@@ -1,10 +1,8 @@
 from pathlib import Path
 # Download and preprocess the Immgen dataset
 
-configfile: "../../config.yaml"
-
-# Two directories up from the current file
-PROJECT_DIR = Path(workflow.basedir).resolve().parents[1]
+PROJECT_DIR = Path(workflow.basedir).resolve().parents[2]
+configfile: PROJECT_DIR / "config.yaml"
 
 # http://rstats.immgen.org/DataPage/
 COUNT_TABLE_URL = "https://sharehost.hms.harvard.edu/immgen/GSE109125/GSE109125_Normalized_Gene_count_table.csv"
