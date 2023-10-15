@@ -1,0 +1,5 @@
+datasets:
+  immgen:
+    read_count_table: resources/immgen/immgen_read_count_table.csv
+    annotations: resources/immgen/immgen_annotations.xlsx
+    processed_annotations: resources/immgen/immgen_annotations.json

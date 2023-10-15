@@ -1,0 +1,47 @@
+from pathlib import Path
+# Download and preprocess the Immgen dataset
+
+configfile: "../../config.yaml"
+
+# Two directories up from the current file
+PROJECT_DIR = Path(workflow.basedir).resolve().parents[1]
+
+# http://rstats.immgen.org/DataPage/
+COUNT_TABLE_URL = "https://sharehost.hms.harvard.edu/immgen/GSE109125/GSE109125_Normalized_Gene_count_table.csv"
+ANNOTAITON_URL = "https://www.cell.com/cms/10.1016/j.cell.2018.12.036/attachment/e5df7329-d77d-40b3-a03a-34bdbe4b402c/mmc1.xlsx"
+
+rule all:
+    input:
+        PROJECT_DIR / config["datasets"]["immgen"]["read_count_table"],
+        PROJECT_DIR / config["datasets"]["immgen"]["processed_annotations"]
+
+rule download_data:
+    """
+    TODO download fails with 403 (forbidden). Maybe we need to use a different user agent?
+    """
+    output:
+        read_count_table=PROJECT_DIR / config["datasets"]["immgen"]["read_count_table"],
+        annotations=PROJECT_DIR / config["datasets"]["immgen"]["annotations"],
+    shell: """
+    wget -O {output.read_count_table} {COUNT_TABLE_URL}
+    wget -O {output.annotations} {ANNOTAITON_URL}  # fails with 403 -.-
+    """
+
+rule format_annotations:
+    """
+    Convert the annotations from xlsx to json, using the index as the keys
+    """
+    input: rules.download_data.output.annotations
+    output: PROJECT_DIR / config["datasets"]["immgen"]["processed_annotations"]
+    run:
+        import json
+        import pandas as pd
+
+        df = pd.read_excel(input[0], index_col=0)
+        import ipdb; ipdb.set_trace()
+
+        # Transform the df to a dict, such that the index is the key and the values are additional dicts (col: value pairs for each row)
+        annotations = df.to_dict(orient="index")
+
+        with open(output[0], "w") as f:
+            json.dump(annotations, f, indent=4)
