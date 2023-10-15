@@ -1,0 +1,8 @@
+.snakemake
+
+
+# CeMM/Bockie repo convention
+resources/
+data/
+metadata/
+results/
