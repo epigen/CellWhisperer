@@ -1,5 +1,8 @@
+paths:
+  read_count_table: resources/{dataset}/read_count_table.csv
+  raw_annotations: resources/{dataset}/annotations.xlsx
+  structured_annotations: results/{dataset}/annotations.json
+  processed_annotations: results/{dataset}/processed_annotations.json
+
 datasets:
   immgen:
-    read_count_table: resources/immgen/immgen_read_count_table.csv
-    annotations: resources/immgen/immgen_annotations.xlsx
-    processed_annotations: resources/immgen/immgen_annotations.json
