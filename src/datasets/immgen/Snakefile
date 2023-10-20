@@ -5,7 +5,7 @@ PROJECT_DIR = Path(workflow.basedir).resolve().parents[2]
 configfile: PROJECT_DIR / "config.yaml"
 
 # http://rstats.immgen.org/DataPage/
-COUNT_TABLE_URL = "https://sharehost.hms.harvard.edu/immgen/GSE109125/GSE109125_Normalized_Gene_count_table.csv"
+COUNT_TABLE_URL = "https://sharehost.hms.harvard.edu/immgen/GSE227743/GSE227743_Normalized_Gene_count_table.csv"
 ANNOTAITON_URL = "https://www.cell.com/cms/10.1016/j.cell.2018.12.036/attachment/e5df7329-d77d-40b3-a03a-34bdbe4b402c/mmc1.xlsx"
 
 rule all:
@@ -19,26 +19,48 @@ rule download_data:
     """
     output:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="immgen"),
-        annotations=PROJECT_DIR / config["paths"]["raw_annotations"].format(dataset="immgen"),
     shell: """
     wget -O {output.read_count_table} {COUNT_TABLE_URL}
-    wget -O {output.annotations} {ANNOTAITON_URL}  # fails with 403 -.-
     """
 
 rule format_annotations:
     """
     Convert the annotations from xlsx to json, using the index as the keys
     """
-    input: rules.download_data.output.annotations
     output: PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="immgen")
     run:
         import json
-        import pandas as pd
+        data = {
+            "B.NveIgD+27-.Bl#1": "Naive B cells that express IgD but not CD27 from human blood",
+            "B.MemIgD-27+38-.Bl#1": "Memory B cells that do not express IgD but do express CD27 and not CD38 from human blood",
+            "B.TransIgD+27+.Bl#1": "Transitional B cells that express both IgD and CD27 from human blood",
+            "ILC.NKimm.56hi16-.Bl#1": "Immature natural killer cells from the innate lymphoid cell group with high expression of CD56 but not CD16 from human blood",
+            "ILC.NKmat.56lo16hi57-.Bl#1": "Mature natural killer cells from the innate lymphoid cell group with low expression of CD56, high expression of CD16, and no expression of CD57 from human blood",
+            "ILC.NKmem.56lo16hi57hi.Bl#1": "Memory natural killer cells from the innate lymphoid cell group with low expression of CD56, high expression of CD16, and high expression of CD57 from human blood",
+            "T.4Nve.CD3+4+RA+62L+.Bl#1": "Naive CD4 T cells that express CD3, CD4, CD45RA, and CD62L from human blood",
+            "T.4EffMem.CD3+4+RA-62L-.Bl#1": "Effector memory CD4 T cells that express CD3, CD4, but not CD45RA or CD62L from human blood",
+            "T.8Nve.CD3+8+RA+62L+.Bl#1": "Naive CD8 T cells that express CD3, CD8, CD45RA, and CD62L from human blood",
+            "T.8EffMem.CD3+8+RA-62L-.Bl#1": "Effector memory CD8 T cells that express CD3, CD8, but not CD45RA or CD62L from human blood",
+            "T.NKT.Va24+.Bl#1": "NKT cells that express Va24 from human blood",
+            "T.MAIT.4+.Bl#1": "MAIT cells that express CD4 from human blood",
+            "T.MAIT.8+.Bl#1": "MAIT cells that express CD8 from human blood",
+            "T.Treg.rest.Bl#1": "Resting regulatory T cells from human blood",
+            "T.Treg.act.Bl#1": "Activated regulatory T cells from human blood",
+            "Mo.16+.Bl#1": "Monocytes that express CD16 from human blood",
+            "Mo.14+.Bl#1": "Monocytes that express CD14 from human blood",
+            "DC.DC1.141+.Bl#1": "Type 1 dendritic cells that express CD141 from human blood",
+            "DC.DC5.AXL+SIGLEC6+.Bl#1": "Type 5 dendritic cells that express AXL and SIGLEC6 from human blood",
+            "DC.DC6.123+.Bl#1": "Type 6 dendritic cells that express CD123 from human blood"
+        }
 
-        df = pd.read_excel(input[0], index_col=0)
-
-        # Transform the df to a dict, such that the index is the key and the values are additional dicts (col: value pairs for each row)
-        annotations = df.to_dict(orient="index")
+        # Include the replicates
+        for k, v in data.copy().items():
+            if k.startswith("B.NveIgD+27-.Bl#"):
+                num_repl = 3
+            else:
+                num_repl = 1
+            for i in range(num_repl):
+                data[f"{k[:-1]}{i+2}"] = v
 
         with open(output[0], "w") as f:
-            json.dump(annotations, f, indent=4)
+            json.dump(data, f, indent=4)
