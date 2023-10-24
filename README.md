@@ -21,8 +21,9 @@ https://github.com/epigen/single-cellm/wiki
 ## How to install a new library (i.e. extend the environment)?
 
 
-
 1. Load the environment, defined by envs/main.yaml with conda (`conda activate singlecellm`)
 2. Install the package of interest (`conda install <your_package>`)
 3. If everything works pin the package you installed in main.yaml with its version.
-4. Before commiting create a fresh environment for testing from the new main.yaml (`conda env create -f envs/main.yml -n test_tmp_env`)
+4. Before commiting do one of the two
+4.1 Update your env conda env: `conda env update --file environment.yml`
+4.2 create a fresh environment for testing from the new main.yaml (`conda env create -f envs/main.yml -n test_tmp_env`)
