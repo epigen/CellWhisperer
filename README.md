@@ -17,3 +17,12 @@ https://github.com/epigen/single-cellm/wiki
 - results: Can be reproduced with your scripts and pipelines
 - resources: External, references, datasets and tools that are project inherent and can be reproduced or downloaded with your scripts and pipelines
 - src (and all other directories needed to run the source code)
+
+## How to install a new library (i.e. extend the environment)?
+
+
+
+1. Load the environment, defined by envs/main.yaml with conda (`conda activate singlecellm`)
+2. Install the package of interest (`conda install <your_package>`)
+3. If everything works pin the package you installed in main.yaml with its version.
+4. Before commiting create a fresh environment for testing from the new main.yaml (`conda env create -f envs/main.yml -n test_tmp_env`)

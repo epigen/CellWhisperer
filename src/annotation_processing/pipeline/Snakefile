@@ -48,7 +48,7 @@ rule process_annotation:
     output:
         processed_annotation = protected(PROCESSED_FILE),  # I marked this as protected as it might be costly to produce
     conda:
-        PROJECT_DIR / "envs" / "langchain.yaml"
+        PROJECT_DIR / "envs" / "main.yaml"
     script:
         "scripts/process_annotations.py"
 

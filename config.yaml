@@ -3,6 +3,7 @@ paths:
   raw_annotations: resources/{dataset}/annotations.xlsx
   structured_annotations: results/{dataset}/annotations.json
   processed_annotations: results/{dataset}/processed_annotations.json
+  llm_embeddings: results/{dataset}/llm_embeddings.npz
 
 datasets:
   immgen:

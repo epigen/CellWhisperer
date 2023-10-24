@@ -1,6 +1,0 @@
-channels:
-  - conda-forge
-dependencies:
-  - langchain==0.0.314
-  - pip:
-    - openai==0.28.1

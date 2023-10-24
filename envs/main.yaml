@@ -1,0 +1,14 @@
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+dependencies:
+  - langchain==0.0.314
+  - ipdb==0.13.13
+  - transformers==4.34.1
+  - pytorch==2.1.0
+  - torchvision==0.16.0
+  - torchaudio==2.1.0
+  - pytorch-cuda==12.1
+  - pip:
+    - openai==0.28.1

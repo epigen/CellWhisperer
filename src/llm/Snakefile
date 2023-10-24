@@ -1,0 +1,26 @@
+"""
+Snakefile to generate LLM embeddings
+"""
+from pathlib import Path
+
+PROJECT_DIR = Path(workflow.basedir).resolve().parents[1]
+configfile: PROJECT_DIR / "config.yaml"
+
+rule all:
+    input:
+        expand(PROJECT_DIR / config["paths"]["llm_embeddings"], dataset=config["datasets"])
+
+rule biogpt_embeddings:
+    """
+    Load BioGPT model via `transformers` library and generate embeddings by averaging token embeddings
+
+    # TODO should use `processed_annotations`, but for now we use the unprocessed ones (immgen)
+    """
+    input:
+        PROJECT_DIR / config["paths"]["structured_annotations"]
+    output:
+        PROJECT_DIR / config["paths"]["llm_embeddings"]
+    conda:
+        PROJECT_DIR / "envs" / "main.yaml"
+    script:
+        "scripts/biogpt_embeddings.py"
