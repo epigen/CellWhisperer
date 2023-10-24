@@ -7,4 +7,4 @@ paths:
   rna_embeddings: results/{dataset}/rna_embeddings.npz
 
 datasets:
-  immgen:
+  - immgen

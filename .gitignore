@@ -6,3 +6,8 @@ resources/
 data/
 metadata/
 results/
+
+
+.ipynb_checkpoints
+__pycache__
+*.egg-info/

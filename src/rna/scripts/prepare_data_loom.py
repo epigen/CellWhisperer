@@ -7,6 +7,7 @@ adata = anndata.read_csv(
     first_column_names=True,
 ).T
 
+
 # TODO: Hardcoded metadata extraction, specific for immgen
 adata.obs["cell type"] = [x.split("#")[0] for x in adata.obs.index.values]
 # TODO: Hardcoded metadata extraction, specific for immgen
@@ -26,6 +27,3 @@ adata_w_id.obs["n_counts"] = adata_w_id.obs.total_counts
 adata_w_id.obs.index.name = "sample_name"
 adata_w_id.obs.reset_index(inplace=True)
 adata_w_id.write_loom(snakemake.output[0])
-
-# read loom file in again
-adata = anndata.read_loom(snakemake.output[0])

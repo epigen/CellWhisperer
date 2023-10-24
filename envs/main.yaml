@@ -1,20 +1,25 @@
+
+name: single-cellm
 channels:
   - conda-forge
   - pytorch
   - nvidia
 dependencies:
+  - gcc=13.2.0
   - python=3.9
   - anndata=0.10.2
   - langchain=0.0.314
   - ipdb=0.13.13
+  - ipykernel=6.25.2
   - transformers=4.34.1
   - pytorch=2.1.0
   - scanpy=1.9.5
   - torchvision=0.16.0
   - torchaudio=2.1.0
   - bioconda::pybiomart=0.2.0
-  - utf8proc=2.6.1
+  - anaconda::utf8proc=2.6.1
   - pytorch-cuda=12.1
   - pip:
     - openai==0.28.1
-    - git+https://huggingface.co/ctheodoris/Geneformer
+    - loompy==3.0.7
+    - tdigest==0.5.2.2

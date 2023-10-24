@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+
+[project]
+name = "single-cellm"
+version = "0.1.0"
+description = "single ceLLM"
+readme = "README.md"
+authors = [{name = "Moritz Schaefer", email = "mail@moritzs.de"}]
+keywords = ["single cell llm"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+]
+# homepage = "https://github.com/epigen/single-cellm"
+
+# [project.scripts]
+# guided_protein_diffusion = "single_cellm.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src", "modules/Geneformer"]
+namespaces = false
+# packages = ["single_cellm", "geneformer"]
+
+[tool.setuptools.package-dir]
+"single_cellm" = "src/single_cellm"
+"geneformer" = "modules/Geneformer/geneformer"
