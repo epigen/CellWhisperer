@@ -1,10 +1,14 @@
+anndata_label_name: natural_language_annotation
+
 paths:
-  read_count_table: resources/{dataset}/read_count_table.csv
-  raw_annotations: resources/{dataset}/annotations.xlsx
+  read_count_table: resources/{dataset}/read_count_table.h5ad
+  raw_annotations: resources/{dataset}/annotations.tsv
   structured_annotations: results/{dataset}/annotations.json
   processed_annotations: results/{dataset}/processed_annotations.json
+  full_dataset: results/{dataset}/full_data.h5ad
   llm_embeddings: results/{dataset}/llm_embeddings.npz
   rna_embeddings: results/{dataset}/rna_embeddings.npz
 
 datasets:
-  - immgen
+#  - immgen
+  - daniel

@@ -1,1 +1,0 @@
-You are given a structured (JSON) annotation of a given cellular context (e.g. cell type/state). Your job is to formulate a concise but comprehensive formulation of this annotation in natural language.

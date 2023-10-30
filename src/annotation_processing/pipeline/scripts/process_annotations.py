@@ -45,7 +45,7 @@ def load_openai_api(api_key: Optional[str] = None, model="gpt-4"):
                 # Remove trailing newline character and return the password
                 return password.stdout.rstrip("\n")
 
-            key = "openai.com/meduni_matthias_api_key"  # Moritz' setup
+            key = "openai.com/meduni_my_api_key"  # Moritz' setup
             os.environ["OPENAI_API_KEY"] = get_password_from_pass_store(key)
             # print(f"Password for {key}: {openai_api_key}")
         else:
@@ -58,7 +58,7 @@ def load_openai_api(api_key: Optional[str] = None, model="gpt-4"):
         max_retries=1,
     )
     stream_chat = ChatOpenAI(
-        streaming=True,
+        streaming=False,
         temperature=0,
         model_name=model,
         request_timeout=600,

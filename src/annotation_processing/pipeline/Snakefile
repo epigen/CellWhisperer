@@ -5,7 +5,7 @@ Use `langchain` to convert structured annotations (JSON) from diverse sources in
 PROJECT_DIR = Path(workflow.basedir).resolve().parents[2]
 configfile: PROJECT_DIR / "config.yaml"
 
-DATASETS = config["datasets"].keys()
+DATASETS = config["datasets"]
 
 PROCESSED_FILE = PROJECT_DIR / "results" / "annotation_processing" / "processed" / "{dataset}" / "{sample_id}.txt"
 
@@ -21,37 +21,43 @@ def annotation_ids(wildcards):
 
 rule all:
     input:
-        [PROJECT_DIR / config["paths"]["processed_annotations"].format(dataset=dataset) for dataset in config["datasets"].keys()]
+        [PROJECT_DIR / config["paths"]["full_dataset"].format(dataset=dataset) for dataset in config["datasets"]]
 
 rule prepare_requests:
     """
     Open the structured annotations dataframe and extract the sample with the appropriate ID
     """
     input:
-        structured_annotations = lambda wildcards: PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset=wildcards.dataset),
+        structured_annotations = lambda wildcards: ancient(PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset=wildcards.dataset)),
     output:
-        request = PROJECT_DIR / "results" / "annotation_processing"  / "requests" / "{dataset}" / "{sample_id}.json",
+        json = PROJECT_DIR / "results" / "annotation_processing"  / "requests" / "{dataset}" / "{sample_id}.json",
+        yaml = PROJECT_DIR / "results" / "annotation_processing"  / "requests" / "{dataset}" / "{sample_id}.yaml",
     run:
         import json
+        import yaml
 
         with open(input.structured_annotations) as f:
             annotations = json.load(f)
 
         sample = annotations[wildcards.sample_id]
-        with open(output[0], "w") as f:
+        sample = {k: v for k, v in sample.items() if v==v}  # v==v filters out nan values
+        with open(output["json"], "w") as f:
             json.dump(sample, f, indent=4)
+
+        with open(output["yaml"], "w") as f:
+            yaml.dump(sample, f)
 
 rule process_annotation:
     input:
-        human_message = rules.prepare_requests.output[0],
-        system_message = "prompts/process_annotations.txt",
+        human_message = ancient(rules.prepare_requests.output.yaml),
+        system_message = "prompts/process_annotations_zero_shot.txt",
     output:
         processed_annotation = protected(PROCESSED_FILE),  # I marked this as protected as it might be costly to produce
     conda:
-        PROJECT_DIR / "envs" / "main.yaml"
+        "single-cellm"
+        # PROJECT_DIR / "envs" / "main.yaml"
     script:
         "scripts/process_annotations.py"
-
 
 rule aggregate_processed:
     """
@@ -63,3 +69,17 @@ rule aggregate_processed:
         PROJECT_DIR / config["paths"]["processed_annotations"]
     script:
         "scripts/aggregate_processed.py"
+
+rule integrate_dataset:
+    input:
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
+        processed_annotations=PROJECT_DIR / config["paths"]["processed_annotations"]
+    output:
+        PROJECT_DIR / config["paths"]["full_dataset"]
+    params:
+        anndata_label_name=config["anndata_label_name"],
+    conda:
+        "single-cellm"
+        # PROJECT_DIR / "envs" / "main.yaml"
+    script:
+        "scripts/integrate_dataset.py"

@@ -1,0 +1,7 @@
+You are given a structured (YAML) annotation of a RNA sequencing study with detailed information about a single sample from this study. Your job is to formulate a short and concise formulation of this single sample in natural language.
+
+Take special attention to the following points:
+
+- The YAML information provides context about the study in which the cellular context of interest was observed. This context may provide predominantly irrelevant information with respect to the cell state, so pay special attention to the sample-specific information in the YAML.
+- Provide only information that is relevant to the cell state (e.g. cell type, perturbation, ...) in any manner. In other words, focus on biological properties, which are reflected in the cellular phenotype and transcriptome of the sample.
+- Disregard information that is not reflected in the phenotype or transcriptome of the sample. E.g., discard all study-specific information.

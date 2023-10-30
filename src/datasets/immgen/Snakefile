@@ -15,13 +15,11 @@ rule all:
 
 rule download_data:
     """
-    TODO download fails with 403 (forbidden). Maybe we need to use a different user agent?
     """
     output:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="immgen"),
-    shell: """
-    wget -O {output.read_count_table} {COUNT_TABLE_URL}
-    """
+    run:
+        pd.read_excel(ANNOTAITON_URL).to_csv(output.read_count_table, index=False, sep="\t")  # TODO store as h5ad. make sure that obs.index is the same as the index in the count table/annotatios
 
 rule format_annotations:
     """
