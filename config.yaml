@@ -8,6 +8,8 @@ paths:
   full_dataset: results/{dataset}/full_data.h5ad
   llm_embeddings: results/{dataset}/llm_embeddings.npz
   rna_embeddings: results/{dataset}/rna_embeddings.npz
+  jointemb_models: results/models/jointemb
+  wandb_logs: results/wandb_logging
 
 datasets:
 #  - immgen

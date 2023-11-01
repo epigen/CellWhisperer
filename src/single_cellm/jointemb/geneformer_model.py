@@ -3,7 +3,9 @@ import scipy.sparse as sp
 import numpy as np
 import dataclasses
 
+from transformers import BertForMaskedLM, BertConfig
 from typing import Optional, Union, Tuple, Any
+from geneformer.in_silico_perturber import pad_tensor_list
 from transformers.modeling_utils import PreTrainedModel
 from transformers.modeling_outputs import BaseModelOutputWithPooling
 from transformers.configuration_utils import PretrainedConfig
@@ -32,32 +34,47 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
         super().__init__(*args, **kwargs)
 
     def _prepare_features(self, adata):
-        """ """
+        """
+        Supports ensemble and symbol names
+        """
 
         # adata.obs["cell type"] = [x.split("#")[0] for x in adata.obs.index.values]
         # adata.obs["cell type rough"] = [
         #     x.split(".")[0] for x in adata.obs["cell type"].values
         # ]
-        annot = sc.queries.biomart_annotations(
-            "hsapiens",
-            ["ensembl_gene_id", "external_gene_name"],
-        ).set_index("external_gene_name")
-        annot_drop_dups = annot.reset_index().drop_duplicates(
-            subset="external_gene_name"
-        )
-        annot_drop_dups = annot_drop_dups.set_index("external_gene_name")
+        if adata.var.index[0].startswith("ENSG0"):
+            # No need to translate IDs
+            ensembl_ids = adata.var.index
+            if "." in ensembl_ids[0]:
+                # Trim version
+                ensembl_ids = ensembl_ids.map(lambda v: v[: v.index(".")])
+            adata_w_id = adata
+            adata_w_id.var["ensembl_id"] = ensembl_ids
+        else:
+            # Assuming gene symbol names. Use biomart to get ensembl_ids
+            annot = sc.queries.biomart_annotations(
+                "hsapiens",
+                ["ensembl_gene_id", "external_gene_name"],
+            ).set_index("external_gene_name")
 
-        adata_w_id = adata[:, [x for x in adata.var.index if x in annot.index]]
-        adata_w_id.var["ensembl_id"] = annot_drop_dups.loc[
-            adata_w_id.var.index.values, "ensembl_gene_id"
-        ].values
+            annot_drop_dups = annot.reset_index().drop_duplicates(
+                subset="external_gene_name"
+            )
+            annot_drop_dups = annot_drop_dups.set_index("external_gene_name")
+
+            adata_w_id = adata[:, [x for x in adata.var.index if x in annot.index]]
+            adata_w_id.var["ensembl_id"] = annot_drop_dups.loc[
+                adata_w_id.var.index.values, "ensembl_gene_id"
+            ].values
         sc.pp.calculate_qc_metrics(adata_w_id, inplace=True)
         adata_w_id.obs["n_counts"] = adata_w_id.obs.total_counts
         adata_w_id.obs.index.name = "sample_name"
         adata_w_id.obs.reset_index(inplace=True)
         return adata_w_id
 
-    def _tokenize(self, prepared_features, chunk_size=512, target_sum=10_000):
+    def _tokenize(
+        self, prepared_features, chunk_size=512, target_sum=10_000, padding=False
+    ):
         """
         Args:
             prepared_features: anndata object
@@ -123,10 +140,16 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
 
     def __call__(self, features, return_tensors=None, *args, **kwargs):
         prepared_features = self._prepare_features(features)
-        tokens, expression_token_lengths = self._tokenize(prepared_features)
+        tokens, expression_token_lengths = self._tokenize(
+            prepared_features, *args, **kwargs
+        )
 
         if return_tensors == "pt":
-            tokens = torch.tensor(tokens, dtype=torch.long)
+            max_len = max(expression_token_lengths)
+            tokens = [torch.from_numpy(v).to(dtype=torch.long) for v in tokens]
+            tokens = pad_tensor_list(
+                tokens, max_len, pad_token_id=0, model_input_size=2048
+            )  # TODO get pad_token_id and model_size from config
             expression_token_lengths = torch.tensor(expression_token_lengths)
         elif return_tensors is not None:
             raise ValueError("return_tensors must be 'pt' (PyTorch) or None!")
@@ -146,7 +169,6 @@ class GeneformerConfig(PretrainedConfig):
 
     def __init__(
         self,
-        model_directory=None,
         num_classes=0,  # TODO
         emb_mode="cell",
         hidden_size=512,
@@ -156,12 +178,12 @@ class GeneformerConfig(PretrainedConfig):
         forward_batch_size=1,
         nproc=4,
         summary_stat=None,
+        pad_token_id=0,
         **kwargs,
     ):
         super().__init__(**kwargs)
 
         self.model_type = GeneformerConfig.model_type
-        self.model_directory = model_directory
         self.num_classes = num_classes
         self.emb_mode = emb_mode
         self.hidden_size = hidden_size
@@ -171,6 +193,7 @@ class GeneformerConfig(PretrainedConfig):
         self.forward_batch_size = forward_batch_size
         self.nproc = nproc
         self.summary_stat = summary_stat
+        self.pad_token_id = pad_token_id
 
         # valid_option_dict = {
         #     "num_classes": {int},
@@ -183,11 +206,17 @@ class GeneformerConfig(PretrainedConfig):
         #     "forward_batch_size": {int},
         #     "nproc": {int},
         #     "summary_stat": {None, "mean", "median"},
-        #     "model_directory"
         # }
 
 
-class GeneformerModel(PreTrainedModel):
+class GeneformerModel(
+    PreTrainedModel
+):  # we could even subclass from BertForMaskedLM. but how to then do the config thing?
+    config_class = GeneformerConfig
+    base_model_prefix = "geneformer_model"
+    is_parallelizable = False  # not sure actually
+    main_input_name = "expression_tokens"
+
     def __init__(
         self,
         config: GeneformerConfig,
@@ -197,12 +226,28 @@ class GeneformerModel(PreTrainedModel):
         super().__init__(config)
         self.config = config
 
-        # Initialize weights and apply final processing
-        # self.post_init()
+        # model configuration
+        bert_config = {
+            "hidden_size": 512,
+            "num_hidden_layers": 6,
+            "initializer_range": 0.2,
+            "layer_norm_eps": 1e-12,
+            "attention_probs_dropout_prob": 0.02,
+            "hidden_dropout_prob": 0.02,
+            "intermediate_size": 1024,
+            "hidden_act": "relu",
+            "max_position_embeddings": 2**11,
+            "model_type": "bert",
+            "num_attention_heads": 4,
+            "pad_token_id": 0,
+            "output_hidden_states": True,
+            "output_attentions": False,
+            "vocab_size": 25426,  # genes+2 for <mask> and <pad> tokens
+        }
 
-        self.geneformer_model = load_model(
-            "Pretrained", self.config.num_classes, self.config.model_directory
-        )  # params see below
+        self.geneformer_model = BertForMaskedLM(BertConfig(**bert_config))
+        # Initialize weights and apply final processing
+        self.post_init()
 
     def forward(
         self,
@@ -213,7 +258,6 @@ class GeneformerModel(PreTrainedModel):
         # output_attentions: Optional[bool] = None,
         # output_hidden_states: Optional[bool] = None,
         # interpolate_pos_encoding: Optional[bool] = None,
-        pad_token_id: Any = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
@@ -227,7 +271,7 @@ class GeneformerModel(PreTrainedModel):
             expression_token_lengths,
             self.config.emb_mode,
             layer_to_quant,
-            pad_token_id,
+            self.config.pad_token_id,
             self.config.forward_batch_size,
             self.config.summary_stat,
         )

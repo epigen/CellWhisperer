@@ -5,6 +5,7 @@
 from typing import Optional, Tuple, Union, Any
 
 import torch
+from pathlib import Path
 from torch import nn
 from .geneformer_model import GeneformerConfig, GeneformerModel
 
@@ -22,6 +23,7 @@ from transformers.models.auto.modeling_auto import AutoModel
 
 from dataclasses import dataclass
 from .config import TranscriptomeTextDualEncoderConfig  # TODO make relative again
+from .loss import clip_loss
 
 logger = logging.get_logger(__name__)
 
@@ -43,20 +45,6 @@ class CLIPOutput(ModelOutput):
             else getattr(self, k).to_tuple()
             for k in self.keys()
         )
-
-
-# Copied from transformers.models.clip.modeling_clip.contrastive_loss
-def contrastive_loss(logits: torch.Tensor) -> torch.Tensor:
-    return nn.functional.cross_entropy(
-        logits, torch.arange(len(logits), device=logits.device)
-    )
-
-
-# Copied from transformers.models.clip.modeling_clip.clip_loss
-def clip_loss(similarity: torch.Tensor) -> torch.Tensor:
-    caption_loss = contrastive_loss(similarity)
-    transcriptome_loss = contrastive_loss(similarity.t())
-    return (caption_loss + transcriptome_loss) / 2.0
 
 
 class TranscriptomeTextDualEncoderModel(PreTrainedModel):
@@ -104,7 +92,6 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
 
         self.transcriptome_model = transcriptome_model
         self.text_model = text_model
-
         # make sure that the individual model's config refers to the shared config
         # so that the updates to the config will be synced
         self.transcriptome_model.config = self.config.transcriptome_config
@@ -171,7 +158,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         expression_token_lengths=None,
         # output_attentions=None,
         # output_hidden_states=None,
-        pad_token_id=None,
+        # pad_token_id=None,
         return_dict=None,
     ):
         r"""
@@ -181,17 +168,16 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             applying the projection layer to the pooled output of [`CLIPTranscriptomeModel`].
 
         ```"""
-        if pad_token_id is None:
-            raise ValueError(
-                "pad_token_id has to be defined when using `get_transcriptome_features`"
-            )
+        # if pad_token_id is None:
+        #     raise ValueError(
+        #         "pad_token_id has to be defined when using `get_transcriptome_features`"
+        #     )
 
         transcriptome_outputs = self.transcriptome_model(
             expression_tokens=expression_tokens,
             expression_token_lengths=expression_token_lengths,
             # output_attentions=output_attentions,
             # output_hidden_states=output_hidden_states,
-            pad_token_id=pad_token_id,
             return_dict=return_dict,
         )
 
@@ -207,11 +193,11 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         expression_token_lengths: Optional[torch.LongTensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
         # position_ids: Optional[torch.LongTensor] = None,
-        return_loss: Optional[bool] = None,
+        return_loss: Optional[bool] = None,  # TODO refactor-erase loss computation
         # token_type_ids: Optional[torch.LongTensor] = None,
         # output_attentions: Optional[bool] = None,
         # output_hidden_states: Optional[bool] = None,
-        pad_token_id: Any = None,
+        # pad_token_id: Any = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[torch.Tensor], CLIPOutput]:
         return_dict = (
@@ -223,7 +209,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         transcriptome_outputs, transcriptome_embeds = self.get_transcriptome_features(
             expression_tokens=expression_tokens,
             expression_token_lengths=expression_token_lengths,
-            pad_token_id=pad_token_id,
+            # pad_token_id=self.pad_token_id,#pad_token_id,
         )
 
         text_outputs, text_embeds = self.get_text_features(

@@ -12,6 +12,7 @@ dependencies:
   - ipykernel=6.25.2
   - transformers=4.34.1
   - pytorch=2.1.0
+  - pytorch-lightning=2.1.0
   - scanpy=1.9.5
   - torchvision=0.16.0
   - torchaudio=2.1.0
@@ -22,3 +23,6 @@ dependencies:
     - openai==0.28.1
     - loompy==3.0.7
     - tdigest==0.5.2.2
+    - plotly==5.3.1
+    - networkx==2.6.3
+    - wandb==0.15.12
