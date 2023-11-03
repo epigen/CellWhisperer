@@ -7,8 +7,8 @@ tk = TranscriptomeTokenizer(
         "cell type rough": "cell type rough",
         "cell type": "cell type",
         "sample_name": "sample_name",
-    }, # TODO: hardcoded metadata columns for now
-    nproc=16, # TODO: hardcoded nproc for now
+    },  # TODO: hardcoded metadata columns for now
+    nproc=16,  # TODO: hardcoded nproc for now
 )
 tk.tokenize_data(
     data_directory=Path(snakemake.input[0]).parent,

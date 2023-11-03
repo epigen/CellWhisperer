@@ -54,8 +54,8 @@ rule process_annotation:
     output:
         processed_annotation = protected(PROCESSED_FILE),  # I marked this as protected as it might be costly to produce
     conda:
-        "single-cellm"
-        # PROJECT_DIR / "envs" / "main.yaml"
+        PROJECT_DIR / "envs" / "main.yaml"
+        # "single-cellm"
     script:
         "scripts/process_annotations.py"
 

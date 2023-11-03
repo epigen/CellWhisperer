@@ -19,6 +19,7 @@ dependencies:
   - bioconda::pybiomart=0.2.0
   - anaconda::utf8proc=2.6.1
   - pytorch-cuda=12.1
+  - gseapy=1.0.6
   - pip:
     - openai==0.28.1
     - loompy==3.0.7

@@ -11,7 +11,7 @@ adata = anndata.read_csv(
 # TODO: Hardcoded metadata extraction, specific for immgen
 adata.obs["cell type"] = [x.split("#")[0] for x in adata.obs.index.values]
 # TODO: Hardcoded metadata extraction, specific for immgen
-adata.obs["cell type rough"] = [x.split(".")[0] for x in adata.obs["cell type"].values] 
+adata.obs["cell type rough"] = [x.split(".")[0] for x in adata.obs["cell type"].values]
 annot = sc.queries.biomart_annotations(
     "hsapiens",
     ["ensembl_gene_id", "external_gene_name"],
