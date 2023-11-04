@@ -4,6 +4,29 @@ single ceLLM project
 For more information on project management, follow
 https://github.com/epigen/single-cellm/wiki
 
+## Run/Train with Pytorch Lightning
+
+We rely on pytorch lightning, which significantly reduces boilerplate for a multitude of aspects, including
+- logging
+- training
+- CLI args
+- model sharing
+
+Before training, make sure to read the [LightningCLI documentation](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html) (the three Basics are enough). It's short and really helpful! E.g. to start a run do this:
+
+```bash
+python src/single_cellm/jointemb/training.py fit --print_config > run_config.yaml
+# configure run_config.yaml
+python src/single_cellm/jointemb/training.py fit --config run_config.yaml
+```
+
+### Important parameters
+
+`trainer.logger.init_args.name`: The run-name on WandB
+`trainer.logger.log_model`: Upload model to WandB?
+`trainer.fast_dev_run`: Name is self-explanatory. Super useful for debugging
+`ckpt_path`: a path (to load a model, e.g. for resuming)
+
 ## Folder structure
 
 - data: Computationally non-reproducible, expensive, or painful to reproduce

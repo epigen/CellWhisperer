@@ -1,4 +1,8 @@
-import pytorch_lightning as pl
+"""
+Wraps lightning and transformers logic, providing bare configs to the user/CLI
+"""
+
+import lightning as pl
 from .model import (
     TranscriptomeTextDualEncoderConfig,
     TranscriptomeTextDualEncoderModel,
@@ -14,14 +18,30 @@ import torch
 class TranscriptomeTextDualEncoderLightning(pl.LightningModule):
     def __init__(
         self,
-        config: TranscriptomeTextDualEncoderConfig,
-        *args,
-        **kwargs,
+        projection_dim=512,
+        logit_scale_init_value=2.6592,
+        transcriptome_model_type="geneformer",
+        text_model_type="biogpt",
     ):
+        """
+        Args:
+            dim: dimension of the projection layer
+            logit_scale_init_value: initial value of the logit scale parameter (see CLIP paper)
+        """
         super(TranscriptomeTextDualEncoderLightning, self).__init__()
 
+        config_transcriptome = {"model_type": transcriptome_model_type}
+        config_text = {"model_type": text_model_type}
+
+        model_config = TranscriptomeTextDualEncoderConfig(
+            projection_dim=projection_dim,
+            logit_scale_init_value=logit_scale_init_value,
+            transcriptome_config=config_transcriptome,
+            text_config=config_text,
+        )
+
         self.model = TranscriptomeTextDualEncoderModel(
-            config=config,
+            config=model_config,
         )
 
         self.save_hyperparameters()
@@ -46,6 +66,21 @@ class TranscriptomeTextDualEncoderLightning(pl.LightningModule):
         for param in self.model.transcriptome_model.parameters():
             param.requires_grad = False
 
+    def on_save_checkpoint(self, checkpoint):
+        """
+        Drop frozen parameters (don't save them)
+        """
+
+        for param_name in [
+            param_name
+            for param_name, param in self.named_parameters()
+            if not param.requires_grad
+        ]:
+            try:
+                del checkpoint["state_dict"][f"{param_name}"]
+            except KeyError:
+                print(f"Key {param_name} not found")
+
     def forward(
         self,
         input_ids: Optional[torch.LongTensor],
@@ -61,39 +96,28 @@ class TranscriptomeTextDualEncoderLightning(pl.LightningModule):
             return_dict=True,
         )
 
-    def training_step(self, batch, batch_idx):
+    def process_step(self, batch, batch_idx, step_type):
         outputs = self.model(**batch)
         loss = clip_loss(outputs.logits_per_text)
         self.log(
-            "train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
+            f"{step_type}_loss",
+            loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
         )
         return loss
+
+    def training_step(self, batch, batch_idx):
+        return self.process_step(batch, batch_idx, "train")
 
     def validation_step(self, batch, batch_idx):
-        # print(batch)
-        outputs = self.model(**batch)
-        loss = clip_loss(outputs.logits_per_text)
-        self.log(
-            "val_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
-        )
-        return loss
+        return self.process_step(batch, batch_idx, "val")
 
     def test_step(self, batch, batch_idx):
-        outputs = self.model(**batch)
-        loss = clip_loss(outputs.logits_per_text)
-        self.log(
-            "test_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
-        )
-        return loss
+        return self.process_step(batch, batch_idx, "test")
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=1e-4)
         return optimizer
-
-
-# Example of how to train the model
-# dataset = ... # Your Dataset
-# train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
-# model = TranscriptomeTextDualEncoderLightning(...)
-# trainer = pl.Trainer(max_epochs=5, gpus=1)
-# trainer.fit(model, train_loader)

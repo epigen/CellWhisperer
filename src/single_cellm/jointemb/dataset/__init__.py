@@ -1,5 +1,4 @@
 from torch.utils.data import Dataset, DataLoader
-import pytorch_lightning as pl
 import anndata
 
 # from pytorch_metric_learning import samplers
@@ -15,7 +14,7 @@ import random
 
 import torch
 from torch.utils.data import Dataset, DataLoader
-import pytorch_lightning as pl
+import lightning as pl
 
 from transformers import AutoTokenizer
 from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
@@ -45,7 +44,7 @@ class JointEmbedDataset(Dataset):
 
 
 class JointEmbedDataModule(pl.LightningDataModule):
-    def __init__(self, dataset_name, batch_size):
+    def __init__(self, dataset_name="daniel", batch_size=32):
         super().__init__()
         self.batch_size = batch_size
         self.dataset_name = dataset_name
