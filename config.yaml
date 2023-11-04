@@ -9,8 +9,10 @@ paths:
   llm_embeddings: results/{dataset}/llm_embeddings.npz
   rna_embeddings: results/{dataset}/rna_embeddings.npz
   enrichr_terms_json: resources/enrichr_terms/terms.json
+  ensembl_gene_symbol_dict: resources/ensembl_gene_symbol_dict.csv
   jointemb_models: results/models/jointemb
   wandb_logs: results/wandb_logging
+  datamodule_prepared_path: results/{dataset}/lightning-processed/inputs.pt
 
 datasets:
   - immgen

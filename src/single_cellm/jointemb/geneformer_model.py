@@ -1,3 +1,4 @@
+from single_cellm.config import get_path
 import torch
 import scipy.sparse as sp
 import numpy as np
@@ -52,17 +53,9 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
             adata_w_id = adata
             adata_w_id.var["ensembl_id"] = ensembl_ids
         else:
-            # Assuming gene symbol names. Use biomart to get ensembl_ids
-            # use_cache=False to avoid the error sqlite3.OperationalError: database is locked
-            annot = sc.queries.biomart_annotations(
-                "hsapiens", ["ensembl_gene_id", "external_gene_name"], use_cache=False
-            ).set_index("external_gene_name") 
-
-            annot_drop_dups = annot.reset_index().drop_duplicates(
-                subset="external_gene_name"
+            annot = pd.read_csv(
+                get_path(["paths", "ensembl_gene_symbol_dict"]), index_col=0
             )
-            annot_drop_dups = annot_drop_dups.set_index("external_gene_name")
-
             adata_w_id = adata[:, [x for x in adata.var.index if x in annot.index]]
             # Since the copy() mechanism seems to be broken
             adata_w_id = anndata.AnnData(
@@ -70,7 +63,7 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
                 var=pd.DataFrame(adata_w_id.var),
                 obs=pd.DataFrame(adata_w_id.obs),
             )
-            adata_w_id.var["ensembl_id"] = annot_drop_dups.loc[
+            adata_w_id.var["ensembl_id"] = annot.loc[
                 adata_w_id.var.index.values, "ensembl_gene_id"
             ].values
 

@@ -19,15 +19,9 @@ import lightning as pl
 from transformers import AutoTokenizer
 from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
 from single_cellm.jointemb.processing import TranscriptomeTextDualEncoderProcessor
+from single_cellm.config import get_path
 import subprocess
 
-PROJECT_DIR = Path(
-    subprocess.check_output(
-        ["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).parent
-    )
-    .decode("utf-8")
-    .strip()
-)
 NUM_THREADS = 20
 
 
@@ -48,9 +42,9 @@ class JointEmbedDataModule(pl.LightningDataModule):
         super().__init__()
         self.batch_size = batch_size
         self.dataset_name = dataset_name
-        self.processed_path = (
-            PROJECT_DIR / f"results/{self.dataset_name}/lightning-processed/inputs.pt"
-        )  # TODO this path needs to go to config (and/or provided as argument)
+        self.processed_path = get_path(
+            ["paths", "datamodule_prepared_path"], dataset=self.dataset_name
+        )
 
     def prepare_data(self):
         # TODO check whether data has already been prepared
@@ -67,8 +61,8 @@ class JointEmbedDataModule(pl.LightningDataModule):
         processor = TranscriptomeTextDualEncoderProcessor(
             transcriptome_processor, tokenizer
         )
-        adata = anndata.read_h5ad(  # TODO provide path through function parameters and config.yaml :)
-            PROJECT_DIR / f"results/{self.dataset_name}/full_data.h5ad"
+        adata = anndata.read_h5ad(
+            (get_path(["paths", "full_dataset"], dataset=self.dataset_name))
         )
 
         inputs = processor(
