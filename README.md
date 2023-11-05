@@ -15,9 +15,9 @@ We rely on pytorch lightning, which significantly reduces boilerplate for a mult
 Before training, make sure to read the [LightningCLI documentation](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html) (the three Basics are enough). It's short and really helpful! E.g. to start a run do this:
 
 ```bash
-python src/single_cellm/jointemb/training.py fit --print_config > run_config.yaml
+single_cellm fit --print_config > run_config.yaml
 # configure run_config.yaml
-python src/single_cellm/jointemb/training.py fit --config run_config.yaml
+single_cellm fit --config run_config.yaml
 ```
 
 ### Important parameters
@@ -53,11 +53,10 @@ python src/single_cellm/jointemb/training.py fit --config run_config.yaml
   `git submodule update --init --recursive`
 2. Install the environment
   ```
-  mamba env create -f envs/main.yaml
+  mamba env create -f envs/main.yaml  # this already includes `pip install -e .`
   conda activate single-cellm
   ```
 
-3. `pip install -e .`
 4. Develop :)
 
 ### Sane git defaults

@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - pytorch
   - nvidia
+  - defaults
 dependencies:
   - gcc=13.2.0
   - python=3.9
@@ -20,6 +21,7 @@ dependencies:
   - anaconda::utf8proc=2.6.1
   - pytorch-cuda=12.1
   - gseapy=1.0.6
+  - pip
   - pip:
     - openai==0.28.1
     - loompy==3.0.7
@@ -28,3 +30,4 @@ dependencies:
     - networkx==2.6.3
     - wandb==0.15.12
     - jsonargparse[signatures]==4.27.0
+    - -e ..
