@@ -4,9 +4,11 @@
 See https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html for documentation on usage
 """
 
+from single_cellm.config import get_path
 import torch
 from lightning.pytorch.cli import LightningCLI, SaveConfigCallback
 import subprocess
+import shutil
 from pathlib import Path
 import os
 import yaml
@@ -35,6 +37,7 @@ class SingleCeLLMCLI(LightningCLI):
 
     def add_arguments_to_parser(self, parser):
         parser.add_argument("--freeze_pretrained", default=True)
+        parser.add_argument("--best_model_path", type=Path, default=None)
 
     def before_fit(self) -> None:
         # We need to preload this model
@@ -49,6 +52,24 @@ class SingleCeLLMCLI(LightningCLI):
             raise
         if self.config["fit.freeze_pretrained"]:
             self.model.freeze_pretrained()
+
+    def after_fit(self) -> None:
+        if self.config["fit.best_model_path"] is not None:
+            # copy the best model_path
+            if self.trainer.checkpoint_callback.best_model_path == "":
+                logging.error(
+                    "No best model path found. Please check if the checkpoint callback is enabled."
+                )
+            else:
+                # Make sure file does not exist
+                if self.config["fit.best_model_path"].exists():
+                    logging.error(
+                        f"File {self.config['fit.best_model_path']} already exists. Not copying {self.trainer.checkpoint_callback.best_model_path}."
+                    )
+                shutil.copy(
+                    self.trainer.checkpoint_callback.best_model_path,
+                    self.config["fit.best_model_path"],
+                )
 
 
 class LoggerSaveConfigCallback(SaveConfigCallback):
