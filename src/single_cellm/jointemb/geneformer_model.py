@@ -183,7 +183,7 @@ class GeneformerConfig(PretrainedConfig):
         max_ncells=200,  # TODO
         emb_layer=-1,
         emb_label=["sample_name", "cell type rough", "cell type"],  # TODO
-        forward_batch_size=1,
+        forward_batch_size=-1,
         nproc=4,
         summary_stat=None,
         pad_token_id=0,
