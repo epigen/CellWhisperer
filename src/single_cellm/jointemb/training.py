@@ -89,7 +89,7 @@ def cli_main():
 
     with open(PROJECT_DIR / "config.yaml") as f:
         config = yaml.safe_load(f)
-        LOG_DIR = PROJECT_DIR / config["paths"]["wandb_logs"]
+        LOG_DIR = PROJECT_DIR / "results" / "model_training"
 
     early_stop = EarlyStopping(
         monitor="val_loss", min_delta=1e-5, patience=20, verbose=False, mode="min"
@@ -111,7 +111,7 @@ def cli_main():
             logger={
                 "class_path": WandbLogger.__module__ + "." + WandbLogger.__name__,
                 "init_args": dict(
-                    save_dir=LOG_DIR,
+                    save_dir=get_path(["paths", "wandb_logs"]),
                     project="JointEmbed_Training",
                     entity="single-cellm",
                     log_model=False,

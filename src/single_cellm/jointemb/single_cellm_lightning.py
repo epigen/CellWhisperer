@@ -18,10 +18,10 @@ import torch
 class TranscriptomeTextDualEncoderLightning(pl.LightningModule):
     def __init__(
         self,
-        projection_dim=512,
-        logit_scale_init_value=2.6592,
-        transcriptome_model_type="geneformer",
-        text_model_type="biogpt",
+        projection_dim: int = 512,
+        logit_scale_init_value: float = 2.6592,
+        transcriptome_model_type: str = "geneformer",
+        text_model_type: str = "biogpt",
     ):
         """
         Args:

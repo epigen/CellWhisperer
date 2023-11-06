@@ -18,8 +18,8 @@ classifiers = [
 ]
 # homepage = "https://github.com/epigen/single-cellm"
 
-# [project.scripts]
-# guided_protein_diffusion = "single_cellm.main:main"
+[project.scripts]
+single_cellm = "single_cellm.jointemb.training:cli_main"
 
 [tool.setuptools.packages.find]
 where = ["src", "modules/Geneformer"]

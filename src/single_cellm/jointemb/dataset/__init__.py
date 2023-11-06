@@ -51,7 +51,6 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.processed_path = (
             PROJECT_DIR / f"results/{self.dataset_name}/lightning-processed/inputs.pt"
         )  # TODO this path needs to go to config (and/or provided as argument)
-        self.prepare_data()  # TODO should be called automatically (by lightning), but isn't (bug?) so we do it manually for now
 
     def prepare_data(self):
         # TODO check whether data has already been prepared
