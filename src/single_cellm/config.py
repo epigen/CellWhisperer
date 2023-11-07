@@ -34,21 +34,25 @@ config = _read_config()
 
 def get_path(config_keys: List[str], __c=config, __testing=False, **kwargs):
     """
-    Params:
-        config_keys: list of keys
+    Get an absolute path from the config file, providing the hierarchy of keys leading to it. E.g. ["paths", "final_model"]
+
+    :param config_keys: Hierarchical list of keys
+    :param __c: Config dict to use (only used for testing)
+    :param __testing: Whether to use the testing config dir
+    :param kwargs: Additional kwargs to pass to the format function, replacing placeholders in the config paths
+    :return:
+
     Return an absolute path for provided config_keys
     """
 
-    if len(config_keys) == 1:
-        if __testing:
-            return (
-                config["PROJECT_ROOT"]
-                / config["test_dir"]
-                / __c[config_keys[0]].format_map(kwargs)
-            )
-        else:
-            return config["PROJECT_ROOT"] / __c[config_keys[0]].format_map(kwargs)
-    else:
-        return get_path(
-            config_keys[1:], __c[config_keys[0]], __testing=__testing, **kwargs
-        )
+    path = __c["PROJECT_ROOT"]
+    if __testing:
+        path /= config["test_dir"]
+
+    dict_level = __c
+    for key in config_keys:
+        dict_level = dict_level[key]
+
+    path /= dict_level.format(**kwargs)
+
+    return path

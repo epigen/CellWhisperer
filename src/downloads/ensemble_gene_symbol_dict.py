@@ -19,4 +19,4 @@ annot = sc.queries.biomart_annotations(
 annot_drop_dups = annot.reset_index().drop_duplicates(subset="external_gene_name")
 annot_drop_dups = annot_drop_dups.set_index("external_gene_name")
 
-annot_drop_dups.to_csv(PROJECT_DIR / config["paths"]["ensembl_gene_symbol_dict"])
+annot_drop_dups.to_csv(PROJECT_DIR / config["paths"]["ensembl_gene_symbol_map"])

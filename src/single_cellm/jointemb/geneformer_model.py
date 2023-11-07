@@ -54,7 +54,7 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
             adata_w_id.var["ensembl_id"] = ensembl_ids
         else:
             annot = pd.read_csv(
-                get_path(["paths", "ensembl_gene_symbol_dict"]), index_col=0
+                get_path(["paths", "ensembl_gene_symbol_map"]), index_col=0
             )
             adata_w_id = adata[:, [x for x in adata.var.index if x in annot.index]]
             # Since the copy() mechanism seems to be broken
