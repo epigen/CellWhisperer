@@ -21,6 +21,8 @@ dependencies:
   - anaconda::utf8proc=2.6.1
   - pytorch-cuda=12.1
   - gseapy=1.0.6
+  - snakemake=7.32.4
+  - torchmetrics=1.2.0
   - pip
   - pip:
     - openai==0.28.1

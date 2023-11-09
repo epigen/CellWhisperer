@@ -8,6 +8,7 @@ from single_cellm.validation.zero_shot.transcriptomes_to_scored_keywords import 
     formatted_text_from_df,
 )
 from single_cellm.utils.cuda import set_freest_gpu_as_device
+from single_cellm.config import get_path, config
 from transformers import AutoTokenizer
 import anndata
 import subprocess
@@ -15,39 +16,37 @@ import yaml
 
 
 ### Example usage ###
+use_immgen = False
 run_example = True
 if run_example:
     logger = logging.getLogger(__name__)
 
-    # Load the config
-    pwd = Path(__file__).parent
-    PROJECT_DIR = Path(
-        subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=pwd)
-        .decode("utf-8")
-        .strip()
-    )
-    with open(PROJECT_DIR / "config.yaml") as f:
-        config = yaml.safe_load(f)
-
     # Prepare the anndata object
     logging.info("Loading anndata...")
-    # To read from csv:
-    # adata = anndata.read_csv("https://sharehost.hms.harvard.edu/immgen/GSE227743/GSE227743_Normalized_Gene_count_table.csv",
-    #     first_column_names=True,
-    # ).T
-    adata = anndata.read_h5ad(
-        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="immgen")
-    )
-    if not "cell type" in adata.obs.columns:
-        adata.obs["cell type"] = [x.split("#")[0] for x in adata.obs.index.values]
-    if not "cell type rough" in adata.obs.columns:
-        adata.obs["cell type rough"] = [
-            x.split(".")[0] for x in adata.obs["cell type"].values
-        ]
-    adata = adata[adata.obs["cell type rough"] == "B"]
+
+
+    if use_immgen:
+        # To read from csv:
+        # adata = anndata.read_csv("https://sharehost.hms.harvard.edu/immgen/GSE227743/GSE227743_Normalized_Gene_count_table.csv",
+        #     first_column_names=True,
+        # ).T
+        adata = anndata.read_h5ad(get_path(["paths", "read_count_table"], dataset="immgen"))
+        if not "cell type" in adata.obs.columns:
+            adata.obs["cell type"] = [x.split("#")[0] for x in adata.obs.index.values]
+        if not "cell type rough" in adata.obs.columns:
+            adata.obs["cell type rough"] = [
+                x.split(".")[0] for x in adata.obs["cell type"].values
+            ]
+        adata = adata[adata.obs["cell type rough"] == "B"]
+    else:
+        adata = adata = anndata.read_h5ad(
+        get_path(["paths", "read_count_table"], dataset="tabula_sapiens_100_cells_per_type")
+        )
+        adata = adata[adata.obs["cell_ontology_class"] == "mature nk t cell"]
+
 
     # Load the enrichr terms path (assumes this is already pre-computed, see single-cellm/src/validation/zero_shot/write_enrichr_terms.py):
-    terms_json_path = PROJECT_DIR / config["paths"]["enrichr_terms_json"]
+    terms_json_path = get_path(["paths", "enrichr_terms_json"])
 
     # Model loading
     logging.info("Loading LLM embedding model...")
@@ -70,15 +69,15 @@ if run_example:
     logging.info("Computing cell/keyword similarities ...")
 
     similarity_scores_df = anndata_to_scored_keywords(
-        expression=adata,
+        adata_or_embedding=adata,
         model=model,
         terms_json_path=terms_json_path,
         transcriptome_processor=transcriptome_processor,
         text_tokenizer=text_tokenizer,
         device=device,
-        average_mode="cells",
+        average_mode="embeddings",
         chunk_size_text_emb_and_scoring=64,
-        obs_cols=["cell type", "cell type rough"],
+        obs_cols=["cell_ontology_class"] if not use_immgen else ["cell type", "cell type rough"],
         additional_text_dict={"day_of_induction": ["10", "20"], "treatment": ["dox"]},
         score_norm_method="zscore",
     )

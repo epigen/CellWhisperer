@@ -52,7 +52,13 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
                 # Trim version
                 ensembl_ids = ensembl_ids.map(lambda v: v[: v.index(".")])
             adata_w_id = adata
-            adata_w_id.var["ensembl_id"] = ensembl_ids
+            adata_var=pd.DataFrame(adata_w_id.var)
+            adata_var["ensembl_id"] = ensembl_ids
+            adata_w_id = anndata.AnnData(
+                X=adata_w_id.X,
+                var=adata_var,
+                obs=pd.DataFrame(adata_w_id.obs),
+            )
         else:
             annot = pd.read_csv(
                 get_path(["paths", "ensembl_gene_symbol_map"]), index_col=0
