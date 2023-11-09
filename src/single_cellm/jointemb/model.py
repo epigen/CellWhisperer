@@ -3,6 +3,8 @@
 
 
 from typing import Optional, Tuple, Union, Any
+from single_cellm.config import get_path
+from single_cellm.jointemb.frozen_model import FrozenCachedModel
 
 import torch
 from pathlib import Path
@@ -22,7 +24,7 @@ from transformers.models.auto.configuration_auto import AutoConfig
 from transformers.models.auto.modeling_auto import AutoModel
 
 from dataclasses import dataclass
-from .config import TranscriptomeTextDualEncoderConfig  # TODO make relative again
+from .config import TranscriptomeTextDualEncoderConfig
 from .loss import clip_loss
 
 logger = logging.get_logger(__name__)
@@ -90,8 +92,17 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         if text_model is None:
             text_model = AutoModel.from_config(config.text_config)
 
-        self.transcriptome_model = transcriptome_model
+        if config.freeze_text_model:
+            text_model = FrozenCachedModel(
+                text_model, get_path(["paths", "text_model_cache"])
+            )
+        if config.freeze_transcriptome_model:
+            transcriptome_model = FrozenCachedModel(
+                transcriptome_model, get_path(["paths", "transcriptome_model_cache"])
+            )
+
         self.text_model = text_model
+        self.transcriptome_model = transcriptome_model
         # make sure that the individual model's config refers to the shared config
         # so that the updates to the config will be synced
         self.transcriptome_model.config = self.config.transcriptome_config
@@ -111,15 +122,28 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             torch.tensor(self.config.logit_scale_init_value)
         )
 
+    def _mean_pooling(
+        self, token_embeddings: torch.FloatTensor, attention_mask: torch.FloatTensor
+    ):
+        """
+        TODO wouldn't it make sense to scale the embeddings by the attention itself?
+        """
+        input_mask_expanded = (
+            attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+        )
+        sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
+        sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+        mean_pooled = sum_embeddings / sum_mask
+
+        return mean_pooled
+
     def get_text_features(
         self,
         input_ids=None,
         attention_mask=None,
-        # position_ids=None,
-        # token_type_ids=None,
-        # output_attentions=None,
-        # output_hidden_states=None,
+        normalize_embeds=False,
         return_dict=None,
+        **kwargs,
     ):
         r"""
         Returns:
@@ -134,21 +158,17 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             # output_attentions=output_attentions,
             # output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            **kwargs,
         )
+        if isinstance(text_outputs[1], torch.Tensor):
+            text_embeds = text_outputs[1]
+        else:
+            text_embeds = self._mean_pooling(text_outputs[0], attention_mask)
 
-        # mean pooling
-        token_embeddings = text_outputs[
-            0
-        ]  # First element of model_output contains all token embeddings
-        input_mask_expanded = (
-            attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-        )
-        sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
-        sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
-        mean_pooled = sum_embeddings / sum_mask
+        text_embeds = self.text_projection(text_embeds)
 
-        # text_embeds = text_outputs[1]  # pooler_output, this works for BERT I believe
-        text_embeds = self.text_projection(mean_pooled)
+        if normalize_embeds:
+            text_embeds = text_embeds / text_embeds.norm(dim=-1, keepdim=True)
 
         return text_outputs, text_embeds
 
@@ -156,9 +176,9 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         self,
         expression_tokens=None,
         expression_token_lengths=None,
-        # output_attentions=None,
+        # output_attentions=None,  # TODO what is this?
         # output_hidden_states=None,
-        # pad_token_id=None,
+        normalize_embeds=False,
         return_dict=None,
     ):
         r"""
@@ -168,10 +188,6 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             applying the projection layer to the pooled output of [`CLIPTranscriptomeModel`].
 
         ```"""
-        # if pad_token_id is None:
-        #     raise ValueError(
-        #         "pad_token_id has to be defined when using `get_transcriptome_features`"
-        #     )
 
         transcriptome_outputs = self.transcriptome_model(
             expression_tokens=expression_tokens,
@@ -179,10 +195,15 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             # output_attentions=output_attentions,
             # output_hidden_states=output_hidden_states,
             return_dict=return_dict,
-        )
+        )[0]
 
         # pooled_output = transcriptome_outputs[1]  # pooled_output
         transcriptome_embeds = self.transcriptome_projection(transcriptome_outputs)
+
+        if normalize_embeds:
+            transcriptome_embeds = transcriptome_embeds / transcriptome_embeds.norm(
+                dim=-1, keepdim=True
+            )
 
         return transcriptome_outputs, transcriptome_embeds
 
@@ -193,23 +214,23 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         expression_token_lengths: Optional[torch.LongTensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
         # position_ids: Optional[torch.LongTensor] = None,
-        return_loss: Optional[bool] = None,  # TODO refactor-erase loss computation
         # token_type_ids: Optional[torch.LongTensor] = None,
         # output_attentions: Optional[bool] = None,
         # output_hidden_states: Optional[bool] = None,
-        # pad_token_id: Any = None,
-        return_dict: Optional[bool] = None,
+        return_dict: Optional[bool] = True,
+        **kwargs,
     ) -> Union[Tuple[torch.Tensor], CLIPOutput]:
-        return_dict = (
-            return_dict if return_dict is not None else self.config.return_dict
-        )
+        assert (
+            return_dict
+        ), "Please request the output as a dict for TranscriptomeTextDualEncoderModel"
         # assert output_attentions is None
         # assert output_hidden_states is None
 
         transcriptome_outputs, transcriptome_embeds = self.get_transcriptome_features(
             expression_tokens=expression_tokens,
             expression_token_lengths=expression_token_lengths,
-            # pad_token_id=self.pad_token_id,#pad_token_id,
+            return_dict=False,
+            normalize_embeds=True,
         )
 
         text_outputs, text_embeds = self.get_text_features(
@@ -219,14 +240,10 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             # position_ids=position_ids,
             # output_attentions=output_attentions,
             # output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
+            return_dict=False,
+            normalize_embeds=True,
+            **kwargs,
         )
-
-        # normalized features
-        transcriptome_embeds = transcriptome_embeds / transcriptome_embeds.norm(
-            dim=-1, keepdim=True
-        )
-        text_embeds = text_embeds / text_embeds.norm(dim=-1, keepdim=True)
 
         # cosine similarity as logits
         logit_scale = self.logit_scale.exp()
@@ -235,12 +252,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         )
         logits_per_transcriptome = logits_per_text.T
 
-        loss = None
-        if return_loss:
-            loss = clip_loss(logits_per_text)
-
         if not return_dict:
-            output = (
+            return (
                 logits_per_transcriptome,
                 logits_per_text,
                 text_embeds,
@@ -248,10 +261,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                 text_outputs,
                 transcriptome_outputs,
             )
-            return ((loss,) + output) if loss is not None else output
 
         return CLIPOutput(
-            loss=loss,
             logits_per_transcriptome=logits_per_transcriptome,
             logits_per_text=logits_per_text,
             text_embeds=text_embeds,
@@ -259,6 +270,19 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             text_model_output=text_outputs,
             transcriptome_model_output=transcriptome_outputs,
         )
+
+    def store_cache(self):
+        """
+        Save the cached transcriptome and text models to a given path.
+
+        Args:
+            path (Path): Path to save the cached models to.
+        """
+        if self.config.freeze_text_model:
+            self.text_model.save_cache()
+
+        if self.config.freeze_transcriptome_model:
+            self.transcriptome_model.save_cache()
 
     @classmethod
     def from_pretrained(cls, *args, **kwargs):
@@ -276,6 +300,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         **kwargs,
     ) -> PreTrainedModel:
         """
+        The documentation below was copied from the `transformers` library and still largely applies. We might trim it though...
+
         Params:
             transcriptome_model_name_or_path (`str`, *optional*, defaults to `None`):
                 Information necessary to initiate the transcriptome model. Can be either:
@@ -360,18 +386,19 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                 transcriptome_config = AutoConfig.from_pretrained(
                     transcriptome_model_name_or_path
                 )
+                kwargs_transcriptome["config"] = transcriptome_config
 
-            if transcriptome_config.model_type == "geneformer":
-                kwargs_transcriptome[
-                    "config"
-                ] = transcriptome_config.transcriptome_config
+            if kwargs_transcriptome["config"]["model_type"] == "geneformer":
+                kwargs_transcriptome["config"] = GeneformerConfig(
+                    **kwargs_transcriptome["config"]
+                )
                 transcriptome_model = GeneformerModel.from_pretrained(
                     transcriptome_model_name_or_path,
-                    *model_args,
+                    # *model_args,  # these args are not supported by geneformer
                     **kwargs_transcriptome,
                 )
-                # TODO: Should we use the pre-trained projection as well ?
             else:
+                raise NotImplementedError("Only geneformer is supported")
                 kwargs_transcriptome["config"] = transcriptome_config
                 transcriptome_model = AutoModel.from_pretrained(
                     transcriptome_model_name_or_path,

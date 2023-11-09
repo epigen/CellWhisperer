@@ -39,7 +39,9 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
         projection_dim=512,
         logit_scale_init_value=2.6592,
         transcriptome_config=None,
+        freeze_transcriptome_model=True,
         text_config=None,
+        freeze_text_model=False,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -60,8 +62,10 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
             self.transcriptome_config = AutoConfig.for_model(
                 transcriptome_model_type, **transcriptome_config
             )
+        self.freeze_transcriptome_model = freeze_transcriptome_model
 
         self.text_config = AutoConfig.for_model(text_model_type, **text_config)
+        self.freeze_text_model = freeze_text_model
 
         self.projection_dim = projection_dim
         self.logit_scale_init_value = logit_scale_init_value

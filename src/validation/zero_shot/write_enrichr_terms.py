@@ -26,7 +26,6 @@ def write_enrichr_terms_to_json(
         "Tabula_Sapiens",
     ],
     organism: str = "Human",
-    return_dict=False,
 ) -> Union[None, dict]:
     """
     Write the EnrichR terms to a json file. Keys are the selected libraries, values are the terms in the library.
@@ -35,7 +34,6 @@ def write_enrichr_terms_to_json(
     :param terms_json_path: Path to the json file to write the terms to.
     :param selected_libraries: List of EnrichR libraries to include.
     :param organism: Organism to use. Must be one of  ['Human', 'Mouse', 'Yeast', 'Fly', 'Fish', 'Worm']
-    :param return_dict: If True, return the terms as a dict in addition to writing them to the json file.
     :return: None
     """
     terms = {}
@@ -49,8 +47,7 @@ def write_enrichr_terms_to_json(
     with open(terms_json_path, "w") as f:
         json.dump(terms, f)
 
-    if return_dict:
-        return terms
+    return terms
 
 
 # Load the config
@@ -80,7 +77,6 @@ if False:
         terms_json_path="/dev/null",
         selected_libraries=["Tabula_Sapiens"],
         organism="Human",
-        return_dict=True,
     )
     terms_dict = {
         key: [

@@ -13,7 +13,7 @@ dependencies:
   - ipykernel=6.25.2
   - transformers=4.34.1
   - pytorch=2.1.0
-  - pytorch-lightning=2.1.0
+  - lightning=2.1.0
   - scanpy=1.9.5
   - torchvision=0.16.0
   - torchaudio=2.1.0

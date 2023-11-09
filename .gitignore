@@ -11,3 +11,5 @@ results/
 .ipynb_checkpoints
 __pycache__
 *.egg-info/
+
+lightning_logs

@@ -13,7 +13,19 @@ paths:
   jointemb_models: results/models/jointemb
   wandb_logs: results/wandb_logging
   datamodule_prepared_path: results/{dataset}/lightning-processed/inputs.pt
+  text_model_cache: results/cache/text.pkl
+  transcriptome_model_cache: results/cache/transcriptome.pkl
+  cancer_gene_essentiality:
+    essential_genes: resources/cancer_gene_essentiality/CRISPRInferredCommonEssentials.csv
+    nonessential_genes: resources/cancer_gene_essentiality/AchillesNonessentialControls.csv
 
 datasets:
   - immgen
   - daniel
+  - perturbation_kaggle
+
+
+model_name_path_map:
+  geneformer: resources/geneformer-12L-30M
+  biogpt: microsoft/biogpt
+  bert: bert-base-multilingual-cased

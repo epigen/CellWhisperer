@@ -56,3 +56,21 @@ def get_path(config_keys: List[str], __c=config, __testing=False, **kwargs):
     path /= dict_level.format(**kwargs)
 
     return path
+
+
+def model_path_from_name(model_name: str):
+    """
+    Translate model names (e.g. biogpt) to their respective model weigth paths (e.g. microsoft/biogpt)
+    """
+
+    try:
+        path_name = config["model_name_path_map"][model_name]
+    except KeyError:
+        return model_name
+    else:
+        local = Path(config["PROJECT_ROOT"] / path_name)
+
+        if local.exists():
+            return local.as_posix()
+        else:
+            return path_name

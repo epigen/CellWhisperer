@@ -4,6 +4,7 @@ import scipy.sparse as sp
 import numpy as np
 import dataclasses
 import pandas as pd
+import logging
 
 from transformers import BertForMaskedLM, BertConfig
 from typing import Optional, Union, Tuple, Any
@@ -56,6 +57,7 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
             annot = pd.read_csv(
                 get_path(["paths", "ensembl_gene_symbol_map"]), index_col=0
             )
+            # TODO add assertion that adata.var.index contains the gene names
             adata_w_id = adata[:, [x for x in adata.var.index if x in annot.index]]
             # Since the copy() mechanism seems to be broken
             adata_w_id = anndata.AnnData(
@@ -221,8 +223,8 @@ class GeneformerModel(
     def __init__(
         self,
         config: GeneformerConfig,
-        add_pooling_layer: bool = True,
-        use_mask_token: bool = False,
+        add_pooling_layer: bool = True,  # TODO refactor-delete
+        use_mask_token: bool = False,  # TODO refactor-delete
     ):
         super().__init__(config)
         self.config = config
@@ -265,6 +267,7 @@ class GeneformerModel(
         bool_masked_pos (`torch.BoolTensor` of shape `(batch_size, num_patches)`, *optional*):
             Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
         """
+        assert not return_dict, f"No support for return_dict={return_dict}"
         layer_to_quant = quant_layers(self.geneformer_model) + self.config.emb_layer
         embs = get_embs(
             self.geneformer_model,
@@ -276,7 +279,7 @@ class GeneformerModel(
             self.config.forward_batch_size,
             self.config.summary_stat,
         )
-        return embs
+        return (embs,)
 
         # if not return_dict:
         #     head_outputs = (
@@ -292,3 +295,30 @@ class GeneformerModel(
         #     hidden_states=encoder_outputs.hidden_states,
         #     attentions=encoder_outputs.attentions,
         # )
+
+    @classmethod
+    def from_pretrained(
+        cls, pretrained_model_name_or_path: str, *args, **kwargs
+    ) -> PreTrainedModel:
+        if "config" in kwargs:
+            config = kwargs.pop("config")
+            if isinstance(config, dict):
+                config = GeneformerConfig(**config)
+            elif not isinstance(config, GeneformerConfig):
+                raise ValueError(
+                    "Parameter `config` must be a dictionary or an instance of `GeneformerConfig`."
+                )
+        else:
+            config = GeneformerConfig()
+            logging.warning(
+                "No configuration provided. Using default configuration from checkpoint."
+            )
+
+        model = cls(config, *args, **kwargs)
+
+        model.geneformer_model = BertForMaskedLM.from_pretrained(
+            pretrained_model_name_or_path,
+            output_hidden_states=True,
+            output_attentions=False,
+        )
+        return model

@@ -1,0 +1,111 @@
+# requires you to set up kaggle API (https://github.com/Kaggle/kaggle-api?tab=readme-ov-file)
+
+sys.path.insert(0, Path(workflow.basedir).parents[1].as_posix())
+from single_cellm.config import get_path, config  # TODO could replace this with configfile:
+
+DATASET_NAME = "perturbation_kaggle"
+RESOURCE_PATH = config["PROJECT_ROOT"] / "resources" / DATASET_NAME
+RESULTS_PATH = config["PROJECT_ROOT"] / "results" / DATASET_NAME
+
+EMBEDDING_SENTENCE = lambda wildcards: "{cell_type} sample treated with {sm_name} ({sm_lincs_id})"
+CONDA_ENV_NAME = "single-cellm6"
+NUM_FOLDS = 3
+
+rule all:
+    input:
+        get_path(["paths", "full_dataset"], dataset=DATASET_NAME),
+
+rule download_data:
+    output:
+        adata=RESOURCE_PATH / "adata_train.parquet",
+        de=RESOURCE_PATH / "de_train.parquet",  # not needed in practice
+        meta=RESOURCE_PATH / "adata_obs_meta.csv",
+    params:
+        kaggle_competition="open-problems-single-cell-perturbations",
+        resource_path=RESOURCE_PATH,
+    conda:
+        config["PROJECT_ROOT"] / "envs" / "kaggle.yaml"
+    shell:
+        """
+        mkdir -p {params.resource_path}
+        cd {params.resource_path}
+        kaggle competitions download -c {params.kaggle_competition}
+        unzip {params.kaggle_competition}.zip
+        """
+
+rule convert_read_count_matrix:
+    input:
+        adata=rules.download_data.output.adata,
+        de=rules.download_data.output.de,
+        meta=rules.download_data.output.meta,
+    output:
+        get_path(["paths", "full_dataset"], dataset=DATASET_NAME)
+    params:
+        extensive=False,  # TODO we could try this later
+        anndata_label_name=config["anndata_label_name"],
+        embedding_sentence=EMBEDDING_SENTENCE,
+    conda:
+        CONDA_ENV_NAME
+        #config["PROJECT_ROOT"] / "envs" / "main.yaml"
+    script:
+        "scripts/convert_read_count_matrix.py"
+
+rule pretrain:
+    output:
+        config["PROJECT_ROOT"] / "results" / "models" / "jointemb" / "pretrained.ckpt"
+    conda:
+        CONDA_ENV_NAME
+        #config["PROJECT_ROOT"] / "envs" / "main.yaml"
+    shell: """
+        single_cellm fit --config configs/pretrain.yaml --best_model_path {output}
+    """
+
+# TODO from here on below should go somewhere else maybe
+rule fine_tune:
+    """
+    Simultaneously fine-tune the model and train the head
+    """
+    input:
+        model=ancient(rules.pretrain.output[0]),
+        fine_tuning_config="configs/fine_tuning.yaml",
+    output:
+        RESULTS_PATH / "fine_tuned.ckpt",
+    conda:
+        CONDA_ENV_NAME
+        #config["PROJECT_ROOT"] / "envs" / "main.yaml"
+    shell: """
+        single_cellm fit --ckpt_path {input.model} --config {input.fine_tuning_config} --best_model_path {output} --trainer.logger.init_args.mode disabled
+    """
+
+rule train_deg_head:
+    input:
+        model=rules.fine_tune.output[0],
+        de=RESOURCE_PATH / "de_train.parquet",
+        test_map=RESOURCE_PATH / "id_map.csv",
+    output:
+        model=RESULTS_PATH / "deg_predictor.ckpt",
+        predictions=RESULTS_PATH / "test_set_predictions.csv",
+        score=RESULTS_PATH / "train_deg_head.score"
+    params:
+        embedding_sentence = EMBEDDING_SENTENCE,
+        num_folds = NUM_FOLDS,
+        wandb_logging = True,
+        # TODO add hyper parameters
+    conda:
+        CONDA_ENV_NAME
+        #config["PROJECT_ROOT"] / "envs" / "main.yaml"
+    notebook:
+        "notebooks/train_deg_head.py.ipynb"
+
+rule kaggle_submit:
+    input:
+        predictions=rules.train_deg_head.output["predictions"],
+    log:
+        RESULTS_PATH / "upload.log"
+    conda:
+        config["PROJECT_ROOT"] / "envs" / "kaggle.yaml"
+    shell:
+        """
+        # TODO attach meaningful message
+        kaggle competitions submit -c open-problems-single-cell-perturbations -f {input.predictions} -m "Message" > {log}
+        """

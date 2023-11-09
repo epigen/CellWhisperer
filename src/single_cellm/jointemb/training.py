@@ -4,7 +4,7 @@
 See https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html for documentation on usage
 """
 
-from single_cellm.config import get_path
+from single_cellm.config import get_path, model_path_from_name
 import torch
 from lightning.pytorch.cli import LightningCLI, SaveConfigCallback
 import subprocess
@@ -36,22 +36,30 @@ class SingleCeLLMCLI(LightningCLI):
         super().__init__(*args, **kwargs)
 
     def add_arguments_to_parser(self, parser):
-        parser.add_argument("--freeze_pretrained", default=True)
         parser.add_argument("--best_model_path", type=Path, default=None)
+        parser.add_argument("--log_level", default="WARNING")
+
+    def before_instantiate_classes(self) -> None:
+        logging.basicConfig(level=self.config["fit.log_level"])
 
     def before_fit(self) -> None:
         # We need to preload this model
         try:
             self.model.load_pretrained_models(
-                PROJECT_DIR / "resources" / "geneformer-12L-30M"
+                model_path_from_name(
+                    self.config.fit.model.model_config["transcriptome_config"][
+                        "model_type"
+                    ]
+                ),
+                model_path_from_name(
+                    self.config.fit.model.model_config["text_config"]["model_type"]
+                ),
             )
         except FileNotFoundError:
             logging.error(
                 "Unabld to fine geneformer model. Please download first (see `rna` snakemake pipeline)"
             )
             raise
-        if self.config["fit.freeze_pretrained"]:
-            self.model.freeze_pretrained()
 
     def after_fit(self) -> None:
         if self.config["fit.best_model_path"] is not None:

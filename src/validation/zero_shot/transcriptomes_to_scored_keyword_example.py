@@ -51,7 +51,7 @@ if run_example:
 
     # Model loading
     logging.info("Loading LLM embedding model...")
-    # TODO what should we use here instead of the hardcoded path?
+    # TODO load trained model checkpoint (see single_cellm_lightning.py)
     geneformer_biogpt_model_path = Path(
         "~/projects/single-cellm/results/models/geneformer-biogpt"
     ).expanduser()
