@@ -220,9 +220,6 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         return_dict: Optional[bool] = True,
         **kwargs,
     ) -> Union[Tuple[torch.Tensor], CLIPOutput]:
-        assert (
-            return_dict
-        ), "Please request the output as a dict for TranscriptomeTextDualEncoderModel"
         # assert output_attentions is None
         # assert output_hidden_states is None
 

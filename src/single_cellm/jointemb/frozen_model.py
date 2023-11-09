@@ -31,9 +31,11 @@ def hash_object(obj):
 
 class FrozenCachedModel(nn.Module):
     """
-    This "model" emulates a real model but just retrieves cached outputs, whenever possible.
+    This "model" emulates a real model but just retrieves cached outputs, whenever possible. This is achieved through the following measures:
 
-    Also stores model in a list to avoid its property-tracking and on CPU to not waste GPU memory
+    - Storing `model` in a list to avoid its property-tracking. And moving to CPU to not waste GPU memory
+    - Use python `property`s to mimic the interface of the model
+    - Use hashes and a python dict to store the cached model outputs
     """
 
     def __init__(self, model, cache_file: Optional[Union[str, Path]] = None):

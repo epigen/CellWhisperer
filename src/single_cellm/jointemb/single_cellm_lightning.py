@@ -76,7 +76,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             expression_tokens=expression_tokens,
             expression_token_lengths=expression_token_lengths,
             attention_mask=attention_mask,
-            return_dict=dict,
+            return_dict=True,
         )
 
     def process_step(self, batch, batch_idx, step_type):
