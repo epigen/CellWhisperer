@@ -22,10 +22,11 @@ classifiers = [
 single_cellm = "single_cellm.jointemb.training:cli_main"
 
 [tool.setuptools.packages.find]
-where = ["src", "modules/Geneformer"]
+where = ["src", "modules/Geneformer", "modules"]
 namespaces = false
 # packages = ["single_cellm", "geneformer"]
 
 [tool.setuptools.package-dir]
 "single_cellm" = "src/single_cellm"
 "geneformer" = "modules/Geneformer/geneformer"
+"clip_lite" = "modules/clip_lite"

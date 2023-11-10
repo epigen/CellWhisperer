@@ -4,3 +4,6 @@
 [submodule "modules/Geneformer"]
 	path = modules/Geneformer
 	url = git@github.com:epigen/Geneformer.git
+[submodule "modules/CLIP-Lite"]
+	path = modules/clip_lite
+	url = git@github.com:epigen/CLIP-Lite.git
