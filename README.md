@@ -58,6 +58,10 @@ single_cellm fit --config run_config.yaml
 - resources: External, references, datasets and tools that are project inherent and can be reproduced or downloaded with your scripts and pipelines
 - src (and all other directories needed to run the source code)
 
+### Code style
+
+We use `blacken` for automated code formatting. 
+
 ## How to install a new library (i.e. extend the environment)?
 
 1. Load the environment, defined by envs/main.yaml with conda (`conda activate singlecellm`)
