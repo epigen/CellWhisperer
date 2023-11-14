@@ -5,6 +5,7 @@ from .geneformer_model import GeneformerConfig
 from transformers.configuration_utils import PretrainedConfig
 from transformers.utils import logging
 from transformers.models.auto.configuration_auto import AutoConfig
+from typing import Any, Dict, Optional
 
 
 logger = logging.get_logger(__name__)
@@ -36,13 +37,13 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
 
     def __init__(
         self,
-        projection_dim=512,
-        logit_scale_init_value=2.6592,
-        transcriptome_config=None,
-        freeze_transcriptome_model=True,
-        text_config=None,
-        freeze_text_model=False,
-        **kwargs,
+        projection_dim: int = 512,
+        logit_scale_init_value: float = 2.6592,
+        transcriptome_config: Optional[dict] = None,
+        freeze_transcriptome_model: bool = True,
+        text_config: Optional[dict] = None,
+        freeze_text_model: bool = False,
+        **kwargs: Any,
     ):
         super().__init__(**kwargs)
 

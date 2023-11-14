@@ -1,5 +1,6 @@
 from typing import List, Dict, Optional, Union
 from pathlib import Path
+import logging
 import yaml
 import torch
 
@@ -73,4 +74,9 @@ def model_path_from_name(model_name: str):
         if local.exists():
             return local.as_posix()
         else:
+            if "resources" in path_name or "results" in path_name:
+                logging.warning(
+                    "Model path not found, despite 'results' or 'resources' in path. Maybe you need to download it manually"
+                )
+
             return path_name
