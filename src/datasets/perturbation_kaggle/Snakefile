@@ -51,6 +51,9 @@ rule convert_read_count_matrix:
         "scripts/convert_read_count_matrix.py"
 
 rule pretrain:
+    """
+    This corresponds to our initial training. We might want to skip this if already done within other tasks
+    """
     output:
         config["PROJECT_ROOT"] / "results" / "models" / "jointemb" / "pretrained.ckpt"
     conda:
@@ -63,7 +66,7 @@ rule pretrain:
 # TODO from here on below should go somewhere else maybe
 rule fine_tune:
     """
-    Simultaneously fine-tune the model and train the head
+    Fine-tune our model on the single cell data from the perturbation dataset
     """
     input:
         model=ancient(rules.pretrain.output[0]),
