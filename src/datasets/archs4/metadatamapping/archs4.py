@@ -11,6 +11,7 @@ from . import concurrency
 from . import dbutils
 from typing import Union, Iterable, Any
 
+
 def parse_table(archs4_file: Union[str, PathLike], root_key: str, table_key: str) -> dict[str, Any]:
     """
     parses the archs4 h5 file and extracts the data at /root_key/table_key into a dictionary
@@ -150,71 +151,27 @@ def get_filtered_sample_metadata(archs4_file: Union[str, PathLike], keys_to_reta
     return table
 
 
-def get_not_yet_mapped(table: pd.DataFrame, outfilename: Union[PathLike, str]) -> pd.DataFrame:
-    """
-    If outfilename does not exist yet it is created and table is returned as is. If outfilename exists
-    accessions contained in it are already mapped and thus will be removed from table before returning it
-    
-    :param table:         pandas.DataFrame containing the accessions we want to retrieve
-    :param outfilename:   path to a file the mapping output should be or is written to
-    
-    :return:              pandas.DataFrame containing only the accessions that are not already found in outfilename
-    """
-    # this can definitely be refactored but I leave it as is for now
-    if not os.path.exists(outfilename):
-        retrieved_accessions = set()
-        with open(outfilename, 'w') as outfile:
-            outfile.write(
-                'accession\tuid\tdatabase\n'
-            )
-            
-        return table
-
-    else:
-        retrieved_accessions = dbutils.read_retrieved_accessions(outfilename)
-        retrieved = table.apply(
-            lambda x: any(
-                x[acc] in retrieved_accessions 
-                for acc in ['geo_accession', 'srx_accession', 'biosample_accession']
-            ),
-            axis = 1
-        )
-        return table.loc[~retrieved, :]
-
-
-def map_accessions_to_srauids(table: pd.DataFrame, outfilename: Union[PathLike], chunksize: int = 5000, n_processes: int = 1) -> None:
+def map_accessions_to_srauids(table: pd.DataFrame, outfilename: Union[PathLike, str], chunksize: int = 5000, n_processes: int = 1) -> None:
     """
     takes a pandas.DataFrame containing columns srx_accession, biosample_accession and geo_accession, maps those accessions
     to SRA UIDs and writes the resulting map to outfilename. If n_processes > 1 this will be done concurrently
     
     :param table:         pandas.DataFrame containing columns srx_accession, biosample_accession and geo_accession
+    :param db:            string denoting the NCBI database to retrieve the UIDs from
     :param outfilename:   path to the outputfile the resulting map should be written to
     :param chunksize:     size of the indiviually processed chunks of the input table
     :param n_processes:   number of processes to use for mapping if n_processes > 1 this will be done concurrently using multiprocessing.imap
     
     :return:              None
     """
-    mapping_table = get_not_yet_mapped(
+    mapping_table = dbutils.get_not_yet_mapped(
         table,
         outfilename
     )
     
-    table_chunks = it.batched(
+    concurrency.process_data_in_chunks(
         mapping_table.iterrows(),
-        n = 5000
+        dbutils.map_accessions_to_uids,
+        db = 'sra',
+        outfilename = outfilename
     )
-
-    if n_processes > 1:
-        concurrency.multiprocess_map(
-            table_chunks,
-            dbutils.map_accessions_to_srauid,
-            n_processes,
-            outfilename = outfilename
-        )
-
-    else:
-        concurrency.singleprocess_map(
-            table_chunks,
-            dbutils.map_accessions_to_srauid,
-            outfilename = outfilename
-        )

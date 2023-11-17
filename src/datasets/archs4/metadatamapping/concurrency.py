@@ -1,8 +1,9 @@
 import multiprocessing as mp
+import itertools as it
 
 from functools import partial
 from os import PathLike
-from typing import Iterable, Callable, Union, TextIO
+from typing import Iterable, Callable, Union, TextIO, Any
 
 
 def write(file_handle: TextIO, uid_list: list[list[str]]) -> None:
@@ -66,9 +67,10 @@ def multiprocess_map(chunks: Iterable, func: Callable, n_processes: int, **kwarg
         map_function = partial(func, filelock = filelock, **kwargs)
 
         # this needs to be invoked by iterating over it
-        for _ in p.imap(map_function, chunks):
-            continue
-
+        results = [result for result in p.imap(map_function, chunks)]
+    
+    return results
+    
             
 def singleprocess_map(chunks: Iterable, func: Callable, **kwargs) -> None:
     """
@@ -82,6 +84,41 @@ def singleprocess_map(chunks: Iterable, func: Callable, **kwargs) -> None:
     """
     map_function = partial(func, **kwargs)
     
+    results_iterable = map(map_function, chunks)
     # this needs to be invoked by iterating over it
-    for _ in map(map_function, chunks):
-        continue
+    return list(results_iterable)
+
+
+def process_data_in_chunks(iterable: Iterable, func: Callable, chunksize: int = 5000, n_processes: int = 1, **kwargs) -> Any:
+    """
+    uses func to process the given iterable in chunks of size chunksize possibly concurrently
+    
+    :param iterable:      iterable containing the data to be processed with func
+    :param func:          function that processes the contents of iterable
+    :param chunksize:     size of the indiviually processed chunks of the input iterable
+    :param n_processes:   number of processes to use for mapping if n_processes > 1 this will be done concurrently using multiprocessing.imap
+    :param **kwargs:      any keyword arguments that need to be passed to func
+    
+    :return:              anything that is returned by func
+    """
+    chunks = it.batched(
+        iterable,
+        n = 5000
+    )
+
+    if n_processes > 1:
+        results = multiprocess_map(
+            chunks,
+            func,
+            n_processes,
+            **kwargs
+        )
+
+    else:
+        results = singleprocess_map(
+            chunks,
+            func,
+            **kwargs
+        )
+
+    return results
