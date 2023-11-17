@@ -1,5 +1,6 @@
 .ipynb_checkpoints/
 *.tsv
+*.csv
 archs4_sample_metadata.tsv.gz
 metasra.v1-8.json
 human_gene_v2.2.h5
