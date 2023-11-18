@@ -25,7 +25,6 @@ from transformers.models.auto.modeling_auto import AutoModel
 
 from dataclasses import dataclass
 from .config import TranscriptomeTextDualEncoderConfig
-from .loss import clip_loss
 
 logger = logging.get_logger(__name__)
 
