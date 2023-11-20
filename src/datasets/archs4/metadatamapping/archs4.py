@@ -1,10 +1,10 @@
 import h5py
 import gc
-import os
+import scipy
 
 import pandas as pd
 import numpy as np
-import itertools as it
+import anndata as ad
 
 from os import PathLike
 from . import concurrency
@@ -34,7 +34,7 @@ def parse_table(archs4_file: Union[str, PathLike], root_key: str, table_key: str
             column_data = table[key][:]
         
         else:
-            column_data = table[key].asstr()[:]
+            column_data = [x.decode('utf-8') for x in table[key][:]]
         
         data[key] = column_data
     
@@ -151,7 +151,12 @@ def get_filtered_sample_metadata(archs4_file: Union[str, PathLike], keys_to_reta
     return table
 
 
-def map_accessions_to_srauids(table: pd.DataFrame, outfilename: Union[PathLike, str], chunksize: int = 5000, n_processes: int = 1) -> None:
+def map_accessions_to_srauids(
+    table: pd.DataFrame, 
+    outfilename: Union[PathLike, str], 
+    chunksize: int = 5000, 
+    n_processes: int = 1
+) -> None:
     """
     takes a pandas.DataFrame containing columns srx_accession, biosample_accession and geo_accession, maps those accessions
     to SRA UIDs and writes the resulting map to outfilename. If n_processes > 1 this will be done concurrently
@@ -175,3 +180,109 @@ def map_accessions_to_srauids(table: pd.DataFrame, outfilename: Union[PathLike, 
         db = 'sra',
         outfilename = outfilename
     )
+
+
+# adapted from archs4py as this would not install due to issues with Python 3.12 and numpy requirement
+def index(file, sample_idx, gene_idx = [], silent=False, n_processes = 1):
+    """
+    Retrieve gene expression data from a specified file for the given sample and gene indices.
+
+    Args:
+        file (str): The file path or object containing the data.
+        sample_idx (list): A list of sample indices to retrieve expression data for.
+        gene_idx (list, optional): A list of gene indices to retrieve expression data for. Defaults to an empty list (return all).
+        silent (bool, optional): Whether to disable progress bar. Defaults to False.
+
+    Returns:
+        pd.DataFrame: A pandas DataFrame containing the gene expression data.
+    """
+    sample_idx = sorted(sample_idx)
+    gene_idx = sorted(gene_idx)
+    row_encoding = get_encoding(file)
+    with h5py.File(file, "r") as f:
+        genes = np.array([x.decode("UTF-8") for x in np.array(f[row_encoding])])
+        if len(sample_idx) == 0:
+            return pd.DataFrame(index=genes[gene_idx])
+        gsm_ids = np.array([x.decode("UTF-8") for x in np.array(f["meta/samples/geo_accession"])])[sample_idx]
+
+    if len(gene_idx) == 0:
+        gene_idx = list(range(len(genes)))
+
+    data = concurrency.process_data_in_chunks(
+        zip(sample_idx, gsm_ids),
+        get_samples,
+        n_processes=n_processes,
+        file = file,
+        gene_idx = gene_idx
+    )
+
+    exp = ad.AnnData(
+        X = scipy.sparse.vstack(data),
+        var = pd.DataFrame(index = genes[gene_idx]),
+        obs = pd.DataFrame(index = gsm_ids)
+    )
+    exp.var_names_make_unique()
+    return exp
+
+
+def consecutive(
+    sequence_array: np.ndarray, 
+    *additional_arrays_to_split: np.ndarray,  
+    stepsize: int = 1
+) -> list[np.ndarray]:
+    """
+    finds all sequences of consecutive elements in a numpy array
+    and splits the input arrays accordingly
+    """
+    split_idx = np.where(np.diff(sequence_array) != stepsize)[0]+1
+    arrays = [sequence_array, *additional_arrays_to_split]
+    return [np.split(array, split_idx) for array in arrays]
+
+
+def get_encoding(file):
+    with h5py.File(file) as f:
+        if "genes" in list(f["meta"].keys()):
+            if "gene_symbol" in list(f["meta/genes"].keys()):
+                return "meta/genes/gene_symbol"
+            elif "symbol" in list(f["meta/genes"].keys()):
+                return "meta/genes/symbol"
+        elif "transcripts" in list(f["meta"].keys()):
+            if "ensembl_id" in list(f["meta/trancripts"].keys()):
+                return "meta/trancripts/ensembl_id"
+        else:
+            raise Exception("error in gene/transcript meta data")
+
+
+def read_sample_data(file, idx, gsm, gene_idx):
+    with h5py.File(file, "r") as f:
+        dense_expression = f["data/expression"][:, idx][gene_idx, :]
+        sparse_expression = scipy.sparse.csr_matrix(dense_expression.T)
+        sparse_expression.eliminate_zeros()
+
+        del dense_expression
+        gc.collect()
+
+    return sparse_expression
+    
+
+# this is a wrapper to ensure compliance with API
+def get_samples(sample_idx_gsms, file, gene_idx, **kwargs):
+    sample_idxs = np.array([item[0] for item in sample_idx_gsms])
+    sample_gsms = np.array([item[1] for item in sample_idx_gsms])
+        
+    data = [
+        read_sample_data(file, consecutive_idx, consecutive_gsm, gene_idx) 
+        for consecutive_idx, consecutive_gsm in zip(*consecutive(sample_idxs, sample_gsms))
+    ]
+    return scipy.sparse.vstack(data)
+
+
+def samples(file, sample_ids, silent=False, n_processes = 1):
+    sample_ids = set(sample_ids)
+    with h5py.File(file, "r") as f:
+        samples = [x.decode("UTF-8") for x in np.array(f["meta/samples/geo_accession"])]
+
+    idx = [i for i,x in enumerate(samples) if x in sample_ids]
+    if len(idx) > 0:
+        return index(file, idx, silent=silent, n_processes=n_processes)
+    

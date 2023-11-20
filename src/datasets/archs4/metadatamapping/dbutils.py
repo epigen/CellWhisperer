@@ -364,7 +364,8 @@ def data_from_esummary(
 
 
 def summaries_from_uids(
-    uids: Iterable[int, str], 
+    uids: Iterable[Union[int, str]], 
+    db: str,
     parse_function: Callable, 
     data_parsers: dict[str, Any],
     chunksize: int = 50000
@@ -374,6 +375,7 @@ def summaries_from_uids(
     Values in these columns are determined by parse_function
 
     :param uids:                iterable of uids to retrieve eSummaries for
+    :param db:                  database to retrieve the summaries from
     :param parse_function:      function used to parse the summaries
     :param data_parsers:        parser dictionary forwarded to parse function
     :param chunksize:           size of the chunks of uids posted to the Entrez history server
@@ -391,16 +393,16 @@ def summaries_from_uids(
         logging.info(f'retrieving uids {n} to {n + len(uid_list)}')
 
         n += len(uid_list)
-        web_env_info = create_webenv(uid_list, 'sra')
+        web_env_info = create_webenv(uid_list, db)
 
         logging.debug(web_env_info)
         
         result_frame = data_from_esummary(
             web_env_info,
-            'sra',
+            db,
             parse_function,
             len(uid_list),
-            summary_parsers
+            data_parsers
         )
 
         result_frames.append(result_frames)

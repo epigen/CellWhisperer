@@ -103,7 +103,7 @@ def process_data_in_chunks(iterable: Iterable, func: Callable, chunksize: int = 
     """
     chunks = it.batched(
         iterable,
-        n = 5000
+        n = chunksize
     )
 
     if n_processes > 1:
