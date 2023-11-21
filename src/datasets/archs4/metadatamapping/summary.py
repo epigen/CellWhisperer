@@ -14,6 +14,22 @@ from . import concurrency
 from . import dbutils
 
 
+def uid_from_esearch(accession: str, db: str) -> list[list[str]]:
+    """
+    uses Bio.Entrez.esearch to request the database internal UID of the given accession
+    see  https://www.ncbi.nlm.nih.gov/books/NBK25497/table/chapter2.T._entrez_unique_identifiers_ui/?report=objectonly
+    for available databases
+    
+    :param accession:  accession to retrieve UID for
+    :param db:         name of the Entrez database to retrieve the UID from
+    
+    :return:           list of lists of accession, uid and database name the uid was retrieved from
+    """
+    response_handle = Entrez.esearch(db = db, term = accession)
+    uid_list = Entrez.read(response_handle)['IdList']
+    return [[accession, uid, db] for uid in uid_list]
+
+
 def map_accessions_to_uids(
     accessions: Iterable[pd.Series], 
     db: str, 
