@@ -136,7 +136,7 @@ def data_from_esummary(
         key.lower(): [] for key in data_parsers.keys()
     }
     
-    for retmin, retmax in core.get_chunklimits(n_uids, chunksize):
+    for retmin, retmax in dbutils.get_chunklimits(n_uids, chunksize):
         time.sleep(5) # avoid too many requests error
         response = dbutils.retry(
             esummaries_from_history,
