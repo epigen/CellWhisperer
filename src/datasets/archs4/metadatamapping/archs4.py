@@ -8,7 +8,6 @@ import anndata as ad
 
 from os import PathLike
 from . import concurrency
-from . import dbutils
 from typing import Union, Iterable, Any
 
 
@@ -149,37 +148,6 @@ def get_filtered_sample_metadata(archs4_file: Union[str, PathLike], keys_to_reta
     gc.collect()
     
     return table
-
-
-def map_accessions_to_srauids(
-    table: pd.DataFrame, 
-    outfilename: Union[PathLike, str], 
-    chunksize: int = 5000, 
-    n_processes: int = 1
-) -> None:
-    """
-    takes a pandas.DataFrame containing columns srx_accession, biosample_accession and geo_accession, maps those accessions
-    to SRA UIDs and writes the resulting map to outfilename. If n_processes > 1 this will be done concurrently
-    
-    :param table:         pandas.DataFrame containing columns srx_accession, biosample_accession and geo_accession
-    :param db:            string denoting the NCBI database to retrieve the UIDs from
-    :param outfilename:   path to the outputfile the resulting map should be written to
-    :param chunksize:     size of the indiviually processed chunks of the input table
-    :param n_processes:   number of processes to use for mapping if n_processes > 1 this will be done concurrently using multiprocessing.imap
-    
-    :return:              None
-    """
-    mapping_table = dbutils.get_not_yet_mapped(
-        table,
-        outfilename
-    )
-    
-    concurrency.process_data_in_chunks(
-        mapping_table.iterrows(),
-        dbutils.map_accessions_to_uids,
-        db = 'sra',
-        outfilename = outfilename
-    )
 
 
 # adapted from archs4py as this would not install due to issues with Python 3.12 and numpy requirement
