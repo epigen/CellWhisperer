@@ -222,6 +222,7 @@ def index(file, sample_idx, gene_idx = [], silent=False, n_processes = 1):
         obs = pd.DataFrame(index = gsm_ids)
     )
     exp.var_names_make_unique()
+    exp.eliminate_zeros()
     return exp
 
 
