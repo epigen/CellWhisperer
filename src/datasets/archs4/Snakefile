@@ -241,7 +241,7 @@ rule generate_anndata_file:
         PROJECT_DIR / "metadata/metasra_metadata.tsv.gz"
         
     output:
-        PROJECT_DIR / "data/archs4_annotated.h5ad"
+        PROJECT_DIR / "data/archs4_metasra.h5ad"
     
     threads: config['archs4_data_extraction']['n_processes']
     
