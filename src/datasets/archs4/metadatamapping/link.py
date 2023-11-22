@@ -2,6 +2,8 @@ import logging
 
 from Bio import Entrez
 from typing import Any, Union, Iterable
+from . import dbutils
+from functools import partial
 
 import pandas as pd
 import itertools as it
@@ -43,7 +45,7 @@ def get_links(link_item: dict[str, Any]) -> list[list[str, str]]:
     return links
     
 
-def link_uids(uid_list: list[Union[str, int]], dbfrom: str, dbto: str) -> list[list[str, str]]:
+def link_uids(uid_list: list[Union[str, int]], dbfrom: str, dbto: str) -> pd.DataFrame:
     """
     takes an iterable of UIDs originating from dbfrom and links them to dbto via eLink
 
@@ -51,7 +53,7 @@ def link_uids(uid_list: list[Union[str, int]], dbfrom: str, dbto: str) -> list[l
     :param dbfrom:      string denoting the NCBI database the UIDs stem from
     :param dbto:        string denoting the NCBI database to link the UIDs to
 
-    :return:            list of lists containing UID pairs retrieved from eLink
+    :return:            pandas.DataFrame with columns dbfrom, dbto containing the linked UIDs
     """
     response_handle = Entrez.elink(
         dbfrom = dbfrom,
@@ -66,9 +68,15 @@ def link_uids(uid_list: list[Union[str, int]], dbfrom: str, dbto: str) -> list[l
         links = get_links(link_item)
         linked_ids.extend(links)
     
+
+    linked_ids = pd.DataFrame(
+        linked_ids,
+        columns = [dbfrom, dbto]
+    )
+    
     return linked_ids
 
-    
+
 def link_sra_to_biosample(sra_uids: Iterable[Union[str, int]]) -> pd.DataFrame:
     """
     links SRA UIDs to BioSample UIDs
@@ -77,25 +85,14 @@ def link_sra_to_biosample(sra_uids: Iterable[Union[str, int]]) -> pd.DataFrame:
 
     :return:            pandas.DataFrame containing the 'sra' and 'biosample' column with the respective UIDs
     """
-    n = 0
-    dbfrom = 'sra'
-    dbto = 'biosample'
-    linked_ids = []
-    for id_chunk in it.batched(sra_uids, n = 1000):
-        logging.info(f'linking uids {n} to {n + len(id_chunk)}')
-        n += len(id_chunk)
-        
-        links = retry(
-            link_uids,
-            id_chunk,
-            dbfrom = dbfrom,
-            dbto = dbto
-        )
-    
-        linked_ids.extend(links)
-    
-    linked_ids = pd.DataFrame(
-        linked_ids,
-        columns = [dbfrom, dbto]
+    retry_link = partial(
+        link_uids,
+        dbfrom = 'sra',
+        dbto = 'biosample'
     )
-    return linked_ids
+    links = dbutils.process_in_chunks(
+        sra_uids,
+        retry_link,
+        chunksize = 1000
+    )
+    return pd.concat(links)

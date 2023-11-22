@@ -161,6 +161,34 @@ def data_from_esummary(
     return data.drop_duplicates().reset_index(drop = True)
 
 
+def uids_to_summaries(uid_list, db, parse_function, data_parsers):
+    """
+    retrieves summaries for uids from eSummary and returns a pandas.DataFrame with columns = keys of data_parsers
+    Values in these columns are determined by parse_function
+
+    :param uids:                iterable of uids to retrieve eSummaries for
+    :param db:                  database to retrieve the summaries from
+    :param parse_function:      function used to parse the summaries
+    :param data_parsers:        parser dictionary forwarded to parse function
+    :param chunksize:           size of the chunks of uids posted to the Entrez history server
+
+    :return:                    pandas.DataFrame containing the summary parsing results
+    """
+    web_env_info = dbutils.create_webenv(uid_list, db)
+
+    logging.debug(web_env_info)
+    
+    accessions = data_from_esummary(
+        web_env_info,
+        db,
+        parse_function,
+        data_parsers,
+        len(uid_list)
+    )
+
+    return accessions
+
+
 def summaries_from_uids(
     uids: Iterable[Union[int, str]], 
     db: str,
@@ -180,29 +208,13 @@ def summaries_from_uids(
 
     :return:                    pandas.DataFrame containing the summary parsing results
     """
-    uid_batches = it.batched(
+    result_frames = dbutils.process_in_chunks(
         uids,
-        n = chunksize
+        uids_to_summaries,
+        chunksize = chunksize,
+        db = db,
+        parse_function = parse_function,
+        data_parsers = data_parsers,
     )
-
-    n = 0
-    result_frames = []
-    for uid_list in uid_batches:
-        logging.info(f'retrieving uids {n} to {n + len(uid_list)}')
-
-        n += len(uid_list)
-        web_env_info = dbutils.create_webenv(uid_list, db)
-
-        logging.debug(web_env_info)
-        
-        result_frame = data_from_esummary(
-            web_env_info,
-            db,
-            parse_function,
-            data_parsers,
-            len(uid_list)
-        )
-
-        result_frames.append(result_frames)
 
     return pd.concat(result_frames)

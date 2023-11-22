@@ -7,6 +7,7 @@ import pandas as pd
 from . import parsers
 from . import summary
 from . import concurrency
+from . import dbutils
 from typing import Union, Iterable
 from os import PathLike
 from io import BytesIO
@@ -139,6 +140,46 @@ def biosample_uids_to_metadata(biosample_uids: Iterable[Union[str, int]], chunks
     return metadata
 
 
+def study_id_to_metasra(study_ids: Iterable[str]) -> pd.DataFrame:
+    """
+    used the MetaSRA API to retrieve normalized metdata for all samples in 
+    a study given by study_ids from their database
+    
+    :param study_ids:   iterable containing SRA Biostudy accessions
+
+    :return:            pandas.DataFrame containing MetaSRA normalised metadata
+    """
+    # urllib complains about CERT_NONE but MetaSRA fails with cert so we disable the warning
+    urllib3.disable_warnings()
+    metasra_data = []
+    for i, study_id in enumerate(study_ids):
+        # cert_reqs = 'CERT_NONE' not recommended but needed due to unresolvable SSLError
+        # http = urllib3.PoolManager(
+        #     ca_certs = certifi.where(),
+        #     cert_reqs = 'CERT_NONE'                      
+        # )
+
+        # retrieving number of studies that match search criteria
+        r = urllib3.request(
+            'GET', 
+            'https://metasra.biostat.wisc.edu/api/v01/samples.csv',
+            fields = {
+                'study': study_id,
+                'species': 'human', 
+                'assay': 'RNA-seq', 
+                'limit': 10000,
+                'skip': 0
+            }
+        )
+
+        study_data = pd.read_csv(BytesIO(r.data))
+        
+        if not study_data.empty:
+            metasra_data.append(study_data)
+    
+    return pd.concat(metasra_data)
+
+
 def metasra_from_study_id(study_ids: Iterable[str]) -> pd.DataFrame:
     """
     used the MetaSRA API to retrieve normalized metdata for all samples in 
@@ -148,32 +189,13 @@ def metasra_from_study_id(study_ids: Iterable[str]) -> pd.DataFrame:
 
     :return:            pandas.DataFrame containing MetaSRA normalised metadata
     """
-    metasra_data = []
-    urllib3.disable_warnings()
-    logging.info(f'retrieving {len(study_ids)} studies')
-    for i, study_id in enumerate(study_ids):
-        # cert_reqs = 'CERT_NONE' not recommended but needed due to unresolvable SSLError
-        http = urllib3.PoolManager(
-            ca_certs = certifi.where(),
-            cert_reqs = 'CERT_NONE'                      
-        )
+    metasra_data = dbutils.process_in_chunks(
+        study_ids,
+        study_id_to_metasra,
+        chunksize = 1000
+    )
 
-        # retrieving number of studies that match search criteria
-        r = http.request(
-            'GET', 
-            'http://metasra.biostat.wisc.edu/api/v01/samples.csv',
-            fields = {
-                'study': study_id,
-                'species': 'human', 
-                'assay': 'RNA-seq', 
-                'limit': 10000,
-                'skip': 0
-            }
-        )
-        if not i + 1 % 1000:
-            print(i)
+    return pd.concat(metasra_data)
 
-        study_data = pd.read_csv(BytesIO(r.data))
-        metasra_data.append(study_data)
 
-        return pd.concat(metasra_data)
+# def merge_retrieved_infos():

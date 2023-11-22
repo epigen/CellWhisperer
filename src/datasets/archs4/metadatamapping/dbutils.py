@@ -3,8 +3,11 @@ import urllib
 import logging
 import http
 
+import itertools as it
+import pandas as pd
+
 from Bio import Entrez
-from typing import Callable, Any, Union
+from typing import Callable, Any, Union, Iterable
 
 
 def get_chunklimits(iterable_length: int, chunksize: int) -> tuple[int, int]:
@@ -100,3 +103,60 @@ def retry(func: Callable, *args, n_retries: int = 5, sleep: int = 10, **kwargs) 
             
         
     return result
+
+
+def process_in_chunks(items: Iterable[Any], processing_function: Callable, chunksize = 50000, **kwargs) -> list[Any]:
+    """
+    processes the given iterable with processing_function in chunks of size chunksize
+
+    :param items:                   iterable containing objects that need to be processed with processing_function
+    :param processing_function:     function that takes the iterable and processes it additional arguments can be given with **kwargs
+    :param chunksize:               number of items per processing chunk
+
+    :return:                        list of whatever processing_function returns for each chunk    
+    """
+    chunks = it.batched(
+        items,
+        n = chunksize
+    )
+
+    n = 0
+    results = []
+    for chunk in chunks:
+        logging.info(f'retrieving items {n} to {n + len(chunk)}')
+        n += len(chunk)
+
+        result = processing_function(chunk, **kwargs)
+
+        results.append(result)
+
+    return results
+
+
+    def normalize_string(string: str) -> str:
+        """
+        removes non ascii characters from a given string
+
+        :param string:      string from which to remove non ascii characters
+
+        :return:            string with just ascii characters
+        """
+        normalized_string = []
+        for char in string:
+            if ord(char) < 128 and char != ' ':
+                normalized_string.append(char)
+        
+        return ''.join(normalized_string)
+
+
+    def all_equal(x: pd.Series) -> bool:
+        """
+        checks if all items in a pandas.Series are the same
+
+        :param x:       pandas.Series object to check
+
+        :return:        True if all items are the same else False
+        """
+        ref = normalize_string(x.iloc[0])
+        return all(normalize_string(item) == ref for _, item in x.items())
+        
