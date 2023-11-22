@@ -1,0 +1,361 @@
+from pathlib import Path
+
+PROJECT_DIR = Path(workflow.basedir).resolve().parents[2]
+configfile: PROJECT_DIR / "config.yaml"
+
+rule archs4_accessions_to_srauids:
+    """
+    Retrieve SRA UIDs for each sample in the ARCHS4 file
+    This can take quite some time (ran ~48 - 72h with 4 cores)
+    """
+    input: 
+        PROJECT_DIR / config["archs4_h5"]
+    output: 
+        PROJECT_DIR / "metadata/archs4_accession_uids.tsv"
+    threads: config['archs4_to_uid']['n_processes']
+    params:
+        entrez_email = config['entrez']['email'],
+        entrez_api_key = config['entrez']['api_key']
+
+    run:
+        from metadatamapping import archs4, metadata
+        from Bio import Entrez
+        import logging
+
+        Entrez.email = entrez_email
+        Entrez.api_key = entrez_api_key
+
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+
+        # this might be nice to have as config but I leave it as is for now
+        retain_keys = [
+            'geo_accession', 'characteristics_ch1', 'molecule_ch1', 'readsaligned', 'relation', 
+            'series_id', 'singlecellprobability', 'source_name_ch1', 'title'
+        ]
+        archs4_metadata = archs4.get_filtered_sample_metadata(
+            input[0],
+            retain_keys
+        )
+
+        metadata.map_accessions_to_srauids(
+            archs4_metadata,
+            output[0],
+            n_processes = threads
+        )
+
+
+rule gzip_archs4_accession_srauid_map:
+    """
+    compresses the raw textfile to save space
+    """
+    input:
+        PROJECT_DIR / "metadata/archs4_accession_uids.tsv"
+    output:
+        PROJECT_DIR / "metadata/archs4_accession_uids.tsv.gz"
+
+    shell:
+        "gzip {input}"
+    
+
+rule accessions_from_srauids:
+    """
+    uses the retrieved SRA UIDs and fetches all associated accessions
+    from the SRA server using eSummary
+    """
+    input:
+        PROJECT_DIR / "metadata/archs4_accession_uids.tsv.gz"
+    output:
+        PROJECT_DIR / "metadata/ncbi_accessions_from_srauids.tsv.gz"
+    params:
+        entrez_email = config['entrez']['email'],
+        entrez_api_key = config['entrez']['api_key']
+    
+    run:
+        import logging
+        
+        import pandas as pd
+
+        from metadatamapping import metadata
+        from Bio import Entrez
+
+        Entrez.email = entrez_email
+        Entrez.api_key = entrez_api_key
+
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+
+        archs4_accession_uids = pd.read_csv(
+            input[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+        archs4_accession_uids.drop_duplicates(inplace = True)
+
+        ncbi_accessions = metadata.srauids_to_accessions(
+            archs4_accession_uids
+        )
+
+        ncbi_accessions.to_csv(
+            output[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+
+rule link_sra_uids_to_biosample_uids:
+    """
+    links SRA UIDs to BioSample UIDs to subsequently retrieve BioSample metadata
+    """
+    input:
+        PROJECT_DIR / "metadata/ncbi_accessions_from_srauids.tsv.gz"
+    output:
+        PROJECT_DIR / "metadata/srauids_to_biosampleuids.tsv.gz"
+    params:
+        entrez_email = config['entrez']['email'],
+        entrez_api_key = config['entrez']['api_key']
+    
+    run:
+        import logging
+        
+        import pandas as pd
+
+        from metadatamapping import link
+        from Bio import Entrez
+
+        Entrez.email = entrez_email
+        Entrez.api_key = entrez_api_key
+
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+
+        ncbi_accessions = pd.read_csv(
+            input[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+        srauids_to_biosampleuids = link.link_sra_to_biosample(
+            ncbi_accessions.uid
+        )
+
+        srauids_to_accessions.dropna(inplace = True)
+
+        ncbi_accessions.to_csv(
+            output[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+
+rule collect_metadata_from_biosample:
+    """
+    uses the linked biosample UIDs to fetch available metadata from NCBI BioSample
+    """
+    input:
+        PROJECT_DIR / "metadata/srauids_to_biosampleuids.tsv.gz"
+    output:
+        PROJECT_DIR / "metadata/biosample_metadata.tsv.gz"
+    params:
+        entrez_email = config['entrez']['email'],
+        entrez_api_key = config['entrez']['api_key']
+    
+    run:
+        import logging
+        
+        import pandas as pd
+
+        from metadatamapping import metadata
+        from Bio import Entrez
+
+        Entrez.email = entrez_email
+        Entrez.api_key = entrez_api_key
+
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+
+        srauids_to_biosampleuids = pd.read_csv(
+            input[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+        biosample_metadata = metadata.biosample_uids_to_metadata(
+            srauids_to_biosampleuids.biosample
+        )
+
+        biosample_metadata.to_csv(
+            output[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+
+rule collect_metadata_from_metasra:
+    """
+    uses the linked biosample UIDs to fetch available metadata from NCBI BioSample
+    """
+    input:
+        PROJECT_DIR / "metadata/ncbi_accessions_from_srauids.tsv.gz"
+    output:
+        PROJECT_DIR / "metadata/metasra_metadata.tsv.gz"
+    
+    run:
+        import logging
+        
+        import pandas as pp
+
+        from metadatamapping import metadata
+
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+
+        ncbi_accessions = pd.read_csv(
+            input[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+        metasra_metadata = metadata.metasra_from_study_id(
+            ncbi_accessions.study.unique()
+        )
+
+        metasra_metadata.to_csv(
+            output[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+        
+
+rule generate_anndata_file:
+    """
+    collects the results of all steps, extracts the relevant expression data
+    from the ARCHS4 file and generates an h5ad file from it
+    """
+    input:
+        PROJECT_DIR / config["archs4_h5"],
+        PROJECT_DIR / "metadata/srauids_to_biosampleuids.tsv.gz",
+        PROJECT_DIR / "metadata/biosample_metadata.tsv.gz",
+        PROJECT_DIR / "metadata/ncbi_accessions_from_srauids.tsv.gz",
+        PROJECT_DIR / "metadata/metasra_metadata.tsv.gz"
+        
+    output:
+        PROJECT_DIR / "data/archs4_metasra.h5ad"
+    
+    threads: config['archs4_data_extraction']['n_processes']
+    
+    run:
+        import anndata as ad
+        import pandas as pd
+        from metadatamapping import archs4, dbutils
+
+        def read_compessed_tsv(filename):
+            df = pd.read_csv(
+                filename,
+                sep = '\t',
+                compression = 'gzip'
+            )
+            return df
+
+
+        srauids_to_biosampleuids = read_compessed_tsv(input[1])
+        biosample_metadata = read_compessed_tsv(input[2])
+        ncbi_accessions = read_compessed_tsv(input[3])
+        metasra_metadata = read_compessed_tsv(input[4])
+
+        retain_keys = [
+            'geo_accession', 'characteristics_ch1', 'molecule_ch1', 'readsaligned', 'relation', 
+            'series_id', 'singlecellprobability', 'source_name_ch1', 'title'
+        ]
+        archs4_metadata = archs4.get_filtered_sample_metadata(
+            input[0],
+            retain_keys
+        )
+
+        biosample_uids_and_metadata = srauids_to_biosampleuids.merge(
+            biosample_metadata,
+            on = 'biosample',
+            how = 'inner'
+        )
+
+        accessions_biosample_metadata_uids = biosample_uids_and_metadata \
+            .rename(
+                columns = {
+                    'sra': 'sra_uid',
+                    'biosample': 'biosample_uid',
+                    'title': 'biosample_title',
+                    'attribute': 'raw_biosample_metadata'
+                }
+            ).merge(
+                ncbi_accessions.rename(
+                    columns = {
+                        'uid': 'sra_uid'
+                    }
+                ),
+                on = 'sra_uid',
+                how = 'inner'
+            )
+        
+        metasra_annotated = metasra_metadata.merge(
+            accessions_biosample_metadata_uids.rename(
+                columns = {
+                    'sample': 'sample_id'
+                }
+            ),
+            on = 'sample_id',
+            how = 'inner'
+        )
+
+        archs4_annotated = metasra_annotated.merge(
+            archs4_metadata.drop(
+                columns = [
+                        'srx_accession', 
+                        'biosample_accession'
+                    ]
+            ).rename(
+                columns = {
+                    'geo_accession': 'geo',
+                    'title': 'geo_title',
+                    'source_name_ch1': 'geo_source_name',
+                    'characteristics_ch1': 'geo_metadata'
+                }
+            ),
+            on = 'geo',
+            how = 'inner'
+        )
+
+        # this is done in order to remove scrambled annotations due to spurious links to BioSample
+        spurious_duplication = archs4_annotated.sra_uid.duplicated(keep = False)
+        archs4_annotated_nonduplicated = archs4_annotated.loc[~spurious_duplication, :]
+        archs4_annotated_duplicated = archs4_annotated.loc[spurious_duplication, :]
+
+        all_equal_idx = archs4_annotated_duplicated[['geo_title', 'biosample_title']].apply(
+            dbutils.all_equal,
+            axis = 1
+        )
+
+        archs4_annotated_deduplicated = pd.concat(
+            [
+                archs4_annotated_nonduplicated,
+                archs4_annotated_duplicated.loc[all_equal_idx, :]
+            ]
+        )
+        archs4_annotated_deduplicated.reset_index(
+            drop = True, 
+            inplace = True
+        )
+
+        archs4_data = archs4.samples(
+            input[0],
+            archs4_annotated_deduplicated.geo,
+            n_processes = threads
+        )
+
+        archs4_data.obs = archs4_data.obs.merge(
+            archs4_annotated_deduplicated.set_index('geo'),
+            left_index = True,
+            right_index = True,
+            how = 'left'
+        )
+        archs4_data.write(output[0])

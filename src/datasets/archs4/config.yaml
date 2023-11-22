@@ -1,0 +1,8 @@
+archs4_h5: data/human_gene_v2.2.h5
+entrez:
+  email: dmalzl@cemm.oeaw.ac.at
+  api_key: 746c80043a6e2ceeb01ae587f8ab1a8ace09
+archs4_to_uid:
+  n_processes: 4
+archs4_data_extraction:
+  n_processes: 4
