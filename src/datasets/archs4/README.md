@@ -11,7 +11,7 @@ This part of the repository is dedicated to the generation of a MetaSRA annotate
 The principle workflow is outlined in the contained `Snakefile` which should work together with the `config.yaml`. The necessary environment is specified in `environment.yaml`. Additionally there are utility scripts to e.g. download ARCHS4.
 
 # The `metadatamapping` package
-The whole workflow heavily relies on the `metadatamapping` Python package developed for this usecase. And should be easily extensible to other databases.
+The whole workflow heavily relies on the [`metadatamapping`](https://github.com/dmalzl/metadatamapping) Python package developed for this usecase and should be easily extensible to other databases.
 
 # Entrez credentials
 `metadatamapping` retrieves data from the Entrez eUtilities using the [`biopython` interface](https://biopython.org/docs/1.75/api/Bio.Entrez.html). By default the Entrez API only allows 3 requests per second if `Entrez.email` and `Entrez.api_key` are not set. This can be increased when setting these properties accordingly which also speeds up the most timeconsuming part of the pipeline which is the accession -> SRA UID mapping as this relies on eSearch which only allows for one accession at a time (maybe it also takes several but I did not test this as I expect it to be cumbersome to pull apart then). So please make sure to set the `entrez` properties in the `config.yaml` appropriately (or use mine)
