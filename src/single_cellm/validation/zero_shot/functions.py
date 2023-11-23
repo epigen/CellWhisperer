@@ -10,11 +10,16 @@ from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProces
 from transformers import AutoTokenizer
 import anndata
 import json
-from typing import Union, List, Dict
+from typing import Tuple, Union, List, Dict
 import torchmetrics
 
-def adata_list_to_embeds(adata_list: List[anndata.AnnData], model: TranscriptomeTextDualEncoderModel, 
-                         transcriptome_processor: GeneformerTranscriptomeProcessor, device: torch.device) -> torch.tensor:
+
+def adata_list_to_embeds(
+    adata_list: List[anndata.AnnData],
+    model: TranscriptomeTextDualEncoderModel,
+    transcriptome_processor: GeneformerTranscriptomeProcessor,
+    device: torch.device,
+) -> torch.tensor:
     """
     Compute the transcriptome embeddings for each adata in adata_list.
     TODO: Only works with same number of cells per adata
@@ -25,7 +30,7 @@ def adata_list_to_embeds(adata_list: List[anndata.AnnData], model: Transcriptome
     :param device: torch.device instance
     :return: torch.tensor of transcriptome embeddings. Shape: n_adatas * n_cells_per_adata * embedding_size (e.g. 512)
     """
-    transcriptome_embeds_all_adata=None
+    transcriptome_embeds_all_adata = None
     for adata in adata_list:
         transcriptome_tokens = transcriptome_processor(
             adata, return_tensors="pt", padding=True
@@ -35,18 +40,28 @@ def adata_list_to_embeds(adata_list: List[anndata.AnnData], model: Transcriptome
         for k, v in transcriptome_tokens.items():
             transcriptome_tokens[k] = v.to(device)
 
-        _, transcriptome_embeds = model.get_transcriptome_features(**transcriptome_tokens)
+        _, transcriptome_embeds = model.get_transcriptome_features(
+            **transcriptome_tokens
+        )
         transcriptome_embeds = transcriptome_embeds / transcriptome_embeds.norm(
             dim=-1, keepdim=True
         )
         if transcriptome_embeds_all_adata is None:
-            transcriptome_embeds_all_adata=transcriptome_embeds.unsqueeze(0)
+            transcriptome_embeds_all_adata = transcriptome_embeds.unsqueeze(0)
         else:
-            transcriptome_embeds_all_adata=torch.cat([transcriptome_embeds_all_adata,transcriptome_embeds.unsqueeze(0)],dim=0)
+            transcriptome_embeds_all_adata = torch.cat(
+                [transcriptome_embeds_all_adata, transcriptome_embeds.unsqueeze(0)],
+                dim=0,
+            )
     return transcriptome_embeds_all_adata
 
 
-def text_list_to_embeds(text_list: List[str], model: TranscriptomeTextDualEncoderModel, text_tokenizer: AutoTokenizer, device: torch.device) -> torch.tensor:
+def text_list_to_embeds(
+    text_list: List[str],
+    model: TranscriptomeTextDualEncoderModel,
+    text_tokenizer: AutoTokenizer,
+    device: torch.device,
+) -> torch.tensor:
     """
     Compute the text embeddings for each text in text_list.
     :param text: List[str] instance. Each text will be tokenized and embedded.
@@ -66,17 +81,18 @@ def text_list_to_embeds(text_list: List[str], model: TranscriptomeTextDualEncode
 
     return text_embeds
 
+
 def score_text_vs_transcriptome_many_vs_many(
     model: TranscriptomeTextDualEncoderModel,
     device: torch.device,
     adata_list_or_transcriptome_embeds: Union[List[anndata.AnnData], torch.tensor],
     text_list_or_text_embeds: Union[List[str], torch.tensor],
-    average_mode: str = "embeddings", 
+    average_mode: str = "embeddings",
     text_tokenizer: AutoTokenizer = None,
     transcriptome_processor: GeneformerTranscriptomeProcessor = None,
     chunk_size_text_emb_and_scoring: int = 128,
     score_norm_method: str = "zscore",
-    ):
+):
     """
     Compute the similarity between the text and the transcriptome embeddings.
     :param model: TranscriptomeTextDualEncoderModel instance. Both transcriptome and text embeddings will be computed using this model.
@@ -101,35 +117,44 @@ def score_text_vs_transcriptome_many_vs_many(
 
     #### Prepare transcriptome embeddings ###
     if average_mode == "cells":
-        raise NotImplementedError("average_mode='cells' not implemented yet") #TODO
+        raise NotImplementedError("average_mode='cells' not implemented yet")  # TODO
         # TypeError: sum() got an unexpected keyword argument 'keepdims' in transcriptome_processor when providing an anndata with only 1 cell
         # average_adata_list = [anndata.AnnData(
         #     expression.X.mean(axis=0), # TODO I get an error with keepdims=True),
         #     var=expression.var,
         # ) for expression in adata_list_or_transcriptome_embeds]
         # adata_list_or_transcriptome_embeds=average_adata_list
-    if type(adata_list_or_transcriptome_embeds)==torch.Tensor:
+    if type(adata_list_or_transcriptome_embeds) == torch.Tensor:
         transcriptome_embeds = adata_list_or_transcriptome_embeds
     else:
-        transcriptome_embeds = adata_list_to_embeds(adata_list_or_transcriptome_embeds, model, transcriptome_processor, device) # n_adatas * n_cells_per_adata * 512
+        transcriptome_embeds = adata_list_to_embeds(
+            adata_list_or_transcriptome_embeds, model, transcriptome_processor, device
+        )  # n_adatas * n_cells_per_adata * 512
     if average_mode == "embeddings":
-        transcriptome_embeds = transcriptome_embeds.mean(dim=1, keepdim=False) # now: n_adatas * 512
+        transcriptome_embeds = transcriptome_embeds.mean(
+            dim=1, keepdim=False
+        )  # now: n_adatas * 512
 
     #### Chunk the text to avoid out-of-memory errors ###
     logits_per_text_list = []
     text_chunks = [
         text_list_or_text_embeds[i : i + chunk_size_text_emb_and_scoring]
-        for i in range(0, len(text_list_or_text_embeds), chunk_size_text_emb_and_scoring)
+        for i in range(
+            0, len(text_list_or_text_embeds), chunk_size_text_emb_and_scoring
+        )
     ]
     for chunk in text_chunks:
-
-        if type(text_list_or_text_embeds)==torch.Tensor:
+        if type(text_list_or_text_embeds) == torch.Tensor:
             text_embeds = chunk
         else:
-            text_embeds = text_list_to_embeds(chunk, model, text_tokenizer, device) # chunk_size_text_emb_and_scoring * 512
+            text_embeds = text_list_to_embeds(
+                chunk, model, text_tokenizer, device
+            )  # chunk_size_text_emb_and_scoring * 512
 
         # Compute logits (similarity to expression embedding) for the current chunk and append to the list
-        logits_per_text = (torch.matmul(text_embeds, transcriptome_embeds.t()) * logit_scale) # n_text * n_adatas
+        logits_per_text = (
+            torch.matmul(text_embeds, transcriptome_embeds.t()) * logit_scale
+        )  # n_text * n_adatas
         logits_per_text_list.append(logits_per_text.cpu().detach())
 
     # Concatenate the results to get the final text_embeds
@@ -150,20 +175,20 @@ def score_text_vs_transcriptome_many_vs_many(
     return logits_per_text
 
 
-def get_scores_adatas_vs_text_list(adata_dict_or_embedding_dict: Dict[str, Union[anndata.AnnData, torch.Tensor]],
-                                   model: TranscriptomeTextDualEncoderModel,
-                                   device: torch.device,
-                                   text_tokenizer: AutoTokenizer,
-                                   transcriptome_processor: GeneformerTranscriptomeProcessor,
-                                   text_list_or_text_embeds: Union[List[str], torch.Tensor] = None,
-                                   average_mode = "embeddings",
-                                   chunk_size_text_emb_and_scoring: int = 64,
-                                   score_norm_method: str = "zscore",
-
-    ) -> dict:
+def get_scores_adatas_vs_text_list(
+    adata_dict_or_embedding_dict: Dict[str, Union[anndata.AnnData, torch.Tensor]],
+    model: TranscriptomeTextDualEncoderModel,
+    device: torch.device,
+    text_tokenizer: AutoTokenizer,
+    transcriptome_processor: GeneformerTranscriptomeProcessor,
+    text_list_or_text_embeds: Union[List[str], torch.Tensor] = None,
+    average_mode="embeddings",
+    chunk_size_text_emb_and_scoring: int = 64,
+    score_norm_method: str = "zscore",
+) -> Tuple[Dict[str, float], pd.DataFrame]:
     """
     Score the model's ability to produce similar embeddings for the given texts and adata objects.
-    
+
     Args:
         adata_dict_or_embedding_dict: Either: A dictionary of anndata objects (each of a single cell type), \
               where the keys are the celltypes and the values are the anndata objects. \
@@ -183,23 +208,23 @@ def get_scores_adatas_vs_text_list(adata_dict_or_embedding_dict: Dict[str, Union
             (similarity to the transcriptome). "zscore" will zscore the logits across all terms. "softmax" will apply softmax to the logits.\
                 "01norm" will normalize the logits to the range [0,1].
     Returns:
-        A dictionary with the following keys:
+        1. A dictionary with the following keys:
             precision: The precision score.
             recall: The recall score.
             accuracy: The accuracy score.
             f1: The f1 score.
-            scores_df: A dataframe with the scores for each text and adata combination.
-
+        2. A dataframe with the similarity scores for each text and adata combination.
     """
 
-    celltypes_to_process=adata_dict_or_embedding_dict.keys()
-    adata_list_or_transcriptome_embeds=adata_dict_or_embedding_dict.values()
+    celltypes_to_process = adata_dict_or_embedding_dict.keys()
+    adata_list_or_transcriptome_embeds = adata_dict_or_embedding_dict.values()
 
     if text_list_or_text_embeds is None:
-        text_list_or_text_embeds=[f"Cell type: {x}" for x in celltypes_to_process]
+        text_list_or_text_embeds = [f"Cell type: {x}" for x in celltypes_to_process]
 
     # Get the scores
-    scores=score_text_vs_transcriptome_many_vs_many(model=model,
+    scores = score_text_vs_transcriptome_many_vs_many(
+        model=model,
         device=device,
         text_list_or_text_embeds=text_list_or_text_embeds,
         adata_list_or_transcriptome_embeds=adata_list_or_transcriptome_embeds,
@@ -207,30 +232,55 @@ def get_scores_adatas_vs_text_list(adata_dict_or_embedding_dict: Dict[str, Union
         text_tokenizer=text_tokenizer,
         chunk_size_text_emb_and_scoring=chunk_size_text_emb_and_scoring,
         score_norm_method=score_norm_method,
-        average_mode=average_mode)
+        average_mode=average_mode,
+    )
 
     # scores is a tensor of shape n_text * n_adata
     # It is normalized column-wise, i.e. for each adata, the mean of scores is 0 (if using zscore normalization)
 
     # TODO also return unnormalized scores to show if there are adatas where none of the texts are close in embedding space?
 
-    scores_df=pd.DataFrame(scores.cpu().numpy(),index=[f"prediction: {x}" for x in celltypes_to_process],
-                       columns=[f"input adata: {x}" for x in celltypes_to_process])
+    scores_df = pd.DataFrame(
+        scores.cpu().numpy(),
+        index=[f"prediction: {x}" for x in celltypes_to_process],
+        columns=[f"input adata: {x}" for x in celltypes_to_process],
+    )
 
     true_celltype = np.arange(len(celltypes_to_process))
-    num_classes=int(max(true_celltype)+1)
-    preds = scores.t() # torchmetrics expects preds to be of shape n_samples * n_classes. Our "samples" are our adatas, so we need to transpose
+    num_classes = int(max(true_celltype) + 1)
+    preds = (
+        scores.t()
+    )  # torchmetrics expects preds to be of shape n_samples * n_classes. Our "samples" are our adatas, so we need to transpose
     target = torch.Tensor(true_celltype).long()
-    torchmetric_kwargs={"preds":preds,"target":target,"num_classes":num_classes,"average":"macro","top_k":1}
+    torchmetric_kwargs = {
+        "preds": preds,
+        "target": target,
+        "num_classes": num_classes,
+        "average": "macro",
+        "top_k": 1,
+    }
 
-    precision = torchmetrics.functional.classification.multiclass_precision(**torchmetric_kwargs)
-    recall = torchmetrics.functional.classification.multiclass_recall(**torchmetric_kwargs)
-    accuracy = torchmetrics.functional.classification.multiclass_accuracy(**torchmetric_kwargs)
-    f1 = torchmetrics.functional.classification.multiclass_f1_score(**torchmetric_kwargs)
+    precision = torchmetrics.functional.classification.multiclass_precision(
+        **torchmetric_kwargs
+    )
+    recall = torchmetrics.functional.classification.multiclass_recall(
+        **torchmetric_kwargs
+    )
+    accuracy = torchmetrics.functional.classification.multiclass_accuracy(
+        **torchmetric_kwargs
+    )
+    f1 = torchmetrics.functional.classification.multiclass_f1_score(
+        **torchmetric_kwargs
+    )
 
-    result_dict={"precision":precision,"recall":recall,"accuracy":accuracy,"f1":f1, "scores_df":scores_df}
+    result_dict = {
+        "precision": precision.item(),
+        "recall": recall.item(),
+        "accuracy": accuracy.item(),
+        "f1": f1.item(),
+    }
 
-    return result_dict
+    return result_dict, scores_df
 
 
 def anndata_to_scored_keywords(
@@ -245,8 +295,7 @@ def anndata_to_scored_keywords(
     obs_cols: List[str] = [],
     additional_text_dict: dict = {},
     score_norm_method: str = "zscore",
-    ) -> Union[pd.DataFrame, str]:
-
+) -> Union[pd.DataFrame, str]:
     """
     Compute the similarity between transcriptome embeddings on the on hand and the EnrichR terms + cell metadata on the other hand. \
     TODO potential improvement: Creating the dataframe from the start would make the code simpler. 
@@ -280,13 +329,15 @@ def anndata_to_scored_keywords(
         "embeddings",
     ], f"average_mode must be one of ['cells', 'embeddings'], but is {average_mode}"
 
-    if type(adata_or_embedding)==anndata.AnnData:
-        expression=adata_or_embedding
+    if type(adata_or_embedding) == anndata.AnnData:
+        expression = adata_or_embedding
         assert all(
             [x in expression.obs.columns for x in obs_cols]
         ), f"obs_cols must be a subset of {expression.obs.columns}, but is {obs_cols}"
-    elif type(adata_or_embedding)==torch.Tensor:
-        assert obs_cols==[], f"obs_cols must be empty if adata_dict_or_embedding is a tensor, but is {obs_cols}"
+    elif type(adata_or_embedding) == torch.Tensor:
+        assert (
+            obs_cols == []
+        ), f"obs_cols must be empty if adata_dict_or_embedding is a tensor, but is {obs_cols}"
     assert os.path.exists(
         terms_json_path
     ), f"terms_json_path {terms_json_path} does not exist"
@@ -325,24 +376,28 @@ def anndata_to_scored_keywords(
     #### Get text embeddings and compare to transcriptome embeddings ####
     logging.info("Computing text embeddings and logits...")
 
-    scores=score_text_vs_transcriptome_many_vs_many(
+    scores = score_text_vs_transcriptome_many_vs_many(
         model=model,
         device=device,
         text_list_or_text_embeds=text,
-        adata_list_or_transcriptome_embeds=[expression] if type(adata_or_embedding)==anndata.AnnData else adata_or_embedding,
+        adata_list_or_transcriptome_embeds=[expression]
+        if type(adata_or_embedding) == anndata.AnnData
+        else adata_or_embedding,
         transcriptome_processor=transcriptome_processor,
         text_tokenizer=text_tokenizer,
         chunk_size_text_emb_and_scoring=chunk_size_text_emb_and_scoring,
         score_norm_method=score_norm_method,
-        average_mode=average_mode
+        average_mode=average_mode,
     )
-    
-    logits_per_text = scores.squeeze(dim=1) # squeeze the first dimension, which is 1 because we only have one transcriptome embedding
+
+    logits_per_text = scores.squeeze(
+        dim=1
+    )  # squeeze the first dimension, which is 1 because we only have one transcriptome embedding
 
     # split text into the different libraries and obs columns, and rank by normalized logits
     logits_df = pd.DataFrame(logits_per_text.numpy(), index=text, columns=["logits"])
     logits_df["term_without_prefix"] = np.nan
-    logits_df["term_without_prefix"]=logits_df["term_without_prefix"].astype("object")
+    logits_df["term_without_prefix"] = logits_df["term_without_prefix"].astype("object")
     i = 0
     for library in terms.keys():
         text_this_lib = text[i : i + n_terms_per_lib[library]]
@@ -381,4 +436,3 @@ def formatted_text_from_df(df, n_top_per_term):
         top_n_per_split.append(top_n_text)
 
     return "\n".join(top_n_per_split)
-

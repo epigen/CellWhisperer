@@ -3,11 +3,11 @@ import logging
 import torch
 from single_cellm.jointemb.model import TranscriptomeTextDualEncoderModel
 from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
-from single_cellm.validation.zero_shot.transcriptomes_to_scored_keywords import (
+from single_cellm.validation.zero_shot.functions import (
     anndata_to_scored_keywords,
     formatted_text_from_df,
 )
-from single_cellm.utils.cuda import set_freest_gpu_as_device
+from single_cellm.utils.cuda import get_device
 from single_cellm.config import get_path, config
 from transformers import AutoTokenizer
 import anndata
@@ -24,13 +24,14 @@ if run_example:
     # Prepare the anndata object
     logging.info("Loading anndata...")
 
-
     if use_immgen:
         # To read from csv:
         # adata = anndata.read_csv("https://sharehost.hms.harvard.edu/immgen/GSE227743/GSE227743_Normalized_Gene_count_table.csv",
         #     first_column_names=True,
         # ).T
-        adata = anndata.read_h5ad(get_path(["paths", "read_count_table"], dataset="immgen"))
+        adata = anndata.read_h5ad(
+            get_path(["paths", "read_count_table"], dataset="immgen")
+        )
         if not "cell type" in adata.obs.columns:
             adata.obs["cell type"] = [x.split("#")[0] for x in adata.obs.index.values]
         if not "cell type rough" in adata.obs.columns:
@@ -40,10 +41,12 @@ if run_example:
         adata = adata[adata.obs["cell type rough"] == "B"]
     else:
         adata = adata = anndata.read_h5ad(
-        get_path(["paths", "read_count_table"], dataset="tabula_sapiens_100_cells_per_type")
+            get_path(
+                ["paths", "read_count_table"],
+                dataset="tabula_sapiens_100_cells_per_type",
+            )
         )
         adata = adata[adata.obs["cell_ontology_class"] == "mature nk t cell"]
-
 
     # Load the enrichr terms path (assumes this is already pre-computed, see single-cellm/src/validation/zero_shot/write_enrichr_terms.py):
     terms_json_path = get_path(["paths", "enrichr_terms_json"])
@@ -54,8 +57,7 @@ if run_example:
     geneformer_biogpt_model_path = Path(
         "~/projects/single-cellm/results/models/geneformer-biogpt"
     ).expanduser()
-    set_freest_gpu_as_device()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device()
     model = TranscriptomeTextDualEncoderModel.from_pretrained(
         geneformer_biogpt_model_path
     ).to(device)
@@ -77,7 +79,9 @@ if run_example:
         device=device,
         average_mode="embeddings",
         chunk_size_text_emb_and_scoring=64,
-        obs_cols=["cell_ontology_class"] if not use_immgen else ["cell type", "cell type rough"],
+        obs_cols=["cell_ontology_class"]
+        if not use_immgen
+        else ["cell type", "cell type rough"],
         additional_text_dict={"day_of_induction": ["10", "20"], "treatment": ["dox"]},
         score_norm_method="zscore",
     )

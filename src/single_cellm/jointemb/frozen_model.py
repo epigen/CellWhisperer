@@ -76,7 +76,7 @@ class FrozenCachedModel(nn.Module):
 
             model_hash = hash_object(self.model.config)
             try:
-                cache = cache["model_hash"]
+                cache = cache[model_hash]
                 logger.info(f"Model hash {model_hash} loaded.")
             except KeyError:
                 logger.info(
@@ -88,6 +88,7 @@ class FrozenCachedModel(nn.Module):
         return cache
 
     def save_cache(self):
+        logger.info("Saving cache")
         if self.cache_file is None:
             return
 

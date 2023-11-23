@@ -145,3 +145,6 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
     def on_train_end(self):
         self.model.store_cache()
+
+    def on_validation_end(self):
+        self.model.store_cache()

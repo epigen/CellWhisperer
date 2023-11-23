@@ -10,8 +10,9 @@ def main():
     pl_model = TranscriptomeTextDualEncoderLightning()
     model = pl_model.model
 
-    odds_ratio_metric = evaluate_cancer_gene_essentiality(model)
-    print(odds_ratio_metric)
+    metrics, results_df = evaluate_cancer_gene_essentiality(model)
+    model.store_cache()
+    print(metrics, results_df)
 
 
 if __name__ == "__main__":
