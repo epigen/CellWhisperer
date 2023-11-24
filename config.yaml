@@ -25,6 +25,7 @@ datasets:
   - tabula_sapiens
   - tabula_sapiens_100_cells_per_type
   - perturbation_kaggle
+  - archs4_metasra
 
 model_name_path_map:
   geneformer: resources/geneformer-12L-30M

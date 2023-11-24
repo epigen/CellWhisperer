@@ -21,11 +21,13 @@ def annotation_ids(wildcards):
 
 rule all:
     input:
-        [PROJECT_DIR / config["paths"]["full_dataset"].format(dataset=dataset) for dataset in config["datasets"]]
+        [PROJECT_DIR / config["paths"]["full_dataset"].format(dataset=dataset) for dataset in DATASETS]
 
 rule prepare_requests:
     """
     Open the structured annotations dataframe and extract the sample with the appropriate ID
+
+    TODO: either just return the folder or find another way to run all IDs at the same time. loading the json 100.000 times is stupid. (we could even cache it)
     """
     input:
         structured_annotations = lambda wildcards: ancient(PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset=wildcards.dataset)),
@@ -47,17 +49,54 @@ rule prepare_requests:
         with open(output["yaml"], "w") as f:
             yaml.dump(sample, f)
 
-rule process_annotation:
+# TODO this is commented for now as we might in future rely exclusively on oobabooga
+# rule process_annotation_openai:
+#     input:
+#         human_message = ancient(rules.prepare_requests.output.yaml),
+#         system_message = "prompts/process_annotations_zero_shot_gpt4.txt",
+#     output:
+#         processed_annotation = protected(PROCESSED_FILE),  # I marked this as protected as it might be costly to produce
+#     conda:
+#         PROJECT_DIR / "envs" / "main.yaml"
+#         # "single-cellm"
+#     script:
+#         "scripts/process_annotations.py"
+
+rule process_annotation_local:
+    """
+    Requires running the oobabooga server with the following command:
+    python server.py --listen-host 0.0.0.0 --listen --api --api-port 5002 --model microsoft_Orca-2-13b
+
+    """
     input:
-        human_message = ancient(rules.prepare_requests.output.yaml),
-        system_message = "prompts/process_annotations_zero_shot.txt",
+        instruction="prompts/process_annotations_zero_shot_local.txt",
+        sample_yaml=rules.prepare_requests.output.yaml,
     output:
         processed_annotation = protected(PROCESSED_FILE),  # I marked this as protected as it might be costly to produce
-    conda:
-        PROJECT_DIR / "envs" / "main.yaml"
-        # "single-cellm"
-    script:
-        "scripts/process_annotations.py"
+    params:
+        api_url = "http://s0-l00.hpc.meduniwien.ac.at:5000/v1/completions"  # TODO make sure that the nginx server is running alongside oobabooga clients
+    run:
+        import requests
+        import json
+
+        url =
+        headers = {"Content-Type": "application/json"}
+        instruction = Path(input.instruction).read_text()
+        sample_yaml = Path(input.sample_yaml).read_text()
+        data = {
+            "prompt": f"User: {instruction}:\n{sample_yaml}\n\nAssistant: ",
+            "max_tokens": 300,
+            "seed": 10,
+            "temperature": 0.2,
+            "top_p": 0.95,
+            "top_k": 50
+        }
+
+        response = requests.post(params.api_url, headers=headers, data=json.dumps(data))
+
+        result = response.json()["choices"][0]["text"]
+
+        Path(output[0]).write_text(result)
 
 rule aggregate_processed:
     """
