@@ -10,6 +10,7 @@ import torch
 from pathlib import Path
 from torch import nn
 from .geneformer_model import GeneformerConfig, GeneformerModel
+from clip_lite.loss import GlobalDiscriminatorDot
 
 from transformers.modeling_utils import PreTrainedModel
 from transformers.modeling_outputs import BaseModelOutputWithPooling
@@ -111,22 +112,21 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         self.text_embed_dim = config.text_config.hidden_size
         self.projection_dim = config.projection_dim
 
-        self.transcriptome_projection = nn.Linear(
-            self.transcriptome_embed_dim, self.projection_dim, bias=False
-        )
-        self.text_projection = nn.Linear(
-            self.text_embed_dim, self.projection_dim, bias=False
-        )
-        self.logit_scale = nn.Parameter(
-            torch.tensor(self.config.logit_scale_init_value)
+        self.discriminator = GlobalDiscriminatorDot(
+            image_sz=self.transcriptome_embed_dim,
+            text_sz=self.text_embed_dim,
+            units=self.projection_dim,
+            bln=True,  # batch layer norm
         )
 
-    def _mean_pooling(
-        self, token_embeddings: torch.FloatTensor, attention_mask: torch.FloatTensor
-    ):
+    def _text_pooling(self, text_outputs: Tuple, attention_mask: torch.FloatTensor):
         """
         TODO wouldn't it make sense to scale the embeddings by the attention itself?
         """
+        if isinstance(text_outputs[1], torch.Tensor):
+            return text_outputs[1]
+        token_embeddings = text_outputs[0]
+
         input_mask_expanded = (
             attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
         )
@@ -159,17 +159,14 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             return_dict=return_dict,
             **kwargs,
         )
-        if isinstance(text_outputs[1], torch.Tensor):
-            text_embeds = text_outputs[1]
-        else:
-            text_embeds = self._mean_pooling(text_outputs[0], attention_mask)
+        text_features = self._text_pooling(text_outputs, attention_mask)
 
-        text_embeds = self.text_projection(text_embeds)
+        text_embeds = self.discriminator.text_block(text_features)
 
         if normalize_embeds:
             text_embeds = text_embeds / text_embeds.norm(dim=-1, keepdim=True)
 
-        return text_outputs, text_embeds
+        return text_features, text_embeds
 
     def get_transcriptome_features(
         self,
@@ -188,7 +185,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
 
         ```"""
 
-        transcriptome_outputs = self.transcriptome_model(
+        transcriptome_features = self.transcriptome_model(
             expression_tokens=expression_tokens,
             expression_token_lengths=expression_token_lengths,
             # output_attentions=output_attentions,
@@ -196,15 +193,14 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             return_dict=return_dict,
         )[0]
 
-        # pooled_output = transcriptome_outputs[1]  # pooled_output
-        transcriptome_embeds = self.transcriptome_projection(transcriptome_outputs)
+        transcriptome_embeds = self.discriminator.img_block(transcriptome_features)
 
         if normalize_embeds:
             transcriptome_embeds = transcriptome_embeds / transcriptome_embeds.norm(
                 dim=-1, keepdim=True
             )
 
-        return transcriptome_outputs, transcriptome_embeds
+        return transcriptome_features, transcriptome_embeds
 
     def forward(
         self,
@@ -222,31 +218,32 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         # assert output_attentions is None
         # assert output_hidden_states is None
 
-        transcriptome_outputs, transcriptome_embeds = self.get_transcriptome_features(
+        transcriptome_outputs = self.transcriptome_model(
             expression_tokens=expression_tokens,
             expression_token_lengths=expression_token_lengths,
-            return_dict=False,
-            normalize_embeds=True,
-        )
-
-        text_outputs, text_embeds = self.get_text_features(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            # token_type_ids=token_type_ids,
-            # position_ids=position_ids,
             # output_attentions=output_attentions,
             # output_hidden_states=output_hidden_states,
             return_dict=False,
-            normalize_embeds=True,
+        )[0]
+
+        text_outputs = self.text_model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            # position_ids=position_ids,
+            # token_type_ids=token_type_ids,
+            # output_attentions=output_attentions,
+            # output_hidden_states=output_hidden_states,
+            return_dict=False,
             **kwargs,
         )
+        text_outputs = self._text_pooling(text_outputs, attention_mask)
 
-        # cosine similarity as logits
-        logit_scale = self.logit_scale.exp()
-        logits_per_text = (
-            torch.matmul(text_embeds, transcriptome_embeds.t()) * logit_scale
-        )
-        logits_per_transcriptome = logits_per_text.T
+        (
+            logits_per_transcriptome,
+            transcriptome_embeds,
+            text_embeds,
+        ) = self.discriminator(transcriptome_outputs, text_outputs)
+        logits_per_text = logits_per_transcriptome.T
 
         if not return_dict:
             return (
@@ -263,8 +260,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             logits_per_text=logits_per_text,
             text_embeds=text_embeds,
             transcriptome_embeds=transcriptome_embeds,
-            text_model_output=text_outputs,
-            transcriptome_model_output=transcriptome_outputs,
+            text_model_output=text_outputs,  # TODO rename to text_features
+            transcriptome_model_output=transcriptome_outputs,  # TODO rename transcriptome_features
         )
 
     def store_cache(self):
@@ -296,61 +293,19 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         **kwargs,
     ) -> PreTrainedModel:
         """
-        The documentation below was copied from the `transformers` library and still largely applies. We might trim it though...
+        Documentation below was copied and trimmed from the `transformers` library and still largely applies.
 
         Params:
             transcriptome_model_name_or_path (`str`, *optional*, defaults to `None`):
                 Information necessary to initiate the transcriptome model. Can be either:
-
-                    - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
-                      Valid model ids can be located at the root-level, like `bert-base-uncased`, or namespaced under a
-                      user or organization name, like `dbmdz/bert-base-german-cased`.
-                    - A path to a *directory* containing model weights saved using
-                      [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
-                    - A path or url to a *PyTorch checkpoint folder* (e.g, `./pt_model`). In this case, `from_pt`
-                      should be set to `True` and a configuration object should be provided as `config` argument. This
-                      loading path is slower than converting the PyTorch checkpoint in a Flax model using the provided
-                      conversion scripts and loading the Flax model afterwards.
-
             text_model_name_or_path (`str`, *optional*):
                 Information necessary to initiate the text model. Can be either:
-
-                    - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
-                      Valid model ids can be located at the root-level, like `bert-base-uncased`, or namespaced under a
-                      user or organization name, like `dbmdz/bert-base-german-cased`.
-                    - A path to a *directory* containing model weights saved using
-                      [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
-                    - A path or url to a *PyTorch checkpoint folder* (e.g, `./pt_model`). In this case, `from_pt`
-                      should be set to `True` and a configuration object should be provided as `config` argument. This
-                      loading path is slower than converting the PyTorch checkpoint in a Flax model using the provided
-                      conversion scripts and loading the Flax model afterwards.
-
             model_args (remaining positional arguments, *optional*):
                 All remaning positional arguments will be passed to the underlying model's `__init__` method.
 
             kwargs (remaining dictionary of keyword arguments, *optional*):
                 Can be used to update the configuration object (after it being loaded) and initiate the model (e.g.,
                 `output_attentions=True`).
-
-                - To update the text configuration, use the prefix *text_* for each configuration parameter.
-                - To update the transcriptome configuration, use the prefix *transcriptome_* for each configuration parameter.
-                - To update the parent model configuration, do not use a prefix for each configuration parameter.
-
-                Behaves differently depending on whether a `config` is provided or automatically loaded.
-
-        Example:
-
-        ```python
-        >>> from transformers import TranscriptomeTextDualEncoderModel
-
-        >>> # initialize a model from pretrained ViT and BERT models. Note that the projection layers will be randomly initialized.
-        >>> model = TranscriptomeTextDualEncoderModel.from_transcriptome_text_pretrained(
-        ...     "google/vit-base-patch16-224", "bert-base-uncased"
-        ... )
-        >>> # saving model after fine-tuning
-        >>> model.save_pretrained("./vit-bert")
-        >>> # load fine-tuned model
-        >>> model = TranscriptomeTextDualEncoderModel.from_pretrained("./vit-bert")
         ```"""
         kwargs_transcriptome = {
             argument[len("transcriptome_") :]: value

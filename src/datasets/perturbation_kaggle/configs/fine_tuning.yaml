@@ -10,7 +10,6 @@ trainer:
     class_path: lightning.pytorch.loggers.WandbLogger
     init_args:
       name: test_run_name3
-      save_dir: /home/moritz/Projects/single-cellm/results/wandb_logging
       version: null
       offline: false
       dir: null
@@ -31,7 +30,7 @@ trainer:
       magic: null
       config_exclude_keys: null
       config_include_keys: null
-      mode: disabled
+      mode: online
       allow_val_change: null
       resume: null
       force: null
@@ -44,11 +43,11 @@ trainer:
   fast_dev_run: false
   max_epochs: null
   min_epochs: null
-  max_steps: 1
+  max_steps: -1
   min_steps: null
   max_time: null
-  limit_train_batches: 1
-  limit_val_batches: 1
+  limit_train_batches: null
+  limit_val_batches: null
   limit_test_batches: null
   limit_predict_batches: null
   overfit_batches: 0.0
@@ -59,7 +58,7 @@ trainer:
   enable_checkpointing: null
   enable_progress_bar: true
   enable_model_summary: null
-  accumulate_grad_batches: 1
+  accumulate_grad_batches: 32
   gradient_clip_val: null
   gradient_clip_algorithm: null
   deterministic: null
@@ -72,8 +71,10 @@ trainer:
   plugins: null
   sync_batchnorm: false
   reload_dataloaders_every_n_epochs: 0
-  default_root_dir: /home/moritz/Projects/single-cellm/results/model_training/
 model:
+  loss_config:
+    clip_lambda: 1.0
+    clip_lite_lambda: 0.0
   model_config:
     return_dict: true
     output_hidden_states: false
@@ -281,14 +282,18 @@ model:
       task_specific_params: null
       problem_type: null
       _name_or_path: ''
-      model_type: biogpt
-    freeze_text_model: true
-    projection_dim: 512
+      model_type: bert
+    freeze_text_model: false
+    projection_dim: 128
     logit_scale_init_value: 2.6592
     model_type: transcriptome-text-dual-encoder
 data:
-  dataset_name: daniel
-  batch_size: 2
+  dataset_name: perturbation_kaggle
+  batch_size: 32
 best_model_path: null
 log_level: WARNING
 ckpt_path: null
+optimizer:
+  class_path: torch.optim.AdamW
+  init_args:
+    lr: 0.001

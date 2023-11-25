@@ -23,7 +23,7 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
     documentation from [`PretrainedConfig`] for more information.
 
     Args:
-        projection_dim (`int`, *optional*, defaults to 512):
+        projection_dim (`int`, *optional*, defaults to 1024):
             Dimentionality of text and transcriptome projection layers.
         logit_scale_init_value (`float`, *optional*, defaults to 2.6592):
             The inital value of the *logit_scale* paramter. Default is used as per the original CLIP implementation.
@@ -37,7 +37,7 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
 
     def __init__(
         self,
-        projection_dim: int = 512,
+        projection_dim: int = 1024,
         logit_scale_init_value: float = 2.6592,
         transcriptome_config: Optional[dict] = None,
         freeze_transcriptome_model: bool = True,
@@ -69,7 +69,9 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
         self.freeze_text_model = freeze_text_model
 
         self.projection_dim = projection_dim
-        self.logit_scale_init_value = logit_scale_init_value
+        self.logit_scale_init_value = (
+            logit_scale_init_value  # TODO unused and can be refactored (i.e. removed)
+        )
 
     @classmethod
     def from_transcriptome_text_configs(

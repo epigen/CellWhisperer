@@ -18,7 +18,6 @@ def adata_list_to_embeds(
     adata_list: List[anndata.AnnData],
     model: TranscriptomeTextDualEncoderModel,
     transcriptome_processor: GeneformerTranscriptomeProcessor,
-    device: torch.device,
 ) -> torch.tensor:
     """
     Compute the transcriptome embeddings for each adata in adata_list.
@@ -27,7 +26,6 @@ def adata_list_to_embeds(
     :param adata_list: List[anndata.AnnData] instance. All cells in each adata will be used to compute a single transcriptome embedding.
     :param model: TranscriptomeTextDualEncoderModel instance. Used to compute the transcriptome embeddings.
     :param transcriptome_processor: GeneformerTranscriptomeProcessor instance. Used to tokenize the transcriptome.
-    :param device: torch.device instance
     :return: torch.tensor of transcriptome embeddings. Shape: n_adatas * n_cells_per_adata * embedding_size (e.g. 512)
     """
     transcriptome_embeds_all_adata = None
@@ -38,7 +36,7 @@ def adata_list_to_embeds(
         # make sure transcriptome_tokens are on GPU
         # TODO: Prepare for the case when the transcriptome is too large to fit on the GPU
         for k, v in transcriptome_tokens.items():
-            transcriptome_tokens[k] = v.to(device)
+            transcriptome_tokens[k] = v.to(model.device)
 
         _, transcriptome_embeds = model.get_transcriptome_features(
             **transcriptome_tokens
@@ -60,20 +58,18 @@ def text_list_to_embeds(
     text_list: List[str],
     model: TranscriptomeTextDualEncoderModel,
     text_tokenizer: AutoTokenizer,
-    device: torch.device,
 ) -> torch.tensor:
     """
     Compute the text embeddings for each text in text_list.
     :param text: List[str] instance. Each text will be tokenized and embedded.
     :param model: TranscriptomeTextDualEncoderModel instance. Used to compute the text embeddings.
     :param text_tokenizer: AutoTokenizer instance. Used to tokenize the text.
-    :param device: torch.device instance
     :return: torch.tensor of text embeddings. Shape: len(text_list) * embedding_size (e.g. 512)
     """
     # Tokenize the chunk and move it to the device
     text_tokens = text_tokenizer(text_list, return_tensors="pt", padding=True)
     for k, v in text_tokens.items():
-        text_tokens[k] = v.to(device)
+        text_tokens[k] = v.to(model.device)
 
     # Compute text embeddings
     _, text_embeds = model.get_text_features(**text_tokens)
@@ -84,7 +80,6 @@ def text_list_to_embeds(
 
 def score_text_vs_transcriptome_many_vs_many(
     model: TranscriptomeTextDualEncoderModel,
-    device: torch.device,
     adata_list_or_transcriptome_embeds: Union[List[anndata.AnnData], torch.tensor],
     text_list_or_text_embeds: Union[List[str], torch.tensor],
     average_mode: str = "embeddings",
@@ -96,7 +91,6 @@ def score_text_vs_transcriptome_many_vs_many(
     """
     Compute the similarity between the text and the transcriptome embeddings.
     :param model: TranscriptomeTextDualEncoderModel instance. Both transcriptome and text embeddings will be computed using this model.
-    :param device: torch.device instance
     :param adata_list_or_transcriptome_embeds: List[anndata.AnnData] or torch.tensor. If List[anndata.AnnData], compute the transcriptome embeddings for each adata. \
         If torch.tensor, use the provided transcriptome embeddings.
     :param text_list_or_text_embeds: List[str] or torch.tensor. If List[str], compute the text embeddings for each text. \
@@ -113,7 +107,7 @@ def score_text_vs_transcriptome_many_vs_many(
     : return: torch.tensor of similarity between the text and the adatas. Shape: n_text * n_adata
 
     """
-    logit_scale = model.logit_scale.exp()
+    logit_scale = model.discriminator.temperature.exp()
 
     #### Prepare transcriptome embeddings ###
     if average_mode == "cells":
@@ -128,7 +122,7 @@ def score_text_vs_transcriptome_many_vs_many(
         transcriptome_embeds = adata_list_or_transcriptome_embeds
     else:
         transcriptome_embeds = adata_list_to_embeds(
-            adata_list_or_transcriptome_embeds, model, transcriptome_processor, device
+            adata_list_or_transcriptome_embeds, model, transcriptome_processor
         )  # n_adatas * n_cells_per_adata * 512
     if average_mode == "embeddings":
         transcriptome_embeds = transcriptome_embeds.mean(
@@ -148,7 +142,7 @@ def score_text_vs_transcriptome_many_vs_many(
             text_embeds = chunk
         else:
             text_embeds = text_list_to_embeds(
-                chunk, model, text_tokenizer, device
+                chunk, model, text_tokenizer
             )  # chunk_size_text_emb_and_scoring * 512
 
         # Compute logits (similarity to expression embedding) for the current chunk and append to the list
@@ -178,7 +172,6 @@ def score_text_vs_transcriptome_many_vs_many(
 def get_scores_adatas_vs_text_list(
     adata_dict_or_embedding_dict: Dict[str, Union[anndata.AnnData, torch.Tensor]],
     model: TranscriptomeTextDualEncoderModel,
-    device: torch.device,
     text_tokenizer: AutoTokenizer,
     transcriptome_processor: GeneformerTranscriptomeProcessor,
     text_list_or_text_embeds: Union[List[str], torch.Tensor] = None,
@@ -195,7 +188,6 @@ def get_scores_adatas_vs_text_list(
                 Or: A dictionary of transcriptome embedding tensors (each of a single cell type), \
                     where the keys are the celltypes and the values are the transcriptome embeddings. \
         model: The model to use for scoring.
-        device: The device to use for scoring.
         text_tokenizer: The tokenizer to use for scoring.
         transcriptome_processor: The transcriptome processor to use for scoring.
         text_list_or_text_embeds: Either: A list of texts to score. Or: A tensor of text embeddings to score. \
@@ -225,7 +217,6 @@ def get_scores_adatas_vs_text_list(
     # Get the scores
     scores = score_text_vs_transcriptome_many_vs_many(
         model=model,
-        device=device,
         text_list_or_text_embeds=text_list_or_text_embeds,
         adata_list_or_transcriptome_embeds=adata_list_or_transcriptome_embeds,
         transcriptome_processor=transcriptome_processor,
@@ -289,7 +280,6 @@ def anndata_to_scored_keywords(
     terms_json_path: Union[str, Path],
     transcriptome_processor: GeneformerTranscriptomeProcessor,
     text_tokenizer: AutoTokenizer,
-    device: torch.device,
     average_mode: str = "cells",
     chunk_size_text_emb_and_scoring: int = 64,
     obs_cols: List[str] = [],
@@ -305,7 +295,6 @@ def anndata_to_scored_keywords(
     :param terms_json_path: Path to the json file containing the EnrichR terms (keys: libraries, values: list of terms)
     :param transcriptome_processor: GeneformerTranscriptomeProcessor instance. Used to tokenize the transcriptome.
     :param text_tokenizer: AutoTokenizer instance. Used to tokenize the text.
-    :param device: torch.device instance
     :param average_mode: "cells" or "embeddings". If "cells", first average the transcriptome data across all cells, then tokenize and embed. \
         If "embeddings", first tokenize and embed each cell, then average the embeddings. TODO what is better?
     :param chunk_size_text_emb_and_scoring: int. The text will be chunked into chunks of this size before computing the text \
@@ -378,7 +367,6 @@ def anndata_to_scored_keywords(
 
     scores = score_text_vs_transcriptome_many_vs_many(
         model=model,
-        device=device,
         text_list_or_text_embeds=text,
         adata_list_or_transcriptome_embeds=[expression]
         if type(adata_or_embedding) == anndata.AnnData

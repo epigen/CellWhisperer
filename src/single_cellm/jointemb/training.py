@@ -57,7 +57,7 @@ class SingleCeLLMCLI(LightningCLI):
             )
         except FileNotFoundError:
             logging.error(
-                "Unabld to fine geneformer model. Please download first (see `rna` snakemake pipeline)"
+                "Unable to find geneformer model. Please download first (see `rna` snakemake pipeline)"
             )
             raise
 

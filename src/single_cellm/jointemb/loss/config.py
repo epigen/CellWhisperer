@@ -17,12 +17,14 @@ class LossConfig:
 
     clip_lambda: float = 0.0
     clip_lite_lambda: float = 1.0
-    clip_lite_type: str = "dot"
+    clip_lite_type: str = "dot"  # TODO we don't support others at the moment
     clip_lite_prior_weight: float = 0.1
-    clip_lite_transcriptome_prior: bool = True
+    clip_lite_transcriptome_prior: bool = (
+        False  # TODO requires image_dim (no big deal to add)
+    )
     clip_lite_text_prior: bool = False
 
-    def configure_losses(self, projection_dim):
+    def configure_losses(self, projection_dim, discriminator):
         """
         Configures loss functions based on provided configuration.
         """
@@ -31,9 +33,7 @@ class LossConfig:
                 "clip": ClipLoss(self.clip_lambda),
                 "clip_lite": JSDInfoMaxLossSingleCeLLM(
                     weight=self.clip_lite_lambda,
-                    image_dim=projection_dim,
-                    text_dim=projection_dim,
-                    type=self.clip_lite_type,
+                    discriminator=discriminator,
                     prior_weight=self.clip_lite_prior_weight,
                     image_prior=self.clip_lite_transcriptome_prior,
                     text_prior=self.clip_lite_text_prior,

@@ -1,5 +1,7 @@
 from typing import Dict, Tuple
 from single_cellm.jointemb.model import TranscriptomeTextDualEncoderModel
+from single_cellm.config import get_path, model_path_from_name
+from transformers import AutoTokenizer
 from lightning import Trainer
 import pandas as pd
 import seaborn as sns
@@ -59,6 +61,21 @@ def _log_reg_statistics(df: pd.DataFrame) -> Tuple[Dict[str, float], pd.DataFram
     return metrics, df
 
 
+def _embed_cancer_sentence(
+    model: TranscriptomeTextDualEncoderModel, anchor_sentence="cancer"
+) -> torch.Tensor:
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path_from_name(model.config.text_config.model_type)
+    )
+    # alterantive: tokenizer = self.trainer.datamodule.processor.tokenizer
+
+    token_dict = tokenizer(anchor_sentence, return_tensors="pt", padding=True)
+    token_dict = {k: v.to(model.device) for k, v in token_dict.items()}
+    with torch.no_grad():
+        anchor_embed = model.get_text_features(**token_dict, normalize_embeds=True)[1]
+    return anchor_embed
+
+
 def evaluate_cancer_gene_essentiality(
     model: TranscriptomeTextDualEncoderModel, plot=False
 ) -> Tuple[Dict[str, float], pd.DataFrame]:
@@ -72,7 +89,6 @@ def evaluate_cancer_gene_essentiality(
 
     """
     logging.info("Performing gene cancer essentiality evaluation...")
-    cancer_sentence = "cancer"
 
     # load first transcriptome from our 15k dataset and perform in silico KOs
     datamodule = CancerGeneEssentialityDataModule(
@@ -81,18 +97,36 @@ def evaluate_cancer_gene_essentiality(
         dataset_name="daniel",
         batch_size=8,
     )
+    # Follow lightning API
+    datamodule.prepare_data()
+    datamodule.setup()
+    dataloader = datamodule.predict_dataloader()
 
-    # Use trainer for prediction only
-    trainer = Trainer()
-    predictions = trainer.predict(
-        LitCancerGeneEssentiality(model, cancer_sentence), datamodule=datamodule
+    model = model.eval()
+
+    anchor_embed = _embed_cancer_sentence(model)
+
+    # Iterate over dataloader, predict and calculate similarities
+    similarities = []
+    labels = []
+    for batch in dataloader:
+        labels.append(batch.pop("labels"))
+        batch = {k: v.to(model.device) for k, v in batch.items()}
+        with torch.no_grad():
+            transcriptome_embeds = model.get_transcriptome_features(
+                **batch, normalize_embeds=True
+            )[1]
+        similarity = torch.matmul(
+            anchor_embed, transcriptome_embeds.t().to(anchor_embed.device)
+        )
+        similarities.append(similarity.cpu())
+
+    df = pd.DataFrame(
+        {
+            "similarity": torch.cat([sim.squeeze(0) for sim in similarities]).numpy(),
+            "labels": torch.cat([lab.squeeze(0) for lab in labels]).numpy(),
+        }
     )
-
-    aggregated_predictions = {
-        key: torch.cat([prediction[key].squeeze(0) for prediction in predictions])
-        for key in predictions[0].keys()
-    }
-    df = pd.DataFrame(aggregated_predictions)
     if plot:
         sns.barplot(data=df, x="labels", y="similarity", ci="sd")
 

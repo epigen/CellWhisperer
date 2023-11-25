@@ -12,7 +12,7 @@ paths:
   ensembl_gene_symbol_map: resources/ensembl_gene_symbol_map.csv
   jointemb_models: results/models/jointemb
   wandb_logs: results/wandb_logging
-  datamodule_prepared_path: results/{dataset}/lightning-processed/inputs.pt
+  datamodule_prepared_path: results/{dataset}/lightning-processed/{transcriptome_processor}__{tokenizer}.pt
   text_model_cache: results/cache/text.pkl
   transcriptome_model_cache: results/cache/transcriptome.pkl
   cancer_gene_essentiality:

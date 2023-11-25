@@ -2,7 +2,6 @@ from single_cellm.config import get_path
 import torch
 import scipy.sparse as sp
 import numpy as np
-import dataclasses
 import pandas as pd
 import logging
 
@@ -52,7 +51,7 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
                 # Trim version
                 ensembl_ids = ensembl_ids.map(lambda v: v[: v.index(".")])
             adata_w_id = adata
-            adata_var=pd.DataFrame(adata_w_id.var)
+            adata_var = pd.DataFrame(adata_w_id.var)
             adata_var["ensembl_id"] = ensembl_ids
             adata_w_id = anndata.AnnData(
                 X=adata_w_id.X,
@@ -100,10 +99,10 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
         norm_factor_vector = np.array(
             [
                 self.tokenizer.gene_median_dict[i]
-                for i in prepared_features.var["ensembl_id"][coding_miRNA_loc]
+                for i in prepared_features.var["ensembl_id"].iloc[coding_miRNA_loc]
             ]
         )
-        coding_miRNA_ids = prepared_features.var["ensembl_id"][coding_miRNA_loc]
+        coding_miRNA_ids = prepared_features.var["ensembl_id"].iloc[coding_miRNA_loc]
         coding_miRNA_tokens = np.array(
             [self.tokenizer.gene_token_dict[i] for i in coding_miRNA_ids]
         )
@@ -120,8 +119,8 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
                 [i == 1 for i in prepared_features.obs["filter_pass"]]
             )[0]
         else:
-            print(
-                f"prepared_features has no column attribute 'filter_pass'; tokenizing all cells."
+            logging.info(
+                "prepared_features has no column attribute 'filter_pass'; tokenizing all cells."
             )
             filter_pass_loc = np.array([i for i in range(prepared_features.shape[0])])
 

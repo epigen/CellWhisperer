@@ -61,16 +61,17 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.transcriptome_processor = transcriptome_processor
         self.nproc = nproc
         self.processed_path = get_path(
-            ["paths", "datamodule_prepared_path"], dataset=self.dataset_name
+            ["paths", "datamodule_prepared_path"],
+            dataset=self.dataset_name,
+            transcriptome_processor=self.transcriptome_processor,
+            tokenizer=self.tokenizer,
         )
 
     def prepare_data(self):
         # check whether data has already been prepared
         if self.processed_path.exists():
-            print(
-                "data already prepared, repreparing anyways to make sure that config did not change..."
-            )
-            # return
+            print("data already prepared")
+            return
         print("preparing data...")
 
         if self.transcriptome_processor == "geneformer":

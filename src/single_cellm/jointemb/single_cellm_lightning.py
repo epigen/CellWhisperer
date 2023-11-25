@@ -2,8 +2,10 @@
 Wraps lightning and transformers logic, providing bare configs to the user/CLI
 """
 
+import warnings
+
 from lightning import LightningModule
-from single_cellm.jointemb.geneformer_model import GeneformerConfig
+from single_cellm.validation import TRAINING_VALIDATION_FUNCTIONS
 from single_cellm.jointemb.loss.config import LossConfig
 from single_cellm.jointemb.model import (
     TranscriptomeTextDualEncoderConfig,
@@ -21,6 +23,11 @@ from functools import partial
 
 from single_cellm.jointemb.regularization import InputRegularization
 
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message=r".*is deprecated and will be removed in a future version.*",
+)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 DEFAULT_MODEL_CONFIG = TranscriptomeTextDualEncoderConfig(
@@ -35,7 +42,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         model_config: Union[Dict, TranscriptomeTextDualEncoderConfig] = copy.deepcopy(
             DEFAULT_MODEL_CONFIG
         ),  # needs copy to avoid GPU memory leak
-        loss_configs: Union[Dict, LossConfig] = LossConfig().to_dict(),
+        loss_config: Union[Dict, LossConfig] = LossConfig().to_dict(),
         gauss_noise_std: float = 0.0,  # Noise standard deviation: if 0.0 or None noise won't be added to training embeddings
     ):
         """
@@ -48,25 +55,54 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             model_config
         )  # make sure not to modify the default arg itself
 
-        loss_configs = copy.deepcopy(loss_configs)
+        loss_config = copy.deepcopy(loss_config)
 
         super(TranscriptomeTextDualEncoderLightning, self).__init__()
 
         if not isinstance(model_config, TranscriptomeTextDualEncoderConfig):
             model_config = TranscriptomeTextDualEncoderConfig(**model_config)
 
-        if not isinstance(loss_configs, LossConfig):
-            loss_configs = LossConfig(**loss_configs)
+        if not isinstance(loss_config, LossConfig):
+            loss_config = LossConfig(**loss_config)
 
         self.model = TranscriptomeTextDualEncoderModel(
             config=model_config,
         )
 
-        self.loss_functions = loss_configs.configure_losses(model_config.projection_dim)
+        self.loss_config = loss_config
+        self.loss_functions = self.loss_config.configure_losses(
+            self.model.projection_dim, self.model.discriminator
+        )
 
         self.input_regularization = InputRegularization(gauss_noise_std=gauss_noise_std)
 
         self.save_hyperparameters()
+
+    @classmethod
+    def load_from_checkpoint(
+        cls,
+        checkpoint_path: str,
+        geneformer_directory: str,
+        text_model_name_or_path: str,
+        **kwargs,
+    ):
+        """
+        Because our checkpoints might not contain the foundation models, we need to load them separately and then load the checkpoint.
+
+        TODO: we only need to do this if one of the models is frozen (which is usually the case)
+        """
+        model = super().load_from_checkpoint(checkpoint_path, **kwargs)
+        # Park state_dict
+        state_dict = model.state_dict().copy()
+
+        # make sure that pretrained models are loaded
+        model.load_pretrained_models(
+            geneformer_directory=geneformer_directory,
+            text_model_name_or_path=text_model_name_or_path,
+        )
+
+        # Restore state_dict
+        model.load_state_dict(state_dict)
 
     def load_pretrained_models(
         self, geneformer_directory: str, text_model_name_or_path: str
@@ -81,6 +117,9 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                 **self.model.config.to_dict(),
             )
         )
+        self.loss_functions = self.loss_config.configure_losses(
+            self.model.projection_dim, self.model.discriminator
+        )
 
     def forward(
         self,
@@ -91,7 +130,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
     ) -> CLIPOutput:
         # TODO at a later stage, we may add regularization here
 
-        return self.model.model(
+        return self.model(
             input_ids=input_ids,
             expression_tokens=expression_tokens,
             expression_token_lengths=expression_token_lengths,
@@ -100,7 +139,8 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         )
 
     def process_step(self, batch, batch_idx, step_type):
-        outputs = self.model(**batch, return_dict=True)
+        outputs = self(**batch)
+
         # outputs = {k: v.to(device) if v is not None else None for k, v in outputs.items()}
         combined_loss = 0.0
 
@@ -135,6 +175,21 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
     def validation_step(self, batch, batch_idx):
         return self.process_step(batch, batch_idx, "val")
+
+    def on_validation_epoch_end(self):
+        # epoch_average = torch.stack(self.validation_step_outputs).mean()
+        # self.log("validation_epoch_average", epoch_average)
+        for val_fn_name, val_fn in TRAINING_VALIDATION_FUNCTIONS.items():
+            val_metrics, results_df = val_fn(self.model)
+            for metric_name, metric_value in val_metrics.items():
+                self.log(
+                    f"validation_{val_fn_name}_{metric_name}",
+                    metric_value,
+                    on_step=False,
+                    on_epoch=True,
+                    prog_bar=True,
+                    logger=True,
+                )
 
     def test_step(self, batch, batch_idx):
         return self.process_step(batch, batch_idx, "test")

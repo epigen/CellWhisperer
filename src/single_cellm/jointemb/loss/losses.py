@@ -1,3 +1,4 @@
+# TODO trash this class in favor of the one in clip_lite.loss
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -17,8 +18,8 @@ class JSDInfoMaxLossSingleCeLLM(JSDInfoMaxLoss):
 
     def forward(
         self,
-        transcriptome_embeds=None,
-        text_embeds=None,
+        transcriptome_model_output=None,
+        text_model_output=None,
         neg_transcriptome_embeds=None,
         neg_text_embeds=None,
         aug_transcriptome_embeds=None,
@@ -31,8 +32,8 @@ class JSDInfoMaxLossSingleCeLLM(JSDInfoMaxLoss):
 
         ### This outputs a dictionary with keys {'total_loss','cross_modal_loss','visual_loss','textual_loss'}
         loss_results = super().forward(
-            image_features=transcriptome_embeds,
-            text_features=text_embeds,
+            image_features=transcriptome_model_output,
+            text_features=text_model_output,
             neg_image_features=neg_transcriptome_embeds,
             neg_text_features=neg_text_embeds,
             aug_image_features=aug_transcriptome_embeds,

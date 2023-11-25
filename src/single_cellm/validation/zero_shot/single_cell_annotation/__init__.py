@@ -27,7 +27,6 @@ class SingleCellZeroshotValidationScoreCalculator:
         prefix_for_text_embeddings="Transcriptome of a ",
         suffix_for_text_embeddings="",
         nproc_transcriptome_processor=1,
-        device=None,
         logger=None,
         tokenizer_name="microsoft/biogpt",
     ):
@@ -41,7 +40,6 @@ class SingleCellZeroshotValidationScoreCalculator:
             prefix_for_text_embeddings: prefix to add to the celltype name to generate the text to embed.
             suffix_for_text_embeddings: suffix to add to the celltype name to generate the text to embed.
             nproc_transcriptome_processor: number of processes to use for the transcriptome processor.
-            device: device to use for the model. If None, will use the first available GPU if available, otherwise CPU.
             logger: logger to use. If None, will use the logger for this module.
         """
 
@@ -52,13 +50,8 @@ class SingleCellZeroshotValidationScoreCalculator:
         self.prefix_for_text_embeddings = prefix_for_text_embeddings
         self.suffix_for_text_embeddings = suffix_for_text_embeddings
         self.nproc_transcriptome_processor = nproc_transcriptome_processor
-        self.device = device
         self.logger = logger
         self.tokenizer_name = tokenizer_name
-
-        if self.device is None:
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            # set_freest_gpu_as_device()
 
         if self.logger is None:
             self.logger = logging.getLogger(__name__)
@@ -105,7 +98,6 @@ class SingleCellZeroshotValidationScoreCalculator:
         result_dict, result_df = get_scores_adatas_vs_text_list(
             adata_dict_or_embedding_dict=self.adata_dict,
             model=model,
-            device=self.device,
             text_tokenizer=self.text_tokenizer,
             transcriptome_processor=self.transcriptome_processor,
             text_list_or_text_embeds=None,
