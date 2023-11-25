@@ -37,7 +37,7 @@ def _log_reg_statistics(df: pd.DataFrame) -> Tuple[Dict[str, float], pd.DataFram
 
     # Fit the logistic regression model
     logit_model = sm.Logit(y, X)
-    result = logit_model.fit()
+    result = logit_model.fit(disp=0)
 
     # Get predictions
     df["predictions"] = result.predict(X)

@@ -51,7 +51,10 @@ class CancerGeneEssentialityDataModule(LightningDataModule):
         self.tokenizer = model_path_from_name(tokenizer)
         self.transcriptome_processor = transcriptome_processor
         self.processed_path = get_path(
-            ["paths", "datamodule_prepared_path"], dataset="cancer_gene_essentiality"
+            ["paths", "datamodule_prepared_path"],
+            dataset="cancer_gene_essentiality",
+            transcriptome_processor=transcriptome_processor,
+            tokenizer=tokenizer,
         )
 
     def prepare_data(self):

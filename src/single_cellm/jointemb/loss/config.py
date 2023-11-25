@@ -15,8 +15,8 @@ class LossConfig:
     A more elegant implementation would 'inherit' individual configs for each of the losses, thus staying modular.
     """
 
-    clip_lambda: float = 0.0
-    clip_lite_lambda: float = 1.0
+    clip_lambda: float = 1.0
+    clip_lite_lambda: float = 0.0
     clip_lite_type: str = "dot"  # TODO we don't support others at the moment
     clip_lite_prior_weight: float = 0.1
     clip_lite_transcriptome_prior: bool = (
