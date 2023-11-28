@@ -4,7 +4,9 @@ This model emulates a real model actually just retrieves cached processed model 
 NOTE: This might be more elegantly implemented within model.py (e.g. via a decorator on the get_text_features and get_transcriptome_features methods)
 """
 
+import fcntl
 import torch
+import time
 import torch.nn as nn
 import pickle
 from typing import Optional, Union
@@ -43,7 +45,9 @@ class FrozenCachedModel(nn.Module):
         # Avoiding parameter tracking
         self._models = [model.eval().cpu()]
         self.cache_file = cache_file
-        self.cache = self._load_cache()
+
+        self.model_hash = hash_object(self.model.config)
+        self.cache = self._load_cache()[self.model_hash]
 
     @property
     def model(self):
@@ -67,45 +71,62 @@ class FrozenCachedModel(nn.Module):
         self.model.config = value
 
     def _load_cache(self):
-        if self.cache_file is None:
-            return {}
-
-        try:
-            with open(self.cache_file, "rb") as f:
-                cache = pickle.load(f)
-
-            model_hash = hash_object(self.model.config)
-            try:
-                cache = cache[model_hash]
-                logger.info(f"Model hash {model_hash} loaded.")
-            except KeyError:
-                logger.info(
-                    f"Model hash {model_hash} not found in cache. Creating new cache."
+        """
+        Try to load the cache file and if it does not exist, return an empty cache
+        """
+        cache = {self.model_hash: {}}
+        if self.cache_file is not None:
+            for _ in range(3):
+                try:
+                    with open(self.cache_file, "rb") as f:
+                        fcntl.flock(f, fcntl.LOCK_EX)  # Exclusive lock
+                        cache = pickle.load(f)
+                        fcntl.flock(f, fcntl.LOCK_UN)  # Unlock the file
+                    if self.model_hash not in cache:
+                        cache[self.model_hash] = {}
+                    break
+                except FileNotFoundError:
+                    logger.warning("Unable to find cache file. Resetting cache.")
+                    break
+                except EOFError:
+                    logger.error("Unable to load cache (EOFError). Resetting.")
+                    continue  # maybe it works next time
+                except OSError:
+                    time.sleep(5)
+                    continue
+            else:
+                logger.error(
+                    "Unable to load cache (tried 3 times, but always locked). Resetting."
                 )
-                cache = {}
-        except FileNotFoundError:
-            cache = {}
+
         return cache
 
     def save_cache(self):
-        logger.info("Saving cache")
         if self.cache_file is None:
             return
+        logger.info("Saving cache")
 
-        model_hash = hash_object(self.model.config)
-        try:
-            with open(self.cache_file, "rb") as f:
-                cache = pickle.load(f)
-            cache[model_hash] = self.cache
-            logger.info(f"Saving {model_hash} to existing cache.")
-        except FileNotFoundError:
-            cache = {"model_hash": self.cache}
-            logger.info(f"Saving {model_hash} to new cache.")
+        assert self.model_hash == hash_object(self.model.config), "Model conf changed."
 
+        # Reload the cache to make sure that we don't overwrite any changes from other runs
+        cache = self._load_cache()
+        cache[self.model_hash] = self.cache
+
+        logger.info(f"Saving cache for model {self.model_hash} to cache.")
         # make sure the directory exists
         Path(self.cache_file).parent.mkdir(parents=True, exist_ok=True)
-        with open(self.cache_file, "wb") as f:
-            pickle.dump(cache, f)
+        for _ in range(3):
+            try:
+                with open(self.cache_file, "wb") as f:
+                    fcntl.flock(f, fcntl.LOCK_EX)  # Exclusive lock
+                    pickle.dump(cache, f)
+                    fcntl.flock(f, fcntl.LOCK_UN)  # Unlock the file
+                    logging.info(f"Saved cache to {self.cache_file}")
+                    break
+            except OSError:
+                time.sleep(5)  # wait 5 seconds before trying again
+        else:
+            logger.error("Unable to save cache. Aborting.")
 
     def compute_sample_hashes(self, **kwargs):
         batch_size = len(next(iter(kwargs.values())))

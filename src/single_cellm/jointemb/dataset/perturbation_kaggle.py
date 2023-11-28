@@ -80,7 +80,10 @@ class KaggleDEGDataModule(pl.LightningDataModule):
         self.n_folds = n_folds
         self.kth_fold = kth_fold
         self.processed_path = get_path(
-            ["paths", "datamodule_prepared_path"], dataset="perturbation_kaggle_deg"
+            ["paths", "datamodule_prepared_path"],
+            dataset="perturbation_kaggle_deg",
+            transcriptome_processor="",
+            tokenizer=tokenizer,
         )
 
     def tokenize_df(self, df):

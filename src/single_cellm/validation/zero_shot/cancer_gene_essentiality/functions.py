@@ -13,7 +13,6 @@ from .dataset import (
     CancerGeneEssentialityDataModule,
 )
 
-from .model import LitCancerGeneEssentiality
 import torch
 import statsmodels.api as sm
 

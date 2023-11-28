@@ -5,6 +5,7 @@ See https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html for document
 """
 from lightning.pytorch.tuner import Tuner
 from single_cellm.config import get_path, model_path_from_name
+from single_cellm.misc.utils import obj_signature
 import torch
 from lightning.pytorch.cli import LightningCLI, SaveConfigCallback
 import subprocess
@@ -16,6 +17,10 @@ import logging
 from lightning import Trainer, LightningModule
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import Logger, WandbLogger
+from jsonargparse import lazy_instance
+
+from single_cellm.jointemb.model import TranscriptomeTextDualEncoderConfig
+from single_cellm.jointemb.loss.config import LossConfig
 from single_cellm.jointemb.single_cellm_lightning import (
     TranscriptomeTextDualEncoderLightning,
 )
@@ -38,6 +43,51 @@ class SingleCeLLMCLI(LightningCLI):
     def add_arguments_to_parser(self, parser):
         parser.add_argument("--best_model_path", type=Path, default=None)
         parser.add_argument("--log_level", default="WARNING")
+        parser.add_argument("--batch_size", default=32, type=int)
+        parser.add_argument(
+            "--wandb",
+            default="",
+            help="Enable WandB logging. Need to pass a run name",
+            type=str,
+        )
+        parser.set_defaults(
+            {
+                "model.model_config": lazy_instance(
+                    TranscriptomeTextDualEncoderConfig,
+                    **obj_signature(TranscriptomeTextDualEncoderConfig),
+                ),
+                "model.loss_config": lazy_instance(
+                    LossConfig, **obj_signature(LossConfig)
+                ),
+                "trainer.max_epochs": 100,
+            }
+        )
+
+        parser.link_arguments(
+            "trainer.max_epochs", "model.max_epochs"
+        )  # needed for scheduler initialization
+        parser.link_arguments("wandb", "trainer.logger.init_args.name")
+        parser.link_arguments(
+            "wandb",
+            "trainer.logger.init_args.mode",
+            lambda wandb: "disabled" if wandb == "" else "online",
+        )
+        # TODO not working, because model_type needs to be top level within model_config
+        # parser.link_arguments(
+        #     "model.model_config.transcriptome_config.model_type",
+        #     "data.transcriptome_processor",
+        # )
+        # parser.link_arguments(
+        #     "model.model_config.text_config.model_type", "data.tokenizer"
+        # )
+
+        parser.link_arguments(
+            ["trainer.fast_dev_run", "batch_size"],
+            "data.batch_size",
+            compute_fn=lambda fast_dev_run, batch_size: 2  # TODO 1 fails maybe :/
+            if fast_dev_run
+            else batch_size,
+        )
 
     def before_instantiate_classes(self) -> None:
         logging.basicConfig(level=self.config["fit.log_level"])
@@ -47,13 +97,9 @@ class SingleCeLLMCLI(LightningCLI):
         try:
             self.model.load_pretrained_models(
                 model_path_from_name(
-                    self.config.fit.model.model_config["transcriptome_config"][
-                        "model_type"
-                    ]
+                    self.model.model.transcriptome_model.config.model_type
                 ),
-                model_path_from_name(
-                    self.config.fit.model.model_config["text_config"]["model_type"]
-                ),
+                model_path_from_name(self.model.model.text_model.config.model_type),
             )
         except FileNotFoundError:
             logging.error(
@@ -66,6 +112,8 @@ class SingleCeLLMCLI(LightningCLI):
             tuner.scale_batch_size(
                 self.model, datamodule=self.datamodule, mode="binsearch", init_val=8
             )
+            
+        # self.trainer.logger.watch(self.model, log="all")
 
     def after_fit(self) -> None:
         if self.config["fit.best_model_path"] is not None:
@@ -135,6 +183,7 @@ def cli_main():
             callbacks=[checkpoint_callback, early_stop],
         ),
         save_config_callback=None,
+        auto_configure_optimizers=False,
     )
 
 

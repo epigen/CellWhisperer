@@ -24,22 +24,27 @@ class LossConfig:
     )
     clip_lite_text_prior: bool = False
 
-    def configure_losses(self, projection_dim, discriminator):
+    def configure_losses(self, discriminator):
         """
         Configures loss functions based on provided configuration.
         """
-        loss_functions = nn.ModuleDict(
+        loss_functions = [
             {
-                "clip": ClipLoss(self.clip_lambda),
-                "clip_lite": JSDInfoMaxLossSingleCeLLM(
-                    weight=self.clip_lite_lambda,
+                "name": "clip",
+                "fn": ClipLoss(),
+                "lambda": self.clip_lambda,
+            },
+            {
+                "name": "clip_lite",
+                "fn": JSDInfoMaxLossSingleCeLLM(
                     discriminator=discriminator,
                     prior_weight=self.clip_lite_prior_weight,
                     image_prior=self.clip_lite_transcriptome_prior,
                     text_prior=self.clip_lite_text_prior,
                 ),
-            }
-        )
+                "lambda": self.clip_lite_lambda,
+            },
+        ]
 
         return loss_functions
 

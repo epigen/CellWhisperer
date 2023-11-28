@@ -7,13 +7,16 @@ import warnings
 from lightning import LightningModule
 from single_cellm.validation import TRAINING_VALIDATION_FUNCTIONS
 from single_cellm.jointemb.loss.config import LossConfig
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim import AdamW
 from single_cellm.jointemb.model import (
     TranscriptomeTextDualEncoderConfig,
     TranscriptomeTextDualEncoderModel,
     CLIPOutput,
 )
 
-# from single_cellm.jointemb.config import LossConfig ## NOT WORKING
+from lightning.pytorch.cli import OptimizerCallable, LRSchedulerCallable
+
 
 from typing import Optional, Union, Dict, List
 from pathlib import Path
@@ -30,33 +33,23 @@ warnings.filterwarnings(
 )
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-DEFAULT_MODEL_CONFIG = TranscriptomeTextDualEncoderConfig(
-    transcriptome_config={"model_type": "geneformer"},
-    text_config={"model_type": "biogpt"},
-).to_dict()
-
 
 class TranscriptomeTextDualEncoderLightning(LightningModule):
     def __init__(
         self,
-        model_config: Union[Dict, TranscriptomeTextDualEncoderConfig] = copy.deepcopy(
-            DEFAULT_MODEL_CONFIG
-        ),  # needs copy to avoid GPU memory leak
-        loss_config: Union[Dict, LossConfig] = LossConfig().to_dict(),
+        model_config: Union[Dict, TranscriptomeTextDualEncoderConfig],
+        loss_config: Union[Dict, LossConfig],
         gauss_noise_std: float = 0.0,  # Noise standard deviation: if 0.0 or None noise won't be added to training embeddings
+        max_epochs: int = 100,
+        optimizer: OptimizerCallable = torch.optim.AdamW,
+        scheduler: LRSchedulerCallable = CosineAnnealingLR,
+        learning_rate: float = 1e-3,
     ):
         """
         Args:
             dim: dimension of the projection layer
             logit_scale_init_value: initial value of the logit scale parameter (see CLIP paper)
         """
-
-        model_config = copy.deepcopy(
-            model_config
-        )  # make sure not to modify the default arg itself
-
-        loss_config = copy.deepcopy(loss_config)
-
         super(TranscriptomeTextDualEncoderLightning, self).__init__()
 
         if not isinstance(model_config, TranscriptomeTextDualEncoderConfig):
@@ -68,10 +61,14 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         self.model = TranscriptomeTextDualEncoderModel(
             config=model_config,
         )
+        self.max_epochs = max_epochs
+        self.optimizer = optimizer
+        self.scheduler = scheduler
+        self.learning_rate = learning_rate
 
         self.loss_config = loss_config
         self.loss_functions = self.loss_config.configure_losses(
-            self.model.projection_dim, self.model.discriminator
+            self.model.discriminator
         )
 
         self.input_regularization = InputRegularization(gauss_noise_std=gauss_noise_std)
@@ -104,6 +101,8 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         # Restore state_dict
         model.load_state_dict(state_dict)
 
+        return model
+
     def load_pretrained_models(
         self, geneformer_directory: str, text_model_name_or_path: str
     ):
@@ -118,7 +117,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             )
         )
         self.loss_functions = self.loss_config.configure_losses(
-            self.model.projection_dim, self.model.discriminator
+            self.model.discriminator
         )
 
     def forward(
@@ -144,14 +143,14 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         # outputs = {k: v.to(device) if v is not None else None for k, v in outputs.items()}
         combined_loss = 0.0
 
-        for loss_name, loss_fn in self.loss_functions.items():
+        for loss in self.loss_functions:
             # Calculate the loss for the current batch using the specific loss function.
-            loss_value = loss_fn(**outputs)
-            combined_loss += loss_value
+            loss_value = loss["fn"](**outputs)
+            combined_loss = combined_loss + (loss_value * loss["lambda"])
 
             # Log the individual loss value for monitoring.
             self.log(
-                f"{step_type}_{loss_name}_loss",
+                f"{step_type}_{loss['name']}_loss",
                 loss_value,
                 on_step=True,
                 on_epoch=True,
@@ -195,11 +194,31 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         return self.process_step(batch, batch_idx, "test")
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.model.parameters(), lr=1e-4)
-        return optimizer
+        """
+        Use AdamW optimizer for decoupled weight decay. Apply decay weights only (e.g. not biases), as indicated by the CLIP paper(s).
+
+        Also implement cosine learning rate schedule, as indicated by the CLIP paper(s).
+        """
+        weight_params = [
+            param for name, param in self.named_parameters() if "weight" in name
+        ]
+        other_params = [
+            param for name, param in self.named_parameters() if "weight" not in name
+        ]
+
+        optimizer = self.optimizer(
+            [
+                {"params": weight_params, "weight_decay": 0.01},
+                {"params": other_params, "weight_decay": 0.0},
+            ],
+            lr=self.learning_rate,
+        )
+        scheduler = {
+            "scheduler": self.scheduler(optimizer, T_max=self.max_epochs, eta_min=0),
+            "interval": "epoch",
+            "monitor": "val_loss",
+        }
+        return {"optimizer": optimizer, "lr_scheduler": scheduler}
 
     def on_train_end(self):
-        self.model.store_cache()
-
-    def on_validation_end(self):
         self.model.store_cache()

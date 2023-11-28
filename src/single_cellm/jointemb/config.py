@@ -39,11 +39,11 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
         self,
         projection_dim: int = 1024,
         logit_scale_init_value: float = 2.6592,
-        transcriptome_config: Optional[dict] = None,
+        transcriptome_config: Dict = {"model_type": "geneformer"},
+        text_config: Dict = {"model_type": "biogpt"},
         freeze_transcriptome_model: bool = True,
-        text_config: Optional[dict] = None,
         freeze_text_model: bool = False,
-        **kwargs: Any,
+        **kwargs,
     ):
         super().__init__(**kwargs)
 
@@ -52,6 +52,9 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
 
         if text_config is None:
             raise ValueError("`text_config` can not be `None`.")
+
+        transcriptome_config = transcriptome_config.copy()
+        text_config = text_config.copy()
 
         transcriptome_model_type = transcriptome_config.pop("model_type")
         text_model_type = text_config.pop("model_type")
@@ -68,7 +71,9 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
         self.text_config = AutoConfig.for_model(text_model_type, **text_config)
         self.freeze_text_model = freeze_text_model
 
-        self.projection_dim = projection_dim
+        self.projection_dim = int(
+            projection_dim
+        )  # workaround Lightning CLI not interpreting the string as int as expected
         self.logit_scale_init_value = (
             logit_scale_init_value  # TODO unused and can be refactored (i.e. removed)
         )

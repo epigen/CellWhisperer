@@ -12,9 +12,8 @@ class JSDInfoMaxLossSingleCeLLM(JSDInfoMaxLoss):
     Repo where JSDInfoMaxLoss it is defined: https://github.com/4m4n5/CLIP-Lite/blob/a6825d0258f3876104002fdd9328b8eda0a18746/loss.py#L110C7-L110C21
     """
 
-    def __init__(self, weight, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(JSDInfoMaxLossSingleCeLLM, self).__init__(*args, **kwargs)
-        self.weight = weight
 
     def forward(
         self,
@@ -40,7 +39,7 @@ class JSDInfoMaxLossSingleCeLLM(JSDInfoMaxLoss):
             aug_text_features=aug_text_embeds,
         )
 
-        return self.weight * loss_results["total_loss"]
+        return loss_results["total_loss"]
 
 
 def contrastive_loss(logits: torch.Tensor) -> torch.Tensor:
@@ -50,9 +49,8 @@ def contrastive_loss(logits: torch.Tensor) -> torch.Tensor:
 
 
 class ClipLoss(nn.Module):
-    def __init__(self, weight: float = 1.0):
+    def __init__(self):
         super().__init__()
-        self.weight = weight
 
     def forward(self, logits_per_text: torch.Tensor, *args, **kwargs) -> torch.Tensor:
         """
@@ -74,7 +72,7 @@ class ClipLoss(nn.Module):
         """
         text_loss = contrastive_loss(logits_per_text)
         transcriptome_loss = contrastive_loss(logits_per_text.t())
-        return self.weight * (text_loss + transcriptome_loss) / 2.0
+        return (text_loss + transcriptome_loss) / 2.0
 
 
 ### The code below is unused and requires refactoring before use

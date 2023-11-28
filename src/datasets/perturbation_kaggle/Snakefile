@@ -94,6 +94,9 @@ rule train_deg_head:
         embedding_sentence = EMBEDDING_SENTENCE,
         num_folds = NUM_FOLDS,
         wandb_logging = True,
+        geneformer_directory = "geneformer",  # TODO needs to match pretraining
+        text_model_name_or_path = "biogpt",
+        normalize_embeds = True
         # TODO add hyper parameters
     conda:
         CONDA_ENV_NAME

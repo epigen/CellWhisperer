@@ -5,7 +5,7 @@ from single_cellm.jointemb.model import TranscriptomeTextDualEncoderModel
 from single_cellm.config import get_path, config
 from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
 from single_cellm.validation.zero_shot.functions import get_scores_adatas_vs_text_list
-from single_cellm.utils.cuda import get_device
+from single_cellm.misc.cuda import get_device
 from transformers import AutoTokenizer
 import anndata
 import numpy as np

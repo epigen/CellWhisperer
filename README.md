@@ -45,7 +45,7 @@ single_cellm fit --config run_config.yaml
 
 ### Important parameters
 
-`trainer.logger.init_args.name`: The run-name on WandB
+`wandb`: Whether to log to wandb and if so which run_name to use
 `trainer.logger.log_model`: Upload model to WandB?
 `trainer.fast_dev_run`: Name is self-explanatory. Super useful for debugging
 `ckpt_path`: a path (to load a model, e.g. for resuming)

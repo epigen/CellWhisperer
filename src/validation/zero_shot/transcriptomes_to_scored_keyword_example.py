@@ -7,7 +7,7 @@ from single_cellm.validation.zero_shot.functions import (
     anndata_to_scored_keywords,
     formatted_text_from_df,
 )
-from single_cellm.utils.cuda import get_device
+from single_cellm.misc.cuda import get_device
 from single_cellm.config import get_path, config
 from transformers import AutoTokenizer
 import anndata
