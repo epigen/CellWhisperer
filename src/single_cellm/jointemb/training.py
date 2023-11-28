@@ -3,7 +3,7 @@
 """
 See https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html for documentation on usage
 """
-
+from lightning.pytorch.tuner import Tuner
 from single_cellm.config import get_path, model_path_from_name
 import torch
 from lightning.pytorch.cli import LightningCLI, SaveConfigCallback
@@ -60,6 +60,12 @@ class SingleCeLLMCLI(LightningCLI):
                 "Unable to find geneformer model. Please download first (see `rna` snakemake pipeline)"
             )
             raise
+
+        if not self.datamodule.batch_size > 0:
+            tuner = Tuner(self.trainer)
+            tuner.scale_batch_size(
+                self.model, datamodule=self.datamodule, mode="binsearch", init_val=8
+            )
 
     def after_fit(self) -> None:
         if self.config["fit.best_model_path"] is not None:
