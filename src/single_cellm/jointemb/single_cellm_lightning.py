@@ -39,7 +39,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         self,
         model_config: Union[Dict, TranscriptomeTextDualEncoderConfig],
         loss_config: Union[Dict, LossConfig],
-        gauss_noise_std: float = 0.0,  # Noise standard deviation: if 0.0 or None noise won't be added to training embeddings
+        gauss_noise_std: float = 0.0,
         max_epochs: int = 100,
         optimizer: OptimizerCallable = torch.optim.AdamW,
         scheduler: LRSchedulerCallable = CosineAnnealingLR,
@@ -47,8 +47,13 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
     ):
         """
         Args:
-            dim: dimension of the projection layer
-            logit_scale_init_value: initial value of the logit scale parameter (see CLIP paper)
+            model_config: configuration for the model. Can be a dict or a TranscriptomeTextDualEncoderConfig object.
+            loss_config: configuration for the loss. Can be a dict or a LossConfig object.
+            gauss_noise_std: Currently inactive: standard deviation of the gaussian noise to add to the input embeddings (features). if 0.0 or None noise won't be added to training embeddings
+            max_epochs: maximum number of epochs to train for
+            optimizer: optimizer to use. Must be a callable that returns an optimizer object.
+            scheduler: scheduler to use. Must be a callable that returns a scheduler object.
+            learning_rate: learning rate to use for the optimizer
         """
         super(TranscriptomeTextDualEncoderLightning, self).__init__()
 

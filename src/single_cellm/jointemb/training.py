@@ -6,6 +6,7 @@ See https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html for document
 from lightning.pytorch.tuner import Tuner
 from single_cellm.config import get_path, model_path_from_name
 from single_cellm.misc.utils import obj_signature
+from single_cellm.misc.debug import start_debugger
 import torch
 from lightning.pytorch.cli import LightningCLI, SaveConfigCallback
 import subprocess
@@ -43,6 +44,7 @@ class SingleCeLLMCLI(LightningCLI):
     def add_arguments_to_parser(self, parser):
         parser.add_argument("--best_model_path", type=Path, default=None)
         parser.add_argument("--log_level", default="WARNING")
+        parser.add_argument("--dap_debug", action="store_true")
         parser.add_argument("--batch_size", default=32, type=int)
         parser.add_argument(
             "--wandb",
@@ -112,8 +114,10 @@ class SingleCeLLMCLI(LightningCLI):
             tuner.scale_batch_size(
                 self.model, datamodule=self.datamodule, mode="binsearch", init_val=8
             )
-            
-        # self.trainer.logger.watch(self.model, log="all")
+        # self.trainer.logger.watch(self.model, log="all")  # TODO test
+
+        if self.config["fit.dap_debug"]:
+            start_debugger(wait_for_client=True)
 
     def after_fit(self) -> None:
         if self.config["fit.best_model_path"] is not None:

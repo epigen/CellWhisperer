@@ -64,18 +64,30 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
             )
             # TODO add assertion that adata.var.index contains the gene names
             adata_w_id = adata[:, [x for x in adata.var.index if x in annot.index]]
-            # Since the copy() mechanism seems to be broken
+            # Since the implicit copy() mechanism seems to be broken, I need to do it explicitly
             adata_w_id = anndata.AnnData(
-                X=np.array(adata_w_id.X),
+                X=adata_w_id.X.copy(),
                 var=pd.DataFrame(adata_w_id.var),
                 obs=pd.DataFrame(adata_w_id.obs),
             )
+
+            # if isinstance(adata_w_id.X, anndata._core.views.ArrayView):  # use this code snippets, if complications arise with the copy() above
+            #     X = np.array(adata_w_id.X)
+            # elif isinstance(adata_w_id.X, anndata._core.views.SparseCSRView):
+            #     X = adata_w_id.X.copy()
+
             adata_w_id.var["ensembl_id"] = annot.loc[
                 adata_w_id.var.index.values, "ensembl_gene_id"
             ].values
 
         sc.pp.calculate_qc_metrics(adata_w_id, inplace=True)
         adata_w_id.obs["n_counts"] = adata_w_id.obs.total_counts
+        if "sample_name" in adata_w_id.obs.columns:
+            # rename column
+            adata_w_id.obs.rename(
+                columns={"sample_name": "sample_name_attrib"}, inplace=True
+            )
+
         adata_w_id.obs.index.name = "sample_name"
         adata_w_id.obs.reset_index(inplace=True)
         return adata_w_id

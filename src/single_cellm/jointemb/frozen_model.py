@@ -171,7 +171,12 @@ class FrozenCachedModel(nn.Module):
             res = (res_0, res_1)
         else:
             logger.debug(f"Computing batch with model {cache_misses}/{batch_size}")
-            self.to(device)  # make sure that model is on the correct device
+
+            if self.model.device == torch.device("cpu"):
+                logger.warning(
+                    f"Loading model {self.model.__name__} into GPU. Consider precomputing all samples first to avoid model loading."
+                )
+                self.to(device)
             with torch.no_grad():
                 res = self.model(*args, **kwargs)
 
@@ -187,8 +192,8 @@ class FrozenCachedModel(nn.Module):
                 self.cache[sample_hashes[i]] = entry
 
             if cache_misses < batch_size:
-                logger.warning(
-                    f"The cache contains some ({cache_misses}) but not all ({batch_size}) of the batch samples. Consider precomputing all samples first to avoid model loading."
+                logger.debug(
+                    f"The cache contains some ({cache_misses}) but not all ({batch_size}) of the batch samples."
                 )
 
         # Return the data in the compatible tuple format
