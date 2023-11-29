@@ -16,7 +16,10 @@ https://github.com/epigen/single-cellm/wiki
   mamba env create -f envs/main.yaml  # this already includes `pip install -e .`
   conda activate single-cellm
   ```
-
+3. Install scgpt and flash-attn (they need pip installation flags to be installed properly)
+   ```
+   bash envs/install_scgpt_after_env_creation.sh
+   ```
 4. Develop :)
 
 ### Sane git defaults
