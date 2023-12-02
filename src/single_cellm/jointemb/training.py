@@ -11,6 +11,7 @@ import torch
 from lightning.pytorch.cli import LightningCLI, SaveConfigCallback
 import subprocess
 import shutil
+import warnings
 from pathlib import Path
 import os
 import yaml
@@ -39,6 +40,8 @@ class SingleCeLLMCLI(LightningCLI):
     """CLI for single-cellm."""
 
     def __init__(self, *args, **kwargs):
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        warnings.filterwarnings("ignore", category=FutureWarning)
         super().__init__(*args, **kwargs)
 
     def add_arguments_to_parser(self, parser):
@@ -186,7 +189,7 @@ def cli_main():
             enable_progress_bar=True,
             callbacks=[checkpoint_callback, early_stop],
         ),
-        save_config_callback=None,
+        save_config_callback=LoggerSaveConfigCallback,
         auto_configure_optimizers=False,
     )
 

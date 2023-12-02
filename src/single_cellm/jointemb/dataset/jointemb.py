@@ -1,16 +1,11 @@
 from torch.utils.data import Dataset, DataLoader
 import anndata
 
-# from pytorch_metric_learning import samplers
 from pathlib import Path
 
-# import torchvision.transforms as transforms
-# import imageio
 import torch
 import random
-
-# from pytorch_metric_learning.utils import common_functions as c_f
-# from PIL import Image
+import logging
 
 import torch
 import lightning as pl
@@ -53,13 +48,24 @@ class JointEmbedDataModule(pl.LightningDataModule):
         dataset_name="daniel",
         batch_size=32,
         nproc=8,
+        min_genes=200,
     ):
+        """
+        Args:
+            tokenizer: name of the tokenizer to use. Must be a valid name for the AutoTokenizer.from_pretrained() function.
+            transcriptome_processor: name of the transcriptome processor to use. Must be a valid name for the GeneformerTranscriptomeProcessor class.
+            dataset_name: name of the dataset to use. Must be a valid name for the get_path() function.
+            batch_size: batch size to use for training and validation
+            nproc: number of processes to use for transcriptome processing
+            min_genes: minimum number of genes to use for a sample. This increases the dataset quality, but also prevents NaNs, which can occur when the number of genes is 0
+        """
         super().__init__()
         self.batch_size = batch_size
         self.dataset_name = dataset_name
         self.tokenizer = tokenizer
         self.transcriptome_processor = transcriptome_processor
         self.nproc = nproc
+        self.min_genes = min_genes
         self.processed_path = get_path(
             ["paths", "datamodule_prepared_path"],
             dataset=self.dataset_name,
@@ -95,6 +101,13 @@ class JointEmbedDataModule(pl.LightningDataModule):
             return_tensors="pt",
             padding=True,
         )
+        # Filter for empty inputs
+        n_genes_filter = inputs["expression_token_lengths"] > self.min_genes
+        inputs = {key: val[n_genes_filter] for key, val in inputs.items()}
+        logging.info(
+            f"Filtered for {sum(n_genes_filter)} of {len(n_genes_filter)} samples with >{self.min_genes} genes."
+        )
+
         # save the inputs dict to a file using torch
         self.processed_path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(
@@ -109,8 +122,9 @@ class JointEmbedDataModule(pl.LightningDataModule):
         # randomly sample train_size indices for train and use the rest for val
         # fix the seed
         random.seed(42)
-        train_ids = random.sample(range(len(inputs["input_ids"])), train_size)
-        val_ids = [i for i in range(len(inputs["input_ids"])) if i not in train_ids]
+        total_ids = set(range(len(inputs["input_ids"])))
+        train_ids = random.sample(total_ids, train_size)
+        val_ids = list(total_ids - set(train_ids))
 
         self.train_dataset = JointEmbedDataset(
             {key: val[train_ids] for key, val in inputs.items()}

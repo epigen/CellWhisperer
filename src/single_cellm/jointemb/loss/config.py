@@ -32,7 +32,7 @@ class LossConfig:
             {
                 "name": "clip",
                 "fn": ClipLoss(),
-                "lambda": self.clip_lambda,
+                "lambda": float(self.clip_lambda),
             },
             {
                 "name": "clip_lite",
@@ -42,7 +42,7 @@ class LossConfig:
                     image_prior=self.clip_lite_transcriptome_prior,
                     text_prior=self.clip_lite_text_prior,
                 ),
-                "lambda": self.clip_lite_lambda,
+                "lambda": float(self.clip_lite_lambda),
             },
         ]
 

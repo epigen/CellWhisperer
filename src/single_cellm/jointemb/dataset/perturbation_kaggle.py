@@ -122,7 +122,7 @@ class KaggleDEGDataModule(pl.LightningDataModule):
     def prepare_data(self):
         if self.processed_path.exists():
             print("data already prepared, not skipping though, just to make sure")
-            # return
+            return
         print("preparing data...")
 
         inputs_perturbed, inputs_control = self.tokenize_df(self.deg_df)
@@ -194,7 +194,7 @@ class KaggleDEGDataModule(pl.LightningDataModule):
                 "perturbation_features": {
                     key: val[val_ids] for key, val in inputs_control.items()
                 },
-                "labels": df.loc[train_ids].select_dtypes(include=[np.number]),
+                "labels": df.loc[val_ids].select_dtypes(include=[np.number]),
             }
         )
 

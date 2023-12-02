@@ -174,7 +174,7 @@ class FrozenCachedModel(nn.Module):
 
             if self.model.device == torch.device("cpu"):
                 logger.warning(
-                    f"Loading model {self.model.__name__} into GPU. Consider precomputing all samples first to avoid model loading."
+                    f"Loading model {self.model.__class__.__name__} into GPU. Consider precomputing all samples first to avoid model loading."
                 )
                 self.to(device)
             with torch.no_grad():

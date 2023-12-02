@@ -4,6 +4,7 @@ import scipy.sparse as sp
 import numpy as np
 import pandas as pd
 import logging
+import warnings
 
 from transformers import BertForMaskedLM, BertConfig
 from typing import Optional, Union, Tuple, Any
@@ -63,7 +64,12 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
                 get_path(["paths", "ensembl_gene_symbol_map"]), index_col=0
             )
             # TODO add assertion that adata.var.index contains the gene names
-            adata_w_id = adata[:, [x for x in adata.var.index if x in annot.index]]
+
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", message=".*is_categorical_dtype is deprecated.*"
+                )
+                adata_w_id = adata[:, [x for x in adata.var.index if x in annot.index]]
             # Since the implicit copy() mechanism seems to be broken, I need to do it explicitly
             adata_w_id = anndata.AnnData(
                 X=adata_w_id.X.copy(),
@@ -141,9 +147,17 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
         for i in range(0, len(filter_pass_loc), chunk_size):
             idx = filter_pass_loc[i : i + chunk_size]
 
-            n_counts = prepared_features[idx].obs["n_counts"].values[:, None]
-            X_view = prepared_features[idx, coding_miRNA_loc].X
-            X_norm = X_view / n_counts * target_sum / norm_factor_vector
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", message=".*is_categorical_dtype is deprecated.*"
+                )
+                n_counts = prepared_features[idx].obs["n_counts"].values[:, None]
+                X_view = prepared_features[idx, coding_miRNA_loc].X
+            with warnings.catch_warnings():  # We can ignore this warning, because we later filter for cells with 0 counts
+                warnings.filterwarnings(
+                    "ignore", message=".*divide by zero encountered in divide.*"
+                )
+                X_norm = X_view / n_counts * target_sum / norm_factor_vector
             X_norm = sp.csr_matrix(X_norm)
 
             tokenized_cells += [

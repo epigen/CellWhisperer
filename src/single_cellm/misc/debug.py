@@ -1,9 +1,9 @@
 import debugpy
+import logging
+import subprocess
 
 
 def start_debugger(wait_for_client=True):
-    import debugpy
-
     for port in range(5678, 5689):
         try:
             debugpy.listen(("0.0.0.0", port))

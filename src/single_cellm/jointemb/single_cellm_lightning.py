@@ -23,6 +23,7 @@ from pathlib import Path
 import torch
 import copy
 from functools import partial
+import logging
 
 from single_cellm.jointemb.regularization import InputRegularization
 
@@ -31,7 +32,6 @@ warnings.filterwarnings(
     category=FutureWarning,
     message=r".*is deprecated and will be removed in a future version.*",
 )
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class TranscriptomeTextDualEncoderLightning(LightningModule):
@@ -146,7 +146,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         outputs = self(**batch)
 
         # outputs = {k: v.to(device) if v is not None else None for k, v in outputs.items()}
-        combined_loss = 0.0
+        combined_loss = torch.tensor(0.0, device=self.device)
 
         for loss in self.loss_functions:
             # Calculate the loss for the current batch using the specific loss function.
@@ -161,6 +161,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                 on_epoch=True,
                 prog_bar=True,
                 logger=True,
+                sync_dist=True,  # NOTE: might lead to more synchronization overhead
             )
 
         # After processing all loss functions, log the total combined loss.
@@ -171,7 +172,13 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             on_epoch=True,
             prog_bar=True,
             logger=True,
+            sync_dist=True,  # NOTE: might lead to more synchronization overhead
         )
+        # TODO: this is a hack to avoid NaNs in the loss. We should fix this properly.
+        if torch.isnan(combined_loss):
+            logging.warning("NaN loss detected. Setting loss to 0.0.")
+            return torch.tensor(0.0, device=self.device)
+
         return combined_loss
 
     def training_step(self, batch, batch_idx):
