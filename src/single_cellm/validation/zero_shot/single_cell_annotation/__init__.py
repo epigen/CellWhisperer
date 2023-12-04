@@ -1,39 +1,35 @@
-from pathlib import Path
+from typing import Union, Iterable, Optional, Any
 import logging
-import torch
 from single_cellm.jointemb.model import TranscriptomeTextDualEncoderModel
-from single_cellm.config import get_path, config
+from single_cellm.config import get_path
 from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
 from single_cellm.validation.zero_shot.functions import get_scores_adatas_vs_text_list
-from single_cellm.misc.cuda import get_device
 from transformers import AutoTokenizer
 import anndata
 import numpy as np
 import pandas as pd
 from typing import Dict, Tuple
 
-np.random.seed(
-    42
-)  # TODO we might want to remove this, because we have a central seeding mechanism withi lightning
-
 
 class SingleCellZeroshotValidationScoreCalculator:
     def __init__(
         self,
-        n_celltypes=10,
-        cell_number_threshold_per_celltype=100,
-        dataset="tabula_sapiens_100_cells_per_type",
-        celltype_obs_colname="cell_ontology_class",
-        prefix_for_text_embeddings="Transcriptome of a ",
-        suffix_for_text_embeddings="",
-        nproc_transcriptome_processor=1,
-        logger=None,
-        tokenizer_name="microsoft/biogpt",
+        celltypes: Union[int, Iterable[str]] = 10,
+        cell_number_threshold_per_celltype: int = 100,
+        dataset: str = "tabula_sapiens_100_cells_per_type",
+        celltype_obs_colname: str = "cell_ontology_class",
+        prefix_for_text_embeddings="Sample of a ",
+        suffix_for_text_embeddings: str = "",
+        nproc_transcriptome_processor: str = 1,
+        logger: Optional[Any] = None,
+        tokenizer_name: str = "microsoft/biogpt",
     ):
         """
         Class to calculate zero-shot validation scores for a single-cell dataset.
         Args:
-            n_celltypes: number of celltypes to process. This many celltypes will be randomly sampled from the dataset.
+            celltypes: number of celltypes to process. \
+                If int: This many celltypes will be randomly sampled from the dataset.
+                If list: This list of celltypes will be processed.
             cell_number_threshold_per_celltype: only celltypes with at least this number of cells will be processed.
             dataset: name of the dataset to process. Must be a key in the config file.
             celltype_obs_colname: name of the column in the adata.obs dataframe that contains the celltype labels.
@@ -43,7 +39,6 @@ class SingleCellZeroshotValidationScoreCalculator:
             logger: logger to use. If None, will use the logger for this module.
         """
 
-        self.n_celltypes = n_celltypes
         self.cell_number_threshold_per_celltype = cell_number_threshold_per_celltype
         self.dataset = dataset
         self.celltype_obs_colname = celltype_obs_colname
@@ -61,24 +56,28 @@ class SingleCellZeroshotValidationScoreCalculator:
             get_path(["paths", "read_count_table"], dataset=self.dataset)
         )
 
-        self.counts_per_celltype = self.adata.obs.value_counts(
-            self.celltype_obs_colname
-        )
-        self.celltypes_to_process = [
-            x
-            for x in self.counts_per_celltype[
-                self.counts_per_celltype >= self.cell_number_threshold_per_celltype
-            ].index.values
-        ]
-        assert (
-            len(self.celltypes_to_process) >= self.n_celltypes
-        ), f"Only {len(self.celltypes_to_process)} celltypes have at least {self.cell_number_threshold_per_celltype} cells, but {self.n_celltypes} celltypes were requested."
-        np.random.shuffle(self.celltypes_to_process)
-        self.celltypes_to_process = self.celltypes_to_process[: self.n_celltypes]
+        if isinstance(celltypes, int):
+            self.counts_per_celltype = self.adata.obs.value_counts(
+                self.celltype_obs_colname
+            )
+            self.celltypes_to_process = [
+                x
+                for x in self.counts_per_celltype[
+                    self.counts_per_celltype >= self.cell_number_threshold_per_celltype
+                ].index.values
+            ]
+            assert (
+                len(self.celltypes_to_process) >= celltypes
+            ), f"Only {len(self.celltypes_to_process)} celltypes have at least {self.cell_number_threshold_per_celltype} cells, but {celltypes} celltypes were requested."
+            np.random.shuffle(self.celltypes_to_process)
+            self.celltypes_to_process = self.celltypes_to_process[:celltypes]
+        elif isinstance(celltypes, Iterable):
+            self.celltypes_to_process = celltypes
         self.text_list = [
             f"{self.prefix_for_text_embeddings}{x}{self.suffix_for_text_embeddings}"
             for x in self.celltypes_to_process
         ]
+        # REFACTOR: use a single adata object with celltype within `obs` DataFrame
         self.adata_list = [
             self.adata[self.adata.obs[self.celltype_obs_colname] == celltype].copy()
             for celltype in self.celltypes_to_process
@@ -108,6 +107,50 @@ class SingleCellZeroshotValidationScoreCalculator:
 def evaluate_single_cell_annotations(
     model: TranscriptomeTextDualEncoderModel,
 ) -> Tuple[Dict[str, float], pd.DataFrame]:
-    score_calculator = SingleCellZeroshotValidationScoreCalculator()
-    scores = score_calculator.get_scores(model=model)
+    # Check if the score_calculator instance exists, otherwise create it
+    if not hasattr(evaluate_single_cell_annotations, "score_calculator"):
+        evaluate_single_cell_annotations.score_calculator = (
+            SingleCellZeroshotValidationScoreCalculator()
+        )
+
+    scores = evaluate_single_cell_annotations.score_calculator.get_scores(model=model)
+    return scores
+
+
+def evaluate_single_cell_annotations_well_studied_celltypes(
+    model: TranscriptomeTextDualEncoderModel,
+) -> Tuple[Dict[str, float], pd.DataFrame]:
+    # Created by running this on the full tabula sapiens dataset: list(adata.obs[adata.obs["organ_tissue"].isin(["Liver","Lung","Blood"])]["cell_ontology_class"].value_counts().iloc[:20].index)
+    top20_lung_liver_blood_celltypes = [
+        "macrophage",
+        "erythrocyte",
+        "monocyte",
+        "type ii pneumocyte",
+        "classical monocyte",
+        "neutrophil",
+        "cd4-positive, alpha-beta t cell",
+        "nk cell",
+        "naive b cell",
+        "basal cell",
+        "cd8-positive, alpha-beta t cell",
+        "hepatocyte",
+        "cd8-positive, alpha-beta cytokine secreting effector t cell",
+        "club cell",
+        "non-classical monocyte",
+        "capillary endothelial cell",
+        "cd4-positive, alpha-beta memory t cell",
+        "memory b cell",
+        "respiratory goblet cell",
+        "basophil",
+    ]
+
+    # Check if the score_calculator instance exists, otherwise create it
+    if not hasattr(evaluate_single_cell_annotations, "score_calculator"):
+        evaluate_single_cell_annotations.score_calculator = (
+            SingleCellZeroshotValidationScoreCalculator(
+                celltypes=top20_lung_liver_blood_celltypes
+            )
+        )
+
+    scores = evaluate_single_cell_annotations.score_calculator.get_scores(model=model)
     return scores

@@ -1,7 +1,8 @@
 from .zero_shot.cancer_gene_essentiality import evaluate_cancer_gene_essentiality
-from .zero_shot.single_cell_annotation import evaluate_single_cell_annotations
+from .zero_shot.single_cell_annotation import evaluate_single_cell_annotations,evaluate_single_cell_annotations_well_studied_celltypes
 
 TRAINING_VALIDATION_FUNCTIONS = {
     "zero_shot_cancer_gene_essentiality": evaluate_cancer_gene_essentiality,
     "zero_shot_single_cell_annotations": evaluate_single_cell_annotations,
+    "zero_shot_single_cell_annotations_well_studied_celltypes": evaluate_single_cell_annotations_well_studied_celltypes,
 }
