@@ -109,16 +109,28 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         return model
 
     def load_pretrained_models(
-        self, geneformer_directory: str, text_model_name_or_path: str
+        self,
+        geneformer_directory: Optional[str],
+        text_model_name_or_path: Optional[str],
     ):
         """
         This method exhibits an interface to load the pretrained models after initialization. This allows loading of pretrained weights from a checkpoint, without initializing these models..
         """
+
+        kwargs = self.model.config.to_dict()
+        if (
+            geneformer_directory is None
+        ):  # TODO to be changed to transcriptome_model_directory or so
+            kwargs["transcriptome_model"] = self.model.transcriptome_model
+
+        if text_model_name_or_path is None:
+            kwargs["text_model"] = self.model.text_model
+
         self.model = (
             TranscriptomeTextDualEncoderModel.from_transcriptome_text_pretrained(
                 transcriptome_model_name_or_path=geneformer_directory,
                 text_model_name_or_path=text_model_name_or_path,
-                **self.model.config.to_dict(),
+                **kwargs,
             )
         )
         self.loss_functions = self.loss_config.configure_losses(
@@ -188,19 +200,19 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         return self.process_step(batch, batch_idx, "val")
 
     def on_validation_epoch_end(self):
-        # epoch_average = torch.stack(self.validation_step_outputs).mean()
-        # self.log("validation_epoch_average", epoch_average)
-        for val_fn_name, val_fn in TRAINING_VALIDATION_FUNCTIONS.items():
-            val_metrics, results_df = val_fn(self.model)
-            for metric_name, metric_value in val_metrics.items():
-                self.log(
-                    f"validation_{val_fn_name}_{metric_name}",
-                    metric_value,
-                    on_step=False,
-                    on_epoch=True,
-                    prog_bar=True,
-                    logger=True,
-                )
+        # For convenience (speed), I disable this when "fast_dev_run" is enabled
+        if not self.trainer.fast_dev_run:
+            for val_fn_name, val_fn in TRAINING_VALIDATION_FUNCTIONS.items():
+                val_metrics, results_df = val_fn(self.model)
+                for metric_name, metric_value in val_metrics.items():
+                    self.log(
+                        f"validation_{val_fn_name}_{metric_name}",
+                        metric_value,
+                        on_step=False,
+                        on_epoch=True,
+                        prog_bar=True,
+                        logger=True,
+                    )
 
     def test_step(self, batch, batch_idx):
         return self.process_step(batch, batch_idx, "test")
@@ -224,6 +236,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                 {"params": other_params, "weight_decay": 0.0},
             ],
             lr=self.learning_rate,
+            betas=(0.9, 0.98),  # SigLiT recommends even 0.95 for beta2
         )
         scheduler = {
             "scheduler": self.scheduler(optimizer, T_max=self.max_epochs, eta_min=0),

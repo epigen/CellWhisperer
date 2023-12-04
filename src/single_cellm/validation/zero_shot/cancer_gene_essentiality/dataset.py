@@ -62,7 +62,7 @@ class CancerGeneEssentialityDataModule(LightningDataModule):
         Dataset-specific preparation
         """
         if self.processed_path.exists():
-            print("data already prepared...")
+            logging.info("data already prepared...")
             return
         essential = pd.read_csv(
             get_path(["paths", "cancer_gene_essentiality", "essential_genes"])

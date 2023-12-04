@@ -76,9 +76,9 @@ class JointEmbedDataModule(pl.LightningDataModule):
     def prepare_data(self):
         # check whether data has already been prepared
         if self.processed_path.exists():
-            print("data already prepared")
+            logging.info("data already prepared")
             return
-        print("preparing data...")
+        logging.info("preparing data...")
 
         if self.transcriptome_processor == "geneformer":
             transcriptome_processor = GeneformerTranscriptomeProcessor(
@@ -134,7 +134,14 @@ class JointEmbedDataModule(pl.LightningDataModule):
         )
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=self.nproc,
+        )
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size)
+        return DataLoader(
+            self.val_dataset, batch_size=self.batch_size, num_workers=self.nproc
+        )

@@ -25,8 +25,13 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
     Args:
         projection_dim (`int`, *optional*, defaults to 1024):
             Dimentionality of text and transcriptome projection layers.
-        logit_scale_init_value (`float`, *optional*, defaults to 2.6592):
-            The inital value of the *logit_scale* paramter. Default is used as per the original CLIP implementation.
+        transcriptome_config (`Dict`, *optional*):
+            Dictionary of transcriptome model configuration parameters.
+        text_config (`Dict`, *optional*):
+            Dictionary of text model configuration parameters.
+        locking_mode (`str`, defaults to "LU"): Follows 'LiT' paper convention. The first letter corresponds to the training mode for the transcriptome model, the second to the text model. 'L' for locked, 'U' for unfrozen, 'u' for unfrozen and randomly initialized
+        unlocked_fp16 (`bool`, defaults to False): Whether to use fp16 for the unlocked models.
+
         kwargs (*optional*):
             Dictionary of keyword arguments.
 
@@ -38,11 +43,10 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
     def __init__(
         self,
         projection_dim: int = 1024,
-        logit_scale_init_value: float = 2.6592,
         transcriptome_config: Dict = {"model_type": "geneformer"},
         text_config: Dict = {"model_type": "biogpt"},
-        freeze_transcriptome_model: bool = True,
-        freeze_text_model: bool = False,
+        locking_mode: str = "LU",
+        unlocked_fp16: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -59,6 +63,9 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
         transcriptome_model_type = transcriptome_config.pop("model_type")
         text_model_type = text_config.pop("model_type")
 
+        self.locking_mode = locking_mode
+        self.unlocked_fp16 = unlocked_fp16
+
         if transcriptome_model_type == "geneformer":
             self.transcriptome_config = GeneformerConfig(**transcriptome_config)
         else:
@@ -66,17 +73,12 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
             self.transcriptome_config = AutoConfig.for_model(
                 transcriptome_model_type, **transcriptome_config
             )
-        self.freeze_transcriptome_model = freeze_transcriptome_model
 
         self.text_config = AutoConfig.for_model(text_model_type, **text_config)
-        self.freeze_text_model = freeze_text_model
 
         self.projection_dim = int(
             projection_dim
         )  # workaround Lightning CLI not interpreting the string as int as expected
-        self.logit_scale_init_value = (
-            logit_scale_init_value  # TODO unused and can be refactored (i.e. removed)
-        )
 
     @classmethod
     def from_transcriptome_text_configs(

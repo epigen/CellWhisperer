@@ -1,5 +1,6 @@
 # from pytorch_metric_learning import samplers
 from pathlib import Path
+import logging
 
 # import torchvision.transforms as transforms
 # import imageio
@@ -121,9 +122,9 @@ class KaggleDEGDataModule(pl.LightningDataModule):
 
     def prepare_data(self):
         if self.processed_path.exists():
-            print("data already prepared, not skipping though, just to make sure")
+            logging.info("data already prepared, skipping")
             return
-        print("preparing data...")
+        logging.info("preparing data...")
 
         inputs_perturbed, inputs_control = self.tokenize_df(self.deg_df)
         inputs_test_perturbed, inputs_test_control = self.tokenize_df(self.test_map)

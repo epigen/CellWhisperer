@@ -60,8 +60,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
     def __init__(
         self,
         config: Optional[TranscriptomeTextDualEncoderConfig] = None,
-        transcriptome_model: Optional[PreTrainedModel] = None,
-        text_model: Optional[PreTrainedModel] = None,
+        transcriptome_model: Optional[Union[PreTrainedModel, FrozenCachedModel]] = None,
+        text_model: Optional[Union[PreTrainedModel, FrozenCachedModel]] = None,
     ):
         if config is None and (transcriptome_model is None or text_model is None):
             raise ValueError(
@@ -89,17 +89,25 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                     config.transcriptome_config
                 )
 
+        if config.locking_mode[0] == "L":
+            if not isinstance(transcriptome_model, FrozenCachedModel):
+                transcriptome_model = FrozenCachedModel(
+                    transcriptome_model,
+                    get_path(["paths", "transcriptome_model_cache"]),
+                )
+        elif config.unlocked_fp16:
+            transcriptome_model.half()
+
         if text_model is None:
             text_model = AutoModel.from_config(config.text_config)
 
-        if config.freeze_text_model:
-            text_model = FrozenCachedModel(
-                text_model, get_path(["paths", "text_model_cache"])
-            )
-        if config.freeze_transcriptome_model:
-            transcriptome_model = FrozenCachedModel(
-                transcriptome_model, get_path(["paths", "transcriptome_model_cache"])
-            )
+        if config.locking_mode[1] == "L":
+            if not isinstance(text_model, FrozenCachedModel):
+                text_model = FrozenCachedModel(
+                    text_model, get_path(["paths", "text_model_cache"])
+                )
+        elif config.unlocked_fp16:
+            text_model.half()
 
         self.text_model = text_model
         self.transcriptome_model = transcriptome_model
@@ -271,11 +279,11 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         Args:
             path (Path): Path to save the cached models to.
         """
-        if self.config.freeze_text_model:
-            self.text_model.save_cache()
-
-        if self.config.freeze_transcriptome_model:
+        if self.config.locking_mode[0] == "L":
             self.transcriptome_model.save_cache()
+
+        if self.config.locking_mode[1] == "L":
+            self.text_model.save_cache()
 
     @classmethod
     def from_pretrained(cls, *args, **kwargs):
@@ -287,8 +295,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
     @classmethod
     def from_transcriptome_text_pretrained(
         cls,
-        transcriptome_model_name_or_path: str = None,
-        text_model_name_or_path: str = None,
+        transcriptome_model_name_or_path: Optional[str] = None,
+        text_model_name_or_path: Optional[str] = None,
         *model_args,
         **kwargs,
     ) -> PreTrainedModel:

@@ -265,10 +265,10 @@ def get_scores_adatas_vs_text_list(
     )
 
     result_dict = {
-        "precision": precision.item(),
-        "recall": recall.item(),
-        "accuracy": accuracy.item(),
-        "f1": f1.item(),
+        "precision": precision.detach(),
+        "recall": recall.detach(),
+        "accuracy": accuracy.detach(),
+        "f1": f1.detach(),
     }
 
     return result_dict, scores_df

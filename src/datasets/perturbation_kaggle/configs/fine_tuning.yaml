@@ -207,7 +207,6 @@ model:
       forward_batch_size: -1
       nproc: 4
       summary_stat: null
-    freeze_transcriptome_model: true
     text_config:
       vocab_size: 42384
       max_position_embeddings: 1024
@@ -283,9 +282,7 @@ model:
       problem_type: null
       _name_or_path: ''
       model_type: bert
-    freeze_text_model: false
     projection_dim: 128
-    logit_scale_init_value: 2.6592
     model_type: transcriptome-text-dual-encoder
 data:
   dataset_name: perturbation_kaggle

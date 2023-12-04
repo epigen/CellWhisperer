@@ -4,6 +4,9 @@
 See https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html for documentation on usage
 """
 from lightning.pytorch.tuner import Tuner
+from lightning.pytorch.strategies import FSDPStrategy
+from transformers.models.bert.modeling_bert import BertLayer
+from transformers.models.biogpt.modeling_biogpt import BioGptDecoderLayer
 from single_cellm.config import get_path, model_path_from_name
 from single_cellm.misc.utils import obj_signature
 from single_cellm.misc.debug import start_debugger
@@ -89,8 +92,8 @@ class SingleCeLLMCLI(LightningCLI):
         parser.link_arguments(
             ["trainer.fast_dev_run", "batch_size"],
             "data.batch_size",
-            compute_fn=lambda fast_dev_run, batch_size: 2  # TODO 1 fails maybe :/
-            if fast_dev_run
+            compute_fn=lambda fast_dev_run, batch_size: 2  # TODO 1 fails maybe?
+            if fast_dev_run or batch_size <= 0
             else batch_size,
         )
 
@@ -99,12 +102,24 @@ class SingleCeLLMCLI(LightningCLI):
 
     def before_fit(self) -> None:
         # We need to preload this model
+        if self.model.model.config.locking_mode[0] == "u":
+            transcriptome_model_path = None
+        else:
+            transcriptome_model_path = model_path_from_name(
+                self.model.model.transcriptome_model.config.model_type
+            )
+
+        if self.model.model.config.locking_mode[1] == "u":
+            text_model_path = None
+        else:
+            text_model_path = model_path_from_name(
+                self.model.model.text_model.config.model_type
+            )
+
         try:
             self.model.load_pretrained_models(
-                model_path_from_name(
-                    self.model.model.transcriptome_model.config.model_type
-                ),
-                model_path_from_name(self.model.model.text_model.config.model_type),
+                transcriptome_model_path,
+                text_model_path,
             )
         except FileNotFoundError:
             logging.error(
@@ -112,12 +127,11 @@ class SingleCeLLMCLI(LightningCLI):
             )
             raise
 
-        if not self.datamodule.batch_size > 0:
+        if not bool(self.config["fit.batch_size"]):
             tuner = Tuner(self.trainer)
             tuner.scale_batch_size(
                 self.model, datamodule=self.datamodule, mode="binsearch", init_val=8
-            )
-        # self.trainer.logger.watch(self.model, log="all")  # TODO test
+            )  # requires batch_size argument in datamodule or model
 
         if self.config["fit.dap_debug"]:
             start_debugger(wait_for_client=True)
@@ -142,6 +156,9 @@ class SingleCeLLMCLI(LightningCLI):
 
 
 class LoggerSaveConfigCallback(SaveConfigCallback):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, overwrite=True, **kwargs)
+
     def save_config(
         self, trainer: Trainer, pl_module: LightningModule, stage: str
     ) -> None:
@@ -175,8 +192,18 @@ def cli_main():
         TranscriptomeTextDualEncoderLightning,
         JointEmbedDataModule,
         trainer_defaults=dict(
-            # accelerator="gpu",
             default_root_dir=LOG_DIR,
+            precision="bf16-mixed",
+            strategy={
+                "class_path": "lightning.pytorch.strategies.FSDPStrategy",
+                "init_args": {
+                    "activation_checkpointing_policy": {  # TODO need to add the relevant layers for the transcriptome models as well, if we want to fine-tune them ever
+                        BioGptDecoderLayer,
+                        BertLayer,
+                    },
+                    "sharding_strategy": "NO_SHARD",  # corresponds to DDP. no need to go fancy for the moment.. We can try later
+                },
+            },
             logger={
                 "class_path": WandbLogger.__module__ + "." + WandbLogger.__name__,
                 "init_args": dict(
