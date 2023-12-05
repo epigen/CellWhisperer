@@ -23,10 +23,6 @@ import scanpy as sc
 
 
 class GeneformerTranscriptomeProcessor(ProcessorMixin):
-    """
-    TODO: move the feauture processing and tokenization (in the model below) here
-    """
-
     attributes = []
 
     def __init__(self, nproc, emb_label, *args, **kwargs):

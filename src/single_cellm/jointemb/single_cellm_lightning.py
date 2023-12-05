@@ -234,6 +234,8 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         Use AdamW optimizer for decoupled weight decay. Apply decay weights only (e.g. not biases), as indicated by the CLIP paper(s).
 
         Also implement cosine learning rate schedule, as indicated by the CLIP paper(s).
+
+        TODO: don't decay weights of pretrained models! Alternative could be to use AdaBelief (which works well according to "ItalianClip")
         """
         weight_params = [
             param for name, param in self.named_parameters() if "weight" in name
@@ -256,6 +258,31 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             "monitor": "val_loss",
         }
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
+
+    def optimizer_step(self, epoch, batch_idx, optimizer, optimizer_closure):
+        """
+        Override `optimizer_step` to allow learning-rate warmup
+        """
+        warmup_steps = 100  # according to CLIP-Lite it's 10K, but we start easy
+        if self.trainer.global_step < warmup_steps:
+            lr_scale = min(1.0, float(self.trainer.global_step + 1) / warmup_steps)
+            for pg in optimizer.param_groups:
+                pg["lr"] = lr_scale * self.learning_rate
+
+        for pg in optimizer.param_groups:
+            self.log(
+                "learning_rate",
+                pg["lr"],
+                on_step=True,
+                on_epoch=True,
+                prog_bar=True,
+                logger=True,
+            )
+            break  # (only the first one is needed)
+
+        super(TranscriptomeTextDualEncoderLightning, self).optimizer_step(
+            epoch, batch_idx, optimizer, optimizer_closure
+        )
 
     def on_train_end(self):
         self.model.store_cache()

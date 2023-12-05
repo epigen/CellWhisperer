@@ -178,7 +178,7 @@ def cli_main():
         LOG_DIR = PROJECT_DIR / "results" / "model_training"
 
     early_stop = EarlyStopping(
-        monitor="val_loss", min_delta=1e-5, patience=20, verbose=False, mode="min"
+        monitor="val_loss", min_delta=1e-5, patience=100, verbose=False, mode="min"
     )
     checkpoint_callback = ModelCheckpoint(
         monitor="val_loss",
