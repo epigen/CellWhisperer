@@ -173,12 +173,16 @@ def evaluate_single_cell_annotations_well_studied_celltypes(
     ]
 
     # Check if the score_calculator instance exists, otherwise create it
-    if not hasattr(evaluate_single_cell_annotations, "score_calculator"):
-        evaluate_single_cell_annotations.score_calculator = (
+    if not hasattr(
+        evaluate_single_cell_annotations_well_studied_celltypes, "score_calculator"
+    ):
+        evaluate_single_cell_annotations_well_studied_celltypes.score_calculator = (
             SingleCellZeroshotValidationScoreCalculator(
                 celltypes=top20_lung_liver_blood_celltypes
             )
         )
 
-    scores = evaluate_single_cell_annotations.score_calculator.get_scores(model=model)
+    scores = evaluate_single_cell_annotations_well_studied_celltypes.score_calculator.get_scores(
+        model=model
+    )
     return scores
