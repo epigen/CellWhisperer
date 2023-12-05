@@ -12,6 +12,7 @@ import lightning as pl
 
 from transformers import AutoTokenizer
 from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
+from single_cellm.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
 from single_cellm.jointemb.processing import TranscriptomeTextDualEncoderProcessor
 
 from single_cellm.config import get_path
@@ -48,6 +49,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         dataset_name="daniel",
         batch_size=32,
         nproc=8,
+        transcriptome_processor_kwargs={},
         min_genes=200,
     ):
         """
@@ -72,6 +74,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             transcriptome_processor=self.transcriptome_processor,
             tokenizer=self.tokenizer,
         )
+        self.transcriptome_processor_kwargs = transcriptome_processor_kwargs
 
     def prepare_data(self):
         # check whether data has already been prepared
@@ -84,7 +87,14 @@ class JointEmbedDataModule(pl.LightningDataModule):
             transcriptome_processor = GeneformerTranscriptomeProcessor(
                 nproc=self.nproc,
                 emb_label="natural_language_annotation",  # config["anndata_label_name"]
+                **self.transcriptome_processor_kwargs,
             )
+        elif self.transcriptome_processor == "scgpt":
+            transcriptome_processor = ScGPTTranscriptomeProcessor(
+                nproc=self.nproc,
+                **self.transcriptome_processor_kwargs,
+            )
+
         else:
             raise ValueError("transcriptome_processor not recognized")
 
@@ -102,7 +112,11 @@ class JointEmbedDataModule(pl.LightningDataModule):
             padding=True,
         )
         # Filter for empty inputs
-        n_genes_filter = inputs["expression_token_lengths"] > self.min_genes
+        if self.transcriptome_processor=="geneformer":
+            n_genes_filter = inputs["expression_token_lengths"] > self.min_genes
+        elif self.transcriptome_processor=="scgpt":
+            # TODO: Only genes with zero expression can become masked
+            n_genes_filter = (inputs["expression_key_padding_mask"]==False).sum(dim=1) > self.min_genes
         inputs = {key: val[n_genes_filter] for key, val in inputs.items()}
         logging.info(
             f"Filtered for {sum(n_genes_filter)} of {len(n_genes_filter)} samples with >{self.min_genes} genes."

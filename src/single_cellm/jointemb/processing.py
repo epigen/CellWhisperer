@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 from transformers.processing_utils import ProcessorMixin
 from transformers.tokenization_utils_base import BatchEncoding
+from .geneformer_model import GeneformerTranscriptomeProcessor
+from .scgpt_model import ScGPTTranscriptomeProcessor
 
 
 class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
@@ -41,7 +43,7 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
             The tokenizer is a required input.
     """
     attributes = ["tokenizer"]  # "transcriptome_processor",
-    transcriptome_processor_class = "GeneformerTranscriptomeProcessor"
+    # transcriptome_processor_class = "GeneformerTranscriptomeProcessor"
     tokenizer_class = "AutoTokenizer"
 
     def __init__(self, transcriptome_processor=None, tokenizer=None, **kwargs):
@@ -99,21 +101,29 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
             encoding = self.tokenizer(text, return_tensors=return_tensors, **kwargs)
 
         if transcriptomes is not None:
-            transcriptome_features = self.transcriptome_processor(
+            transcriptome_processor_results = self.transcriptome_processor(
                 transcriptomes, return_tensors=return_tensors, **kwargs
             )
 
         if text is not None and transcriptomes is not None:
-            encoding["expression_tokens"] = transcriptome_features["expression_tokens"]
-            encoding["expression_token_lengths"] = transcriptome_features[
-                "expression_token_lengths"
-            ]
+            if type(self.transcriptome_processor) == GeneformerTranscriptomeProcessor:
+                encoding["expression_tokens"] = transcriptome_processor_results[
+                    "expression_tokens"
+                ]
+                encoding["expression_token_lengths"] = transcriptome_processor_results[
+                    "expression_token_lengths"
+                ]
+            elif type(self.transcriptome_processor) == ScGPTTranscriptomeProcessor:
+                for key in transcriptome_processor_results.keys():
+                    encoding[key] = transcriptome_processor_results[key]
+            else:
+                raise ValueError("Unsupported transcriptome processor type.")
             return encoding
         elif text is not None:
             return encoding
         else:
             return BatchEncoding(
-                data=dict(**transcriptome_features), tensor_type=return_tensors
+                data=dict(**transcriptome_processor_results), tensor_type=return_tensors
             )
 
     def batch_decode(self, *args, **kwargs):

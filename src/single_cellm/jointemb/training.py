@@ -123,7 +123,7 @@ class SingleCeLLMCLI(LightningCLI):
             )
         except FileNotFoundError:
             logging.error(
-                "Unable to find geneformer model. Please download first (see `rna` snakemake pipeline)"
+                "Unable to find the transcriptome model. Please download first (see `rna` snakemake pipeline). For scGPT: https://drive.google.com/drive/folders/1oWh_-ZRdhtoGQ2Fw24HP41FgLoomVo-y"
             )
             raise
 

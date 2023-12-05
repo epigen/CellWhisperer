@@ -14,6 +14,7 @@ from pathlib import Path
 import torch
 import hashlib
 import logging
+from single_cellm.jointemb.scgpt_model import ScGPTConfig
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,12 @@ def hash_object(obj):
     elif isinstance(obj, dict):
         return hashlib.sha256(
             str({k: hash_object(v) for k, v in obj.items()}).encode()
+        ).hexdigest()
+    elif isinstance(obj, ScGPTConfig):
+        obj_to_dict = obj.to_dict()
+        obj_to_dict["vocab_path"] = str(obj_to_dict["vocab_path"]) # POSIX path objects are not hashable
+        return hashlib.sha256(
+            str({k: hash_object(v) for k, v in obj_to_dict.items()}).encode()
         ).hexdigest()
     else:
         return hashlib.sha256(str(obj).encode()).hexdigest()
@@ -129,7 +136,8 @@ class FrozenCachedModel(nn.Module):
             logger.error("Unable to save cache. Aborting.")
 
     def compute_sample_hashes(self, **kwargs):
-        batch_size = len(next(iter(kwargs.values())))
+        batch_size = len([x for x in kwargs.values() if isinstance(x, torch.Tensor)][0])
+        #batch_size = len(next(iter(kwargs.values())))
         sample_hashes = []
         for i in range(batch_size):
             sample_kwargs = {
@@ -144,12 +152,14 @@ class FrozenCachedModel(nn.Module):
         """
         Returns a tuple of tensors (token_embeddings, Optional[sentence_embedding]). The sentence_embedding is just returned if provided by the model
         """
-        device = next(iter(kwargs.values())).device
+        device  = [x for x in kwargs.values() if isinstance(x, torch.Tensor)][0].device
+        #device = next(iter(kwargs.values())).device
 
         assert len(args) == 0, "not implemented for positional args"
 
         # First, we need to hash the inputs per sample (not per batch)
-        batch_size = len(next(iter(kwargs.values())))
+        batch_size  = len([x for x in kwargs.values() if isinstance(x, torch.Tensor)][0])
+        #batch_size = len(next(iter(kwargs.values())))
         sample_hashes = self.compute_sample_hashes(**kwargs)
 
         cache_misses = sum([sh not in self.cache for sh in sample_hashes])

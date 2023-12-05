@@ -31,3 +31,4 @@ model_name_path_map:
   geneformer: resources/geneformer-12L-30M
   biogpt: microsoft/biogpt
   bert: bert-base-multilingual-cased
+  scgpt: resources/scGPT_human

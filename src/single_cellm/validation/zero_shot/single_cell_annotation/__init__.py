@@ -3,7 +3,9 @@ import logging
 from single_cellm.jointemb.model import TranscriptomeTextDualEncoderModel
 from single_cellm.config import get_path
 from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
+from single_cellm.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
 from single_cellm.validation.zero_shot.functions import get_scores_adatas_vs_text_list
+
 from transformers import AutoTokenizer
 import anndata
 import numpy as np
@@ -23,6 +25,8 @@ class SingleCellZeroshotValidationScoreCalculator:
         nproc_transcriptome_processor: str = 1,
         logger: Optional[Any] = None,
         tokenizer_name: str = "microsoft/biogpt",
+        transcriptome_tokenizer_type="geneformer",
+        transcriptome_processor_kwargs=None,
     ):
         """
         Class to calculate zero-shot validation scores for a single-cell dataset.
@@ -37,6 +41,10 @@ class SingleCellZeroshotValidationScoreCalculator:
             suffix_for_text_embeddings: suffix to add to the celltype name to generate the text to embed.
             nproc_transcriptome_processor: number of processes to use for the transcriptome processor.
             logger: logger to use. If None, will use the logger for this module.
+            tokenizer_name: name of the tokenizer to use for the text. Must be a key in the config file.
+            transcriptome_tokenizer_type: type of tokenizer to use for the transcriptome. Must be one of "geneformer" or "scgpt".
+            transcriptome_processor_kwargs: kwargs to pass to the transcriptome processor. Default: None for geneformer, \
+                {"gene_col":"gene_symbol"} for scgpt.
         """
 
         self.cell_number_threshold_per_celltype = cell_number_threshold_per_celltype
@@ -47,6 +55,14 @@ class SingleCellZeroshotValidationScoreCalculator:
         self.nproc_transcriptome_processor = nproc_transcriptome_processor
         self.logger = logger
         self.tokenizer_name = tokenizer_name
+        self.transcriptome_tokenizer_type = transcriptome_tokenizer_type
+        if self.transcriptome_processor_kwargs is None:
+            if self.transcriptome_tokenizer_type == "scgpt":
+                self.transcriptome_processor_kwargs = {"gene_col": "gene_symbol"}
+            else:
+                self.transcriptome_processor_kwargs = {}
+        else:
+            self.transcriptome_processor_kwargs = transcriptome_processor_kwargs
 
         if self.logger is None:
             self.logger = logging.getLogger(__name__)
@@ -89,9 +105,21 @@ class SingleCellZeroshotValidationScoreCalculator:
 
         self.text_tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_name)
 
-        self.transcriptome_processor = GeneformerTranscriptomeProcessor(
-            nproc=self.nproc_transcriptome_processor, emb_label=[]
-        )  # I think it's ok to not have emb_labels here, but I'm not sure
+        if transcriptome_tokenizer_type == "geneformer":
+            self.transcriptome_processor = GeneformerTranscriptomeProcessor(
+                nproc=self.nproc_transcriptome_processor,
+                emb_label=[],
+                **self.transcriptome_processor_kwargs,
+            )  # I think it's ok to not have emb_labels here, but I'm not sure
+        elif transcriptome_tokenizer_type == "scgpt":
+            self.transcriptome_processor = ScGPTTranscriptomeProcessor(
+                nproc=self.nproc_transcriptome_processor,
+                **self.transcriptome_processor_kwargs,
+            )
+        else:
+            ValueError(
+                f"transcriptome_tokenizer_type must be one of 'geneformer' or 'scgpt', but is {transcriptome_tokenizer_type}."
+            )
 
     def get_scores(self, model) -> Tuple[Dict[str, float], pd.DataFrame]:
         result_dict, result_df = get_scores_adatas_vs_text_list(

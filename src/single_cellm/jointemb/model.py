@@ -10,6 +10,7 @@ import torch
 from pathlib import Path
 from torch import nn
 from .geneformer_model import GeneformerConfig, GeneformerModel
+from .scgpt_model import ScGPTConfig, ScGPTModel
 from clip_lite.loss import GlobalDiscriminatorDot
 
 from transformers.modeling_utils import PreTrainedModel
@@ -84,6 +85,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         if transcriptome_model is None:
             if isinstance(config.transcriptome_config, GeneformerConfig):
                 transcriptome_model = GeneformerModel(config.transcriptome_config)
+            elif isinstance(config.transcriptome_config, ScGPTConfig):
+                transcriptome_model = ScGPTModel(config.transcriptome_config)
             else:
                 transcriptome_model = AutoModel.from_config(  # TODO support our transcriptome model natively
                     config.transcriptome_config
@@ -180,6 +183,9 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         self,
         expression_tokens=None,
         expression_token_lengths=None,
+        expression_gene=None,
+        expression_expr=None,
+        expression_key_padding_mask=None,
         # output_attentions=None,  # TODO what is this?
         # output_hidden_states=None,
         normalize_embeds=False,
@@ -196,6 +202,9 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         transcriptome_features = self.transcriptome_model(
             expression_tokens=expression_tokens,
             expression_token_lengths=expression_token_lengths,
+            expression_gene=expression_gene,
+            expression_expr=expression_expr,
+            expression_key_padding_mask=expression_key_padding_mask,
             # output_attentions=output_attentions,
             # output_hidden_states=output_hidden_states,
             return_dict=return_dict,
@@ -215,6 +224,9 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         input_ids: Optional[torch.LongTensor] = None,
         expression_tokens: Optional[torch.FloatTensor] = None,
         expression_token_lengths: Optional[torch.LongTensor] = None,
+        expression_gene: Optional[torch.LongTensor] = None,
+        expression_expr: Optional[torch.LongTensor] = None,
+        expression_key_padding_mask: Optional[torch.LongTensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
         # position_ids: Optional[torch.LongTensor] = None,
         # token_type_ids: Optional[torch.LongTensor] = None,
@@ -229,6 +241,18 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         transcriptome_outputs = self.transcriptome_model(
             expression_tokens=expression_tokens,
             expression_token_lengths=expression_token_lengths,
+            expression_gene=expression_gene,
+            expression_expr=expression_expr,
+            expression_key_padding_mask=expression_key_padding_mask,
+            return_dict=False,
+            normalize_embeds=True,
+        )
+
+        text_outputs, text_embeds = self.get_text_features(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            # token_type_ids=token_type_ids,
+            # position_ids=position_ids,
             # output_attentions=output_attentions,
             # output_hidden_states=output_hidden_states,
             return_dict=False,
@@ -356,8 +380,17 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                     # *model_args,  # these args are not supported by geneformer
                     **kwargs_transcriptome,
                 )
+            elif kwargs_transcriptome["config"]["model_type"] == "scgpt":
+                kwargs_transcriptome["config"] = ScGPTConfig(
+                    **kwargs_transcriptome["config"]
+                )
+                transcriptome_model = ScGPTModel.from_pretrained(
+                    f"{transcriptome_model_name_or_path}/best_model.pt",
+                    # *model_args,  # these args are not supported by geneformer
+                    **kwargs_transcriptome,
+                )
             else:
-                raise NotImplementedError("Only geneformer is supported")
+                raise NotImplementedError("Only geneformer and scgpt are supported")
                 kwargs_transcriptome["config"] = transcriptome_config
                 transcriptome_model = AutoModel.from_pretrained(
                     transcriptome_model_name_or_path,

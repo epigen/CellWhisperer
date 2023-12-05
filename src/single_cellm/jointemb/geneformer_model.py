@@ -287,6 +287,9 @@ class GeneformerModel(
         self,
         expression_tokens: torch.Tensor,
         expression_token_lengths: torch.Tensor,
+        expression_gene=None,  # ignored, but needed for compatibility with other models
+        expression_expr=None,  # ignored, but needed for compatibility with other models
+        expression_key_padding_mask=None,  # ignored, but needed for compatibility with other models
         # bool_masked_pos: Optional[torch.BoolTensor] = None,
         # head_mask: Optional[torch.Tensor] = None,
         # output_attentions: Optional[bool] = None,

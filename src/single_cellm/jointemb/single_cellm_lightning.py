@@ -84,7 +84,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
     def load_from_checkpoint(
         cls,
         checkpoint_path: str,
-        geneformer_directory: str,
+        transcriptome_model_directory: str,
         text_model_name_or_path: str,
         **kwargs,
     ):
@@ -99,7 +99,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
         # make sure that pretrained models are loaded
         model.load_pretrained_models(
-            geneformer_directory=geneformer_directory,
+            transcriptome_model_directory=transcriptome_model_directory,
             text_model_name_or_path=text_model_name_or_path,
         )
 
@@ -110,7 +110,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
     def load_pretrained_models(
         self,
-        geneformer_directory: Optional[str],
+        transcriptome_model_directory: Optional[str],
         text_model_name_or_path: Optional[str],
     ):
         """
@@ -119,7 +119,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
         kwargs = self.model.config.to_dict()
         if (
-            geneformer_directory is None
+            transcriptome_model_directory is None
         ):  # TODO to be changed to transcriptome_model_directory or so
             kwargs["transcriptome_model"] = self.model.transcriptome_model
 
@@ -128,7 +128,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
         self.model = (
             TranscriptomeTextDualEncoderModel.from_transcriptome_text_pretrained(
-                transcriptome_model_name_or_path=geneformer_directory,
+                transcriptome_model_name_or_path=transcriptome_model_directory,
                 text_model_name_or_path=text_model_name_or_path,
                 **kwargs,
             )
@@ -140,11 +140,23 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
     def forward(
         self,
         input_ids: Optional[torch.LongTensor],
-        expression_tokens: Optional[torch.FloatTensor],
-        expression_token_lengths: Optional[torch.LongTensor],
-        attention_mask: Optional[torch.Tensor],
+        expression_tokens: Optional[torch.FloatTensor] = None,
+        expression_token_lengths: Optional[torch.LongTensor] = None,
+        expression_gene: Optional[torch.LongTensor] = None,
+        expression_expr: Optional[torch.LongTensor] = None,
+        expression_key_padding_mask: Optional[torch.LongTensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
     ) -> CLIPOutput:
         # TODO at a later stage, we may add regularization here
+
+        assert attention_mask is not None, "Attention mask must be provided"
+        assert (
+            expression_tokens is not None and expression_token_lengths is not None
+        ) or (
+            expression_gene is not None
+            and expression_expr is not None
+            and expression_key_padding_mask is not None
+        ), "Either expression_tokens and expression_token_lengths or expression_gene, expression_expr and expression_key_padding_mask must be provided"
 
         return self.model(
             input_ids=input_ids,

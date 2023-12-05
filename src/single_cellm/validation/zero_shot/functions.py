@@ -7,6 +7,7 @@ import pandas as pd
 import torch
 from single_cellm.jointemb.model import TranscriptomeTextDualEncoderModel
 from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
+from single_cellm.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
 from transformers import AutoTokenizer
 import anndata
 import json
@@ -17,7 +18,9 @@ import torchmetrics
 def adata_list_to_embeds(
     adata_list: List[anndata.AnnData],
     model: TranscriptomeTextDualEncoderModel,
-    transcriptome_processor: GeneformerTranscriptomeProcessor,
+    transcriptome_processor: Union[
+        GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor
+    ],
 ) -> torch.tensor:
     """
     Compute the transcriptome embeddings for each adata in adata_list.
@@ -25,21 +28,21 @@ def adata_list_to_embeds(
 
     :param adata_list: List[anndata.AnnData] instance. All cells in each adata will be used to compute a single transcriptome embedding.
     :param model: TranscriptomeTextDualEncoderModel instance. Used to compute the transcriptome embeddings.
-    :param transcriptome_processor: GeneformerTranscriptomeProcessor instance. Used to tokenize the transcriptome.
+    :param transcriptome_processor: GeneformerTranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to prepare/tokenize the transcriptome.
     :return: torch.tensor of transcriptome embeddings. Shape: n_adatas * n_cells_per_adata * embedding_size (e.g. 512)
     """
     transcriptome_embeds_all_adata = None
     for adata in adata_list:
-        transcriptome_tokens = transcriptome_processor(
+        transcriptome_processor_result = transcriptome_processor(
             adata, return_tensors="pt", padding=True
         )
         # make sure transcriptome_tokens are on GPU
         # TODO: Prepare for the case when the transcriptome is too large to fit on the GPU
-        for k, v in transcriptome_tokens.items():
-            transcriptome_tokens[k] = v.to(model.device)
+        for k, v in transcriptome_processor_result.items():
+            transcriptome_processor_result[k] = v.to(model.device)
 
         _, transcriptome_embeds = model.get_transcriptome_features(
-            **transcriptome_tokens
+            **transcriptome_processor_result
         )
         transcriptome_embeds = transcriptome_embeds / transcriptome_embeds.norm(
             dim=-1, keepdim=True
@@ -84,7 +87,9 @@ def score_text_vs_transcriptome_many_vs_many(
     text_list_or_text_embeds: Union[List[str], torch.tensor],
     average_mode: str = "embeddings",
     text_tokenizer: AutoTokenizer = None,
-    transcriptome_processor: GeneformerTranscriptomeProcessor = None,
+    transcriptome_processor: Union[
+        GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor
+    ] = None,
     chunk_size_text_emb_and_scoring: int = 128,
     score_norm_method: str = "zscore",
 ):
@@ -98,7 +103,7 @@ def score_text_vs_transcriptome_many_vs_many(
     :param average_mode: "cells" or "embeddings". If "cells", first average the transcriptome data across all cells, then tokenize and embed. \
         If "embeddings", first tokenize and embed each cell, then average the embeddings. TODO "cells" does not work yet.
     :param text_tokenizer: AutoTokenizer instance. Used to tokenize the text. Can be None if text_list_or_text_embeds is a torch.tensor.
-    :param transcriptome_processor: GeneformerTranscriptomeProcessor instance. Used to tokenize the transcriptome. Can be None if adata_list_or_transcriptome_embeds is a torch.tensor.
+    :param transcriptome_processor: GeneformerTranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to prepare/tokenize the transcriptome. Can be None if adata_list_or_transcriptome_embeds is a torch.tensor.
     :param chunk_size_text_emb_and_scoring: int. The text will be chunked into chunks of this size before computing the text \
             embeddings and similarity to the transcriptome. This is necessary to avoid out-of-memory errors.
     :param score_norm_method: "zscore", "softmax", or "01norm". TODO - unclear what is best. How to normalize the logits \
@@ -173,7 +178,9 @@ def get_scores_adatas_vs_text_list(
     adata_dict_or_embedding_dict: Dict[str, Union[anndata.AnnData, torch.Tensor]],
     model: TranscriptomeTextDualEncoderModel,
     text_tokenizer: AutoTokenizer,
-    transcriptome_processor: GeneformerTranscriptomeProcessor,
+    transcriptome_processor: Union[
+        GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor
+    ],
     text_list_or_text_embeds: Union[List[str], torch.Tensor] = None,
     average_mode="embeddings",
     chunk_size_text_emb_and_scoring: int = 64,
@@ -278,7 +285,9 @@ def anndata_to_scored_keywords(
     adata_or_embedding: Union[anndata.AnnData, torch.Tensor],
     model: TranscriptomeTextDualEncoderModel,
     terms_json_path: Union[str, Path],
-    transcriptome_processor: GeneformerTranscriptomeProcessor,
+    transcriptome_processor: Union[
+        GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor
+    ],
     text_tokenizer: AutoTokenizer,
     average_mode: str = "cells",
     chunk_size_text_emb_and_scoring: int = 64,
@@ -293,7 +302,7 @@ def anndata_to_scored_keywords(
                   Or: torch.tensor instance, then the provided transcriptome embeddings will be used.
     :param model: TranscriptomeTextDualEncoderModel instance. Both transcriptome and text embeddings will be computed using this model.
     :param terms_json_path: Path to the json file containing the EnrichR terms (keys: libraries, values: list of terms)
-    :param transcriptome_processor: GeneformerTranscriptomeProcessor instance. Used to tokenize the transcriptome.
+    :param transcriptome_processor: GeneformerTranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to tokenize/prepare the transcriptome.
     :param text_tokenizer: AutoTokenizer instance. Used to tokenize the text.
     :param average_mode: "cells" or "embeddings". If "cells", first average the transcriptome data across all cells, then tokenize and embed. \
         If "embeddings", first tokenize and embed each cell, then average the embeddings. TODO what is better?
