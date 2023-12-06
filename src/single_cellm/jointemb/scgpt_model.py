@@ -74,8 +74,6 @@ class DatasetForScGPTTranscriptomeProcessor(torch.utils.data.Dataset):
 class ScGPTTranscriptomeProcessor(ProcessorMixin):
     # TODO: Instead of using gene names, use gene IDs. There is a scGPT issue that gives a gene id vocab
 
-    # TODO sc.pp.normalize_total(adata, target_sum=1e4); sc.pp.log1p(adata); hvg selection. Or do we assume this is done already?
-
     attributes = []
 
     def __init__(
