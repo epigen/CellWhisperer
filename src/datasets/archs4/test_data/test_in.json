@@ -1,0 +1,47 @@
+{
+    "SAMN01163911": {
+        "source_name": "Human DLBCL cel line",
+        "treatment": "siNT",
+        "cell_line": "OCI-LY1"
+    },
+    "SAMN01163912": {
+        "source_name": "Human DLBCL cel line",
+        "treatment": "siNT",
+        "cell_line": "OCI-LY1"
+    },
+    "SAMN01163913": {
+        "source_name": "Human DLBCL cel line",
+        "treatment": "siNT",
+        "cell_line": "OCI-LY1"
+    },
+    "SAMN01163914": {
+        "source_name": "Human DLBCL cel line",
+        "treatment": "siBCL6",
+        "cell_line": "OCI-LY1"
+    },
+    "SAMN01163915": {
+        "source_name": "Human DLBCL cel line",
+        "treatment": "siBCL6",
+        "cell_line": "OCI-LY1"
+    },
+    "SAMN01163916": {
+        "source_name": "Human DLBCL cel line",
+        "treatment": "siBCL6",
+        "cell_line": "OCI-LY1"
+    },
+    "SAMN01166092": {
+        "source_name": "placenta",
+        "spike-in hsa-mir-147": "0.1",
+        "spike-in hsa-mir-211": "1",
+        "spike-in hsa-mir-219-5p": "10",
+        "spike-in hsa-mir-338-3p": "0.1",
+        "spike-in hsa-mir-383": "1",
+        "spike-in hsa-mir-429": "10",
+        "precursor spike-in hsa-mir-147": "0",
+        "o-methyl spike-in hsa-mir-211": "0",
+        "o-methyl spike-in hsa-mir-219-5p": "0",
+        "precursor spike-in hsa-mir-338-3p": "0",
+        "precursor spike-in hsa-mir-383": "0",
+        "o-methyl spike-in hsa-mir-429": "0"
+    }
+}

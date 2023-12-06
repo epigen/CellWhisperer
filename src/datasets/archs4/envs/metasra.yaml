@@ -1,0 +1,12 @@
+name: metasra
+channels:
+  - defaults
+dependencies:
+  - pip=19.3.1
+  - python=2.7.18
+  - pip:
+    - dill==0.3.5.1
+    - marisa-trie==0.8.0
+    - nltk==3.4
+    - scikit-learn==0.17.1
+    - unidecode==1.2.0

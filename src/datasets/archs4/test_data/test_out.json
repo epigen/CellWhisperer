@@ -1,0 +1,160 @@
+{
+    "SAMN01163916": {
+        "sample type": "cell_line",
+        "real-value properties": [],
+        "mapped ontology terms": [
+            "EFO:0005952|non-Hodgkins lymphoma",
+            "EFO:0007352|lymphatic system disease",
+            "CVCL:1879|OCI-Ly1",
+            "EFO:0005907|OCI-LY1",
+            "CL:0000010|cultured cell",
+            "EFO:0000540|immune system disease",
+            "EFO:0000616|neoplasm",
+            "DOID:0050745|diffuse large B-cell lymphoma",
+            "EFO:0001642|lymphoid neoplasm",
+            "EFO:0000574|lymphoma",
+            "EFO:0005803|hematological system disease",
+            "EFO:0000322|cell line",
+            "EFO:0000096|neoplasm of mature B-cells",
+            "EFO:0000727|treatment",
+            "EFO:0000311|cancer",
+            "DOID:14566|disease of cellular proliferation",
+            "EFO:0000403|diffuse large B-cell lymphoma",
+            "EFO:0000408|disease"
+        ],
+        "sample-type confidence": 1.0
+    },
+    "SAMN01163914": {
+        "sample type": "cell_line",
+        "real-value properties": [],
+        "mapped ontology terms": [
+            "EFO:0005952|non-Hodgkins lymphoma",
+            "EFO:0007352|lymphatic system disease",
+            "CVCL:1879|OCI-Ly1",
+            "EFO:0005907|OCI-LY1",
+            "CL:0000010|cultured cell",
+            "EFO:0000540|immune system disease",
+            "EFO:0000616|neoplasm",
+            "DOID:0050745|diffuse large B-cell lymphoma",
+            "EFO:0001642|lymphoid neoplasm",
+            "EFO:0000574|lymphoma",
+            "EFO:0005803|hematological system disease",
+            "EFO:0000322|cell line",
+            "EFO:0000096|neoplasm of mature B-cells",
+            "EFO:0000727|treatment",
+            "EFO:0000311|cancer",
+            "DOID:14566|disease of cellular proliferation",
+            "EFO:0000403|diffuse large B-cell lymphoma",
+            "EFO:0000408|disease"
+        ],
+        "sample-type confidence": 1.0
+    },
+    "SAMN01163915": {
+        "sample type": "cell_line",
+        "real-value properties": [],
+        "mapped ontology terms": [
+            "EFO:0005952|non-Hodgkins lymphoma",
+            "EFO:0007352|lymphatic system disease",
+            "CVCL:1879|OCI-Ly1",
+            "EFO:0005907|OCI-LY1",
+            "CL:0000010|cultured cell",
+            "EFO:0000540|immune system disease",
+            "EFO:0000616|neoplasm",
+            "DOID:0050745|diffuse large B-cell lymphoma",
+            "EFO:0001642|lymphoid neoplasm",
+            "EFO:0000574|lymphoma",
+            "EFO:0005803|hematological system disease",
+            "EFO:0000322|cell line",
+            "EFO:0000096|neoplasm of mature B-cells",
+            "EFO:0000727|treatment",
+            "EFO:0000311|cancer",
+            "DOID:14566|disease of cellular proliferation",
+            "EFO:0000403|diffuse large B-cell lymphoma",
+            "EFO:0000408|disease"
+        ],
+        "sample-type confidence": 1.0
+    },
+    "SAMN01163912": {
+        "sample type": "cell_line",
+        "real-value properties": [],
+        "mapped ontology terms": [
+            "EFO:0005952|non-Hodgkins lymphoma",
+            "EFO:0007352|lymphatic system disease",
+            "CVCL:1879|OCI-Ly1",
+            "EFO:0005907|OCI-LY1",
+            "CL:0000010|cultured cell",
+            "EFO:0000540|immune system disease",
+            "EFO:0000616|neoplasm",
+            "DOID:0050745|diffuse large B-cell lymphoma",
+            "EFO:0001642|lymphoid neoplasm",
+            "EFO:0000574|lymphoma",
+            "EFO:0005803|hematological system disease",
+            "EFO:0000322|cell line",
+            "EFO:0000096|neoplasm of mature B-cells",
+            "EFO:0000727|treatment",
+            "EFO:0000311|cancer",
+            "DOID:14566|disease of cellular proliferation",
+            "EFO:0000403|diffuse large B-cell lymphoma",
+            "EFO:0000408|disease"
+        ],
+        "sample-type confidence": 1.0
+    },
+    "SAMN01163913": {
+        "sample type": "cell_line",
+        "real-value properties": [],
+        "mapped ontology terms": [
+            "EFO:0005952|non-Hodgkins lymphoma",
+            "EFO:0007352|lymphatic system disease",
+            "CVCL:1879|OCI-Ly1",
+            "EFO:0005907|OCI-LY1",
+            "CL:0000010|cultured cell",
+            "EFO:0000540|immune system disease",
+            "EFO:0000616|neoplasm",
+            "DOID:0050745|diffuse large B-cell lymphoma",
+            "EFO:0001642|lymphoid neoplasm",
+            "EFO:0000574|lymphoma",
+            "EFO:0005803|hematological system disease",
+            "EFO:0000322|cell line",
+            "EFO:0000096|neoplasm of mature B-cells",
+            "EFO:0000727|treatment",
+            "EFO:0000311|cancer",
+            "DOID:14566|disease of cellular proliferation",
+            "EFO:0000403|diffuse large B-cell lymphoma",
+            "EFO:0000408|disease"
+        ],
+        "sample-type confidence": 1.0
+    },
+    "SAMN01163911": {
+        "sample type": "cell_line",
+        "real-value properties": [],
+        "mapped ontology terms": [
+            "EFO:0005952|non-Hodgkins lymphoma",
+            "EFO:0007352|lymphatic system disease",
+            "CVCL:1879|OCI-Ly1",
+            "EFO:0005907|OCI-LY1",
+            "CL:0000010|cultured cell",
+            "EFO:0000540|immune system disease",
+            "EFO:0000616|neoplasm",
+            "DOID:0050745|diffuse large B-cell lymphoma",
+            "EFO:0001642|lymphoid neoplasm",
+            "EFO:0000574|lymphoma",
+            "EFO:0005803|hematological system disease",
+            "EFO:0000322|cell line",
+            "EFO:0000096|neoplasm of mature B-cells",
+            "EFO:0000727|treatment",
+            "EFO:0000311|cancer",
+            "DOID:14566|disease of cellular proliferation",
+            "EFO:0000403|diffuse large B-cell lymphoma",
+            "EFO:0000408|disease"
+        ],
+        "sample-type confidence": 1.0
+    },
+    "SAMN01166092": {
+        "sample type": "tissue",
+        "real-value properties": [],
+        "mapped ontology terms": [
+            "UBERON:0001987|placenta"
+        ],
+        "sample-type confidence": 0.8023930363652431
+    }
+}
