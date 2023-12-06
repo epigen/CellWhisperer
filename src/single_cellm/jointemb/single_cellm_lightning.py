@@ -44,6 +44,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         optimizer: OptimizerCallable = torch.optim.AdamW,
         scheduler: LRSchedulerCallable = CosineAnnealingLR,
         learning_rate: float = 1e-3,
+        lr_warmup_steps: int = 100,
     ):
         """
         Args:
@@ -70,6 +71,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.learning_rate = learning_rate
+        self.lr_warmup_steps = lr_warmup_steps
 
         self.loss_config = loss_config
         self.loss_functions = self.loss_config.configure_losses(
@@ -263,9 +265,10 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         """
         Override `optimizer_step` to allow learning-rate warmup
         """
-        warmup_steps = 100  # according to CLIP-Lite it's 10K, but we start easy
-        if self.trainer.global_step < warmup_steps:
-            lr_scale = min(1.0, float(self.trainer.global_step + 1) / warmup_steps)
+        if self.trainer.global_step < self.lr_warmup_steps:
+            lr_scale = min(
+                1.0, float(self.trainer.global_step + 1) / self.lr_warmup_steps
+            )
             for pg in optimizer.param_groups:
                 pg["lr"] = lr_scale * self.learning_rate
 
