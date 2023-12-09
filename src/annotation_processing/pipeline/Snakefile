@@ -8,32 +8,31 @@ configfile: PROJECT_DIR / "config.yaml"
 DATASETS = config["datasets"]
 
 PROCESSED_FILE = PROJECT_DIR / "results" / "annotation_processing" / "processed" / "{dataset}" / "{sample_id}.txt"
+PROCESSED_FILE_OPENAI = PROJECT_DIR / "results" / "annotation_processing" / "processed_openai" / "{dataset}" / "{sample_id}.txt"
 
 
-def annotation_ids(wildcards):
+def annotation_ids(wildcards, base_path=PROCESSED_FILE):
     """
     Return the paths to all the annotations for a given dataset.
     """
     import json
     with open(PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset=wildcards.dataset)) as f:
         annotations = json.load(f)
-    return [str(PROCESSED_FILE).format(sample_id=sample_id, dataset=wildcards.dataset) for sample_id in annotations.keys()]
+    return [str(base_path).format(sample_id=sample_id, dataset=wildcards.dataset) for sample_id in annotations.keys()]
 
 rule all:
     input:
         [PROJECT_DIR / config["paths"]["full_dataset"].format(dataset=dataset) for dataset in DATASETS]
 
-rule prepare_requests:
-    """
-    Open the structured annotations dataframe and extract the sample with the appropriate ID
 
-    TODO: either just return the folder or find another way to run all IDs at the same time. loading the json 100.000 times is stupid. (we could even cache it)
+checkpoint prepare_requests:
+    """
+    Open the structured annotations dataframe and extract the sample with the appropriate ID. For performance reasons, extract all requested at once.
     """
     input:
         structured_annotations = lambda wildcards: ancient(PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset=wildcards.dataset)),
     output:
-        json = PROJECT_DIR / "results" / "annotation_processing"  / "requests" / "{dataset}" / "{sample_id}.json",
-        yaml = PROJECT_DIR / "results" / "annotation_processing"  / "requests" / "{dataset}" / "{sample_id}.yaml",
+        directory(PROJECT_DIR / "results/annotation_processing/requests/{dataset,[^/]+}"),
     run:
         import json
         import yaml
@@ -41,36 +40,45 @@ rule prepare_requests:
         with open(input.structured_annotations) as f:
             annotations = json.load(f)
 
-        sample = annotations[wildcards.sample_id]
-        sample = {k: v for k, v in sample.items() if v==v}  # v==v filters out nan values
-        with open(output["json"], "w") as f:
-            json.dump(sample, f, indent=4)
+        json_fns = annotation_ids(wildcards, base_path=Path(output[0]) / "{sample_id}.json")
+        yaml_fns = annotation_ids(wildcards, base_path=Path(output[0]) / "{sample_id}.yaml")
 
-        with open(output["yaml"], "w") as f:
-            yaml.dump(sample, f)
+        Path(json_fns[0]).parent.mkdir(parents=True, exist_ok=True)
+        for json_fn, yaml_fn in zip(json_fns, yaml_fns):
+            sample_id = Path(json_fn).stem
+            sample = annotations[sample_id]
+            sample = {k: v for k, v in sample.items() if v==v}  # v==v filters out nan values
+            with open(json_fn, "w") as f:
+                json.dump(sample, f, indent=4)
 
-# TODO this is commented for now as we might in future rely exclusively on oobabooga
-# rule process_annotation_openai:
-#     input:
-#         human_message = ancient(rules.prepare_requests.output.yaml),
-#         system_message = "prompts/process_annotations_zero_shot_gpt4.txt",
-#     output:
-#         processed_annotation = protected(PROCESSED_FILE),  # I marked this as protected as it might be costly to produce
-#     conda:
-#         PROJECT_DIR / "envs" / "main.yaml"
-#         # "single-cellm"
-#     script:
-#         "scripts/process_annotations.py"
+            with open(yaml_fn, "w") as f:
+                yaml.dump(sample, f)
+
+rule process_annotation_openai:
+    """
+    Alternative annotation processing using OpenAI's API.
+
+    Currently unused
+    """
+    input:
+        human_message = ancient(rules.prepare_requests.output.yaml),
+        system_message = "prompts/process_annotations_zero_shot_gpt4.txt",
+    output:
+        processed_annotation = protected(PROCESSED_FILE_OPENAI),  # I marked this as protected as it might be costly to produce
+    conda:
+        PROJECT_DIR / "envs" / "main.yaml"
+        # "single-cellm"
+    script:
+        "scripts/process_annotations.py"
+
 
 rule process_annotation_local:
     """
-    Requires running the oobabooga server with the following command:
-    python server.py --listen-host 0.0.0.0 --listen --api --api-port 5002 --model microsoft_Orca-2-13b
-
+    Requires running the oobabooga server. See the README for instructions.
     """
     input:
         instruction="prompts/process_annotations_zero_shot_local.txt",
-        sample_yaml=rules.prepare_requests.output.yaml,
+        sample_yaml=lambda wildcards: checkpoints.prepare_requests.get(dataset=wildcards.dataset).output[0] + f"/{wildcards.sample_id}.yaml"
     output:
         processed_annotation = protected(PROCESSED_FILE),  # I marked this as protected as it might be costly to produce
     params:
@@ -79,7 +87,6 @@ rule process_annotation_local:
         import requests
         import json
 
-        url =
         headers = {"Content-Type": "application/json"}
         instruction = Path(input.instruction).read_text()
         sample_yaml = Path(input.sample_yaml).read_text()

@@ -5,7 +5,7 @@ PROJECT_DIR = Path(workflow.basedir).resolve().parents[2]
 configfile: PROJECT_DIR / "config.yaml"
 
 # http://rstats.immgen.org/DataPage/
-COUNT_TABLE_URL = "https://sharehost.hms.harvard.edu/immgen/GSE227743/GSE227743_Normalized_Gene_count_table.csv"
+COUNT_TABLE_URL = "https://sharehost.hms.harvard.edu/immgen/GSE227743/GSE227743_Gene_count_table.csv"
 ANNOTAITON_URL = "https://www.cell.com/cms/10.1016/j.cell.2018.12.036/attachment/e5df7329-d77d-40b3-a03a-34bdbe4b402c/mmc1.xlsx"
 
 rule all:
@@ -19,13 +19,22 @@ rule download_data:
     output:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="immgen"),
     run:
-        pd.read_excel(ANNOTAITON_URL).to_csv(output.read_count_table, index=False, sep="\t")  # TODO store as h5ad. make sure that obs.index is the same as the index in the count table/annotatios
+        import pandas as pd
+        import anndata
+
+        df = pd.read_csv(COUNT_TABLE_URL, index_col=0)
+        df.index.name = "sample_name"
+        adata = anndata.AnnData(X=df.T, var=df.index.to_frame(), obs=df.columns.to_frame())
+        adata.obs.index.name = "sample_name"
+        adata.obs.columns = ["sample_name"]
+
+        adata.write_h5ad(output.read_count_table)
 
 rule format_annotations:
     """
     Convert the annotations from xlsx to json, using the index as the keys
     """
-    output: PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="immgen")
+    output: PROJECT_DIR / config["paths"]["processed_annotations"].format(dataset="immgen")
     run:
         import json
         data = {
