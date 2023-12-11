@@ -44,8 +44,10 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
     def __init__(
         self,
         projection_dim: int = 1024,
-        transcriptome_config: Dict = {"model_type": "geneformer"},
-        text_config: Dict = {"model_type": "biogpt"},
+        transcriptome_model_type: str = "geneformer",
+        transcriptome_config: Dict = {},
+        text_model_type: str = "biogpt",
+        text_config: Dict = {},
         locking_mode: str = "LU",
         unlocked_fp16: bool = False,
         **kwargs,
@@ -60,9 +62,6 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
 
         transcriptome_config = transcriptome_config.copy()
         text_config = text_config.copy()
-
-        transcriptome_model_type = transcriptome_config.pop("model_type")
-        text_model_type = text_config.pop("model_type")
 
         self.locking_mode = locking_mode
         self.unlocked_fp16 = unlocked_fp16
@@ -100,8 +99,16 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
             [`TranscriptomeTextDualEncoderConfig`]: An instance of a configuration object
         """
 
+        transcriptome_config = transcriptome_config.to_dict()
+        transcriptome_model_type = transcriptome_config.pop("model_type")
+
+        text_config = text_config.to_dict()
+        text_model_type = text_config.pop("model_type")
+
         return cls(
-            transcriptome_config=transcriptome_config.to_dict(),
-            text_config=text_config.to_dict(),
+            transcriptome_model_type=transcriptome_model_type,
+            transcriptome_config=transcriptome_config,
+            text_model_type=text_model_type,
+            text_config=text_config,
             **kwargs,
         )

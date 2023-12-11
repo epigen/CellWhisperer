@@ -7,7 +7,6 @@ https://github.com/epigen/single-cellm/wiki
 
 ## Installation instructions
 
-0. Make sure you have `git-lfs` installed
 1. Run `git clone git@github.com:epigen/single-cellm.git --recurse-submodules`
   If you already cloned, but did not add the `--recurse-submodules` run the following:
   `git submodule update --init --recursive`
@@ -45,6 +44,10 @@ single_cellm fit --print_config > run_config.yaml
 # configure run_config.yaml
 single_cellm fit --config run_config.yaml
 ```
+
+### Broken parameters
+
+- Only AdamW optimizer works at the moment (because using it dynamically fails with --config <file>)
 
 ### Important parameters
 

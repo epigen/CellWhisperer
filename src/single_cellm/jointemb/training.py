@@ -11,6 +11,7 @@ from single_cellm.config import get_path, model_path_from_name
 from single_cellm.misc.utils import obj_signature
 from single_cellm.misc.debug import start_debugger
 import torch
+from typing import Optional, List
 from lightning.pytorch.cli import LightningCLI, SaveConfigCallback
 import subprocess
 import shutil
@@ -51,7 +52,9 @@ class SingleCeLLMCLI(LightningCLI):
         parser.add_argument("--best_model_path", type=Path, default=None)
         parser.add_argument("--log_level", default="WARNING")
         parser.add_argument("--dap_debug", action="store_true")
-        parser.add_argument("--batch_size", default=32, type=int)
+        parser.add_argument(
+            "--batch_size", default=32, type=int
+        )  # TODO assert batch_size > 1 (because of failing batch norm)
         parser.add_argument(
             "--wandb",
             default="",
@@ -60,13 +63,8 @@ class SingleCeLLMCLI(LightningCLI):
         )
         parser.set_defaults(
             {
-                "model.model_config": lazy_instance(
-                    TranscriptomeTextDualEncoderConfig,
-                    **obj_signature(TranscriptomeTextDualEncoderConfig),
-                ),
-                "model.loss_config": lazy_instance(
-                    LossConfig, **obj_signature(LossConfig)
-                ),
+                "model.model_config": obj_signature(TranscriptomeTextDualEncoderConfig),
+                "model.loss_config": obj_signature(LossConfig),
                 "trainer.max_epochs": 100,
             }
         )
@@ -80,22 +78,37 @@ class SingleCeLLMCLI(LightningCLI):
             "trainer.logger.init_args.mode",
             lambda wandb: "disabled" if wandb == "" else "online",
         )
-        # TODO not working, because model_type needs to be top level within model_config
-        # parser.link_arguments(
-        #     "model.model_config.transcriptome_config.model_type",
-        #     "data.transcriptome_processor",
-        # )
-        # parser.link_arguments(
-        #     "model.model_config.text_config.model_type", "data.tokenizer"
-        # )
 
+        parser.link_arguments(
+            "model.model_config",
+            "data.transcriptome_processor",
+            lambda model_config: model_config["transcriptome_model_type"],
+        )
+
+        parser.link_arguments(
+            "model.model_config",
+            "data.tokenizer",
+            lambda model_config: model_config["text_model_type"],
+        )
+
+        # for development: if fast_dev_run is enabled, set batch_size to 2
+        batch_size_fn = (
+            lambda fast_dev_run, batch_size: 2  # 1 fails
+            if fast_dev_run or batch_size <= 0
+            else batch_size
+        )
         parser.link_arguments(
             ["trainer.fast_dev_run", "batch_size"],
             "data.batch_size",
-            compute_fn=lambda fast_dev_run, batch_size: 2  # TODO 1 fails maybe?
-            if fast_dev_run or batch_size <= 0
-            else batch_size,
+            compute_fn=batch_size_fn,
         )
+
+        # TODO enable at some point (right now disabled, as it crashed with large batch sizes)
+        # parser.link_arguments(
+        #     ["trainer.fast_dev_run", "batch_size"],
+        #     "model.val_batch_size",
+        #     compute_fn=batch_size_fn,
+        # )
 
     def before_instantiate_classes(self) -> None:
         logging.basicConfig(level=self.config["fit.log_level"])
@@ -169,13 +182,15 @@ class LoggerSaveConfigCallback(SaveConfigCallback):
             trainer.logger.log_hyperparams({"config": config})
 
 
-def cli_main():
+def cli_main(args: Optional[List] = None):
+    """
+    Args:
+        args: Arguments to be used instead of sys.argv for LightningCLI. If None, sys.argv is used.
+    """
     torch.set_float32_matmul_precision("high")  # speed up on ampere-level GPUs
     torch.multiprocessing.set_sharing_strategy("file_system")
 
-    with open(PROJECT_DIR / "config.yaml") as f:
-        config = yaml.safe_load(f)
-        LOG_DIR = PROJECT_DIR / "results" / "model_training"
+    LOG_DIR = (PROJECT_DIR / "results" / "model_training").relative_to(os.getcwd())
 
     early_stop = EarlyStopping(
         monitor="val_loss", min_delta=1e-5, patience=100, verbose=False, mode="min"
@@ -207,7 +222,7 @@ def cli_main():
             logger={
                 "class_path": WandbLogger.__module__ + "." + WandbLogger.__name__,
                 "init_args": dict(
-                    save_dir=get_path(["paths", "wandb_logs"]),
+                    save_dir=get_path(["paths", "wandb_logs"]).relative_to(os.getcwd()),
                     project="JointEmbed_Training",
                     entity="single-cellm",
                     log_model=False,
@@ -218,6 +233,7 @@ def cli_main():
         ),
         save_config_callback=LoggerSaveConfigCallback,
         auto_configure_optimizers=False,
+        args=args,
     )
 
 

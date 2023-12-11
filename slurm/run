@@ -1,0 +1,43 @@
+#!/bin/bash
+
+TOTAL_NUM_JOBS=12
+NUM_SIMULT_JOBS=1
+
+gpu_type="a100"
+gpu_type="a100-sxm4-80gb"
+
+JOBID=$(sbatch --array=0-$((TOTAL_NUM_JOBS-1))%${NUM_SIMULT_JOBS} --mem 150GB -N 1 -q $gpu_type --partition gpu --gres gpu:${gpu_type}:1 --ntasks-per-node=1 -c 30 ~/single-cellm/slurm/sbatch_process.job $* | awk '{print $4}')
+
+echo $JOBID
+
+# sleep 0.3
+# while :
+# do
+#     NODE=$(squeue -j $JOBID -o "%N" | tail -n +2)
+#     # check that node is not empty
+#     if [[ $NODE != "PENDING" && $NODE != "(None)" && $NODE != "" ]];
+#     then
+#         echo "Job $JOBID is running on node: $NODE"
+#         break
+#     fi
+#     sleep 0.3
+# done
+# # check on the growing log file until the line "Debugger port" appears. Then finish.
+# exit
+
+# sleep 5  # wait until log file is there
+# tail -f slurm_logs/slurm-${JOBID}.out | while read LINE
+# do
+#     echo $LINE
+#     if [[ $LINE == *"Debugger listening"* ]]; then
+#         echo "Job $JOBID is running on node: $NODE $LINE"
+#         pkill -P $$ tail
+#         exit 0
+#         break
+#     fi
+#     if [[ $LINE == *"srun: error:"* ]]; then
+#         pkill -P $$ tail
+#         exit 1
+#         break
+#     fi
+# done

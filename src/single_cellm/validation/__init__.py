@@ -1,8 +1,23 @@
-from .zero_shot.cancer_gene_essentiality import evaluate_cancer_gene_essentiality
-from .zero_shot.single_cell_annotation import evaluate_single_cell_annotations,evaluate_single_cell_annotations_well_studied_celltypes
+from .zero_shot.cancer_gene_essentiality import EvaluateCancerGeneEssentiality
+from .zero_shot.single_cell_annotation import (
+    SingleCellZeroshotValidationScoreCalculator,
+    TOP20_LUNG_LIVER_BLOOD_CELLTYPES,
+)
 
-TRAINING_VALIDATION_FUNCTIONS = {
-    "zero_shot_cancer_gene_essentiality": evaluate_cancer_gene_essentiality,
-    "zero_shot_single_cell_annotations": evaluate_single_cell_annotations,
-    "zero_shot_single_cell_annotations_well_studied_celltypes": evaluate_single_cell_annotations_well_studied_celltypes,
-}
+
+def initialize_validation_functions(
+    batch_size: int, transcriptome_model_type: str, text_model_type: str
+):
+    training_validation_functions = {
+        "zero_shot_cancer_gene_essentiality": EvaluateCancerGeneEssentiality(
+            batch_size, transcriptome_model_type, text_model_type
+        ),
+        # "zero_shot_single_cell_annotations": SingleCellZeroshotValidationScoreCalculator(
+        #     batch_size=batch_size
+        # ),  # commented due to slow speed
+        "zero_shot_single_cell_annotations_well_studied_celltypes": SingleCellZeroshotValidationScoreCalculator(
+            celltypes=TOP20_LUNG_LIVER_BLOOD_CELLTYPES,
+            batch_size=batch_size,
+        ),
+    }
+    return training_validation_functions

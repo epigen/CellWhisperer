@@ -32,3 +32,16 @@ model_name_path_map:
   biogpt: microsoft/biogpt
   bert: bert-base-multilingual-cased
   scgpt: resources/scGPT_human
+
+# Only used, if not dedicated hyperparameter config file is provided
+SWEEP_HYPERPARAMETERS:
+  method: random
+  name: test_sweep
+  metric:
+    goal: minimize
+    name: val_loss
+  parameters:
+    batch_size:
+      values: [2, 4]
+    trainer.fast_dev_run:
+      values: [true]

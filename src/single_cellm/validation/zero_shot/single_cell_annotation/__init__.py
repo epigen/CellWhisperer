@@ -12,6 +12,30 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Tuple
 
+# Created by running this on the full tabula sapiens dataset: list(adata.obs[adata.obs["organ_tissue"].isin(["Liver","Lung","Blood"])]["cell_ontology_class"].value_counts().iloc[:20].index)
+TOP20_LUNG_LIVER_BLOOD_CELLTYPES = [
+    "macrophage",
+    "erythrocyte",
+    "monocyte",
+    "type ii pneumocyte",
+    "classical monocyte",
+    "neutrophil",
+    "cd4-positive, alpha-beta t cell",
+    "nk cell",
+    "naive b cell",
+    "basal cell",
+    "cd8-positive, alpha-beta t cell",
+    "hepatocyte",
+    "cd8-positive, alpha-beta cytokine secreting effector t cell",
+    "club cell",
+    "non-classical monocyte",
+    "capillary endothelial cell",
+    "cd4-positive, alpha-beta memory t cell",
+    "memory b cell",
+    "respiratory goblet cell",
+    "basophil",
+]
+
 
 class SingleCellZeroshotValidationScoreCalculator:
     def __init__(
@@ -27,6 +51,7 @@ class SingleCellZeroshotValidationScoreCalculator:
         tokenizer_name: str = "microsoft/biogpt",
         transcriptome_tokenizer_type="geneformer",
         transcriptome_processor_kwargs=None,
+        batch_size: int = 32,
     ):
         """
         Class to calculate zero-shot validation scores for a single-cell dataset.
@@ -44,7 +69,7 @@ class SingleCellZeroshotValidationScoreCalculator:
             tokenizer_name: name of the tokenizer to use for the text. Must be a key in the config file.
             transcriptome_tokenizer_type: type of tokenizer to use for the transcriptome. Must be one of "geneformer" or "scgpt".
             transcriptome_processor_kwargs: kwargs to pass to the transcriptome processor. Default: None for geneformer, \
-                {"gene_col":"gene_symbol"} for scgpt.
+                {"gene_col":"gene_name"} for scgpt.
         """
 
         self.cell_number_threshold_per_celltype = cell_number_threshold_per_celltype
@@ -54,11 +79,12 @@ class SingleCellZeroshotValidationScoreCalculator:
         self.suffix_for_text_embeddings = suffix_for_text_embeddings
         self.nproc_transcriptome_processor = nproc_transcriptome_processor
         self.logger = logger
+        self.batch_size = batch_size
         self.tokenizer_name = tokenizer_name
         self.transcriptome_tokenizer_type = transcriptome_tokenizer_type
-        if self.transcriptome_processor_kwargs is None:
+        if transcriptome_processor_kwargs is None:
             if self.transcriptome_tokenizer_type == "scgpt":
-                self.transcriptome_processor_kwargs = {"gene_col": "gene_symbol"}
+                self.transcriptome_processor_kwargs = {"gene_col": "gene_name"}
             else:
                 self.transcriptome_processor_kwargs = {}
         else:
@@ -121,68 +147,13 @@ class SingleCellZeroshotValidationScoreCalculator:
                 f"transcriptome_tokenizer_type must be one of 'geneformer' or 'scgpt', but is {transcriptome_tokenizer_type}."
             )
 
-    def get_scores(self, model) -> Tuple[Dict[str, float], pd.DataFrame]:
+    def __call__(self, model) -> Tuple[Dict[str, float], pd.DataFrame]:
         result_dict, result_df = get_scores_adatas_vs_text_list(
             adata_dict_or_embedding_dict=self.adata_dict,
             model=model,
             text_tokenizer=self.text_tokenizer,
             transcriptome_processor=self.transcriptome_processor,
             text_list_or_text_embeds=None,
+            batch_size=self.batch_size,
         )  # automatically generates text_list from adata_dict
         return result_dict, result_df
-
-
-def evaluate_single_cell_annotations(
-    model: TranscriptomeTextDualEncoderModel,
-) -> Tuple[Dict[str, float], pd.DataFrame]:
-    # Check if the score_calculator instance exists, otherwise create it
-    if not hasattr(evaluate_single_cell_annotations, "score_calculator"):
-        evaluate_single_cell_annotations.score_calculator = (
-            SingleCellZeroshotValidationScoreCalculator()
-        )
-
-    scores = evaluate_single_cell_annotations.score_calculator.get_scores(model=model)
-    return scores
-
-
-def evaluate_single_cell_annotations_well_studied_celltypes(
-    model: TranscriptomeTextDualEncoderModel,
-) -> Tuple[Dict[str, float], pd.DataFrame]:
-    # Created by running this on the full tabula sapiens dataset: list(adata.obs[adata.obs["organ_tissue"].isin(["Liver","Lung","Blood"])]["cell_ontology_class"].value_counts().iloc[:20].index)
-    top20_lung_liver_blood_celltypes = [
-        "macrophage",
-        "erythrocyte",
-        "monocyte",
-        "type ii pneumocyte",
-        "classical monocyte",
-        "neutrophil",
-        "cd4-positive, alpha-beta t cell",
-        "nk cell",
-        "naive b cell",
-        "basal cell",
-        "cd8-positive, alpha-beta t cell",
-        "hepatocyte",
-        "cd8-positive, alpha-beta cytokine secreting effector t cell",
-        "club cell",
-        "non-classical monocyte",
-        "capillary endothelial cell",
-        "cd4-positive, alpha-beta memory t cell",
-        "memory b cell",
-        "respiratory goblet cell",
-        "basophil",
-    ]
-
-    # Check if the score_calculator instance exists, otherwise create it
-    if not hasattr(
-        evaluate_single_cell_annotations_well_studied_celltypes, "score_calculator"
-    ):
-        evaluate_single_cell_annotations_well_studied_celltypes.score_calculator = (
-            SingleCellZeroshotValidationScoreCalculator(
-                celltypes=top20_lung_liver_blood_celltypes
-            )
-        )
-
-    scores = evaluate_single_cell_annotations_well_studied_celltypes.score_calculator.get_scores(
-        model=model
-    )
-    return scores

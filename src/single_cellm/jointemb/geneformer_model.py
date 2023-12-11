@@ -7,7 +7,7 @@ import logging
 import warnings
 
 from transformers import BertForMaskedLM, BertConfig
-from typing import Optional, Union, Tuple, Any
+from typing import Dict, Optional, Union, Tuple, Any
 from geneformer.in_silico_perturber import pad_tensor_list
 from transformers.modeling_utils import PreTrainedModel
 from transformers.modeling_outputs import BaseModelOutputWithPooling
@@ -168,7 +168,9 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
 
         return tokenized_cells, expression_token_lengths
 
-    def __call__(self, features, return_tensors=None, *args, **kwargs):
+    def __call__(
+        self, features, return_tensors=None, *args, **kwargs
+    ) -> Dict[str, Any]:
         prepared_features = self._prepare_features(features)
         tokens, expression_token_lengths = self._tokenize(
             prepared_features, *args, **kwargs

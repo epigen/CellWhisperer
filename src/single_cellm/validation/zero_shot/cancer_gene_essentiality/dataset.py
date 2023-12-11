@@ -11,6 +11,7 @@ import logging
 from single_cellm.jointemb.processing import TranscriptomeTextDualEncoderProcessor
 from torch.utils.data import Dataset, DataLoader
 from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
+from single_cellm.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
 from transformers import AutoTokenizer
 import anndata
 from single_cellm.config import get_path, model_path_from_name
@@ -38,6 +39,7 @@ class CancerGeneEssentialityDataModule(LightningDataModule):
         transcriptome_processor="geneformer",
         dataset_name="daniel",
         batch_size=32,
+        transcriptome_processor_kwargs={},
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -56,6 +58,7 @@ class CancerGeneEssentialityDataModule(LightningDataModule):
             transcriptome_processor=transcriptome_processor,
             tokenizer=tokenizer,
         )
+        self.transcriptome_processor_kwargs = transcriptome_processor_kwargs
 
     def prepare_data(self):
         """
@@ -85,8 +88,14 @@ class CancerGeneEssentialityDataModule(LightningDataModule):
 
         if self.transcriptome_processor == "geneformer":
             transcriptome_processor = GeneformerTranscriptomeProcessor(
-                nproc=1,
+                nproc=1,  # TODO can I pass some value from "above" (as in the other datamodule)?
                 emb_label="natural_language_annotation",  # config["anndata_label_name"]
+                **self.transcriptome_processor_kwargs,
+            )
+        elif self.transcriptome_processor == "scgpt":
+            transcriptome_processor = ScGPTTranscriptomeProcessor(
+                nproc=0,
+                **self.transcriptome_processor_kwargs,
             )
         else:
             raise ValueError("transcriptome_processor not recognized")

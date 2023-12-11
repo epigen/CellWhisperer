@@ -78,7 +78,7 @@ if run_example:
         text_tokenizer=text_tokenizer,
         device=device,
         average_mode="embeddings",
-        chunk_size_text_emb_and_scoring=64,
+        batch_size=64,
         obs_cols=["cell_ontology_class"]
         if not use_immgen
         else ["cell type", "cell type rough"],

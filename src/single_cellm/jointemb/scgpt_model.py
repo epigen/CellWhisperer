@@ -5,6 +5,7 @@ import numpy as np
 import dataclasses
 import pandas as pd
 import logging
+import torch.nn.functional as F
 
 from transformers import BertForMaskedLM, BertConfig
 from typing import Optional, Union, Tuple, Any
@@ -86,7 +87,7 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
         adata_n_hvgs=None,
         adata_hvg_flavor="cell_ranger",
         gene_col="gene_name",
-        vocab_path=get_path(["model_name_path_map", "scgpt"]) / "vocab.json",
+        vocab_path=str(get_path(["model_name_path_map", "scgpt"]) / "vocab.json"),
         pad_token="<pad",
         nproc=10,
         **kwargs,
@@ -270,7 +271,7 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
             )
         return adata
 
-    def __call__(self, adata, *args, **kwargs):
+    def __call__(self, adata, *args, **kwargs) -> dict:
         """
         Tokenize the input data.  \
          Also adapted from: https://github.com/bowang-lab/scGPT/blob/418b0f623fb1f17641a12c9e50f72f4419311745/scgpt/tasks/cell_emb.py#L22
@@ -322,7 +323,7 @@ class ScGPTConfig(PretrainedConfig):
         self,
         pad_token="<pad>",
         input_emb_style="continuous",
-        vocab_path=get_path(["model_name_path_map", "scgpt"]) / "vocab.json",
+        vocab_path=str(get_path(["model_name_path_map", "scgpt"]) / "vocab.json"),
         fast_transformer=True,
         nlayers=12,
         nheads=8,
@@ -407,7 +408,7 @@ class ScGPTModel(PreTrainedModel):
         """
         #  model_dir: str, max_length: int = 1200,
         #  batch_size: int = 64, use_fast_transformer: bool = False,
-        #  device: str = "cuda", gene_col: str = "gene_symbol"):
+        #  device: str = "cuda", gene_col: str = "gene_name"):
 
         super().__init__(config)
         self.config = config
@@ -460,13 +461,8 @@ class ScGPTModel(PreTrainedModel):
 
         features = features[:, 0, :]  # get the <cls> position embedding
 
-        # PP: avoid conversion to numpy, I think this is equivalent, but I'm not sure
-        if self.normalize_features:  #
-            features = features / torch.functional.F.normalize(features, p=2, dim=1)
-        # features = features.cpu().numpy()
-        # features = features / np.linalg.norm(
-        # features, axis=1, keepdims=True
-        # )
+        if self.config.normalize_features:
+            features = F.normalize(features, p=2, dim=1)
 
         return (features,)
 

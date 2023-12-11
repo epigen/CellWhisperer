@@ -1,0 +1,29 @@
+method: random
+name: broad_initial
+metric:
+  goal: minimize
+  name: val_loss
+parameters:
+  config:
+    values:
+      - "src/experiments/sweeps/broad_initial/base_config.yaml"
+  model.model_config.text_model_type:
+    values:
+      - biogpt
+      - bert
+  model.model_config.transcriptome_model_type:
+    values:
+      - geneformer
+      #- scgpt
+  model.model_config.projection_dim:
+    values: [64, 512, 2048]
+  model.model_config.locking_mode:
+    values: ["LU"]
+  model.loss_config.clip_lambda:
+    values: [0.1, 1.0, 10.0]
+  model.loss_config.clip_lite_lambda:
+    values: [0.1, 1.0, 10.0]
+  batch_size:
+    values: [256, 1024]
+  trainer.accumulate_grad_batches:
+    values: [1, 32, 256]

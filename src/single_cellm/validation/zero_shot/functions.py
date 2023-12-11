@@ -21,7 +21,8 @@ def adata_list_to_embeds(
     transcriptome_processor: Union[
         GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor
     ],
-) -> torch.tensor:
+    batch_size: int = 32,
+) -> torch.Tensor:
     """
     Compute the transcriptome embeddings for each adata in adata_list.
     TODO: Only works with same number of cells per adata
@@ -41,9 +42,20 @@ def adata_list_to_embeds(
         for k, v in transcriptome_processor_result.items():
             transcriptome_processor_result[k] = v.to(model.device)
 
-        _, transcriptome_embeds = model.get_transcriptome_features(
-            **transcriptome_processor_result
-        )
+        transcriptome_embeds = []
+        for i in range(
+            0,
+            next(iter(transcriptome_processor_result.values())).shape[0],
+            batch_size,
+        ):
+            batch = {
+                k: v[i : i + batch_size]
+                for k, v in transcriptome_processor_result.items()
+            }
+            _, transcriptome_embeds_batch = model.get_transcriptome_features(**batch)
+            transcriptome_embeds.append(transcriptome_embeds_batch)
+        transcriptome_embeds = torch.cat(transcriptome_embeds, dim=0)
+
         transcriptome_embeds = transcriptome_embeds / transcriptome_embeds.norm(
             dim=-1, keepdim=True
         )
@@ -90,7 +102,7 @@ def score_text_vs_transcriptome_many_vs_many(
     transcriptome_processor: Union[
         GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor
     ] = None,
-    chunk_size_text_emb_and_scoring: int = 128,
+    batch_size: int = 128,
     score_norm_method: str = "zscore",
 ):
     """
@@ -104,8 +116,7 @@ def score_text_vs_transcriptome_many_vs_many(
         If "embeddings", first tokenize and embed each cell, then average the embeddings. TODO "cells" does not work yet.
     :param text_tokenizer: AutoTokenizer instance. Used to tokenize the text. Can be None if text_list_or_text_embeds is a torch.tensor.
     :param transcriptome_processor: GeneformerTranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to prepare/tokenize the transcriptome. Can be None if adata_list_or_transcriptome_embeds is a torch.tensor.
-    :param chunk_size_text_emb_and_scoring: int. The text will be chunked into chunks of this size before computing the text \
-            embeddings and similarity to the transcriptome. This is necessary to avoid out-of-memory errors.
+    :param batch_size: int. Model processing in batches (to avoid OOM)
     :param score_norm_method: "zscore", "softmax", or "01norm". TODO - unclear what is best. How to normalize the logits \
             (similarity to the transcriptome). "zscore" will zscore the logits across all terms. "softmax" will apply softmax to the logits.\
             "01norm" will normalize the logits to the range [0,1].
@@ -127,7 +138,10 @@ def score_text_vs_transcriptome_many_vs_many(
         transcriptome_embeds = adata_list_or_transcriptome_embeds
     else:
         transcriptome_embeds = adata_list_to_embeds(
-            adata_list_or_transcriptome_embeds, model, transcriptome_processor
+            adata_list_or_transcriptome_embeds,
+            model,
+            transcriptome_processor,
+            batch_size=batch_size,
         )  # n_adatas * n_cells_per_adata * 512
     if average_mode == "embeddings":
         transcriptome_embeds = transcriptome_embeds.mean(
@@ -137,10 +151,8 @@ def score_text_vs_transcriptome_many_vs_many(
     #### Chunk the text to avoid out-of-memory errors ###
     logits_per_text_list = []
     text_chunks = [
-        text_list_or_text_embeds[i : i + chunk_size_text_emb_and_scoring]
-        for i in range(
-            0, len(text_list_or_text_embeds), chunk_size_text_emb_and_scoring
-        )
+        text_list_or_text_embeds[i : i + batch_size]
+        for i in range(0, len(text_list_or_text_embeds), batch_size)
     ]
     for chunk in text_chunks:
         if type(text_list_or_text_embeds) == torch.Tensor:
@@ -148,7 +160,7 @@ def score_text_vs_transcriptome_many_vs_many(
         else:
             text_embeds = text_list_to_embeds(
                 chunk, model, text_tokenizer
-            )  # chunk_size_text_emb_and_scoring * 512
+            )  # batch_size * 512
 
         # Compute logits (similarity to expression embedding) for the current chunk and append to the list
         logits_per_text = (
@@ -183,7 +195,7 @@ def get_scores_adatas_vs_text_list(
     ],
     text_list_or_text_embeds: Union[List[str], torch.Tensor] = None,
     average_mode="embeddings",
-    chunk_size_text_emb_and_scoring: int = 64,
+    batch_size: int = 64,
     score_norm_method: str = "zscore",
 ) -> Tuple[Dict[str, float], pd.DataFrame]:
     """
@@ -201,7 +213,7 @@ def get_scores_adatas_vs_text_list(
             If None, the celltypes in adata_dict will be used, with the prefix "Cell type: ".
         average_mode: "cells" or "embeddings". If "cells", first average the transcriptome data across all cells, then tokenize and embed. \
             If "embeddings", first tokenize and embed each cell, then average the embeddings. TODO "cells" does not work yet.
-        chunk_size_text_emb_and_scoring: The text will be chunked into chunks of this size before computing the text \
+        batch_size: The text will be chunked into chunks of this size before computing the text \
             embeddings and similarity to the transcriptome. This is necessary to avoid out-of-memory errors.
         score_norm_method: "zscore", "softmax", or "01norm". TODO - unclear what is best. How to normalize the logits \
             (similarity to the transcriptome). "zscore" will zscore the logits across all terms. "softmax" will apply softmax to the logits.\
@@ -228,7 +240,7 @@ def get_scores_adatas_vs_text_list(
         adata_list_or_transcriptome_embeds=adata_list_or_transcriptome_embeds,
         transcriptome_processor=transcriptome_processor,
         text_tokenizer=text_tokenizer,
-        chunk_size_text_emb_and_scoring=chunk_size_text_emb_and_scoring,
+        batch_size=batch_size,
         score_norm_method=score_norm_method,
         average_mode=average_mode,
     )
@@ -290,7 +302,7 @@ def anndata_to_scored_keywords(
     ],
     text_tokenizer: AutoTokenizer,
     average_mode: str = "cells",
-    chunk_size_text_emb_and_scoring: int = 64,
+    batch_size: int = 64,
     obs_cols: List[str] = [],
     additional_text_dict: dict = {},
     score_norm_method: str = "zscore",
@@ -306,7 +318,7 @@ def anndata_to_scored_keywords(
     :param text_tokenizer: AutoTokenizer instance. Used to tokenize the text.
     :param average_mode: "cells" or "embeddings". If "cells", first average the transcriptome data across all cells, then tokenize and embed. \
         If "embeddings", first tokenize and embed each cell, then average the embeddings. TODO what is better?
-    :param chunk_size_text_emb_and_scoring: int. The text will be chunked into chunks of this size before computing the text \
+    :param batch_size: int. The text will be chunked into chunks of this size before computing the text \
           embeddings and similarity to the transcriptome. This is necessary to avoid out-of-memory errors.
     :param obs_cols: List[str]. Compute the similarity to the transcriptome for the values of these columns.\
           E.g. if obs_cols=["cell type"], the similarity to the transcriptome will be computed for each value of "cell type". \
@@ -382,7 +394,7 @@ def anndata_to_scored_keywords(
         else adata_or_embedding,
         transcriptome_processor=transcriptome_processor,
         text_tokenizer=text_tokenizer,
-        chunk_size_text_emb_and_scoring=chunk_size_text_emb_and_scoring,
+        batch_size=batch_size,
         score_norm_method=score_norm_method,
         average_mode=average_mode,
     )

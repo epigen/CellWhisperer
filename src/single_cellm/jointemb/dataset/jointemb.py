@@ -15,7 +15,7 @@ from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProces
 from single_cellm.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
 from single_cellm.jointemb.processing import TranscriptomeTextDualEncoderProcessor
 
-from single_cellm.config import get_path
+from single_cellm.config import get_path, model_path_from_name
 import subprocess
 
 
@@ -44,7 +44,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
     def __init__(
         self,
-        tokenizer="microsoft/biogpt",
+        tokenizer="biogpt",
         transcriptome_processor="geneformer",
         dataset_name="daniel",
         batch_size=32,
@@ -64,7 +64,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         super().__init__()
         self.batch_size = batch_size
         self.dataset_name = dataset_name
-        self.tokenizer = tokenizer
+        self.tokenizer = model_path_from_name(tokenizer)
         self.transcriptome_processor = transcriptome_processor
         self.nproc = nproc
         self.min_genes = min_genes
@@ -143,9 +143,9 @@ class JointEmbedDataModule(pl.LightningDataModule):
         # randomly sample train_size indices for train and use the rest for val
         # fix the seed
         random.seed(42)
-        total_ids = set(range(len(inputs["input_ids"])))
+        total_ids = list(range(len(inputs["input_ids"])))
         train_ids = random.sample(total_ids, train_size)
-        val_ids = list(total_ids - set(train_ids))
+        val_ids = sorted(list(set(total_ids) - set(train_ids)))
 
         self.train_dataset = JointEmbedDataset(
             {key: val[train_ids] for key, val in inputs.items()}
@@ -160,9 +160,13 @@ class JointEmbedDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=self.nproc,
+            drop_last=True,  # drop last batch to avoid batch_size of 1, which fails due to batch-norm
         )
 
     def val_dataloader(self):
         return DataLoader(
-            self.val_dataset, batch_size=self.batch_size, num_workers=self.nproc
+            self.val_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.nproc,
+            drop_last=True,  # drop last batch to avoid batch_size of 1, which fails due to batch-norm
         )

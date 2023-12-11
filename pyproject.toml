@@ -20,6 +20,7 @@ classifiers = [
 
 [project.scripts]
 single_cellm = "single_cellm.jointemb.training:cli_main"
+single_cellm_sweeping = "single_cellm.jointemb.sweeping:main"
 
 [tool.setuptools.packages.find]
 where = ["src", "modules/Geneformer", "modules"]

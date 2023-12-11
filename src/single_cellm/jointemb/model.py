@@ -207,7 +207,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             expression_key_padding_mask=expression_key_padding_mask,
             # output_attentions=output_attentions,
             # output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
+            return_dict=False,
         )[0]
 
         transcriptome_embeds = self.discriminator.img_block(transcriptome_features)
@@ -244,17 +244,6 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             expression_gene=expression_gene,
             expression_expr=expression_expr,
             expression_key_padding_mask=expression_key_padding_mask,
-            return_dict=False,
-            normalize_embeds=True,
-        )
-
-        text_outputs, text_embeds = self.get_text_features(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            # token_type_ids=token_type_ids,
-            # position_ids=position_ids,
-            # output_attentions=output_attentions,
-            # output_hidden_states=output_hidden_states,
             return_dict=False,
         )[0]
 

@@ -5,7 +5,7 @@ Wraps lightning and transformers logic, providing bare configs to the user/CLI
 import warnings
 
 from lightning import LightningModule
-from single_cellm.validation import TRAINING_VALIDATION_FUNCTIONS
+from single_cellm.validation import initialize_validation_functions
 from single_cellm.jointemb.loss.config import LossConfig
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.optim import AdamW
@@ -37,12 +37,15 @@ warnings.filterwarnings(
 class TranscriptomeTextDualEncoderLightning(LightningModule):
     def __init__(
         self,
-        model_config: Union[Dict, TranscriptomeTextDualEncoderConfig],
-        loss_config: Union[Dict, LossConfig],
+        model_config: Dict,
+        loss_config: Dict,
+        val_batch_size: int = 32,
         gauss_noise_std: float = 0.0,
         max_epochs: int = 100,
         optimizer: OptimizerCallable = torch.optim.AdamW,
-        scheduler: LRSchedulerCallable = CosineAnnealingLR,
+        scheduler: LRSchedulerCallable = lambda optimizer: CosineAnnealingLR(
+            optimizer, T_max=100, eta_min=0
+        ),  # TODO need to find a solution to make T_max flexible here
         learning_rate: float = 1e-3,
         lr_warmup_steps: int = 100,
     ):
@@ -50,6 +53,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         Args:
             model_config: configuration for the model. Can be a dict or a TranscriptomeTextDualEncoderConfig object.
             loss_config: configuration for the loss. Can be a dict or a LossConfig object.
+            val_batch_size: batch size to used for dedicated validation functions. 32 should be feasible on most GPUs.
             gauss_noise_std: Currently inactive: standard deviation of the gaussian noise to add to the input embeddings (features). if 0.0 or None noise won't be added to training embeddings
             max_epochs: maximum number of epochs to train for
             optimizer: optimizer to use. Must be a callable that returns an optimizer object.
@@ -58,11 +62,9 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         """
         super(TranscriptomeTextDualEncoderLightning, self).__init__()
 
-        if not isinstance(model_config, TranscriptomeTextDualEncoderConfig):
-            model_config = TranscriptomeTextDualEncoderConfig(**model_config)
-
-        if not isinstance(loss_config, LossConfig):
-            loss_config = LossConfig(**loss_config)
+        # Convert dicts to the respective object types
+        model_config = TranscriptomeTextDualEncoderConfig(**model_config)
+        loss_config = LossConfig(**loss_config)
 
         self.model = TranscriptomeTextDualEncoderModel(
             config=model_config,
@@ -79,6 +81,11 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         )
 
         self.input_regularization = InputRegularization(gauss_noise_std=gauss_noise_std)
+        self.validation_functions = initialize_validation_functions(
+            val_batch_size,
+            model_config.transcriptome_config.model_type,
+            model_config.text_config.model_type,
+        )  # TODO should become model_config.text_model_type
 
         self.save_hyperparameters()
 
@@ -164,6 +171,9 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             input_ids=input_ids,
             expression_tokens=expression_tokens,
             expression_token_lengths=expression_token_lengths,
+            expression_gene=expression_gene,
+            expression_expr=expression_expr,
+            expression_key_padding_mask=expression_key_padding_mask,
             attention_mask=attention_mask,
             return_dict=True,
         )
@@ -216,7 +226,8 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
     def on_validation_epoch_end(self):
         # For convenience (speed), I disable this when "fast_dev_run" is enabled
         if not self.trainer.fast_dev_run:
-            for val_fn_name, val_fn in TRAINING_VALIDATION_FUNCTIONS.items():
+            logging.info("Running validation functions")
+            for val_fn_name, val_fn in self.validation_functions.items():
                 val_metrics, results_df = val_fn(self.model)
                 for metric_name, metric_value in val_metrics.items():
                     self.log(
@@ -246,7 +257,9 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             param for name, param in self.named_parameters() if "weight" not in name
         ]
 
-        optimizer = self.optimizer(
+        # Workaround to all using --config <file> (otherwise it does not work :())
+        logging.warning("passed optimizer arg is being ignored in favor of adamw")
+        optimizer = AdamW(
             [
                 {"params": weight_params, "weight_decay": 0.01},
                 {"params": other_params, "weight_decay": 0.0},
@@ -255,7 +268,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             betas=(0.9, 0.98),  # SigLiT recommends even 0.95 for beta2
         )
         scheduler = {
-            "scheduler": self.scheduler(optimizer, T_max=self.max_epochs, eta_min=0),
+            "scheduler": self.scheduler(optimizer),
             "interval": "epoch",
             "monitor": "val_loss",
         }
