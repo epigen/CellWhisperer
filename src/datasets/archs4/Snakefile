@@ -3,6 +3,64 @@ from pathlib import Path
 PROJECT_DIR = Path(workflow.basedir).resolve().parents[2]
 configfile: PROJECT_DIR / "config.yaml"
 
+rule all:
+    PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="archs4_metasra")
+
+rule filter_final_file:
+    """
+    filters the final file to only contain samples that are not in the daniel dataset and have a sample_type_confidence > 0.5
+    """
+    input:
+        archs4_metadata_unfiltered=PROJECT_DIR / "results" / "archs4_metasra_unfiltered.h5ad"  # TODO improve path and realize generation of this path
+        daniel=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="daniel")
+    output:
+        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="archs4_metasra")
+    run:
+        import anndata
+        archs4 = anndata.read_h5ad(input["archs4_metadata_unfiltered"])
+
+        archs4.obs.index.name = "geo_id"
+        archs4.obs.reset_index(inplace=True)
+        archs4.obs.set_index("experiment", inplace=True)
+
+        daniel = anndata.read_h5ad(input["daniel"])
+        archs4_filtered = archs4[(~archs4.obs.index.isin(daniel.obs.index)) & (archs4.obs["sample_type_confidence"] > 0.5)]
+
+        # compression is 5x slower and 5x smaller
+        archs4_filtered.write_h5ad(output[0], compression="gzip")
+
+rule structured_json:
+    input:
+        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="archs4_metasra")
+    output:
+        PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="archs4_metasra")
+    run:
+        import anndata
+        import pandas as pd
+        import json
+        import numpy as np
+        import re
+
+        archs4 = anndata.read_h5ad(input[0])
+
+        # Convert a subset of the 'obs' DataFrame to a JSON string with index orientation
+        fields_to_keep_redundant = "study_title sample_name sample_type mapped_ontology_terms raw_SRA_metadata sample_species biosample_title raw_biosample_metadata accession_type geo_metadata molecule_ch1 geo_source_name geo_title".split(
+            " "
+        )
+
+        fields_to_keep_reductionist_v1 = (
+            "sample_name sample_type mapped_ontology_terms raw_SRA_metadata".split(" ")
+        )
+        fields_to_keep_reductionist_v2 = (
+            "geo_title geo_metadata geo_source_name sample_type mapped_ontology_terms raw_biosample_metadata treatment".split(" ")
+        )
+
+        json_list = archs4.obs[fields_to_keep_reductionist_v2].to_json(orient="index")
+
+        # Write the JSON string to a file
+        with open(output[0], "w") as f:
+            f.write(json_list)
+
 rule archs4_accessions_to_srauids:
     """
     Retrieve SRA UIDs for each sample in the ARCHS4 file
