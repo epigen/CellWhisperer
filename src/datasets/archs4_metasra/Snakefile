@@ -23,10 +23,15 @@ rule filter_final_file:
         archs4.obs.reset_index(inplace=True)
         archs4.obs.set_index("experiment", inplace=True)
 
+        # add `gene_name` column and set index to ensembl IDs
+        archs4.var.rename(columns={"symbol": "gene_name"}, inplace=True)
+        archs4.var.set_index("ensembl_gene_id", drop=True, inplace=True)
+
+        # filtering
         daniel = anndata.read_h5ad(input["daniel"])
         archs4_filtered = archs4[(~archs4.obs.index.isin(daniel.obs.index)) & (archs4.obs["sample_type_confidence"] > 0.5)]
 
-        # compression is 5x slower and 5x smaller
+        # compression is 5x slower and 5x smaller (makes sense to use though as this file is intermediary)
         archs4_filtered.write_h5ad(output[0], compression="gzip")
 
 rule structured_json:
