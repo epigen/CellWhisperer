@@ -1,7 +1,7 @@
 from typing import Union, Iterable, Optional, Any
 import logging
 from single_cellm.jointemb.model import TranscriptomeTextDualEncoderModel
-from single_cellm.config import get_path
+from single_cellm.config import get_path, model_path_from_name
 from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
 from single_cellm.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
 from single_cellm.validation.zero_shot.functions import get_scores_adatas_vs_text_list
@@ -48,7 +48,7 @@ class SingleCellZeroshotValidationScoreCalculator:
         suffix_for_text_embeddings: str = "",
         nproc_transcriptome_processor: str = 1,
         logger: Optional[Any] = None,
-        tokenizer_name: str = "microsoft/biogpt",
+        tokenizer_name: str = "biogpt",
         transcriptome_tokenizer_type="geneformer",
         transcriptome_processor_kwargs=None,
         batch_size: int = 32,
@@ -129,7 +129,9 @@ class SingleCellZeroshotValidationScoreCalculator:
             for i, celltype in enumerate(self.celltypes_to_process)
         }
 
-        self.text_tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_name)
+        self.text_tokenizer = AutoTokenizer.from_pretrained(
+            model_path_from_name(self.tokenizer_name)
+        )
 
         if transcriptome_tokenizer_type == "geneformer":
             self.transcriptome_processor = GeneformerTranscriptomeProcessor(

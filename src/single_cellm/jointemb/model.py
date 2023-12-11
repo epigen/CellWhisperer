@@ -197,7 +197,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             transcriptome_features (`torch.FloatTensor` of shape `(batch_size, output_dim`): The transcriptome embeddings obtained by
             applying the projection layer to the pooled output of [`CLIPTranscriptomeModel`].
 
-        ```"""
+        """
 
         transcriptome_features = self.transcriptome_model(
             expression_tokens=expression_tokens,

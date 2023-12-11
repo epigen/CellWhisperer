@@ -15,6 +15,7 @@ rule all:
 
         #PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="immgen")
 
+# TODO need to run `data.var.rename(columns={"gene_symbol": "gene_name"}, inplace=True)`
 rule download_data:
     """
     """

@@ -85,7 +85,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             val_batch_size,
             model_config.transcriptome_config.model_type,
             model_config.text_config.model_type,
-        )  # TODO should become model_config.text_model_type
+        )
 
         self.save_hyperparameters()
 

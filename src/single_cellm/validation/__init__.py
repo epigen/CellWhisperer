@@ -18,6 +18,8 @@ def initialize_validation_functions(
         "zero_shot_single_cell_annotations_well_studied_celltypes": SingleCellZeroshotValidationScoreCalculator(
             celltypes=TOP20_LUNG_LIVER_BLOOD_CELLTYPES,
             batch_size=batch_size,
+            transcriptome_tokenizer_type=transcriptome_model_type,
+            tokenizer_name=text_model_type,
         ),
     }
     return training_validation_functions
