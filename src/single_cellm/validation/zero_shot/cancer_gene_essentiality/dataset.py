@@ -88,7 +88,7 @@ class CancerGeneEssentialityDataModule(LightningDataModule):
 
         if self.transcriptome_processor == "geneformer":
             transcriptome_processor = GeneformerTranscriptomeProcessor(
-                nproc=1,  # TODO can I pass some value from "above" (as in the other datamodule)?
+                nproc=0,  # not really being used
                 emb_label="natural_language_annotation",  # config["anndata_label_name"]
                 **self.transcriptome_processor_kwargs,
             )

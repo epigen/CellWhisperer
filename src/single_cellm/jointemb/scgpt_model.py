@@ -36,7 +36,7 @@ import anndata
 import scanpy as sc
 
 
-class DatasetForScGPTTranscriptomeProcessor(torch.utils.data.Dataset):
+class ScGPTDataset(torch.utils.data.Dataset):
     """
     Adapted from: https://github.com/bowang-lab/scGPT/blob/418b0f623fb1f17641a12c9e50f72f4419311745/scgpt/tasks/cell_emb.py#L22
     """
@@ -54,7 +54,9 @@ class DatasetForScGPTTranscriptomeProcessor(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         row = self.count_matrix[idx]
         nonzero_idx = np.nonzero(row)[0]
-        values = row[nonzero_idx]
+        values = row[nonzero_idx].astype(
+            np.int64
+        )  # uint row matrixes cannot represent pad_token (-2)
         genes = self.gene_ids[nonzero_idx]
         # append <cls> token at the beginning
         genes = np.insert(genes, 0, self.vocab["<cls>"])
@@ -87,7 +89,7 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
         adata_hvg_flavor="cell_ranger",
         gene_col="gene_name",
         vocab_path=str(get_path(["model_name_path_map", "scgpt"]) / "vocab.json"),
-        pad_token="<pad",
+        pad_token="<pad>",
         nproc=10,
         **kwargs,
     ):
@@ -168,7 +170,7 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
         if use_batch_labels:
             batch_ids = np.array(adata.obs["batch_id"].tolist())
 
-        dataset = DatasetForScGPTTranscriptomeProcessor(
+        dataset = ScGPTDataset(
             count_matrix,
             gene_ids,
             self.vocab,
@@ -185,9 +187,11 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
             sampling=True,
             keep_first_n_tokens=1,
         )
+        # We need to process all at once. Otherwise the token lengths might vary across batches which leads to crashes (this is what padding is for...). If this leads to OOMs, we need to find another solution.
+        # TODO make sure that the binning operates on log values (and not on raw read counts, otherwise the bins are "useless")
         data_loader = DataLoader(
             dataset,
-            batch_size=batch_size,
+            batch_size=len(dataset),
             sampler=SequentialSampler(dataset),
             collate_fn=collator,
             drop_last=False,
@@ -202,7 +206,9 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
         }
         if use_batch_labels:
             output["batch_labels"] = []
-        for data_dict in tqdm(data_loader, desc="Tokenizing cells"):
+        for data_dict in tqdm(
+            data_loader, desc="Tokenizing cells"
+        ):  # only one iteration (we can delete the for loop)
             output["expression_gene"].append(data_dict["gene"])
             output["expression_expr"].append(data_dict["expr"])
             output["expression_key_padding_mask"].append(
@@ -293,7 +299,22 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
             f"match {np.sum(gene_ids_in_vocab >= 0)}/{len(gene_ids_in_vocab)} genes "
             f"in vocabulary of size {len(self.vocab)}."
         )
-        adata = adata[:, adata.var["id_in_vocab"] >= 0]
+
+        # Avoid to create views of views (as there was a bug in anndata)
+        adata_view = adata[:, adata.var["id_in_vocab"] >= 0]
+
+        # Identify rows with zero reads
+        selector = adata_view.X.sum(axis=1) < 1
+        if selector.sum() > 0:
+            # Workaround for requirement in `Collator` to have at least one read-count gene per cell.
+            # As we perform filtering for `min_genes`, this will be filtered anyways
+            logging.info(
+                f"There are {selector.sum()} rows with 0 read counts. Adding 1 read count to max expressed gene"
+            )
+            max_gene_idx = adata_view.X.sum(axis=0).argmax()
+            adata_view.X[np.squeeze(np.asarray(selector)), max_gene_idx] = 1
+        else:
+            adata = adata_view
 
         genes = adata.var[self.gene_col].tolist()
         gene_ids = np.array(self.vocab(genes), dtype=int)

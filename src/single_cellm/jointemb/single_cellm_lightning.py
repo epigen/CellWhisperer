@@ -228,7 +228,8 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         if not self.trainer.fast_dev_run:
             logging.info("Running validation functions")
             for val_fn_name, val_fn in self.validation_functions.items():
-                val_metrics, results_df = val_fn(self.model)
+                with torch.no_grad():  # necessary, despite model being in eval mode
+                    val_metrics, results_df = val_fn(self.model)
                 for metric_name, metric_value in val_metrics.items():
                     self.log(
                         f"validation_{val_fn_name}_{metric_name}",

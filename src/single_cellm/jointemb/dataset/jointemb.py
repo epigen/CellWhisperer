@@ -115,7 +115,6 @@ class JointEmbedDataModule(pl.LightningDataModule):
         if self.transcriptome_processor == "geneformer":
             n_genes_filter = inputs["expression_token_lengths"] > self.min_genes
         elif self.transcriptome_processor == "scgpt":
-            # NOTE: Only genes with zero expression can become masked (some datasets are normalized such that 0 values becomes non-zero). See https://github.com/epigen/single-cellm/pull/158#discussion_r1415923822
             n_genes_filter = (inputs["expression_key_padding_mask"] == False).sum(
                 dim=1
             ) > self.min_genes
