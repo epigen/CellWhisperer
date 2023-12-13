@@ -458,7 +458,9 @@ class ScGPTModel(PreTrainedModel):
             d_hid=self.config.hidden_size,
             **scgpt_model_kwargs,
         )
-        self.scgpt_model.to(config.device)
+        self.scgpt_model.to(
+            config.device, dtype=torch.bfloat16
+        )  # flash-attention requires 16bit apparently
 
     def forward(
         self,
@@ -475,11 +477,11 @@ class ScGPTModel(PreTrainedModel):
 
         features = self.scgpt_model._encode(
             expression_gene,
-            expression_expr,
+            expression_expr.to(torch.bfloat16),
             src_key_padding_mask=expression_key_padding_mask,
         )
-
-        features = features[:, 0, :]  # get the <cls> position embedding
+        # get the <cls> position embedding and convert back to float32
+        features = features[:, 0, :].to(torch.float)
 
         if self.config.normalize_features:
             features = F.normalize(features, p=2, dim=1)

@@ -129,6 +129,11 @@ class SingleCeLLMCLI(LightningCLI):
                 self.model.model.text_model.config.model_type
             )
 
+        assert (
+            self.model.model.config.locking_mode[0] == "L"
+            or self.model.model.transcriptome_model.config.model_type != "scgpt"
+        ), "scgpt can't be fine-tuned at the moment, because of FSDP being incapable of implicitly handling fp16 and fp32 conversion"
+
         try:
             self.model.load_pretrained_models(
                 transcriptome_model_path,
