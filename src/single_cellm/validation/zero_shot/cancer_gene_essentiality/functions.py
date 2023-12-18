@@ -8,6 +8,7 @@ import seaborn as sns
 import numpy as np
 import logging
 from torchmetrics.functional import f1_score
+from scipy.stats import mannwhitneyu
 
 
 from .dataset import (
@@ -159,4 +160,16 @@ class EvaluateCancerGeneEssentiality:
         if plot:
             sns.barplot(data=df, x="labels", y="similarity", ci="sd")
 
-        return _log_reg_statistics(df)
+        # return _log_reg_statistics(df)
+
+        true_values = df[df["labels"]]["similarity"]
+        false_values = df[~df["labels"]]["similarity"]
+
+        # Perform the Mann-Whitney U test
+        stat, p_value = mannwhitneyu(true_values, false_values, alternative="less")
+
+        return {
+            "mannwhitneyu_stat": stat,
+            "mannwhitneyu_pvalue": p_value,
+            "log_ratio": np.log(true_values.mean() / false_values.mean()),
+        }, None
