@@ -46,7 +46,7 @@ class SingleCellZeroshotValidationScoreCalculator:
         celltype_obs_colname: str = "cell_ontology_class",
         prefix_for_text_embeddings="Sample of a ",
         suffix_for_text_embeddings: str = "",
-        nproc_transcriptome_processor: str = 1,
+        nproc_transcriptome_processor: int = 0,  # TODO link to CLI nproc argument
         logger: Optional[Any] = None,
         tokenizer_name: str = "biogpt",
         transcriptome_tokenizer_type="geneformer",

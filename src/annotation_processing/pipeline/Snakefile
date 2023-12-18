@@ -61,7 +61,7 @@ rule process_annotation_openai:
     Currently unused
     """
     input:
-        human_message = ancient(rules.prepare_requests.output.yaml),
+        human_message=lambda wildcards: checkpoints.prepare_requests.get(dataset=wildcards.dataset).output[0] + f"/{wildcards.sample_id}.yaml",
         system_message = "prompts/process_annotations_zero_shot_gpt4.txt",
     output:
         processed_annotation = protected(PROCESSED_FILE_OPENAI),  # I marked this as protected as it might be costly to produce

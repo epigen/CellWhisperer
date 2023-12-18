@@ -91,7 +91,6 @@ def sweep_train(args):
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument("--exp_name", type=str, default="test")
     parser.add_argument(
         "--wandb_mode", choices=["offline", "online", "disabled"], default="online"
     )
@@ -113,6 +112,7 @@ def main():
         default=1,
         help="Number of runs to perform before dying. If 0, runs forever",
     )
+
     args = parser.parse_args()
 
     if args.sweep_id is None:  # start new sweep

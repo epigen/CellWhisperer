@@ -94,7 +94,7 @@ class CancerGeneEssentialityDataModule(LightningDataModule):
             )
         elif self.transcriptome_processor == "scgpt":
             transcriptome_processor = ScGPTTranscriptomeProcessor(
-                nproc=0,
+                nproc=0,  # TODO link to nproc argument
                 **self.transcriptome_processor_kwargs,
             )
         else:

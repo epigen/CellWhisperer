@@ -34,7 +34,9 @@ from single_cellm.jointemb.dataset import JointEmbedDataModule
 
 
 PROJECT_DIR = Path(
-    subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=os.getcwd())
+    subprocess.check_output(
+        ["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).parent
+    )
     .decode("utf-8")
     .strip()
 )
@@ -113,6 +115,9 @@ class SingleCeLLMCLI(LightningCLI):
     def before_instantiate_classes(self) -> None:
         logging.basicConfig(level=self.config["fit.log_level"])
 
+        if self.config["fit.dap_debug"]:
+            start_debugger(wait_for_client=True)
+
     def before_fit(self) -> None:
         # We need to preload this model
         if self.model.model.config.locking_mode[0] == "u":
@@ -151,8 +156,6 @@ class SingleCeLLMCLI(LightningCLI):
                 self.model, datamodule=self.datamodule, mode="binsearch", init_val=8
             )  # requires batch_size argument in datamodule or model
 
-        if self.config["fit.dap_debug"]:
-            start_debugger(wait_for_client=True)
 
     def after_fit(self) -> None:
         if self.config["fit.best_model_path"] is not None:

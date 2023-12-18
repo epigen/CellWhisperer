@@ -206,16 +206,16 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
         }
         if use_batch_labels:
             output["batch_labels"] = []
-        for data_dict in tqdm(
-            data_loader, desc="Tokenizing cells"
-        ):  # only one iteration (we can delete the for loop)
-            output["expression_gene"].append(data_dict["gene"])
-            output["expression_expr"].append(data_dict["expr"])
-            output["expression_key_padding_mask"].append(
-                data_dict["gene"].eq(self.vocab[self.pad_token])
-            )
-            if use_batch_labels:
-                output["batch_labels"].append(data_dict["batch_labels"])
+
+        assert len(data_loader) == 1, "We need to process all at once"
+        data_dict = next(iter(data_loader))
+        output["expression_gene"].append(data_dict["gene"])
+        output["expression_expr"].append(data_dict["expr"])
+        output["expression_key_padding_mask"].append(
+            data_dict["gene"].eq(self.vocab[self.pad_token])
+        )
+        if use_batch_labels:
+            output["batch_labels"].append(data_dict["batch_labels"])
 
         for key, value in output.items():
             output[key] = torch.cat(value, dim=0)
@@ -295,7 +295,7 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
             for gene in adata.var[self.gene_col]
         ]
         gene_ids_in_vocab = np.array(adata.var["id_in_vocab"])
-        logger.info(
+        logger.debug(
             f"match {np.sum(gene_ids_in_vocab >= 0)}/{len(gene_ids_in_vocab)} genes "
             f"in vocabulary of size {len(self.vocab)}."
         )
@@ -324,7 +324,7 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
             max_length=1200,
             batch_size=64,
             pad_token=self.pad_token,
-            pad_value=-2,
+            pad_value=-2,  # TODO hardcoded here, but flexible elsewhere in this file
             gene_ids=gene_ids,
             use_batch_labels=False,
         )
