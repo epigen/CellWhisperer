@@ -156,6 +156,7 @@ class SingleCeLLMCLI(LightningCLI):
                 self.model, datamodule=self.datamodule, mode="binsearch", init_val=8
             )  # requires batch_size argument in datamodule or model
 
+        self.trainer.logger.watch(self.model, log="all")
 
     def after_fit(self) -> None:
         if self.config["fit.best_model_path"] is not None:
