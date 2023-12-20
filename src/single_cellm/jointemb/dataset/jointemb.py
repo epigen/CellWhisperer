@@ -50,6 +50,9 @@ class JointEmbedDataModule(pl.LightningDataModule):
         batch_size=32,
         nproc=8,
         transcriptome_processor_kwargs={},
+        tokenizer_kwargs={
+            "model_max_length": 100  # 100 seems to be a decent fit, which cuts very few inputs (both for biogpt and biobert)
+        },  # see https://github.com/epigen/single-cellm/issues/193
         min_genes=200,
     ):
         """
@@ -74,7 +77,8 @@ class JointEmbedDataModule(pl.LightningDataModule):
             transcriptome_processor=self.transcriptome_processor,
             tokenizer=self.tokenizer,
         )
-        self.transcriptome_processor_kwargs = transcriptome_processor_kwargs
+        self.transcriptome_processor_kwargs = transcriptome_processor_kwargs.copy()
+        self.tokenizer_kwargs = tokenizer_kwargs.copy()
 
     def prepare_data(self):
         # check whether data has already been prepared
@@ -99,7 +103,8 @@ class JointEmbedDataModule(pl.LightningDataModule):
             raise ValueError("transcriptome_processor not recognized")
 
         processor = TranscriptomeTextDualEncoderProcessor(
-            transcriptome_processor, AutoTokenizer.from_pretrained(self.tokenizer)
+            transcriptome_processor,
+            AutoTokenizer.from_pretrained(self.tokenizer, **self.tokenizer_kwargs),
         )
         adata = anndata.read_h5ad(
             (get_path(["paths", "full_dataset"], dataset=self.dataset_name))

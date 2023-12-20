@@ -9,7 +9,8 @@ with open(snakemake.input.processed_annotations) as f:
     annotations = json.load(f)
 
 # Annotation keys correspond to the anndata object names (index of obs)
-dataset.obs[snakemake.params.anndata_label_name] = dataset.obs.index.map(annotations)
+annotations = dataset.obs.index.map(annotations).str.lstrip("\n")
+dataset.obs[snakemake.params.anndata_label_name] = annotations
 
 if dataset.obs[snakemake.params.anndata_label_name].isna().any():
     # Workaround: need to reload unbacked to allow the copy

@@ -56,7 +56,14 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
         super().__init__(tokenizer)  # transcriptome_processor,
         self.transcriptome_processor = transcriptome_processor
 
-    def __call__(self, text=None, transcriptomes=None, return_tensors=None, **kwargs):
+    def __call__(
+        self,
+        text=None,
+        transcriptomes=None,
+        text_truncation=True,
+        return_tensors=None,
+        **kwargs
+    ):
         """
         Main method to prepare for the model one or several sequences(s) and transcriptome(s). This method forwards the `text`
         and `kwargs` arguments to TranscriptomeTextDualEncoderTokenizer's [`~PreTrainedTokenizer.__call__`] if `text` is not
@@ -73,6 +80,8 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
                 The transcriptome or batch of transcriptomes to be prepared. Each transcriptome can be a PIL transcriptome, NumPy array or PyTorch
                 tensor. In case of a NumPy array/PyTorch tensor, each transcriptome should be of shape (C, H, W), where C is a
                 number of channels, H and W are transcriptome height and width.
+
+            text_truncation: Whether to truncate text if the sequence is longer than the maximum length of the model. TODO Currently this *enforces* the length to be 100 (parameter provided in `dataset/jointemb.py`). Better would be to truncate to the maximum length within the batch (if smaller than 100)
 
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors of a particular framework. Acceptable values are:
@@ -98,7 +107,12 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
             )
 
         if text is not None:
-            encoding = self.tokenizer(text, return_tensors=return_tensors, **kwargs)
+            encoding = self.tokenizer(
+                text,
+                truncation=text_truncation,
+                return_tensors=return_tensors,
+                **kwargs
+            )
 
         if transcriptomes is not None:
             transcriptome_processor_results = self.transcriptome_processor(
