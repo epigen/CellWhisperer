@@ -251,13 +251,26 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
         Also implement cosine learning rate schedule, as indicated by the CLIP paper(s).
 
-        TODO: don't decay weights of pretrained models! Alternative could be to use AdaBelief (which works well according to "ItalianClip")
+        https://arxiv.org/pdf/2303.15343.pdf (Fig. 4) indicates better performance when NOT decaying the weights of the 'U'nlocked pretrained model. Other CLIP papers indicated that only the weigths not the bias should be decayed.
+
+        Alternative could be to use AdaBelief (which works well according to "ItalianClip")
         """
+
+        # Decay weights as indicated in docstring
+        # NOTE subject this to ablation study
+        decay_selector = lambda name: "weight" in name and (
+            (
+                self.model.config.locking_mode[0] == "u"
+                and ".transcriptome_model." in name
+            )
+            or (self.model.config.locking_mode[1] == "u" and ".text_model." in name)
+        )
+
         weight_params = [
-            param for name, param in self.named_parameters() if "weight" in name
+            param for name, param in self.named_parameters() if decay_selector(name)
         ]
         other_params = [
-            param for name, param in self.named_parameters() if "weight" not in name
+            param for name, param in self.named_parameters() if not decay_selector(name)
         ]
 
         # Workaround to all using --config <file> (otherwise it does not work :())
