@@ -30,7 +30,7 @@ datasets:
 model_name_path_map:
   geneformer: resources/geneformer-12L-30M
   biogpt: microsoft/biogpt
-  bert: bert-base-multilingual-cased
+  bert: dmis-lab/biobert-v1.1
   scgpt: resources/scGPT_human
 
 # Only used, if not dedicated hyperparameter config file is provided
