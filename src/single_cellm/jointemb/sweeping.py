@@ -31,8 +31,9 @@ def init_wandb(args):
 def wandb_config_to_args(wandb_config):
     """
     Convert wandb_config (dict-like) to args object that can be passed to LightningCLI (as a supplement to sys.argv).
+    "config" arg is forced to be the first one, so the dynamic args from the sweep can overwrite it. Best practice is to not list the same args both in sweep_config and in base_args
 
-    LightningCLI args expect one of two formats (see below). We implement the first one for now (it worked)
+    LightningCLI args expect one of two formats (see below). We implement the first one for now (it worked).
 
     1. list of strings, where each string is a command line argument (e.g. args = ["fit", --trainer.max_epochs=100", "--model.encoder_layers", "24"])
     2. A config dictionary resembling the config structure of the CLI arguments (see `single_cellm --print_config`). E.g.
@@ -50,11 +51,22 @@ def wandb_config_to_args(wandb_config):
     Returns:
         Arguments in format suitable for LightningCLI
     """
-    args = Namespace()
-    for key, value in wandb_config.items():
-        setattr(args, key, value)
+    # args = Namespace()
+    # for key, value in wandb_config.items():
+    #     setattr(args, key, value)
 
-    return ["fit"] + [f"--{key}={value}" for key, value in wandb_config.items()]
+    cli_args = ["fit"]
+
+    try:
+        cli_args.append(f"--config={wandb_config.config}")
+    except AttributeError:
+        logging.warning("No base-args config provided for sweep")
+
+    cli_args.extend(
+        [f"--{key}={value}" for key, value in wandb_config.items() if key != "config"]
+    )
+
+    return cli_args
 
 
 def sweep_train(args):
@@ -65,9 +77,8 @@ def sweep_train(args):
             if param_value == "null":
                 wandb.config[param] = None
 
-        print(f"Performing sweep training run")
-
         cli_mimic_args = wandb_config_to_args(wandb.config)
+        logging.info(f"Performing sweep training run with args: {cli_mimic_args}")
         # Make sure that LightningCLI does not parse sys.argv (it prints a warning)
         sys_argv_backup = sys.argv
         sys.argv = sys.argv[:1]

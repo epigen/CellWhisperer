@@ -1,0 +1,14 @@
+method: random
+name: replicate_simple_sweep
+metric:
+  goal: minimize
+  name: val_loss
+parameters:
+  config:
+    values:
+      - "src/experiments/sweeps/replicate_working/base_config.yaml"
+  model.model_config.text_model_type:
+    values:
+      - biogpt
+  batch_size:
+    values: [32]

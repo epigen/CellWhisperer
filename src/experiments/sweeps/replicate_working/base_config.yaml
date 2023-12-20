@@ -57,6 +57,7 @@ trainer:
   enable_checkpointing: null
   enable_progress_bar: true
   enable_model_summary: null
+  accumulate_grad_batches: 32
   gradient_clip_val: null
   gradient_clip_algorithm: null
   deterministic: null
@@ -72,10 +73,15 @@ trainer:
   default_root_dir: results/model_training
 model:
   model_config:
+    projection_dim: 1024
+    transcriptome_model_type: geneformer
     transcriptome_config: {}
     text_config: {}
+    locking_mode: LU
     unlocked_fp16: false
   loss_config:
+    clip_lambda: 0.0
+    clip_lite_lambda: 1.0
     clip_lite_type: dot
     clip_lite_prior_weight: 0.1
     clip_lite_transcriptome_prior: false

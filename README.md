@@ -45,6 +45,10 @@ single_cellm fit --print_config > run_config.yaml
 single_cellm fit --config run_config.yaml
 ```
 
+### Sweeps
+
+To run sweeps, refer to [this README](./src/experiments/sweeps/README.md). You can run sweeps with the `single_cell_sweeping` tool
+
 ### Broken parameters
 
 - Only AdamW optimizer works at the moment (because using it dynamically fails with --config <file>)
