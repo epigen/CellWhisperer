@@ -151,6 +151,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         self,
         input_ids=None,
         attention_mask=None,
+        # token_type_ids=None,
         normalize_embeds=False,
         return_dict=None,
         **kwargs,

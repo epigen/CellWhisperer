@@ -75,7 +75,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             ["paths", "datamodule_prepared_path"],
             dataset=self.dataset_name,
             transcriptome_processor=self.transcriptome_processor,
-            tokenizer=self.tokenizer,
+            tokenizer=tokenizer,
         )
         self.transcriptome_processor_kwargs = transcriptome_processor_kwargs.copy()
         self.tokenizer_kwargs = tokenizer_kwargs.copy()

@@ -155,6 +155,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         expression_expr: Optional[torch.LongTensor] = None,
         expression_key_padding_mask: Optional[torch.LongTensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
+        **kwargs,  # token_type_ids
     ) -> CLIPOutput:
         # TODO at a later stage, we may add regularization here
 
@@ -176,6 +177,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             expression_key_padding_mask=expression_key_padding_mask,
             attention_mask=attention_mask,
             return_dict=True,
+            **kwargs,
         )
 
     def process_step(self, batch, batch_idx, step_type):
