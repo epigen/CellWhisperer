@@ -81,11 +81,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         )
 
         self.input_regularization = InputRegularization(gauss_noise_std=gauss_noise_std)
-        self.validation_functions = initialize_validation_functions(
-            val_batch_size,
-            model_config.transcriptome_config.model_type,
-            model_config.text_config.model_type,
-        )
+        self.val_batch_size = val_batch_size
 
         self.save_hyperparameters()
 
@@ -224,6 +220,15 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
     def validation_step(self, batch, batch_idx):
         return self.process_step(batch, batch_idx, "val")
+
+    def setup(self, stage=None):
+        # We do this here because during __init__ self.trainer is not yet available
+        self.validation_functions = initialize_validation_functions(
+            batch_size=self.val_batch_size,
+            transcriptome_model_type=self.model.transcriptome_model.config.model_type,
+            text_model_type=self.model.text_model.config.model_type,
+            val_dataloader=self.trainer.datamodule.val_dataloader(),
+        )
 
     def on_validation_epoch_end(self):
         # For convenience (speed), I disable this when "fast_dev_run" is enabled

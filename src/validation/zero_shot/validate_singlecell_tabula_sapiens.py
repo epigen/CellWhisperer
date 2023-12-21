@@ -4,7 +4,9 @@ import torch
 from single_cellm.jointemb.model import TranscriptomeTextDualEncoderModel
 from single_cellm.config import get_path, config
 from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
-from single_cellm.validation.zero_shot.functions import get_scores_adatas_vs_text_list
+from single_cellm.validation.zero_shot.functions import (
+    get_performance_metrics_transcriptome_vs_text,
+)
 from single_cellm.misc.cuda import get_device
 from transformers import AutoTokenizer
 import anndata
@@ -52,8 +54,8 @@ transcriptome_processor = GeneformerTranscriptomeProcessor(
 )
 
 ### Run the model and get the scores ###
-result_dict, result_df = get_scores_adatas_vs_text_list(
-    adata_dict_or_embedding_dict=adata_dict,
+result_dict, result_df = get_performance_metrics_transcriptome_vs_text(
+    transcriptome_input=adata_dict,
     model=model,
     device=device,
     text_tokenizer=text_tokenizer,

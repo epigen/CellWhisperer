@@ -4,7 +4,9 @@ from single_cellm.jointemb.model import TranscriptomeTextDualEncoderModel
 from single_cellm.config import get_path, model_path_from_name
 from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
 from single_cellm.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
-from single_cellm.validation.zero_shot.functions import get_scores_adatas_vs_text_list
+from single_cellm.validation.zero_shot.functions import (
+    get_performance_metrics_transcriptome_vs_text,
+)
 
 from transformers import AutoTokenizer
 import anndata
@@ -80,7 +82,7 @@ class SingleCellZeroshotValidationScoreCalculator:
         self.nproc_transcriptome_processor = nproc_transcriptome_processor
         self.logger = logger
         self.batch_size = batch_size
-        self.tokenizer_name = tokenizer_name
+        self.tokenizer_path = model_path_from_name(tokenizer_name)
         self.transcriptome_tokenizer_type = transcriptome_tokenizer_type
         if transcriptome_processor_kwargs is None:
             if self.transcriptome_tokenizer_type == "scgpt":
@@ -129,9 +131,7 @@ class SingleCellZeroshotValidationScoreCalculator:
             for i, celltype in enumerate(self.celltypes_to_process)
         }
 
-        self.text_tokenizer = AutoTokenizer.from_pretrained(
-            model_path_from_name(self.tokenizer_name)
-        )
+        self.text_tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path)
 
         if transcriptome_tokenizer_type == "geneformer":
             self.transcriptome_processor = GeneformerTranscriptomeProcessor(
@@ -150,8 +150,8 @@ class SingleCellZeroshotValidationScoreCalculator:
             )
 
     def __call__(self, model) -> Tuple[Dict[str, float], pd.DataFrame]:
-        result_dict, result_df = get_scores_adatas_vs_text_list(
-            adata_dict_or_embedding_dict=self.adata_dict,
+        result_dict, result_df = get_performance_metrics_transcriptome_vs_text(
+            transcriptome_input=self.adata_dict,
             model=model,
             text_tokenizer=self.text_tokenizer,
             transcriptome_processor=self.transcriptome_processor,

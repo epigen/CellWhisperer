@@ -27,6 +27,13 @@ datasets:
   - perturbation_kaggle
   - archs4_metasra
 
+retrieval_validation_sets:
+  - immgen_deduplicated
+  - daniel_loosely_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
+  - daniel_normally_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
+  - daniel_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
+
+
 model_name_path_map:
   geneformer: resources/geneformer-12L-30M
   biogpt: microsoft/biogpt

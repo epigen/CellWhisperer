@@ -5,8 +5,18 @@ import numpy as np
 # Load anndata object
 adata = anndata.read_h5ad(snakemake.input.read_count_table_full)
 
+# Create the standardized column that contains the gene name
+adata.var["gene_name"] = adata.var["gene_symbol"]
+
+# For conevenience, set the ensembl id as index
+adata.var.set_index("ensemblid", inplace=True)
+
 # save structured annotations
 adata.obs.to_json(snakemake.output.structured_annotations_full)
+
+# Save the anndata object as an .h5ad file
+adata.write(snakemake.output.read_count_table_full)
+
 
 # Identify the unique cell types
 cell_types = adata.obs["cell_ontology_class"].unique()
@@ -26,13 +36,8 @@ subsampled_indices = np.hstack(subsampled_cells)
 # Subset the anndata object using the subsampled indices
 subsampled_adata = adata[subsampled_indices].copy()
 
-# For conevenience, set the ensembl id as index
-subsampled_adata.var.set_index("ensemblid", inplace=True)
-adata.var.set_index("ensemblid", inplace=True)
-
 # Save the anndata objects as an .h5ad file
 subsampled_adata.write(snakemake.output.read_count_table_100_cells_per_type)
-# TODO also write the full anndata object again
 
 # Save structured annotations
 subsampled_adata.obs.to_json(snakemake.output.structured_annotations_100percelltype)

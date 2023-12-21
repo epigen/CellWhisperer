@@ -54,6 +54,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             "model_max_length": 100  # 100 seems to be a decent fit, which cuts very few inputs (both for biogpt and biobert)
         },  # see https://github.com/epigen/single-cellm/issues/193
         min_genes=200,
+        train_fraction=0.95,
     ):
         """
         Args:
@@ -77,6 +78,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             transcriptome_processor=self.transcriptome_processor,
             tokenizer=tokenizer,
         )
+        self.train_fraction = train_fraction
         self.transcriptome_processor_kwargs = transcriptome_processor_kwargs.copy()
         self.tokenizer_kwargs = tokenizer_kwargs.copy()
 
@@ -143,7 +145,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
     def setup(self, stage=None):
         inputs = torch.load(self.processed_path)
         # Assuming you want to split the data into train and val for simplicity
-        train_size = int(0.8 * len(inputs["input_ids"]))
+        train_size = int(self.train_fraction * len(inputs["input_ids"]))
         # randomly sample train_size indices for train and use the rest for val
         # fix the seed
         random.seed(42)
@@ -172,5 +174,5 @@ class JointEmbedDataModule(pl.LightningDataModule):
             self.val_dataset,
             batch_size=self.batch_size,
             num_workers=self.nproc,
-            drop_last=True,  # drop last batch to avoid batch_size of 1, which fails due to batch-norm
+            drop_last=False,
         )
