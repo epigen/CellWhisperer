@@ -1,12 +1,12 @@
 #!/bin/bash
 
-TOTAL_NUM_JOBS=12
+TOTAL_NUM_JOBS=100
 NUM_SIMULT_JOBS=1
 
 gpu_type="a100"
 gpu_type="a100-sxm4-80gb"
 
-JOBID=$(sbatch --array=0-$((TOTAL_NUM_JOBS-1))%${NUM_SIMULT_JOBS} --mem 150GB -N 1 -q $gpu_type --partition gpu --gres gpu:${gpu_type}:1 --ntasks-per-node=1 -c 30 ~/single-cellm/slurm/sbatch_process.job $* | awk '{print $4}')
+JOBID=$(sbatch --array=0-$((TOTAL_NUM_JOBS-1))%${NUM_SIMULT_JOBS} --mem 200GB -N 1 -q $gpu_type --partition gpu --gres gpu:${gpu_type}:1 --ntasks-per-node=1 -c 30 ~/single-cellm/slurm/sbatch_process.job $* | awk '{print $4}')
 
 echo $JOBID
 

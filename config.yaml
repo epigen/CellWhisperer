@@ -13,8 +13,7 @@ paths:
   jointemb_models: results/models/jointemb
   wandb_logs: results/wandb_logging
   datamodule_prepared_path: results/{dataset}/lightning-processed/{transcriptome_processor}__{tokenizer}.pt
-  text_model_cache: results/cache/text.pkl
-  transcriptome_model_cache: results/cache/transcriptome.pkl
+  model_cache: results/cache/{model_hash}.pkl
   cancer_gene_essentiality:
     essential_genes: resources/cancer_gene_essentiality/CRISPRInferredCommonEssentials.csv
     nonessential_genes: resources/cancer_gene_essentiality/AchillesNonessentialControls.csv

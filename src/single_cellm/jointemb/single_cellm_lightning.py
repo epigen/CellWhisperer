@@ -238,6 +238,9 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                 with torch.no_grad():  # necessary, despite model being in eval mode
                     val_metrics, results_df = val_fn(self.model)
                 for metric_name, metric_value in val_metrics.items():
+                    # TODO enabling sync_dist requires the logged metric to be on GPU
+                    # In our case it doesn't matter, because we are training on a single GPU/node at the moment
+                    # see https://github.com/Lightning-AI/pytorch-lightning/issues/18803
                     self.log(
                         f"validation_{val_fn_name}_{metric_name}",
                         metric_value,
@@ -245,7 +248,26 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                         on_epoch=True,
                         prog_bar=True,
                         logger=True,
+                        # sync_dist=True,
                     )
+
+    def on_train_epoch_end(self):
+        """
+        This function is called at the end of each epoch, after training AND validation.
+
+        Store the cache of the model, after the first epoch to make it available to other runs as early as possible.
+        """
+
+        if self.trainer.current_epoch == 0:
+            logging.debug("Storing cache of model")
+            self.model.store_cache()
+
+    def on_train_end(self):
+        """
+        Store the cache of the model, at the end of training. Since we drop the last batch (in training), we don't get all samples in the first batch
+        """
+        logging.debug("Storing cache of model")
+        self.model.store_cache()
 
     def test_step(self, batch, batch_idx):
         return self.process_step(batch, batch_idx, "test")
@@ -320,6 +342,3 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         super(TranscriptomeTextDualEncoderLightning, self).optimizer_step(
             epoch, batch_idx, optimizer, optimizer_closure
         )
-
-    def on_train_end(self):
-        self.model.store_cache()

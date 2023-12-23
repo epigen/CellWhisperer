@@ -94,10 +94,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
 
         if config.locking_mode[0] == "L":
             if not isinstance(transcriptome_model, FrozenCachedModel):
-                transcriptome_model = FrozenCachedModel(
-                    transcriptome_model,
-                    get_path(["paths", "transcriptome_model_cache"]),
-                )
+                transcriptome_model = FrozenCachedModel(transcriptome_model)
         elif config.unlocked_fp16:
             transcriptome_model.half()
 
@@ -106,9 +103,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
 
         if config.locking_mode[1] == "L":
             if not isinstance(text_model, FrozenCachedModel):
-                text_model = FrozenCachedModel(
-                    text_model, get_path(["paths", "text_model_cache"])
-                )
+                text_model = FrozenCachedModel(text_model)
         elif config.unlocked_fp16:
             text_model.half()
 
@@ -135,7 +130,9 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         TODO wouldn't it make sense to scale the embeddings by the attention itself?
         """
         if isinstance(text_outputs[1], torch.Tensor):
-            return text_outputs[1]
+            return text_outputs[
+                1
+            ].float()  # counter implicit conversion into bfloat16 in dense layer in BERT pooler
         token_embeddings = text_outputs[0]
 
         input_mask_expanded = (

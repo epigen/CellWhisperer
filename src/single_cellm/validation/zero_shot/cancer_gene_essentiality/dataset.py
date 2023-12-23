@@ -18,6 +18,7 @@ from single_cellm.config import get_path, model_path_from_name
 from pathlib import Path
 import numpy as np
 import pandas as pd
+from scipy.sparse import issparse
 import torch
 
 import pandas as pd
@@ -86,22 +87,10 @@ class CancerGeneEssentialityDataModule(LightningDataModule):
             lambda v: re.search(r"^.+ ", v).group()[:-1]
         )
 
-        if self.transcriptome_processor == "geneformer":
-            transcriptome_processor = GeneformerTranscriptomeProcessor(
-                nproc=0,  # not really being used
-                emb_label="natural_language_annotation",  # config["anndata_label_name"]
-                **self.transcriptome_processor_kwargs,
-            )
-        elif self.transcriptome_processor == "scgpt":
-            transcriptome_processor = ScGPTTranscriptomeProcessor(
-                nproc=0,  # TODO link to nproc argument
-                **self.transcriptome_processor_kwargs,
-            )
-        else:
-            raise ValueError("transcriptome_processor not recognized")
-
         self.processor = TranscriptomeTextDualEncoderProcessor(
-            transcriptome_processor, AutoTokenizer.from_pretrained(self.tokenizer)
+            self.transcriptome_processor,
+            AutoTokenizer.from_pretrained(self.tokenizer),
+            **self.transcriptome_processor_kwargs,
         )
         # read out the first transcriptome from our dataset
         adata = anndata.read_h5ad(
@@ -111,7 +100,12 @@ class CancerGeneEssentialityDataModule(LightningDataModule):
         # for each gene in the provided lists, generate an artificial knockout
         gene_masks = df_essent["Gene"].apply(lambda x: (adata.var.gene_name == x))
 
-        X = np.array(adata.X)
+        if issparse(adata.X):
+            # Convert the sparse matrix to a NumPy ndarray
+            X = adata.X.toarray()
+        else:
+            # It's already a NumPy ndarray, so we can use it directly
+            X = np.array(adata.X)
         # boost the single sample (first dimension) to len(df_essent) samples
         X = np.repeat(X, len(df_essent), axis=0)
         # introduce the knockout

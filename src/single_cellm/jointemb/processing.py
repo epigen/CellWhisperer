@@ -18,9 +18,11 @@ Processor class for TranscriptomeTextDualEncoder
 
 import warnings
 import logging
+from typing import Any, Union
 
 logger = logging.getLogger(__name__)
 
+from transformers import AutoTokenizer
 from transformers.processing_utils import ProcessorMixin
 from transformers.tokenization_utils_base import BatchEncoding
 from .geneformer_model import GeneformerTranscriptomeProcessor
@@ -42,19 +44,39 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
         tokenizer ([`PreTrainedTokenizer`], *optional*):
             The tokenizer is a required input.
     """
-    attributes = ["tokenizer"]  # "transcriptome_processor",
+    attributes = ["tokenizer", "transcriptome_processor"]  # "transcriptome_processor",
     # transcriptome_processor_class = "GeneformerTranscriptomeProcessor"
     tokenizer_class = "AutoTokenizer"
 
-    def __init__(self, transcriptome_processor=None, tokenizer=None, **kwargs):
-        if transcriptome_processor is None:
-            raise ValueError("You have to specify a transcriptome processor.")
+    def __init__(
+        self,
+        transcriptome_processor: Union[str, Any] = None,
+        tokenizer: Union[str, Any] = None,
+        **transcriptome_kwargs
+    ):
+        if transcriptome_processor == "geneformer":
+            self.transcriptome_processor = GeneformerTranscriptomeProcessor(
+                nproc=0,
+                emb_label="natural_language_annotation",  # config["anndata_label_name"]
+                **transcriptome_kwargs,
+            )
+        elif transcriptome_processor == "scgpt":
+            self.transcriptome_processor = ScGPTTranscriptomeProcessor(
+                nproc=0,
+                **transcriptome_kwargs,
+            )
+        else:
+            assert (
+                transcriptome_processor is not None
+            ), "You have to specify a transcriptome processor."
+            self.transcriptome_processor = transcriptome_processor
 
+        if isinstance(tokenizer, str):
+            tokenizer = AutoTokenizer.from_pretrained(tokenizer)
         if tokenizer is None:
             raise ValueError("You have to specify a tokenizer.")
 
         super().__init__(tokenizer)  # transcriptome_processor,
-        self.transcriptome_processor = transcriptome_processor
 
     def __call__(
         self,
@@ -111,7 +133,7 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
                 text,
                 truncation=text_truncation,
                 return_tensors=return_tensors,
-                **kwargs
+                **kwargs,
             )
 
         if transcriptomes is not None:

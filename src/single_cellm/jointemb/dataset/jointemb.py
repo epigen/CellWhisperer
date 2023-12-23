@@ -89,23 +89,8 @@ class JointEmbedDataModule(pl.LightningDataModule):
             return
         logging.info("preparing data...")
 
-        if self.transcriptome_processor == "geneformer":
-            transcriptome_processor = GeneformerTranscriptomeProcessor(
-                nproc=self.nproc,
-                emb_label="natural_language_annotation",  # config["anndata_label_name"]
-                **self.transcriptome_processor_kwargs,
-            )
-        elif self.transcriptome_processor == "scgpt":
-            transcriptome_processor = ScGPTTranscriptomeProcessor(
-                nproc=self.nproc,
-                **self.transcriptome_processor_kwargs,
-            )
-
-        else:
-            raise ValueError("transcriptome_processor not recognized")
-
         processor = TranscriptomeTextDualEncoderProcessor(
-            transcriptome_processor,
+            self.transcriptome_processor,
             AutoTokenizer.from_pretrained(self.tokenizer, **self.tokenizer_kwargs),
         )
         adata = anndata.read_h5ad(

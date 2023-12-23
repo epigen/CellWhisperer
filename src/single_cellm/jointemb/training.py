@@ -10,7 +10,9 @@ from transformers.models.biogpt.modeling_biogpt import BioGptDecoderLayer
 from single_cellm.config import get_path, model_path_from_name
 from single_cellm.misc.utils import obj_signature
 from single_cellm.misc.debug import start_debugger
+from scgpt.model import FlashTransformerEncoderLayer
 import torch
+from torch.nn import TransformerEncoderLayer
 from typing import Optional, List
 from lightning.pytorch.cli import LightningCLI, SaveConfigCallback
 import subprocess
@@ -137,7 +139,7 @@ class SingleCeLLMCLI(LightningCLI):
         assert (
             self.model.model.config.locking_mode[0] == "L"
             or self.model.model.transcriptome_model.config.model_type != "scgpt"
-        ), "scgpt can't be fine-tuned at the moment, because of FSDP being incapable of implicitly handling fp16 and fp32 conversion"
+        ), "scgpt can't be fine-tuned at the moment, because of FSDP being incapable of implicitly handling fp16 and fp32 conversion. NOTE: scGPT in 32-bit training mode works. Just disable the assertion"
 
         try:
             self.model.load_pretrained_models(
@@ -156,7 +158,8 @@ class SingleCeLLMCLI(LightningCLI):
                 self.model, datamodule=self.datamodule, mode="binsearch", init_val=8
             )  # requires batch_size argument in datamodule or model
 
-        self.trainer.logger.watch(self.model, log="all")
+        # disabled for sweeps  # TODO could check for trainer.logger.run.sweep_id or so?
+        # self.trainer.logger.watch(self.model, log="gradients")
 
     def after_fit(self) -> None:
         if self.config["fit.best_model_path"] is not None:
@@ -224,6 +227,8 @@ def cli_main(args: Optional[List] = None):
                     "activation_checkpointing_policy": {  # TODO need to add the relevant layers for the transcriptome models as well, if we want to fine-tune them ever
                         BioGptDecoderLayer,
                         BertLayer,
+                        TransformerEncoderLayer,  # scGPT
+                        FlashTransformerEncoderLayer,  # scGPT
                     },
                     "sharding_strategy": "NO_SHARD",  # corresponds to DDP. no need to go fancy for the moment.. We can try later
                 },

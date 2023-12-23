@@ -95,6 +95,7 @@ class EvaluateCancerGeneEssentiality:
             if transcriptome_model_type == "geneformer"
             else {"gene_col": "gene_name"},
         )
+
         # Follow lightning API
         datamodule.prepare_data()
         datamodule.setup()

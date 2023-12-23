@@ -196,7 +196,7 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
             collate_fn=collator,
             drop_last=False,
             num_workers=min(self.nproc, batch_size),
-            pin_memory=True,
+            pin_memory=True,  # TODO?
         )
 
         output = {
@@ -344,7 +344,7 @@ class ScGPTConfig(PretrainedConfig):
         pad_token="<pad>",
         input_emb_style="continuous",
         vocab_path=str(get_path(["model_name_path_map", "scgpt"]) / "vocab.json"),
-        fast_transformer=True,
+        fast_transformer=False,
         nlayers=12,
         nheads=8,
         embsize=512,
@@ -458,9 +458,9 @@ class ScGPTModel(PreTrainedModel):
             d_hid=self.config.hidden_size,
             **scgpt_model_kwargs,
         )
-        self.scgpt_model.to(
-            config.device, dtype=torch.bfloat16
-        )  # flash-attention requires 16bit apparently
+        if self.config.fast_transformer:
+            # flash-attention requires 16bit apparently
+            self.scgpt_model.to(config.device, dtype=torch.bfloat16)
 
     def forward(
         self,
@@ -474,14 +474,23 @@ class ScGPTModel(PreTrainedModel):
         """
         Forward pass of the model. Obtain cell embeddings (i.e. features for the CLIP model) from tokenized input data.
         """
+        # Convert to float16 for flash attention
+        if self.config.fast_transformer:
+            expression_expr = expression_expr.to(torch.bfloat16)
+        else:
+            expression_expr = expression_expr.to(torch.float)
 
         features = self.scgpt_model._encode(
             expression_gene,
-            expression_expr.to(torch.bfloat16),
+            expression_expr,
             src_key_padding_mask=expression_key_padding_mask,
         )
         # get the <cls> position embedding and convert back to float32
-        features = features[:, 0, :].to(torch.float)
+        features = features[:, 0, :]
+
+        # Convert back to float32
+        if self.config.fast_transformer:
+            features.to(torch.float)
 
         if self.config.normalize_features:
             features = F.normalize(features, p=2, dim=1)

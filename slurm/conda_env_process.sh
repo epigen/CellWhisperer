@@ -3,7 +3,7 @@
 # export OMP_NUM_THREADS=1  # TODO should I ?
 
 source /msc/home/mschae83/miniconda3/etc/profile.d/conda.sh
-source activate single-cellm-moritz2  # TODO later single-cellm
+source activate single-cellm
 
 export GLOBAL_RANK=$SLURM_LOCALID
 export LOCAL_RANK=$SLURM_LOCALID
