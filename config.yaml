@@ -5,9 +5,12 @@ paths:
   raw_annotations: resources/{dataset}/annotations.tsv
   structured_annotations: results/{dataset}/annotations.json
   processed_annotations: results/{dataset}/processed_annotations.json
+  llava_pretrain_text_dataset: results/{dataset}/llava_pretrain_texts.json
+  model_processed_dataset: results/{dataset}/{model}/full_output.npz
+  llava_pretrained_model_dir: results/llava/pretrained/{base_model}/
   full_dataset: results/{dataset}/full_data.h5ad
-  llm_embeddings: results/{dataset}/llm_embeddings.npz
-  rna_embeddings: results/{dataset}/rna_embeddings.npz
+  llm_embeddings: results/{dataset}/llm_embeddings.npz  # deprecated
+  rna_embeddings: results/{dataset}/rna_embeddings.npz  # deprecated
   enrichr_terms_json: resources/enrichr_terms/terms.json
   ensembl_gene_symbol_map: resources/ensembl_gene_symbol_map.csv
   jointemb_models: results/models/jointemb

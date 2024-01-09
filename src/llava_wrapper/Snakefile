@@ -1,0 +1,117 @@
+PROJECT_DIR = Path(workflow.basedir).resolve().parents[1]
+configfile: PROJECT_DIR / "config.yaml"
+
+DATASET = "archs4_metasra"
+CLIP_MODEL = "f6fjywkb"
+# TODO optionally change vicuna to 13b
+BASE_MODEL = "vicuna-7b-v1.5"
+
+QUESTIONS = [
+    "What does the sample represent?",
+    "What does the transcriptome represent?",
+    "Give a brief description of the sample.",
+    "Give a brief description of the transcriptome.",
+    "Present a compact description of the sample's key features.",
+    "Present a compact description of the transcriptome's key features.",
+    "Summarize the transcriptomic content of the sample.",
+    "Provide a brief description of the given transcriptome.",
+    "Provide a brief description of the given sample.",
+    "Describe the sample concisely.",
+    "Describe the transcriptome concisely.",
+]
+
+rule all:
+    input:
+        PROJECT_DIR / config["paths"]["llava_pretrain_text_dataset"].format(dataset=DATASET),
+        PROJECT_DIR / config["paths"]["model_processed_dataset"].format(dataset=DATASET, model=CLIP_MODEL),
+        PROJECT_DIR / config["paths"]["llava_pretrained_model_dir"].format(base_model=BASE_MODEL)
+
+
+rule create_text_dataset:
+    input:
+        PROJECT_DIR / config["paths"]["full_dataset"]
+    output:
+        PROJECT_DIR / config["paths"]["llava_pretrain_text_dataset"]
+    params:
+        seed=42,
+        questions=QUESTIONS,
+        transcriptome_tag="<image>",  # we stick to <image> because of the llava code base
+        anndata_label_name=config["anndata_label_name"]
+    conda:
+        "single-cellm"
+    notebook:
+        "notebooks/create_text_dataset.py.ipynb"
+
+rule process_full_dataset:
+    input:
+        full_data=PROJECT_DIR / config["paths"]["full_dataset"].format(dataset=DATASET),
+        model=PROJECT_DIR / f"results/wandb_logging/JointEmbed_Training/{CLIP_MODEL}/checkpoints/last.ckpt"  # TODO: currently only "last" is supported. improve!
+    output:
+        model_outputs=PROJECT_DIR / config["paths"]["model_processed_dataset"].format(model=CLIP_MODEL, dataset=DATASET),
+    resources:
+        mem_mb=10000
+    conda:
+        "single-cellm"
+    notebook:
+        "notebooks/process_full_dataset.py.ipynb"
+
+rule train_llava:
+    """
+    Based on /home/moritz/Projects/single-cellm/modules/LLaVA/scripts/v1_5/pretrain.sh
+
+    LLaVA takes these image patches as tokens, so a single image leads to ~100(?) text tokens.
+    Our transcriptome model returns a single embedding, so to provide more "information power" to the language model, I convert it to 4 tokens
+    """
+    input:
+        data_path=rules.create_text_dataset.output[0].format(dataset=DATASET),
+        image_data=rules.process_full_dataset.output.model_outputs.format(dataset=DATASET)
+    conda:
+        "llava"
+    params:
+        deepspeed=False,
+    output:
+        output_dir= directory(PROJECT_DIR / config["paths"]["llava_pretrained_model_dir"])
+
+    threads: 16
+    shell: """
+        PYTHON_SCRIPT=../../modules/LLaVA/llava/train/train_mem.py
+        if [[ {params.deepspeed} == True ]]; then
+            CMD="deepspeed $PYTHON_SCRIPT --deepspeed ../../modules/LLaVA/scripts/zero2.json"
+        else
+            CMD="python -m ipdb -c c $PYTHON_SCRIPT"
+        fi
+
+        # TODO for faster debugging try facebook/opt-125m
+        $CMD \
+            --data_path {input.data_path} \
+            --image_data {input.image_data} \
+            --output_dir {output.output_dir} \
+            --model_name_or_path lmsys/{wildcards.base_model} \
+            --version plain \
+            --mm_projector_type mlp2x_4t_gelu \
+            --tune_mm_mlp_adapter True \
+            --mm_vision_select_layer -1 \
+            --mm_vision_select_feature cls_patch \
+            --mm_use_im_start_end False \
+            --mm_use_im_patch_token False \
+            --bf16 True \
+            --num_train_epochs 1 \
+            --per_device_train_batch_size 32 \
+            --per_device_eval_batch_size 4 \
+            --gradient_accumulation_steps 1 \
+            --evaluation_strategy "no" \
+            --save_strategy "steps" \
+            --save_steps 2400 \
+            --save_total_limit 1 \
+            --learning_rate 1e-3 \
+            --weight_decay 0. \
+            --warmup_ratio 0.03 \
+            --lr_scheduler_type "cosine" \
+            --logging_steps 1 \
+            --tf32 True \
+            --model_max_length 2048 \
+            --gradient_checkpointing True \
+            --dataloader_num_workers {threads} \
+            --lazy_preprocess True \
+            --report_to wandb
+    """

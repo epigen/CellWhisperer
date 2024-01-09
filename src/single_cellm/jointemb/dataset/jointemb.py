@@ -19,8 +19,9 @@ class JointEmbedDataset(Dataset):
     Dataset of dicts
     """
 
-    def __init__(self, inputs):
+    def __init__(self, inputs, orig_ids=None):
         self.inputs = inputs
+        self.orig_ids = orig_ids
 
     def __len__(self):
         return len(next(iter(self.inputs.values())))
@@ -111,6 +112,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             )
 
         inputs = {key: val[n_genes_filter] for key, val in inputs.items()}
+        inputs["orig_ids"] = adata.obs.index[n_genes_filter]
         logging.info(
             f"Filtered for {sum(n_genes_filter)} of {len(n_genes_filter)} samples with >{self.min_genes} genes."
         )
@@ -134,10 +136,12 @@ class JointEmbedDataModule(pl.LightningDataModule):
         val_ids = sorted(list(set(total_ids) - set(train_ids)))
 
         self.train_dataset = JointEmbedDataset(
-            {key: val[train_ids] for key, val in inputs.items()}
+            {key: val[train_ids] for key, val in inputs.items() if key != "orig_ids"},
+            orig_ids=inputs["orig_ids"][train_ids],
         )
         self.val_dataset = JointEmbedDataset(
-            {key: val[val_ids] for key, val in inputs.items()}
+            {key: val[val_ids] for key, val in inputs.items() if key != "orig_ids"},
+            orig_ids=inputs["orig_ids"][val_ids],
         )
 
     def train_dataloader(self):
@@ -155,4 +159,5 @@ class JointEmbedDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.nproc,
             drop_last=False,
+            shuffle=False,
         )

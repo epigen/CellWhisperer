@@ -38,13 +38,13 @@ class CLIPOutput(ModelOutput):
     logits_per_text: torch.FloatTensor = None
     text_embeds: torch.FloatTensor = None
     transcriptome_embeds: torch.FloatTensor = None
-    text_model_output: BaseModelOutputWithPooling = None
-    transcriptome_model_output: BaseModelOutputWithPooling = None
+    text_features: BaseModelOutputWithPooling = None
+    transcriptome_features: BaseModelOutputWithPooling = None
 
     def to_tuple(self) -> Tuple[Any]:
         return tuple(
             self[k]
-            if k not in ["text_model_output", "transcriptome_model_output"]
+            if k not in ["text_features", "transcriptome_features"]
             else getattr(self, k).to_tuple()
             for k in self.keys()
         )
@@ -250,7 +250,16 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         # assert output_attentions is None
         # assert output_hidden_states is None
 
-        transcriptome_outputs = self.transcriptome_model(
+        assert attention_mask is not None, "Attention mask must be provided"
+        assert (
+            expression_tokens is not None and expression_token_lengths is not None
+        ) or (
+            expression_gene is not None
+            and expression_expr is not None
+            and expression_key_padding_mask is not None
+        ), "Either expression_tokens and expression_token_lengths or expression_gene, expression_expr and expression_key_padding_mask must be provided"
+
+        transcriptome_features = self.transcriptome_model(
             expression_tokens=expression_tokens,
             expression_token_lengths=expression_token_lengths,
             expression_gene=expression_gene,
@@ -259,7 +268,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             return_dict=False,
         )[0]
 
-        text_outputs = self.text_model(
+        text_features = self.text_model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             # position_ids=position_ids,
@@ -269,13 +278,13 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             return_dict=False,
             **kwargs,
         )
-        text_outputs = self._text_pooling(text_outputs, attention_mask)
+        text_features = self._text_pooling(text_features, attention_mask)
 
         (
             logits_per_transcriptome,
             transcriptome_embeds,
             text_embeds,
-        ) = self.discriminator(transcriptome_outputs, text_outputs)
+        ) = self.discriminator(transcriptome_features, text_features)
         logits_per_text = logits_per_transcriptome.T
 
         if not return_dict:
@@ -284,8 +293,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                 logits_per_text,
                 text_embeds,
                 transcriptome_embeds,
-                text_outputs,
-                transcriptome_outputs,
+                text_features,
+                transcriptome_features,
             )
 
         return CLIPOutput(
@@ -293,8 +302,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             logits_per_text=logits_per_text,
             text_embeds=text_embeds,
             transcriptome_embeds=transcriptome_embeds,
-            text_model_output=text_outputs,  # TODO rename to text_features
-            transcriptome_model_output=transcriptome_outputs,  # TODO rename transcriptome_features
+            text_features=text_features,
+            transcriptome_features=transcriptome_features,
         )
 
     def store_cache(self):

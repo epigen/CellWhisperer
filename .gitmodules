@@ -11,3 +11,6 @@
 	path = src/datasets/archs4_metasra/metasra
 	url = https://github.com/dmalzl/metasra
 	
+[submodule "modules/LLaVA"]
+	path = modules/LLaVA
+	url = git@github.com:epigen/LLaVA

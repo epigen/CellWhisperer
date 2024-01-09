@@ -166,15 +166,6 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
     ) -> CLIPOutput:
         # TODO at a later stage, we may add regularization here
 
-        assert attention_mask is not None, "Attention mask must be provided"
-        assert (
-            expression_tokens is not None and expression_token_lengths is not None
-        ) or (
-            expression_gene is not None
-            and expression_expr is not None
-            and expression_key_padding_mask is not None
-        ), "Either expression_tokens and expression_token_lengths or expression_gene, expression_expr and expression_key_padding_mask must be provided"
-
         return self.model(
             input_ids=input_ids,
             expression_tokens=expression_tokens,

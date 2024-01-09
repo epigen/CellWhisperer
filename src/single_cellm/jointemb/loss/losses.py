@@ -17,8 +17,8 @@ class JSDInfoMaxLossSingleCeLLM(JSDInfoMaxLoss):
 
     def forward(
         self,
-        transcriptome_model_output=None,
-        text_model_output=None,
+        transcriptome_features=None,
+        text_features=None,
         neg_transcriptome_embeds=None,
         neg_text_embeds=None,
         aug_transcriptome_embeds=None,
@@ -31,8 +31,8 @@ class JSDInfoMaxLossSingleCeLLM(JSDInfoMaxLoss):
 
         ### This outputs a dictionary with keys {'total_loss','cross_modal_loss','visual_loss','textual_loss'}
         loss_results = super().forward(
-            image_features=transcriptome_model_output,
-            text_features=text_model_output,
+            image_features=transcriptome_features,
+            text_features=text_features,
             neg_image_features=neg_transcriptome_embeds,
             neg_text_features=neg_text_embeds,
             aug_image_features=aug_transcriptome_embeds,
