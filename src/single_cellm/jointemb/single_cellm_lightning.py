@@ -16,7 +16,7 @@ from single_cellm.jointemb.model import (
 )
 
 from lightning.pytorch.cli import OptimizerCallable, LRSchedulerCallable
-
+from wandb import Artifact, Table
 
 from typing import Optional, Union, Dict, List
 from pathlib import Path
@@ -236,7 +236,8 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             logging.info("Running validation functions")
             for val_fn_name, val_fn in self.validation_functions.items():
                 with torch.no_grad():  # necessary, despite model being in eval mode
-                    val_metrics, results_df = val_fn(self.model)
+                    val_results = val_fn(self.model)
+                    val_metrics = val_results[0]
                 for metric_name, metric_value in val_metrics.items():
                     # TODO enabling sync_dist requires the logged metric to be on GPU
                     # In our case it doesn't matter, because we are training on a single GPU/node at the moment
@@ -250,6 +251,15 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                         logger=True,
                         # sync_dist=True,
                     )
+                    if val_results[1] is not None:
+                        artifact = Artifact(
+                            f"validation_{val_fn_name}_per_celltype_run{self.logger.experiment.id}",
+                            type="performance_metrics",
+                        )
+                        # turn the df val_results[1] into a wandb table:
+                        table = Table(dataframe=val_results[1].reset_index())
+                        artifact.add(table, "performance_metrics")
+                        self.logger.experiment.log_artifact(artifact)
 
     def on_train_epoch_end(self):
         """
