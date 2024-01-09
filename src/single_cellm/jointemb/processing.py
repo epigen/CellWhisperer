@@ -45,7 +45,7 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
             The tokenizer is a required input.
     """
     attributes = ["tokenizer", "transcriptome_processor"]  # "transcriptome_processor",
-    # transcriptome_processor_class = "GeneformerTranscriptomeProcessor"
+    transcriptome_processor_class = "ProcessorMixin"
     tokenizer_class = "AutoTokenizer"
 
     def __init__(
@@ -55,13 +55,13 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
         **transcriptome_kwargs
     ):
         if transcriptome_processor == "geneformer":
-            self.transcriptome_processor = GeneformerTranscriptomeProcessor(
+            transcriptome_processor = GeneformerTranscriptomeProcessor(
                 nproc=0,
                 emb_label="natural_language_annotation",  # config["anndata_label_name"]
                 **transcriptome_kwargs,
             )
         elif transcriptome_processor == "scgpt":
-            self.transcriptome_processor = ScGPTTranscriptomeProcessor(
+            transcriptome_processor = ScGPTTranscriptomeProcessor(
                 nproc=0,
                 **transcriptome_kwargs,
             )
@@ -69,14 +69,14 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
             assert (
                 transcriptome_processor is not None
             ), "You have to specify a transcriptome processor."
-            self.transcriptome_processor = transcriptome_processor
+            transcriptome_processor = transcriptome_processor
 
         if isinstance(tokenizer, str):
             tokenizer = AutoTokenizer.from_pretrained(tokenizer)
         if tokenizer is None:
             raise ValueError("You have to specify a tokenizer.")
 
-        super().__init__(tokenizer)  # transcriptome_processor,
+        super().__init__(tokenizer, transcriptome_processor)
 
     def __call__(
         self,

@@ -79,7 +79,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                     f"config: {config} has to be of type {self.config_class}"
                 )
 
-        # initialize with config
+        # initialize with config (makes self.config available)
         super().__init__(config)
 
         if transcriptome_model is None:
@@ -92,23 +92,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                     config.transcriptome_config
                 )
 
-        if config.locking_mode[0] == "L":
-            if not isinstance(transcriptome_model, FrozenCachedModel):
-                transcriptome_model = FrozenCachedModel(transcriptome_model)
-        elif config.unlocked_fp16:
-            transcriptome_model.half()
+        self.prepare_models(transcriptome_model, text_model)
 
-        if text_model is None:
-            text_model = AutoModel.from_config(config.text_config)
-
-        if config.locking_mode[1] == "L":
-            if not isinstance(text_model, FrozenCachedModel):
-                text_model = FrozenCachedModel(text_model)
-        elif config.unlocked_fp16:
-            text_model.half()
-
-        self.text_model = text_model
-        self.transcriptome_model = transcriptome_model
         # make sure that the individual model's config refers to the shared config
         # so that the updates to the config will be synced
         self.transcriptome_model.config = self.config.transcriptome_config
@@ -124,6 +109,35 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             units=self.projection_dim,
             bln=True,  # batch layer norm
         )
+
+    def prepare_models(self, transcriptome_model, text_model, force_freeze=False):
+        """
+        Freeze the transcriptome and text model if indicated by self.config
+
+        Args:
+            transcriptome_model (*): The transcriptome model to be used.
+            text_model (PreTrainedModel): The text model to be used.
+            force_freeze (bool): Whether to force freezing the models even if the config does not indicate it.
+        """
+        # TODO need to make sure to modify the config according to the model. Idea: predict a unified input (all_zero, or all_one or so) and take the output as the hash
+
+        if self.config.locking_mode[0] == "L" or force_freeze:
+            if not isinstance(transcriptome_model, FrozenCachedModel):
+                transcriptome_model = FrozenCachedModel(transcriptome_model)
+        elif self.config.unlocked_fp16:
+            transcriptome_model.half()
+
+        if text_model is None:
+            text_model = AutoModel.from_config(self.config.text_config)
+
+        if self.config.locking_mode[1] == "L" or force_freeze:
+            if not isinstance(text_model, FrozenCachedModel):
+                text_model = FrozenCachedModel(text_model)
+        elif self.config.unlocked_fp16:
+            text_model.half()
+
+        self.text_model = text_model
+        self.transcriptome_model = transcriptome_model
 
     def _text_pooling(self, text_outputs: Tuple, attention_mask: torch.FloatTensor):
         """
@@ -285,16 +299,17 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
 
     def store_cache(self):
         """
-        Save the cached transcriptome and text models to a given path.
-
-        Args:
-            path (Path): Path to save the cached models to.
+        Save cached transcriptome and text embeddings/features, if the corresponding models have been frozen.
         """
-        if self.config.locking_mode[0] == "L":
+        try:
             self.transcriptome_model.save_cache()
+        except AttributeError:
+            pass
 
-        if self.config.locking_mode[1] == "L":
+        try:
             self.text_model.save_cache()
+        except AttributeError:
+            pass
 
     @classmethod
     def from_pretrained(cls, *args, **kwargs):
@@ -412,9 +427,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             text_model=text_model,
         )
 
-        # the projection layers are always newly initialized when loading the model
-        # using pre-trained transcriptome and text model.
-        logger.warning(
+        logger.info(
             "The projection layer and logit scale weights `['transcriptome_projection.weight', 'text_projection.weight',"
             " 'logit_scale']` are newly initialized. You should probably TRAIN this model on a down-stream task to be"
             " able to use it for predictions and inference."

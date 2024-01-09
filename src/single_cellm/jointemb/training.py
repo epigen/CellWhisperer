@@ -205,14 +205,14 @@ def cli_main(args: Optional[List] = None):
     LOG_DIR = (PROJECT_DIR / "results" / "model_training").relative_to(os.getcwd())
 
     early_stop = EarlyStopping(
-        monitor="val_loss", min_delta=1e-5, patience=100, verbose=False, mode="min"
+        monitor="val_clip_loss", min_delta=1e-5, patience=100, verbose=False, mode="min"
     )
     checkpoint_callback = ModelCheckpoint(
-        monitor="val_loss",
+        monitor="val_clip_loss",
         mode="min",
         save_top_k=2,
         save_last=True,
-        filename="{epoch}-{val_loss:.2f}",
+        filename="{epoch}-{val_clip_loss:.2f}",
     )
 
     SingleCeLLMCLI(

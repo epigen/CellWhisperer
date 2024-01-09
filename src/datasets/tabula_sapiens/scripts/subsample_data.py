@@ -22,6 +22,7 @@ adata.write(snakemake.output.read_count_table_full)
 cell_types = adata.obs["cell_ontology_class"].unique()
 
 # For each cell type, randomly select 100 cells
+np.random.seed(42)
 subsampled_cells = []
 for cell_type in cell_types:
     cell_indices = np.where(adata.obs["cell_ontology_class"] == cell_type)[0]

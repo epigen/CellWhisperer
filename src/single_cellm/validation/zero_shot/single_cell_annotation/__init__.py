@@ -3,6 +3,7 @@ import logging
 from single_cellm.jointemb.model import TranscriptomeTextDualEncoderModel
 from single_cellm.config import get_path, model_path_from_name
 from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
+from single_cellm.jointemb.processing import TranscriptomeTextDualEncoderProcessor
 from single_cellm.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
 from single_cellm.validation.zero_shot.functions import (
     get_performance_metrics_transcriptome_vs_text,
@@ -52,7 +53,7 @@ class SingleCellZeroshotValidationScoreCalculator:
         logger: Optional[Any] = None,
         tokenizer_name: str = "biogpt",
         transcriptome_tokenizer_type: str = "geneformer",
-        transcriptome_processor_kwargs: Optional[Dict] = None,
+        transcriptome_processor_kwargs: Optional[Dict[str, Any]] = None,
         batch_size: int = 32,
         average_mode: Optional[str] = "embeddings",
     ):
@@ -79,90 +80,66 @@ class SingleCellZeroshotValidationScoreCalculator:
             average_mode: how to average the transcriptome embeddings. Must be one of "cells", "embeddings", or None.
         """
 
-        self.cell_number_threshold_per_celltype = cell_number_threshold_per_celltype
-        self.dataset = dataset
-        self.celltype_obs_colname = celltype_obs_colname
-        self.prefix_for_text_embeddings = prefix_for_text_embeddings
-        self.suffix_for_text_embeddings = suffix_for_text_embeddings
-        self.nproc_transcriptome_processor = nproc_transcriptome_processor
-        self.logger = logger
+        self.nproc_transcriptome_processor = (
+            nproc_transcriptome_processor  # TODO make use of it
+        )
+        self.logger = logger or logging.getLogger(__name__)
         self.batch_size = batch_size
-        self.tokenizer_path = model_path_from_name(tokenizer_name)
-        self.transcriptome_tokenizer_type = transcriptome_tokenizer_type
         self.average_mode = average_mode
 
-        if transcriptome_processor_kwargs is None:
-            if self.transcriptome_tokenizer_type == "scgpt":
-                self.transcriptome_processor_kwargs = {"gene_col": "gene_name"}
-            else:
-                self.transcriptome_processor_kwargs = {}
-        else:
-            self.transcriptome_processor_kwargs = transcriptome_processor_kwargs
-
-        if self.logger is None:
-            self.logger = logging.getLogger(__name__)
+        tokenizer_path = model_path_from_name(tokenizer_name)
+        transcriptome_processor_kwargs = transcriptome_processor_kwargs or {}
+        if (
+            transcriptome_tokenizer_type == "scgpt"
+            and not transcriptome_processor_kwargs
+        ):
+            transcriptome_processor_kwargs = {"gene_col": "gene_name"}
 
         self.logger.info("Loading anndata...")
         self.adata = anndata.read_h5ad(
-            get_path(["paths", "read_count_table"], dataset=self.dataset)
+            get_path(["paths", "read_count_table"], dataset=dataset)
         )
 
         if isinstance(celltypes, int):
-            self.counts_per_celltype = self.adata.obs.value_counts(
-                self.celltype_obs_colname
-            )
+            self.counts_per_celltype = self.adata.obs.value_counts(celltype_obs_colname)
             self.celltypes_to_process = [
                 x
                 for x in self.counts_per_celltype[
-                    self.counts_per_celltype >= self.cell_number_threshold_per_celltype
+                    self.counts_per_celltype >= cell_number_threshold_per_celltype
                 ].index.values
             ]
             assert (
                 len(self.celltypes_to_process) >= celltypes
-            ), f"Only {len(self.celltypes_to_process)} celltypes have at least {self.cell_number_threshold_per_celltype} cells, but {celltypes} celltypes were requested."
+            ), f"Only {len(self.celltypes_to_process)} celltypes have at least {cell_number_threshold_per_celltype} cells, but {celltypes} celltypes were requested."
             np.random.seed(42)
             np.random.shuffle(self.celltypes_to_process)
             self.celltypes_to_process = self.celltypes_to_process[:celltypes]
         elif isinstance(celltypes, Iterable):
             self.celltypes_to_process = celltypes
         elif celltypes is None:
-            self.celltypes_to_process = self.adata.obs[
-                self.celltype_obs_colname
-            ].unique()
+            self.celltypes_to_process = self.adata.obs[celltype_obs_colname].unique()
 
         self.text_list = [
-            f"{self.prefix_for_text_embeddings}{x}{self.suffix_for_text_embeddings}"
+            f"{prefix_for_text_embeddings}{x}{suffix_for_text_embeddings}"
             for x in self.celltypes_to_process
         ]
         self.adata = self.adata[
-            self.adata.obs[self.celltype_obs_colname].isin(self.celltypes_to_process), :
+            self.adata.obs[celltype_obs_colname].isin(self.celltypes_to_process), :
         ].copy()  # subset the adata according to the celltypes to process
-        self.annotation = list(self.adata.obs[self.celltype_obs_colname].values)
+        self.annotation = list(self.adata.obs[celltype_obs_colname].values)
 
         self.correct_text_idx_per_transcriptome = [
             self.text_list.index(
-                f"{self.prefix_for_text_embeddings}{x}{self.suffix_for_text_embeddings}"
+                f"{prefix_for_text_embeddings}{x}{suffix_for_text_embeddings}"
             )
             for x in self.annotation
         ]
 
-        self.text_tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path)
-
-        if transcriptome_tokenizer_type == "geneformer":
-            self.transcriptome_processor = GeneformerTranscriptomeProcessor(
-                nproc=self.nproc_transcriptome_processor,
-                emb_label=[],
-                **self.transcriptome_processor_kwargs,
-            )  # I think it's ok to not have emb_labels here, but I'm not sure
-        elif transcriptome_tokenizer_type == "scgpt":
-            self.transcriptome_processor = ScGPTTranscriptomeProcessor(
-                nproc=self.nproc_transcriptome_processor,
-                **self.transcriptome_processor_kwargs,
-            )
-        else:
-            ValueError(
-                f"transcriptome_tokenizer_type must be one of 'geneformer' or 'scgpt', but is {transcriptome_tokenizer_type}."
-            )
+        self.processor = TranscriptomeTextDualEncoderProcessor(
+            transcriptome_tokenizer_type,
+            tokenizer_path,
+            **transcriptome_processor_kwargs,
+        )
 
     def __call__(
         self, model: TranscriptomeTextDualEncoderModel
@@ -181,8 +158,8 @@ class SingleCellZeroshotValidationScoreCalculator:
         ) = get_performance_metrics_transcriptome_vs_text(
             transcriptome_input=self.adata,
             model=model,
-            text_tokenizer=self.text_tokenizer,
-            transcriptome_processor=self.transcriptome_processor,
+            text_tokenizer=self.processor.tokenizer,
+            transcriptome_processor=self.processor.transcriptome_processor,
             correct_text_idx_per_transcriptome=self.correct_text_idx_per_transcriptome,
             text_list_or_text_embeds=self.text_list,
             transcriptome_annotations=self.annotation,

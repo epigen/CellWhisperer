@@ -96,7 +96,7 @@ def score_text_vs_transcriptome_many_vs_many(
     ] = None,
     batch_size: int = 128,
     score_norm_method: Optional[str] = "zscore",
-) -> Tuple[torch.tensor, torch.tensor, Optional[List[str]]]:
+) -> Tuple[torch.tensor, Optional[List[str]]]:
     """
     Compute the similarity between the text and the transcriptome embeddings.
     :param model: TranscriptomeTextDualEncoderModel instance. Both transcriptome and text embeddings will be computed using this model.
@@ -113,9 +113,9 @@ def score_text_vs_transcriptome_many_vs_many(
     :param score_norm_method: "zscore", "softmax", "01norm" or None. TODO - unclear what is best. How to normalize the logits \
             (similarity to the transcriptome). "zscore" will zscore the logits across all terms. "softmax" will apply softmax to the logits.\
             "01norm" will normalize the logits to the range [0,1]. If None, don't normalize.
-    : return: A tuple of three objects: \
+    : return: A tuple of two objects: \
         First, a torch.tensor of  similarity between the text and the adatas with shape: n_text * n_adata. \
-        second, the list of transcriptome annotations corresponding to the dim1 of the tensors (or None if transcriptome_annotations is None).
+        Second, the list of transcriptome annotations corresponding to the dim1 of the tensors (or None if transcriptome_annotations is None).
     """
     logit_scale = model.discriminator.temperature.exp()
 
@@ -218,7 +218,7 @@ def get_performance_metrics_transcriptome_vs_text(
     batch_size: int = 128,
     score_norm_method: Optional[str] = "zscore",
     report_per_class_metrics: bool = True,
-) -> Tuple[Union[Dict[str, torch.tensor], pd.DataFrame]]:
+) -> Tuple[Dict[str, torch.Tensor], pd.DataFrame]]:
     """
     Score the model's ability to produce similar embeddings for the given matching texts and adata objects.
     :param model: TranscriptomeTextDualEncoderModel instance. Both transcriptome and text embeddings will be computed using this model.
@@ -290,11 +290,10 @@ def get_performance_metrics_transcriptome_vs_text(
         text_annotations = [str(x) for x in range(scores.shape[0])]
     else:
         text_annotations = text_list_or_text_embeds
-
     scores = (
         scores.t()
     )  # Here, it's better to have samples=transcriptomes, classes=texts, so we transpose
-
+    
     # Create a dataframe with the scores
     scores_df = pd.DataFrame(
         scores.cpu().numpy(),
@@ -399,7 +398,7 @@ def anndata_to_scored_keywords(
     obs_cols: List[str] = [],
     additional_text_dict: dict = {},
     score_norm_method: Optional[str] = "zscore",
-) -> Union[pd.DataFrame, str]:
+) -> pd.DataFrame:
     """
     Compute the similarity between transcriptome embeddings on the on hand and the EnrichR terms + cell metadata on the other hand. \
     TODO potential improvement: Creating the dataframe from the start would make the code simpler. 
@@ -449,6 +448,10 @@ def anndata_to_scored_keywords(
         transcriptome_annotations = [
             "selected_cells" for _ in range(transcriptome_input.shape[0])
         ]
+    else:
+        raise ValueError(
+            f"transcriptome_input must be either an anndata.AnnData instance or a torch.tensor, but is {type(transcriptome_input)}"
+        )
 
     assert os.path.exists(
         terms_json_path

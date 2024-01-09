@@ -172,6 +172,6 @@ class EvaluateCancerGeneEssentiality:
         return {
             "mannwhitneyu_stat": stat,
             "mannwhitneyu_neglogp": -np.log10(p_value),
-            "log_ratio": np.log(true_values.mean() / false_values.mean()),
-            "difference": true_values.mean() - false_values.mean(),
+            "log2_ratio": np.log2(true_values.mean() / false_values.mean()),
+            "difference": true_values.mean() - false_values.mean(),  # lower is better
         }, df

@@ -2,6 +2,7 @@
 
 import logging
 from .geneformer_model import GeneformerConfig
+from single_cellm.config import model_path_from_name
 from .scgpt_model import ScGPTConfig
 from transformers.configuration_utils import PretrainedConfig
 from transformers.utils import logging
@@ -74,11 +75,13 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
             raise ValueError(
                 f"Unsupported transcriptome model type: {transcriptome_model_type}"
             )
-            self.transcriptome_config = AutoConfig.for_model(
-                transcriptome_model_type, **transcriptome_config
+            self.transcriptome_config = AutoConfig.from_pretrained(
+                model_path_from_name(transcriptome_model_type), **transcriptome_config
             )
 
-        self.text_config = AutoConfig.for_model(text_model_type, **text_config)
+        self.text_config = AutoConfig.from_pretrained(
+            model_path_from_name(text_model_type), **text_config
+        )
 
         self.projection_dim = int(
             projection_dim

@@ -18,15 +18,15 @@ from pathlib import Path
 from scgpt.tokenizer import GeneVocab
 import scgpt as scg
 from scgpt.data_collator import DataCollator
+from scgpt.model import TransformerModel
+from scgpt import logger
+from scgpt.utils import load_pretrained
+
 from torch.utils.data import DataLoader, SequentialSampler
 from tqdm import tqdm
 import os
-from scgpt.utils import load_pretrained
 from pathlib import Path
 import json
-from scgpt.tokenizer import GeneVocab
-from scgpt.model import TransformerModel
-from scgpt import logger
 import numpy as np
 from anndata import AnnData
 import scanpy as sc

@@ -1,8 +1,6 @@
 from torch.utils.data import Dataset, DataLoader
 import anndata
 
-from pathlib import Path
-
 import torch
 import random
 import logging
@@ -11,12 +9,9 @@ import torch
 import lightning as pl
 
 from transformers import AutoTokenizer
-from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
-from single_cellm.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
 from single_cellm.jointemb.processing import TranscriptomeTextDualEncoderProcessor
 
 from single_cellm.config import get_path, model_path_from_name
-import subprocess
 
 
 class JointEmbedDataset(Dataset):

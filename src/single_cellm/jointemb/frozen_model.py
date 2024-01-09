@@ -10,6 +10,7 @@ import time
 import torch.nn as nn
 import pickle
 from typing import Optional, Union
+import types
 from pathlib import Path
 import torch
 import hashlib
@@ -22,14 +23,14 @@ logger = logging.getLogger(__name__)
 
 def hash_object(obj):
     if isinstance(obj, torch.Tensor):
-        return hashlib.sha256(obj.cpu().numpy().tobytes()).hexdigest()
-    elif isinstance(obj, list):
+        return hashlib.sha256(obj.cpu().detach().numpy().tobytes()).hexdigest()
+    elif isinstance(obj, (list, types.GeneratorType)):
         return hashlib.sha256(str([hash_object(i) for i in obj]).encode()).hexdigest()
     elif isinstance(obj, dict):
         return hashlib.sha256(
             str({k: hash_object(v) for k, v in obj.items()}).encode()
         ).hexdigest()
-    elif isinstance(obj, ScGPTConfig):
+    elif isinstance(obj, ScGPTConfig):  # need to convert unhashable Path for ScGPTConfig
         obj_to_dict = obj.to_dict()
         obj_to_dict["vocab_path"] = str(
             obj_to_dict["vocab_path"]
@@ -57,7 +58,7 @@ class FrozenCachedModel(nn.Module):
         # Avoiding parameter tracking
         self._models = [model.eval().cpu()]
 
-        self.model_hash = hash_object(self.model.config)
+        self.model_hash = hash_object(self.model.parameters())
         logging.info(f"Initializing frozen model with hash {self.model_hash}")
         logging.debug(f"Corresponding model config: {self.model.config}")
 
@@ -120,7 +121,9 @@ class FrozenCachedModel(nn.Module):
             return
         logger.info("Saving cache")
 
-        assert self.model_hash == hash_object(self.model.config), "Model conf changed."
+        assert self.model_hash == hash_object(
+            self.model.parameters()
+        ), "Model parameters changed. This should not happen for a frozen model"
 
         logger.info(f"Saving cache for model {self.model_hash}")
         # make sure the directory exists

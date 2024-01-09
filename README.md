@@ -21,6 +21,15 @@ https://github.com/epigen/single-cellm/wiki
    ```
 4. Develop :)
 
+### Installing cellxgene
+
+See [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md). In short:
+
+- Run `export NODE_OPTIONS=--openssl-legacy-provider` ([workaround](https://stackoverflow.com/questions/69692842/error-message-error0308010cdigital-envelope-routinesunsupported))
+- Build the client and put static files in place: `make build-for-server-dev`
+- Install from local files: `make install-dev`
+- Install prereqs for client: `make dev-env`
+
 ### Sane git defaults
 
 

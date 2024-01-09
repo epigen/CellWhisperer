@@ -6,6 +6,7 @@ import warnings
 
 from lightning import LightningModule
 from single_cellm.validation import initialize_validation_functions
+from single_cellm.config import model_path_from_name
 from single_cellm.jointemb.loss.config import LossConfig
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.optim import AdamW
@@ -62,9 +63,12 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         """
         super(TranscriptomeTextDualEncoderLightning, self).__init__()
 
-        # Convert dicts to the respective object types
-        model_config = TranscriptomeTextDualEncoderConfig(**model_config)
-        loss_config = LossConfig(**loss_config)
+        # Convert dicts to the respective object types (checkpoints contain the Config object, but training passes dicts)
+        if not isinstance(model_config, TranscriptomeTextDualEncoderConfig):
+            model_config = TranscriptomeTextDualEncoderConfig(**model_config)
+
+        if not isinstance(loss_config, LossConfig):
+            loss_config = LossConfig(**loss_config)
 
         self.model = TranscriptomeTextDualEncoderModel(
             config=model_config,
@@ -89,18 +93,25 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
     def load_from_checkpoint(
         cls,
         checkpoint_path: str,
-        transcriptome_model_directory: str,
-        text_model_name_or_path: str,
         **kwargs,
     ):
         """
         Because our checkpoints might not contain the foundation models, we need to load them separately and then load the checkpoint.
 
-        TODO: we only need to do this if one of the models is frozen (which is usually the case)
+        NOTE: we only need to do this explicit sub-model loading, if one of the models is frozen (which is usually the case)
         """
         model = super().load_from_checkpoint(checkpoint_path, **kwargs)
         # Park state_dict
         state_dict = model.state_dict().copy()
+
+        # if transcriptome_model_directory is None:
+        transcriptome_model_directory = model_path_from_name(
+            model.model.transcriptome_model.config.model_type
+        )
+        # if text_model_name_or_path is None:
+        text_model_name_or_path = model_path_from_name(
+            model.model.text_model.config.model_type
+        )
 
         # make sure that pretrained models are loaded
         model.load_pretrained_models(
@@ -243,11 +254,11 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                     # In our case it doesn't matter, because we are training on a single GPU/node at the moment
                     # see https://github.com/Lightning-AI/pytorch-lightning/issues/18803
                     self.log(
-                        f"validation_{val_fn_name}_{metric_name}",
+                        f"valfn_{val_fn_name}_{metric_name}",
                         metric_value,
                         on_step=False,
                         on_epoch=True,
-                        prog_bar=True,
+                        prog_bar=False,
                         logger=True,
                         # sync_dist=True,
                     )
