@@ -515,11 +515,11 @@ class ScGPTModel(PreTrainedModel):
                 "No configuration provided. Using default configuration from checkpoint."
             )
 
-        scgpt_model = cls(config, *args, **kwargs)
+        outer_scgpt_model = cls(config, *args, **kwargs)
 
         # A scgpt function:
-        scgpt_model = load_pretrained(
-            scgpt_model, torch.load(pretrained_model_path), verbose=False
+        outer_scgpt_model.scgpt_model = load_pretrained(
+            outer_scgpt_model.scgpt_model, torch.load(pretrained_model_path), verbose=False
         )
 
-        return scgpt_model
+        return outer_scgpt_model
