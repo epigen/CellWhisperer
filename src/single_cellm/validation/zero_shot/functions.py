@@ -218,7 +218,7 @@ def get_performance_metrics_transcriptome_vs_text(
     batch_size: int = 128,
     score_norm_method: Optional[str] = "zscore",
     report_per_class_metrics: bool = True,
-) -> Tuple[Dict[str, torch.Tensor], pd.DataFrame]]:
+) -> Tuple[Dict[str, torch.Tensor], pd.DataFrame]:
     """
     Score the model's ability to produce similar embeddings for the given matching texts and adata objects.
     :param model: TranscriptomeTextDualEncoderModel instance. Both transcriptome and text embeddings will be computed using this model.
