@@ -24,7 +24,7 @@ def initialize_validation_functions(
             batch_size=batch_size,
             transcriptome_tokenizer_type=transcriptome_model_type,
             tokenizer_name=text_model_type,
-            celltypes=134, # 134: The # of cell types with at least 100 cells in tabula sapiens
+            celltypes=134,  # 134: The # of cell types with at least 100 cells in tabula sapiens
         ),
         "zero_shot_TabSapWellStudied_celltype_lvl": SingleCellZeroshotValidationScoreCalculator(
             celltypes=TOP20_LUNG_LIVER_BLOOD_CELLTYPES,
@@ -36,7 +36,7 @@ def initialize_validation_functions(
             batch_size=batch_size,
             transcriptome_tokenizer_type=transcriptome_model_type,
             tokenizer_name=text_model_type,
-            celltypes=134, # 134: The # of cell types with at least 100 cells in tabula sapiens
+            celltypes=134,  # 134: The # of cell types with at least 100 cells in tabula sapiens
             average_mode=None,
         ),
         "zero_shot_TabSapWellStudied_cell_lvl": SingleCellZeroshotValidationScoreCalculator(
@@ -45,13 +45,13 @@ def initialize_validation_functions(
             tokenizer_name=text_model_type,
             transcriptome_tokenizer_type=transcriptome_model_type,
             average_mode=None,
-        )
+        ),
     }
     if val_dataloader is not None:
         # TODO: For deduplication, would need to provide the dataset name, anndata, or annotations. See src/validation/zero_shot/deduplicate.py
         training_validation_functions[
             "zero_shot_retrieval_validation_set"
-        ].dataloader = val_dataloader
+        ] = RetrievalScoreCalculator(val_dataloader)
 
     # Add retrieval validation tests for the deduplicated validation-sets
     for name in config["retrieval_validation_sets"]:

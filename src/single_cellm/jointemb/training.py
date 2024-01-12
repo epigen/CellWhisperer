@@ -70,6 +70,7 @@ class SingleCeLLMCLI(LightningCLI):
                 "model.model_config": obj_signature(TranscriptomeTextDualEncoderConfig),
                 "model.loss_config": obj_signature(LossConfig),
                 "trainer.max_epochs": 100,
+                "trainer.accumulate_grad_batches": 64,  # the higher the better more or less
             }
         )
 
@@ -136,10 +137,14 @@ class SingleCeLLMCLI(LightningCLI):
                 self.model.model.text_model.config.model_type
             )
 
-        assert (
-            self.model.model.config.locking_mode[0] == "L"
-            or self.model.model.transcriptome_model.config.model_type != "scgpt"
-        ), "scgpt can't be fine-tuned at the moment, because of FSDP being incapable of implicitly handling fp16 and fp32 conversion. NOTE: scGPT in 32-bit training mode works. Just disable the assertion"
+        if (
+            self.model.model.config.locking_mode[0] != "L"
+            and self.model.model.transcriptome_model.config.model_type == "scgpt"
+        ):
+            #  NOTE: because of FSDP being incapable of implicitly handling fp16 and fp32 conversion, we need to use scGPT without flash-attention and with 32 bit
+            logging.warning(
+                "scgpt requireds 32 bit (and in consequence not flash attention). make sure that scgpt_config.fast_transformer is False"
+            )
 
         try:
             self.model.load_pretrained_models(

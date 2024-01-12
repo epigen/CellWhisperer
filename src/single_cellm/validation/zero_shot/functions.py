@@ -206,8 +206,8 @@ def score_text_vs_transcriptome_many_vs_many(
 
 def get_performance_metrics_transcriptome_vs_text(
     model: TranscriptomeTextDualEncoderModel,
-    transcriptome_input: Union[anndata.AnnData, torch.tensor],
-    text_list_or_text_embeds: Union[List[str], torch.tensor],
+    transcriptome_input: Union[anndata.AnnData, torch.Tensor],
+    text_list_or_text_embeds: Union[List[str], torch.Tensor],
     correct_text_idx_per_transcriptome: List[int],
     average_mode: Optional[str] = "embeddings",
     transcriptome_annotations: Optional[List[str]] = None,
@@ -293,7 +293,7 @@ def get_performance_metrics_transcriptome_vs_text(
     scores = (
         scores.t()
     )  # Here, it's better to have samples=transcriptomes, classes=texts, so we transpose
-    
+
     # Create a dataframe with the scores
     scores_df = pd.DataFrame(
         scores.cpu().numpy(),
@@ -387,7 +387,7 @@ def get_performance_metrics_transcriptome_vs_text(
 
 def anndata_to_scored_keywords(
     transcriptome_input: Union[anndata.AnnData, torch.Tensor],
-    model: TranscriptomeTextDualEncoderModel,
+    model: Optional[TranscriptomeTextDualEncoderModel],
     terms_json_path: Union[str, Path],
     transcriptome_processor: Union[
         GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor
