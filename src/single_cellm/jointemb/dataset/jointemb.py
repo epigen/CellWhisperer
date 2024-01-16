@@ -78,9 +78,9 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.transcriptome_processor_kwargs = transcriptome_processor_kwargs.copy()
         self.tokenizer_kwargs = tokenizer_kwargs.copy()
 
-    def prepare_data(self):
+    def prepare_data(self, force_prepare=False):
         # check whether data has already been prepared
-        if self.processed_path.exists():
+        if self.processed_path.exists() and not force_prepare:
             logging.info("data already prepared")
             return
         logging.info("preparing data...")
@@ -101,11 +101,11 @@ class JointEmbedDataModule(pl.LightningDataModule):
         )
         # Filter for empty inputs
         if self.transcriptome_processor == "geneformer":
-            n_genes_filter = inputs["expression_token_lengths"] > self.min_genes
+            n_genes_filter = inputs["expression_token_lengths"] >= self.min_genes
         elif self.transcriptome_processor == "scgpt":
             n_genes_filter = (inputs["expression_key_padding_mask"] == False).sum(
                 dim=1
-            ) > self.min_genes
+            ) >= self.min_genes
         else:
             raise ValueError(
                 "Transcriptome processor {self.transcriptome_processor} not supported"
@@ -113,9 +113,15 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
         inputs = {key: val[n_genes_filter] for key, val in inputs.items()}
         inputs["orig_ids"] = adata.obs.index[n_genes_filter]
-        logging.info(
-            f"Filtered for {sum(n_genes_filter)} of {len(n_genes_filter)} samples with >{self.min_genes} genes."
-        )
+
+        if sum(n_genes_filter) == len(n_genes_filter):
+            logging.info(
+                f"No samples were filtered out (All cells had >= {self.min_genes} genes)"
+            )
+        else:
+            logging.warning(
+                f"Filtered for {sum(n_genes_filter)} of {len(n_genes_filter)} samples with >={self.min_genes} genes."
+            )
 
         # save the inputs dict to a file using torch
         self.processed_path.parent.mkdir(parents=True, exist_ok=True)

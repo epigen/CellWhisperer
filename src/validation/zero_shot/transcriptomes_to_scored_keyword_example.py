@@ -70,6 +70,19 @@ if run_example:
     # Compute the top n keywords per cell type
     logging.info("Computing cell/keyword similarities ...")
 
+    obs_cols = (
+        ["cell_ontology_class"] if not use_immgen else ["cell type", "cell type rough"],
+    )
+    obs_cols = [
+        c for c, t in adaptor.data.obs.dtypes.items() if isinstance(t, CategoricalDtype)
+    ]
+    additional_text_dict = {
+        obs_col: adaptor.data.obs[obs_col].astype(str).unique().tolist()
+        for obs_col in obs_cols
+    }
+    additional_text_dict["day_of_induction"] = ["10", "20"]
+    additional_text_dict["treatment"] = ["dox"]
+
     similarity_scores_df = anndata_to_scored_keywords(
         adata_or_embedding=adata,
         model=model,
@@ -79,10 +92,7 @@ if run_example:
         device=device,
         average_mode="embeddings",
         batch_size=64,
-        obs_cols=["cell_ontology_class"]
-        if not use_immgen
-        else ["cell type", "cell type rough"],
-        additional_text_dict={"day_of_induction": ["10", "20"], "treatment": ["dox"]},
+        additional_text_dict=additional_text_dict,
         score_norm_method="zscore",
     )
 

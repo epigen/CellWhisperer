@@ -43,13 +43,19 @@ rule create_text_dataset:
         "notebooks/create_text_dataset.py.ipynb"
 
 rule process_full_dataset:
+    """
+    By setting `min_genes=1` in the data module, we try to include all cells in the dataset. Need to double check whether this worked via the log file.
+    """
     input:
-        full_data=PROJECT_DIR / config["paths"]["full_dataset"].format(dataset=DATASET),
+        full_data=PROJECT_DIR / config["paths"]["full_dataset"],
         model=PROJECT_DIR / f"results/wandb_logging/JointEmbed_Training/{CLIP_MODEL}/checkpoints/last.ckpt"  # TODO: currently only "last" is supported. improve!
     output:
-        model_outputs=PROJECT_DIR / config["paths"]["model_processed_dataset"].format(model=CLIP_MODEL, dataset=DATASET),
+        model_outputs=PROJECT_DIR / config["paths"]["model_processed_dataset"].format(model=CLIP_MODEL, dataset="{dataset}"),
     resources:
         mem_mb=10000
+    log:
+        notebook="logs/notebooks/process_full_dataset_{dataset}.py.ipynb",
+        log_file="logs/process_full_dataset_{dataset}.log"
     conda:
         "single-cellm"
     notebook:
@@ -71,7 +77,6 @@ rule train_llava:
         deepspeed=False,
     output:
         output_dir= directory(PROJECT_DIR / config["paths"]["llava_pretrained_model_dir"])
-
     threads: 16
     shell: """
         PYTHON_SCRIPT=../../modules/LLaVA/llava/train/train_mem.py

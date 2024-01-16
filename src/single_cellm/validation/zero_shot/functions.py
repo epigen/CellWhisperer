@@ -86,8 +86,8 @@ def text_list_to_embeds(
 
 def score_text_vs_transcriptome_many_vs_many(
     model: TranscriptomeTextDualEncoderModel,
-    transcriptome_input: Union[anndata.AnnData, torch.tensor],
-    text_list_or_text_embeds: Union[List[str], torch.tensor],
+    transcriptome_input: Union[anndata.AnnData, torch.Tensor],
+    text_list_or_text_embeds: Union[List[str], torch.Tensor],
     average_mode: Optional[str] = "embeddings",
     transcriptome_annotations: Optional[List[str]] = None,
     text_tokenizer: Optional[AutoTokenizer] = None,
@@ -96,7 +96,7 @@ def score_text_vs_transcriptome_many_vs_many(
     ] = None,
     batch_size: int = 128,
     score_norm_method: Optional[str] = "zscore",
-) -> Tuple[torch.tensor, Optional[List[str]]]:
+) -> Tuple[torch.Tensor, Optional[List[str]]]:
     """
     Compute the similarity between the text and the transcriptome embeddings.
     :param model: TranscriptomeTextDualEncoderModel instance. Both transcriptome and text embeddings will be computed using this model.
@@ -395,7 +395,6 @@ def anndata_to_scored_keywords(
     text_tokenizer: AutoTokenizer,
     average_mode: str = "cells",
     batch_size: int = 64,
-    obs_cols: List[str] = [],
     additional_text_dict: dict = {},
     score_norm_method: Optional[str] = "zscore",
 ) -> pd.DataFrame:
@@ -412,10 +411,6 @@ def anndata_to_scored_keywords(
         If "embeddings", first tokenize and embed each cell, then average the embeddings. TODO what is better?
     :param batch_size: int. The text will be chunked into chunks of this size before computing the text \
           embeddings and similarity to the transcriptome. This is necessary to avoid out-of-memory errors.
-    :param obs_cols: List[str]. Compute the similarity to the transcriptome for the values of these columns.\
-          E.g. if obs_cols=["cell type"], the similarity to the transcriptome will be computed for each value of "cell type". \
-        Note that the column name will be prepended to each value before the embedding, e.g. "cell type: B cell". \
-            Therefore, columns should be informatively named..
     :param additional_text_dict: dict. Additional text to compute the similarity to the transcriptome for. \
         Will be embedded as '<key>: <value>'.\
           E.g. if additional_text_dict={"day_of_induction": ["10","20"]}, the similarity to the transcriptome will be computed for \
@@ -433,17 +428,11 @@ def anndata_to_scored_keywords(
     ], f"average_mode must be one of ['cells', 'embeddings'], but is {average_mode}"
 
     if type(transcriptome_input) == anndata.AnnData:
-        assert all(
-            [x in transcriptome_input.obs.columns for x in obs_cols]
-        ), f"obs_cols must be a subset of {transcriptome_input.obs.columns}, but is {obs_cols}"
         # We give every cell the same annotation (selected_cells), so that will be averaged to the same embedding later
         transcriptome_annotations = [
             "selected_cells" for _ in range(transcriptome_input.obs.shape[0])
         ]
     elif type(transcriptome_input) == torch.Tensor:
-        assert (
-            obs_cols == []
-        ), f"obs_cols must be empty if transcriptome_input is a tensor, but is {obs_cols}"
         # We give every cell the same annotation (selected_cells), so that will be averaged to the same embedding later
         transcriptome_annotations = [
             "selected_cells" for _ in range(transcriptome_input.shape[0])
@@ -474,14 +463,6 @@ def anndata_to_scored_keywords(
 
     # Add values in the provided obs columns to the text
     text = terms_list
-    for obs_col in obs_cols:
-        text_this_obs_col = [
-            f"{obs_col}: {value}"
-            for value in transcriptome_input.obs[obs_col].unique().tolist()
-        ]
-        text += text_this_obs_col
-        terms[obs_col] = text_this_obs_col
-        n_terms_per_lib[obs_col] = len(terms[obs_col])
 
     # Add additional text to the text
     for key, value in additional_text_dict.items():
