@@ -17,29 +17,29 @@ def initialize_validation_functions(
     val_dataloader: Optional[DataLoader] = None,
 ):
     training_validation_functions = {
-        "zero_shot_cancer_gene_essentiality": EvaluateCancerGeneEssentiality(
-            batch_size, transcriptome_model_type, text_model_type
-        ),
-        "zero_shot_TabSap_celltype_lvl": SingleCellZeroshotValidationScoreCalculator(
+        # "zshot_cancer_gene_essentiality": EvaluateCancerGeneEssentiality(
+        #     batch_size, transcriptome_model_type, text_model_type
+        # ),
+        "zshot_TabSap_celltype_lvl": SingleCellZeroshotValidationScoreCalculator(
             batch_size=batch_size,
             transcriptome_tokenizer_type=transcriptome_model_type,
             tokenizer_name=text_model_type,
             celltypes=134,  # 134: The # of cell types with at least 100 cells in tabula sapiens
         ),
-        "zero_shot_TabSapWellStudied_celltype_lvl": SingleCellZeroshotValidationScoreCalculator(
+        "zshot_TabSapWellStudied_celltype_lvl": SingleCellZeroshotValidationScoreCalculator(
             celltypes=TOP20_LUNG_LIVER_BLOOD_CELLTYPES,
             batch_size=batch_size,
             tokenizer_name=text_model_type,
             transcriptome_tokenizer_type=transcriptome_model_type,
         ),
-        "zero_shot_TabSap_cell_lvl": SingleCellZeroshotValidationScoreCalculator(
+        "zshot_TabSap_cell_lvl": SingleCellZeroshotValidationScoreCalculator(
             batch_size=batch_size,
             transcriptome_tokenizer_type=transcriptome_model_type,
             tokenizer_name=text_model_type,
             celltypes=134,  # 134: The # of cell types with at least 100 cells in tabula sapiens
             average_mode=None,
         ),
-        "zero_shot_TabSapWellStudied_cell_lvl": SingleCellZeroshotValidationScoreCalculator(
+        "zshot_TabSapWellStudied_cell_lvl": SingleCellZeroshotValidationScoreCalculator(
             celltypes=TOP20_LUNG_LIVER_BLOOD_CELLTYPES,
             batch_size=batch_size,
             tokenizer_name=text_model_type,
@@ -50,7 +50,7 @@ def initialize_validation_functions(
     if val_dataloader is not None:
         # TODO: For deduplication, would need to provide the dataset name, anndata, or annotations. See src/validation/zero_shot/deduplicate.py
         training_validation_functions[
-            "zero_shot_retrieval_validation_set"
+            "zshot_retrieval_validation_set"
         ] = RetrievalScoreCalculator(val_dataloader)
 
     # Add retrieval validation tests for the deduplicated validation-sets

@@ -177,7 +177,7 @@ class SingleCeLLMCLI(LightningCLI):
                 # Make sure file does not exist
                 if self.config["fit.best_model_path"].exists():
                     logging.error(
-                        f"File {self.config['fit.best_model_path']} already exists. Not copying {self.trainer.checkpoint_callback.best_model_path}."
+                        f"File {self.config['fit.best_model_path']} already exists. Overwriting {self.trainer.checkpoint_callback.best_model_path}."
                     )
                 shutil.copy(
                     self.trainer.checkpoint_callback.best_model_path,
@@ -210,14 +210,22 @@ def cli_main(args: Optional[List] = None):
     LOG_DIR = (PROJECT_DIR / "results" / "model_training").relative_to(os.getcwd())
 
     early_stop = EarlyStopping(
-        monitor="val_clip_loss", min_delta=1e-5, patience=100, verbose=False, mode="min"
+        monitor="val/clip_loss", min_delta=1e-3, patience=7, verbose=False, mode="min"
     )
     checkpoint_callback = ModelCheckpoint(
-        monitor="val_clip_loss",
+        monitor="val/clip_loss",
         mode="min",
         save_top_k=2,
         save_last=True,
-        filename="{epoch}-{val_clip_loss:.2f}",
+        filename="{epoch}-{val/clip_loss:.2f}",
+    )
+
+    checkpoint_callback2 = ModelCheckpoint(
+        monitor="valfn_zshot_TabSapWellStudied_cell_lvl/f1_macroAvg",
+        mode="max",
+        save_top_k=1,
+        save_last=False,
+        filename="{epoch}-valfn_zshot_TabSapWellStudied_cell_lvl_f1{valfn_zshot_TabSapWellStudied_cell_lvl/f1_macroAvg:.2f}",
     )
 
     SingleCeLLMCLI(
@@ -248,7 +256,7 @@ def cli_main(args: Optional[List] = None):
                 ),
             },
             enable_progress_bar=True,
-            callbacks=[checkpoint_callback, early_stop],
+            callbacks=[checkpoint_callback, early_stop, checkpoint_callback2],
         ),
         save_config_callback=LoggerSaveConfigCallback,
         auto_configure_optimizers=False,

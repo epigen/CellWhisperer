@@ -83,8 +83,8 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
         *args,
         adata_filter_genes_by_count_min_count=None,
         adata_filter_cells_by_count_min_count=None,
-        adata_do_normalize_total=False,
-        adata_do_log1p=False,
+        adata_do_normalize_total=True,
+        adata_do_log1p=True,
         adata_n_hvgs=None,
         adata_hvg_flavor="cell_ranger",
         gene_col="gene_name",
@@ -519,7 +519,9 @@ class ScGPTModel(PreTrainedModel):
 
         # A scgpt function:
         outer_scgpt_model.scgpt_model = load_pretrained(
-            outer_scgpt_model.scgpt_model, torch.load(pretrained_model_path), verbose=False
+            outer_scgpt_model.scgpt_model,
+            torch.load(pretrained_model_path),
+            verbose=False,
         )
 
         return outer_scgpt_model

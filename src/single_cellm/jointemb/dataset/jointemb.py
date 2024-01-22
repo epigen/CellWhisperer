@@ -82,7 +82,9 @@ class JointEmbedDataModule(pl.LightningDataModule):
         # check whether data has already been prepared
         if self.processed_path.exists() and not force_prepare:
             logging.info("data already prepared")
-            return
+
+            if "orig_ids" in torch.load(self.processed_path):
+                return
         logging.info("preparing data...")
 
         processor = TranscriptomeTextDualEncoderProcessor(

@@ -41,9 +41,12 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
         # adata.obs["cell type rough"] = [
         #     x.split(".")[0] for x in adata.obs["cell type"].values
         # ]
-        if adata.var.index[0].startswith("ENSG0"):
+        if adata.var.index[0].startswith("ENSG0") or "ensembl_id" in adata.var.columns:
             # No need to translate IDs
-            ensembl_ids = adata.var.index
+            if "ensembl_id" in adata.var.columns:
+                ensembl_ids = adata.var["ensembl_id"]
+            else:
+                ensembl_ids = adata.var.index
             if "." in ensembl_ids[0]:
                 # Trim version
                 ensembl_ids = ensembl_ids.map(lambda v: v[: v.index(".")])

@@ -89,11 +89,6 @@ class SingleCellZeroshotValidationScoreCalculator:
 
         tokenizer_path = model_path_from_name(tokenizer_name)
         transcriptome_processor_kwargs = transcriptome_processor_kwargs or {}
-        if (
-            transcriptome_tokenizer_type == "scgpt"
-            and not transcriptome_processor_kwargs
-        ):
-            transcriptome_processor_kwargs = {"gene_col": "gene_name"}
 
         self.logger.info("Loading anndata...")
         self.adata = anndata.read_h5ad(

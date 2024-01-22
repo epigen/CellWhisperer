@@ -1,0 +1,18 @@
+method: bayes
+name: LU
+metric:
+  goal: minimize
+  name: val/clip_loss_epoch
+parameters:
+  model.learning_rate:
+    distribution: log_uniform_values
+    min: 0.00001
+    max: 0.001
+  model.model_config.transcriptome_model_type:
+    values:
+      - scgpt
+      - geneformer
+  trainer.accumulate_grad_batches:
+    distribution: q_log_uniform_values
+    min: 64
+    max: 512

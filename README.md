@@ -34,7 +34,7 @@ See [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md)
 
 
 1. `git config --global submodule.recurse true`
-   This way you don't need to keep track of whether the submodules are up to date
+   This way you don't need to keep track of whether the submodules are up to date. Note: This may lead to code loss on the remote repo upon pull.
 2. `git config --global pull.rebase true`
    Rebasing retains a better history
 

@@ -1,0 +1,18 @@
+method: bayes
+name: UU-sweep_scgpt
+metric:
+  goal: minimize
+  name: val/clip_loss_epoch
+parameters:
+  model.model_config.projection_dim:
+    distribution: q_log_uniform_values
+    min: 64
+    max: 4096
+  model.lr_warmup_steps:
+    distribution: q_log_uniform_values
+    min: 100
+    max: 10000
+  model.learning_rate:
+    distribution: log_uniform_values
+    min: 0.000005
+    max: 0.0005

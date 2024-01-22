@@ -11,6 +11,7 @@ results/
 .ipynb_checkpoints
 __pycache__
 *.egg-info/
+*.pytest_cache
 
 lightning_logs
 wandb/

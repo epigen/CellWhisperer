@@ -1,0 +1,31 @@
+method: random
+name: third
+metric:
+  goal: minimize
+  name: val_clip_loss_epoch
+parameters:
+  config:
+    values:
+      - "src/experiments/sweeps/third/base_config.yaml"
+  model.model_config.text_model_type:
+    values:
+      # - biogpt
+      - bert
+  model.model_config.transcriptome_model_type:
+    values:
+      - geneformer
+      - scgpt
+  model.model_config.projection_dim:
+    values: [512, 2048]
+  model.model_config.locking_mode:
+    values: ["LU", "UL", "UU"]
+  model.loss_config.clip_lambda:
+    values: [0.0, 1.0, 10.0]
+  model.loss_config.clip_lite_lambda:
+    values: [0.0, 1.0, 10.0]
+  batch_size:
+    values: [64, 256, 2048]
+  trainer.accumulate_grad_batches:
+    values: [64, 256]
+  model.lr_warmup_steps:
+    values: [100, 1000]

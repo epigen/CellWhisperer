@@ -1,6 +1,7 @@
 """
 This is an untested script to perform wandb sweeps. Good luck! ;)
 """
+
 import yaml
 import sys
 from single_cellm.jointemb.training import cli_main as training_main
@@ -28,10 +29,10 @@ def init_wandb(args):
     return run
 
 
-def wandb_config_to_args(wandb_config):
+def wandb_config_to_args(wandb_config, base_config=None):
     """
     Convert wandb_config (dict-like) to args object that can be passed to LightningCLI (as a supplement to sys.argv).
-    "config" arg is forced to be the first one, so the dynamic args from the sweep can overwrite it. Best practice is to not list the same args both in sweep_config and in base_args
+    "config" arg is forced to be the first one, so the dynamic args from the sweep can overwrite it. Best practice is to not list the same args both in sweep_config and in base_config
 
     LightningCLI args expect one of two formats (see below). We implement the first one for now (it worked).
 
@@ -57,9 +58,9 @@ def wandb_config_to_args(wandb_config):
 
     cli_args = ["fit"]
 
-    try:
-        cli_args.append(f"--config={wandb_config.config}")
-    except AttributeError:
+    if base_config is not None:
+        cli_args.append(f"--config={base_config}")
+    else:
         logging.warning("No base-args config provided for sweep")
 
     cli_args.extend(
@@ -77,7 +78,9 @@ def sweep_train(args):
             if param_value == "null":
                 wandb.config[param] = None
 
-        cli_mimic_args = wandb_config_to_args(wandb.config)
+        cli_mimic_args = wandb_config_to_args(
+            wandb.config, base_config=args.sweep_config / "base_config.yaml"
+        )
         logging.info(f"Performing sweep training run with args: {cli_mimic_args}")
         # Make sure that LightningCLI does not parse sys.argv (it prints a warning)
         sys_argv_backup = sys.argv
@@ -115,7 +118,8 @@ def main():
         "--sweep_config",
         type=Path,
         default=None,
-        help="Path to sweep config file (yaml). If not provided, use the one defined in config.yaml",
+        required=True,
+        help="Path to sweep config folder, containing a sweep_config.yaml and base_config.yaml. If not provided, use the one defined in config.yaml",
     )
     parser.add_argument(
         "--num_runs",
@@ -134,7 +138,7 @@ def main():
             )
             sweep_configuration = config["SWEEP_HYPERPARAMETERS"]
         else:
-            with open(args.sweep_config, "r") as f:
+            with open(args.sweep_config / "sweep_config.yaml", "r") as f:
                 sweep_configuration = yaml.safe_load(f)
         sweep_id = wandb.sweep(
             sweep=sweep_configuration,

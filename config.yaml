@@ -18,6 +18,7 @@ paths:
   datamodule_prepared_path: results/{dataset}/lightning-processed/{transcriptome_processor}__{tokenizer}.pt
   model_cache: results/cache/{model_hash}.pkl
   cancer_gene_essentiality:
+    ccle_expression: CCLE_RNAseq_genes_counts_20180929.gct.gz
     essential_genes: resources/cancer_gene_essentiality/CRISPRInferredCommonEssentials.csv
     nonessential_genes: resources/cancer_gene_essentiality/AchillesNonessentialControls.csv
 

@@ -9,7 +9,7 @@ import numpy as np
 import logging
 from torchmetrics.functional import f1_score
 from scipy.stats import mannwhitneyu
-
+from torchmetrics.classification import BinaryF1Score
 
 from .dataset import (
     CancerGeneEssentialityDataModule,
@@ -19,13 +19,75 @@ import torch
 import statsmodels.api as sm
 
 
+def _per_cell_line_mannwhineyu(
+    df: pd.DataFrame,
+    stat_dim: str = "gene_ko",
+) -> float:
+    """
+    stat_dim: The dimension to perform the statistical test over. One of {gene_ko, cell_line}.
+
+    # TODO we might want to z-score normalize before mean-aggregating
+    """
+    assert stat_dim in ["gene_ko", "cell_line"]
+
+    # For each cell line, take the average similarity to "cancer" for the essential genes and the non-essential genes. Calculate the delta of those 2 values (mean(essential) - mean(non-essential))
+    cellline_differences = df.groupby(["essential", stat_dim])["similarity"].mean()
+    # Test whether the distribution of deltas across cell lines is significantly different beteen essential and non-essential genes
+    stat, p_value = mannwhitneyu(
+        cellline_differences.loc[True],
+        cellline_differences.loc[False],
+        alternative="less",
+    )
+
+    return -np.log10(p_value)
+
+
+def _per_cell_line_f1_score_mean(df: pd.DataFrame) -> float:
+    """
+    filter the reference (WT, no KO) and compare it with the essential and non-essential ones, (closer, less close), leading to separate F1-scores
+    """
+    # Calculate F1 scores based on reference
+    f1_scores = []
+
+    # Initialize the F1Score metric
+    f1_metric = BinaryF1Score()
+
+    # references are calculated as negative controls (reference is where gene_ko == -1)
+    references = df.loc[df.gene_ko == -1].set_index("cell_line")["similarity"]
+
+    # references = df.groupby(["cell_line"])["similarity"].mean()
+
+    for cell_line, reference in references.items():
+        # Get the subset of the dataframe for the current cell line
+        df_subset = df[(df["cell_line"] == cell_line) & (df["gene_ko"] != -1)]
+
+        # Predictions are based on whether the similarity score is below the reference
+        predictions = torch.tensor(
+            df_subset["similarity"].values < reference, dtype=torch.int
+        )
+
+        # Targets are based on whether the gene is essential
+        targets = torch.tensor(df_subset["essential"].values, dtype=torch.int)
+
+        # Compute the F1 score using torchmetrics
+        f1 = f1_metric(predictions, targets).item()
+
+        # Store the F1 score for the current cell line
+        f1_scores.append(f1)
+
+        # Reset the metric for the next calculation (not sure if necessary)
+        f1_metric.reset()
+
+    return np.mean(f1_scores)
+
+
 def _log_reg_statistics(df: pd.DataFrame) -> Tuple[Dict[str, float], pd.DataFrame]:
     """
     Assess how well our shared embedding similarities are able to predict cancer gene essentiality (using a logistic regression model)
 
 
-    :param df: a dataframe with columns "labels" and "similarity"
-    :return: a dictionary with metrics describing the predictability of the labels
+    :param df: a dataframe with columns "essential" and "similarity"
+    :return: a dictionary with metrics describing the predictability of the essential
     """
 
     # Add an intercept column to the dataframe
@@ -34,7 +96,7 @@ def _log_reg_statistics(df: pd.DataFrame) -> Tuple[Dict[str, float], pd.DataFram
 
     # Define the predictor variable(s) and the outcome variable
     X = df[["intercept", "similarity"]]
-    y = df["labels"]
+    y = df["essential"]
 
     # Fit the logistic regression model
     logit_model = sm.Logit(y, X)
@@ -52,11 +114,13 @@ def _log_reg_statistics(df: pd.DataFrame) -> Tuple[Dict[str, float], pd.DataFram
     df["predictions"] = result.predict(X)
 
     # Calculate accuracy metrics
-    df["prediction_correct"] = (df["predictions"].round() == df["labels"]).astype(int)
+    df["prediction_correct"] = (df["predictions"].round() == df["essential"]).astype(
+        int
+    )
     accuracy = df["prediction_correct"].mean()
     try:
         f1 = f1_score(
-            torch.tensor(df["labels"].values),
+            torch.tensor(df["essential"].values),
             torch.tensor(df["predictions"].round().values),
             task="binary",
         )
@@ -69,13 +133,13 @@ def _log_reg_statistics(df: pd.DataFrame) -> Tuple[Dict[str, float], pd.DataFram
     # Return odds ratio
     metrics = {
         "intercept_coeff": result.params.intercept,
-        "var_coeff": result.params.similarity,  # how well does the embedding similarity predict the labels?
-        "var_p_values": result.pvalues.similarity,  # how well does the embedding similarity predict the labels?
+        "var_coeff": result.params.similarity,  # how well does the embedding similarity predict the essential?
+        "var_p_values": result.pvalues.similarity,  # how well does the embedding similarity predict the essential?
         "pseudo_r_squared": result.prsquared,  # goodness-of-fit of the model
         "log_likelihood": result.llf,  # goodness-of-fit of the model
         "AIC": result.aic,  # goodness-of-fit of the model
         "BIC": result.bic,  # goodness-of-fit of the model
-        "accuracy": accuracy,  # how well does the embedding similarity predict the labels?
+        "accuracy": accuracy,  # how well does the embedding similarity predict the essential?
         "f1": f1,
     }
 
@@ -85,15 +149,13 @@ def _log_reg_statistics(df: pd.DataFrame) -> Tuple[Dict[str, float], pd.DataFram
 class EvaluateCancerGeneEssentiality:
     def __init__(self, batch_size, transcriptome_model_type, text_model_type):
         # load first transcriptome from our 15k dataset and perform in silico KOs
-        self.anchor_sentence = "cancer"
+        self.anchor_sentence = "cancer cell line"  # or "cancer"
         datamodule = CancerGeneEssentialityDataModule(
             tokenizer=text_model_type,
             transcriptome_processor=transcriptome_model_type,
-            dataset_name="daniel",
+            dataset_name="ccle",
             batch_size=batch_size,
-            transcriptome_processor_kwargs={}
-            if transcriptome_model_type == "geneformer"
-            else {"gene_col": "gene_name"},
+            transcriptome_processor_kwargs={},
         )
 
         # Follow lightning API
@@ -103,7 +165,6 @@ class EvaluateCancerGeneEssentiality:
         self.tokenizer = AutoTokenizer.from_pretrained(
             model_path_from_name(text_model_type)
         )
-        # alterantive: tokenizer = self.trainer.datamodule.processor.tokenizer
 
     def _embed_cancer_sentence(
         self, model: TranscriptomeTextDualEncoderModel
@@ -137,14 +198,18 @@ class EvaluateCancerGeneEssentiality:
 
         # Iterate over dataloader, predict and calculate similarities
         similarities = []
-        labels = []
+        essential = []
+        gene_ko = []
+        cell_line = []
         for batch in self.dataloader:
-            labels.append(batch.pop("labels"))
+            essential.append(batch.pop("essential"))
+            gene_ko.append(batch.pop("gene_ko"))
+            cell_line.append(batch.pop("cell_line"))
             batch = {k: v.to(model.device) for k, v in batch.items()}
             with torch.no_grad():
-                transcriptome_embeds = model.get_transcriptome_features(
+                _, transcriptome_embeds = model.get_transcriptome_features(
                     **batch, normalize_embeds=True
-                )[1]
+                )
             similarity = torch.matmul(
                 anchor_embed, transcriptome_embeds.t().to(anchor_embed.device)
             )
@@ -155,23 +220,23 @@ class EvaluateCancerGeneEssentiality:
                 "similarity": torch.cat(
                     [sim.squeeze(0) for sim in similarities]
                 ).numpy(),
-                "labels": torch.cat([lab.squeeze(0) for lab in labels]).numpy(),
+                "essential": torch.cat([es.squeeze(0) for es in essential]).numpy(),
+                "gene_ko": torch.cat([ko.squeeze(0) for ko in gene_ko]).numpy(),
+                "cell_line": torch.cat([cl.squeeze(0) for cl in cell_line]).numpy(),
             }
         )
         if plot:
-            sns.barplot(data=df, x="labels", y="similarity", ci="sd")
+            sns.barplot(data=df, x="essential", y="similarity", ci="sd")
 
         # return _log_reg_statistics(df)
 
-        true_values = df[df["labels"]]["similarity"]
-        false_values = df[~df["labels"]]["similarity"]
+        mannwhitneyu_gene_neglogp = _per_cell_line_mannwhineyu(df, "gene_ko")
+        mannwhitneyu_cellline_neglogp = _per_cell_line_mannwhineyu(df, "cell_line")
 
-        # Perform the Mann-Whitney U test
-        stat, p_value = mannwhitneyu(true_values, false_values, alternative="less")
+        per_cell_line_f1_mean = _per_cell_line_f1_score_mean(df)
 
         return {
-            "mannwhitneyu_stat": stat,
-            "mannwhitneyu_neglogp": -np.log10(p_value),
-            "log2_ratio": np.log2(true_values.mean() / false_values.mean()),
-            "difference": true_values.mean() - false_values.mean(),  # lower is better
+            "mannwhitneyu_gene_neglogp": mannwhitneyu_gene_neglogp,
+            "mannwhitneyu_cellline_neglogp": mannwhitneyu_cellline_neglogp,
+            "per_cell_line_f1_mean": per_cell_line_f1_mean,
         }, df

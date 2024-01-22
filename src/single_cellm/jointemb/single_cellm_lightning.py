@@ -191,7 +191,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
             # Log the individual loss value for monitoring.
             self.log(
-                f"{step_type}_{loss['name']}_loss",
+                f"{step_type}/{loss['name']}_loss",
                 loss_value,
                 on_step=True,
                 on_epoch=True,
@@ -202,7 +202,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
         # After processing all loss functions, log the total combined loss.
         self.log(
-            f"{step_type}_loss",
+            f"{step_type}/loss",
             combined_loss,
             on_step=True,
             on_epoch=True,
@@ -245,7 +245,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                     # In our case it doesn't matter, because we are training on a single GPU/node at the moment
                     # see https://github.com/Lightning-AI/pytorch-lightning/issues/18803
                     self.log(
-                        f"valfn_{val_fn_name}_{metric_name}",
+                        f"valfn_{val_fn_name}/{metric_name}",
                         metric_value,
                         on_step=False,
                         on_epoch=True,
@@ -255,7 +255,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                     )
                     if val_results[1] is not None:
                         artifact = Artifact(
-                            f"validation_{val_fn_name}_per_celltype_run{self.logger.experiment.id}",
+                            f"valfn_{val_fn_name}_per_celltype_run{self.logger.experiment.id}",
                             type="performance_metrics",
                         )
                         # turn the df val_results[1] into a wandb table:
@@ -342,7 +342,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
         for pg in optimizer.param_groups:
             self.log(
-                "learning_rate",
+                "train/learning_rate",
                 pg["lr"],
                 on_step=True,
                 on_epoch=True,
