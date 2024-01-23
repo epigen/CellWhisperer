@@ -15,3 +15,5 @@ __pycache__
 
 lightning_logs
 wandb/
+logs/
+log/

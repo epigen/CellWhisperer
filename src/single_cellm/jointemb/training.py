@@ -209,23 +209,25 @@ def cli_main(args: Optional[List] = None):
 
     LOG_DIR = (PROJECT_DIR / "results" / "model_training").relative_to(os.getcwd())
 
+    val_metric = "valfn_daniel_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/recall_at_10_macroAvg"
+
     early_stop = EarlyStopping(
-        monitor="val/clip_loss", min_delta=1e-3, patience=7, verbose=False, mode="min"
+        monitor=val_metric, min_delta=1e-4, patience=10, verbose=False, mode="max"
     )
+    # checkpoint_callback = ModelCheckpoint(
+    #     monitor="val/clip_loss",
+    #     mode="min",
+    #     save_top_k=2,
+    #     save_last=True,
+    #     filename="{epoch}-{val/clip_loss:.2f}",
+    # )
+
     checkpoint_callback = ModelCheckpoint(
-        monitor="val/clip_loss",
-        mode="min",
+        monitor=val_metric,
+        mode="max",
         save_top_k=2,
         save_last=True,
-        filename="{epoch}-{val/clip_loss:.2f}",
-    )
-
-    checkpoint_callback2 = ModelCheckpoint(
-        monitor="valfn_zshot_TabSapWellStudied_cell_lvl/f1_macroAvg",
-        mode="max",
-        save_top_k=1,
-        save_last=False,
-        filename="{epoch}-valfn_zshot_TabSapWellStudied_cell_lvl_f1{valfn_zshot_TabSapWellStudied_cell_lvl/f1_macroAvg:.2f}",
+        filename="{epoch}-valfn_daniel_recall10={%s:.2f}" % (val_metric,),
     )
 
     SingleCeLLMCLI(

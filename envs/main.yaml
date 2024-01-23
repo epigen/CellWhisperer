@@ -46,4 +46,5 @@ dependencies:
     - orbax==0.1.7
     - scvi-tools==0.20.3
     - cell-gears==0.0.2
+    - umap-learn==0.5.5
     - -e ..

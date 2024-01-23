@@ -64,7 +64,7 @@ def text_list_to_embeds(
     text_list: List[str],
     model: TranscriptomeTextDualEncoderModel,
     text_tokenizer: AutoTokenizer,
-) -> torch.tensor:
+) -> torch.Tensor:
     """
     Compute the text embeddings for each text in text_list.
     :param text: List[str] instance. Each text will be tokenized and embedded.
