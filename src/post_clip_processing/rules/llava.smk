@@ -38,17 +38,20 @@ rule pretrain_llava:
     """
     input:
         data_path=rules.create_text_dataset.output[0].format(dataset=TRAINING_DATASET),
-        image_data=rules.process_full_dataset.output.model_outputs.format(dataset=TRAINING_DATASET)
+        image_data=rules.process_full_dataset.output.model_outputs.format(dataset=TRAINING_DATASET, model="{model}")
     conda:
         "llava"
     params:
-        deepspeed=False,
+        deepspeed=True,
         projector_type=PROJECTOR_TYPE,
     output:
         projector=PROJECT_DIR / config["paths"]["llava_pretrained_model_dir"] / "mm_projector.bin",
         output_dir=protected(directory(PROJECT_DIR / config["paths"]["llava_pretrained_model_dir"])),
+    resources:
+        mem_mb=100000,
+        slurm="cpus-per-task=20 gres=gpu:a100-sxm4-80gb:4 qos=a100-sxm4-80gb partition=gpu"
     log:
-        "log/pretrain_llava_{base_model}.log"
+        "log/pretrain_llava_{base_model}_{model}.log"
     threads: 16
     shell: """
         PYTHON_SCRIPT=../../modules/LLaVA/llava/train/train_mem.py
@@ -104,7 +107,7 @@ rule finetune_llava:
     """
     input:
         data_path=rules.create_text_dataset.output[0].format(dataset=TRAINING_DATASET),
-        image_data=rules.process_full_dataset.output.model_outputs.format(dataset=TRAINING_DATASET),
+        image_data=rules.process_full_dataset.output.model_outputs.format(dataset=TRAINING_DATASET, model="{model}"),
         pretrained_projector=rules.pretrain_llava.output.projector
     conda:
         "llava"
@@ -113,8 +116,11 @@ rule finetune_llava:
         projector_type=PROJECTOR_TYPE
     output:
         output_dir=protected(directory(PROJECT_DIR / config["paths"]["llava_finetuned_model_dir"])),
+    resources:
+        mem_mb=100000,
+        slurm="cpus-per-task=20 gres=gpu:a100-sxm4-80gb:4 qos=a100-sxm4-80gb partition=gpu"
     log:
-        "log/pretrain_llava_{base_model}.log"
+        "log/pretrain_llava_{base_model}_{model}.log"
     threads: 16
     shell: """
         PYTHON_SCRIPT=../../modules/LLaVA/llava/train/train_mem.py

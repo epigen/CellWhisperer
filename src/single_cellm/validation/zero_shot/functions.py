@@ -466,9 +466,8 @@ def anndata_to_scored_keywords(
 
     # Add additional text to the text
     for key, value in additional_text_dict.items():
-        text_this_key = [f"{key}: {v}" for v in value]
-        text += text_this_key
-        terms[key] = text_this_key
+        text += value
+        terms[key] = value
         n_terms_per_lib[key] = len(terms[key])
 
     #### Get text embeddings and compare to transcriptome embeddings ####
@@ -495,6 +494,7 @@ def anndata_to_scored_keywords(
     logits_df["term_without_prefix"] = np.nan
     logits_df["term_without_prefix"] = logits_df["term_without_prefix"].astype("object")
     i = 0
+    # TODO all of this might be easier
     for library in terms.keys():
         text_this_lib = text[i : i + n_terms_per_lib[library]]
         logits_df.loc[text_this_lib, "library"] = library

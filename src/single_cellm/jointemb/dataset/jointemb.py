@@ -71,8 +71,13 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.processed_path = get_path(
             ["paths", "datamodule_prepared_path"],
             dataset=self.dataset_name,
-            transcriptome_processor=self.transcriptome_processor,
-            tokenizer=tokenizer,
+            hash="_".join(
+                [
+                    self.transcriptome_processor,
+                    tokenizer,
+                    str(self.min_genes),
+                ]
+            ),
         )
         self.train_fraction = train_fraction
         self.transcriptome_processor_kwargs = transcriptome_processor_kwargs.copy()
@@ -101,6 +106,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             return_tensors="pt",
             padding=True,
         )
+
         # Filter for empty inputs
         if self.transcriptome_processor == "geneformer":
             n_genes_filter = inputs["expression_token_lengths"] >= self.min_genes

@@ -1,0 +1,32 @@
+method: random
+name: workshop_geneformer
+metric:
+  goal: maximize
+  name: valfn_daniel_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/recall_at_10_macroAvg
+parameters:
+  model.lr_warmup_steps:
+    values:
+      - 100
+      - 1000
+      - 10000
+  trainer.accumulate_grad_batches:
+    values:
+      - 32
+      - 256
+  model.learning_rate:
+    values:
+      - 0.0001
+      - 0.001
+      - 0.01
+  batch_size:
+    values:
+    - 64
+    - 256
+    - 1024
+  model.loss_config.clip_lite_lambda:
+    values:
+      - 0
+      - 0
+      - 0
+      - 1
+      - 10

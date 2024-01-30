@@ -1,5 +1,5 @@
 method: bayes
-name: LU
+name: LU-scgpt-vs-geneformer
 metric:
   goal: minimize
   name: val/clip_loss_epoch
@@ -16,3 +16,4 @@ parameters:
     distribution: q_log_uniform_values
     min: 64
     max: 512
+    q: 64

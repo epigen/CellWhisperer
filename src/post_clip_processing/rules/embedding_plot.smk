@@ -1,12 +1,21 @@
+"""
+We could honestly also compute everything directly within the {dataset}.h5ad. However, this would lead to 3x recreation of that massive file. A single job could be another solution, but the we would need scanpy in the llava environment. problems over problems.
+
+Hmm. We anyways need to integrate llava into single_cellm! Going with a single env (single-cellm) would also fix the notebooks issue!
+"""
+
 rule leiden_umap_embeddings:
     input:
         processed_data=rules.process_full_dataset.output.model_outputs,
     output:
-        adata=PROJECT_DIR / "results" / "{dataset}" / "leiden_umap_embeddings.h5ad"
+        adata=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "leiden_umap_embeddings.h5ad"
     conda:
         "single-cellm"
+    resources:
+        mem_mb=24000,
+        slurm="cpus-per-task=5 qos=cpu partition=cpu"
     log:
-        notebook="../log/leiden_umap_embeddings_{dataset}.py.ipynb"
+        notebook="../log/leiden_umap_embeddings_{dataset}_{model}.py.ipynb"
     notebook:
         "../notebooks/leiden_umap_embeddings.py.ipynb"
 
@@ -16,31 +25,85 @@ rule llava_annotate_clusters:
     """
     input:
         adata=rules.leiden_umap_embeddings.output.adata,
-        llava_model=rules.finetune_llava.output.output_dir.format(base_model=LLAVA_BASE_MODEL)
+        llava_model=ancient(rules.finetune_llava.output.output_dir.format(base_model=LLAVA_BASE_MODEL, model="{model}")),
     output:
-        adata=PROJECT_DIR / "results" / "{dataset}" / "llava_annotated_clusters.h5ad"
+        adata=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_annotated_clusters.h5ad"
     conda:
         "llava"
     params:
-        request="Provide a concise and short description of the sample:",
+        request="Provide a concise and short description of the sample:",  # TODO try keyword
         num_beams=10
+    resources:
+        mem_mb=40000,
+        slurm="cpus-per-task=5 gres=gpu:3g.20gb:1 qos=a100 partition=gpu"
     log:
-        notebook="../log/llava_annotate_clusters_{dataset}.py.ipynb"
+        notebook="../log/llava_annotate_clusters_{dataset}_{model}.py.ipynb"
     notebook:
         "../notebooks/llava_annotate_clusters.py.ipynb"
 
-
-rule plot_embeddings_with_llava_labels:
+rule single_cellm_annotate_clusters:
     input:
-        adata=rules.llava_annotate_clusters.output.adata,
+        adata=rules.leiden_umap_embeddings.output.adata,
+        model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
     output:
-        **{
-            ext: PROJECT_DIR / "results" / "plots" / "plot_dataset_embeddings" / f"{{dataset}}.{ext}"
-            for ext in ["png", "pdf", "svg"]
-        },
+        csv=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "single_cellm_annotated_clusters.csv"
     conda:
         "single-cellm"
     log:
-        notebook="../log/plot_embeddings_{dataset}.py.ipynb"
+        notebook="../log/single_cellm_annotate_clusters_{dataset}_{model}.py.ipynb"
+    notebook:
+        "../notebooks/single_cellm_annotate_clusters.py.ipynb"
+
+rule gpt4_curate_cluster_keywords:
+    """
+    TODO Integrate file /home/moritz/wiki/roam/24_fig_1b_color_the_embeddings_by_interesting_metrics_issue_234_epigen_single_cellm.org for this processing step
+    """
+    input:
+        single_cellm_labels=rules.single_cellm_annotate_clusters.output.csv,
+    output:
+        curated_labels=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "single_cellm_curated_annotated_clusters.csv"
+    conda:
+        "single-cellm"
+    shell: ""
+
+
+rule compile_h5ad:
+    """
+    Compile the generated embeddings and labels into a single h5ad file
+    """
+
+    input:
+        llava_labels=rules.llava_annotate_clusters.output.adata,  # TODO use CSV in future and take rules.leiden_umap_embeddings.output.adata as additional input
+        single_cellm_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels
+        full_data=PROJECT_DIR / config["paths"]["full_dataset"],
+    output:
+        adata=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "cellxgene.h5ad"
+    conda:
+        "single-cellm"
+    log:
+        notebook="../log/compile_h5ad_{dataset}_{model}.py.ipynb"
+    notebook:
+        "../notebooks/compile_h5ad.py.ipynb"
+
+
+rule plot_embeddings_with_llava_labels:
+    """
+    Plot the embeddings with the llava labels
+    TODO this is potentially broken because it was implemented for another adata
+    """
+    input:
+        adata=rules.compile_h5ad.output.adata,
+    output:
+        **{
+            ext: PROJECT_DIR / "results" / "plots" / "plot_dataset_embeddings" / f"{{dataset}}_{{model}}.{ext}"
+            for ext in ["png", "pdf", "svg"]
+        },
+    resources:
+        mem_mb=24000,
+        slurm="cpus-per-task=5 qos=cpu partition=cpu"
+    conda:
+        "single-cellm"
+    log:
+        notebook="../log/plot_embeddings_{dataset}_{model}.py.ipynb"
     notebook:
         "../notebooks/plot_embeddings.py.ipynb"

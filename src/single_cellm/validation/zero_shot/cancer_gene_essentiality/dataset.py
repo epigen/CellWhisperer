@@ -70,9 +70,14 @@ class CancerGeneEssentialityDataModule(LightningDataModule):
         self.transcriptome_processor = transcriptome_processor
         self.processed_path = get_path(
             ["paths", "datamodule_prepared_path"],
-            dataset=f"cancer_gene_essentiality_{dataset_name}_{num_transcriptomes}",
-            transcriptome_processor=transcriptome_processor,
-            tokenizer=tokenizer,
+            dataset=f"cancer_gene_essentiality_{dataset_name}",
+            hash="_".join(
+                [
+                    transcriptome_processor,
+                    tokenizer,
+                    str(num_transcriptomes),
+                ]
+            ),
         )
         self.transcriptome_processor_kwargs = transcriptome_processor_kwargs
 

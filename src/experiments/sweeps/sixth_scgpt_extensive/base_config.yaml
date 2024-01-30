@@ -1,5 +1,5 @@
 # lightning.pytorch==2.1.0
-seed_everything: true
+seed_everything: 3331418577
 trainer:
   accelerator: auto
   strategy: auto
@@ -44,7 +44,7 @@ trainer:
   min_epochs: null
   max_steps: -1
   min_steps: null
-  max_time: "02:20:00:00"
+  max_time: "02:40:00:00"
   limit_train_batches: null
   limit_val_batches: null
   limit_test_batches: null
@@ -72,19 +72,21 @@ trainer:
   default_root_dir: results/model_training
 model:
   model_config:
-    projection_dim: 1024
     transcriptome_config: {}
-    text_model_type: bert
     text_config: {}
     unlocked_fp16: false
+    text_model_type: bert
+    transcriptome_model_type: scgpt
+    projection_dim: 1024
     locking_mode: LU
   loss_config:
     clip_lite_type: dot
     clip_lite_prior_weight: 0.1
     clip_lite_transcriptome_prior: false
     clip_lite_text_prior: false
+    clip_lambda: 1.0
+    clip_lite_lambda: 0.0
   val_batch_size: 32
-  lr_warmup_steps: 100
   gauss_noise_std: 0.0
   optimizer: torch.optim.AdamW
   scheduler:
@@ -99,9 +101,9 @@ data:
   nproc: 8
   transcriptome_processor_kwargs: {}
   min_genes: 200
-batch_size: 1024
 best_model_path: null
-log_level: DEBUG
+log_level: INFO
 dap_debug: false
-wandb: ''
+wandb: 'scgpt_best_params'
 ckpt_path: null
+batch_size: 1024

@@ -6,14 +6,15 @@ rule process_full_dataset:
     """
     input:
         full_data=PROJECT_DIR / config["paths"]["full_dataset"],
-        model=PROJECT_DIR / config["paths"]["jointemb_models"] / f"{CLIP_MODEL}.ckpt",
+        model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
     output:
-        model_outputs=PROJECT_DIR / config["paths"]["model_processed_dataset"].format(model=CLIP_MODEL, dataset="{dataset}"),
+        model_outputs=protected(PROJECT_DIR / config["paths"]["model_processed_dataset"]),
     resources:
-        mem_mb=10000
+        mem_mb=100000,
+        slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
     log:
-        notebook="../logs/notebooks/process_full_dataset_{dataset}.py.ipynb",
-        log_file="../logs/process_full_dataset_{dataset}.log"
+        notebook="../logs/notebooks/process_full_dataset_{dataset}_{model}.py.ipynb",
+        log_file="../logs/process_full_dataset_{dataset}_{model}.log"
     conda:
         "single-cellm"
     notebook:

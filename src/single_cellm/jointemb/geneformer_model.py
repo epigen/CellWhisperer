@@ -156,7 +156,13 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
                 warnings.filterwarnings(
                     "ignore", message=".*divide by zero encountered in divide.*"
                 )
+
                 X_norm = X_view / n_counts * target_sum / norm_factor_vector
+                if 0 in n_counts or 0 in norm_factor_vector:
+                    logging.warning(
+                        "Encountered cell(s) with 0 counts or gene with 0 median expression. Hacking low expression here to fix nans"
+                    )
+                    X_norm[n_counts == 0, :] = 1.0 / X_norm.shape[1]
             X_norm = sp.csr_matrix(X_norm)
 
             tokenized_cells += [

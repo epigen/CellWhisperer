@@ -206,6 +206,7 @@ def cli_main(args: Optional[List] = None):
     """
     torch.set_float32_matmul_precision("high")  # speed up on ampere-level GPUs
     torch.multiprocessing.set_sharing_strategy("file_system")
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"  # disable warning from tokenizers
 
     LOG_DIR = (PROJECT_DIR / "results" / "model_training").relative_to(os.getcwd())
 
@@ -214,13 +215,6 @@ def cli_main(args: Optional[List] = None):
     early_stop = EarlyStopping(
         monitor=val_metric, min_delta=1e-4, patience=10, verbose=False, mode="max"
     )
-    # checkpoint_callback = ModelCheckpoint(
-    #     monitor="val/clip_loss",
-    #     mode="min",
-    #     save_top_k=2,
-    #     save_last=True,
-    #     filename="{epoch}-{val/clip_loss:.2f}",
-    # )
 
     checkpoint_callback = ModelCheckpoint(
         monitor=val_metric,
@@ -228,6 +222,15 @@ def cli_main(args: Optional[List] = None):
         save_top_k=2,
         save_last=True,
         filename="{epoch}-valfn_daniel_recall10={%s:.2f}" % (val_metric,),
+    )
+
+    # TODO delete this checkpoint at some point
+    checkpoint_callback2 = ModelCheckpoint(
+        monitor="valfn_zshot_TabSapWellStudied_cell_lvl/recall_at_1_macroAvg",
+        mode="max",
+        save_top_k=2,
+        save_last=False,
+        filename="{epoch}-{valfn_zshot_TabSapWellStudied_cell_lvl/recall_at_1_macroAvg:.2f}",
     )
 
     SingleCeLLMCLI(
