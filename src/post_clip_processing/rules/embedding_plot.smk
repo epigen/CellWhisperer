@@ -57,24 +57,27 @@ rule single_cellm_annotate_clusters:
 rule gpt4_curate_cluster_keywords:
     """
     TODO Integrate file /home/moritz/wiki/roam/24_fig_1b_color_the_embeddings_by_interesting_metrics_issue_234_epigen_single_cellm.org for this processing step
+    TODO then, intgerate it into compile_h5ad
     """
     input:
         single_cellm_labels=rules.single_cellm_annotate_clusters.output.csv,
     output:
         curated_labels=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "single_cellm_curated_annotated_clusters.csv"
-    conda:
-        "single-cellm"
+    # conda:
+    #     "single-cellm"
     shell: ""
 
 
 rule compile_h5ad:
     """
     Compile the generated embeddings and labels into a single h5ad file
+
+    Also normalizes (log1p) X. If there is a "normalized" layer, it is set alternatively
     """
 
     input:
         llava_labels=rules.llava_annotate_clusters.output.adata,  # TODO use CSV in future and take rules.leiden_umap_embeddings.output.adata as additional input
-        single_cellm_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels
+        # single_cellm_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels,
         full_data=PROJECT_DIR / config["paths"]["full_dataset"],
     output:
         adata=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "cellxgene.h5ad"
