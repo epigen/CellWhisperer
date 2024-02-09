@@ -53,6 +53,12 @@ class SingleCeLLMCLI(LightningCLI):
         super().__init__(*args, **kwargs)
 
     def add_arguments_to_parser(self, parser):
+        parser.add_argument(
+            "--model_ckpt",
+            type=Path,
+            default=None,
+            help="Path to a checkpoint to load. This might override some of the other args (to be tested). Difference to --ckpt_path is that it does not restore the trainer/optimizer state.",
+        )
         parser.add_argument("--best_model_path", type=Path, default=None)
         parser.add_argument("--log_level", default="WARNING")
         parser.add_argument("--dap_debug", action="store_true")
@@ -122,46 +128,52 @@ class SingleCeLLMCLI(LightningCLI):
             start_debugger(wait_for_client=True)
 
     def before_fit(self) -> None:
-        # We need to preload this model
-        if self.model.model.config.locking_mode[0] == "u":
-            transcriptome_model_path = None
-        else:
-            transcriptome_model_path = model_path_from_name(
-                self.model.model.transcriptome_model.config.model_type
-            )
+        if not self.config["fit.ckpt_path"] and not self.config["fit.model_ckpt"]:
+            # We need to preload this model
+            if self.model.model.config.locking_mode[0] == "u":
+                transcriptome_model_path = None
+            else:
+                transcriptome_model_path = model_path_from_name(
+                    self.model.model.transcriptome_model.config.model_type
+                )
 
-        if self.model.model.config.locking_mode[1] == "u":
-            text_model_path = None
-        else:
-            text_model_path = model_path_from_name(
-                self.model.model.text_model.config.model_type
-            )
+            if self.model.model.config.locking_mode[1] == "u":
+                text_model_path = None
+            else:
+                text_model_path = model_path_from_name(
+                    self.model.model.text_model.config.model_type
+                )
 
-        if (
-            self.model.model.config.locking_mode[0] != "L"
-            and self.model.model.transcriptome_model.config.model_type == "scgpt"
-        ):
-            #  NOTE: because of FSDP being incapable of implicitly handling fp16 and fp32 conversion, we need to use scGPT without flash-attention and with 32 bit
-            logging.warning(
-                "scgpt requireds 32 bit (and in consequence not flash attention). make sure that scgpt_config.fast_transformer is False"
-            )
+            if (
+                self.model.model.config.locking_mode[0] != "L"
+                and self.model.model.transcriptome_model.config.model_type == "scgpt"
+            ):
+                #  NOTE: because of FSDP being incapable of implicitly handling fp16 and fp32 conversion, we need to use scGPT without flash-attention and with 32 bit
+                logging.warning(
+                    "scgpt requireds 32 bit (and in consequence not flash attention). make sure that scgpt_config.fast_transformer is False"
+                )
 
-        try:
-            self.model.load_pretrained_models(
-                transcriptome_model_path,
-                text_model_path,
-            )
-        except FileNotFoundError:
-            logging.error(
-                "Unable to find the transcriptome model. Please download first (see `rna` snakemake pipeline). For scGPT: https://drive.google.com/drive/folders/1oWh_-ZRdhtoGQ2Fw24HP41FgLoomVo-y"
-            )
-            raise
+            try:
+                self.model.load_pretrained_models(
+                    transcriptome_model_path,
+                    text_model_path,
+                )
+            except FileNotFoundError:
+                logging.error(
+                    "Unable to find the transcriptome model. Please download first (see `rna` snakemake pipeline). For scGPT: https://drive.google.com/drive/folders/1oWh_-ZRdhtoGQ2Fw24HP41FgLoomVo-y"
+                )
+                raise
 
-        if not bool(self.config["fit.batch_size"]):
-            tuner = Tuner(self.trainer)
-            tuner.scale_batch_size(
-                self.model, datamodule=self.datamodule, mode="binsearch", init_val=8
-            )  # requires batch_size argument in datamodule or model
+            if not bool(self.config["fit.batch_size"]):
+                tuner = Tuner(self.trainer)
+                tuner.scale_batch_size(
+                    self.model, datamodule=self.datamodule, mode="binsearch", init_val=8
+                )  # requires batch_size argument in datamodule or model
+        elif self.config["fit.model_ckpt"]:  # model loading needs to be done implicitly
+            logging.warning("Loading model from checkpoint. All other args are ignored")
+            self.model = TranscriptomeTextDualEncoderLightning.load_from_checkpoint(
+                self.config["fit.model_ckpt"]
+            )
 
         # disabled for sweeps  # TODO could check for trainer.logger.run.sweep_id or so?
         # self.trainer.logger.watch(self.model, log="gradients")
