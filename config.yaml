@@ -17,7 +17,7 @@ paths:
   jointemb_models: results/models/jointemb
   wandb_logs: results/wandb_logging
   datamodule_prepared_path: results/{dataset}/lightning-processed/{hash}.pt
-  model_cache: results/cache/{model_hash}.pkl
+  cache: results/cache  # overwritable with CELLWHISPERER_CACHE env
   cancer_gene_essentiality:
     ccle_expression: CCLE_RNAseq_genes_counts_20180929.gct.gz
     essential_genes: resources/cancer_gene_essentiality/CRISPRInferredCommonEssentials.csv

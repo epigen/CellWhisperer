@@ -388,7 +388,7 @@ def get_performance_metrics_transcriptome_vs_text(
 def anndata_to_scored_keywords(
     transcriptome_input: Union[anndata.AnnData, torch.Tensor],
     model: Optional[TranscriptomeTextDualEncoderModel],
-    terms_json_path: Union[str, Path],
+    terms: Union[str, Path, Dict],
     transcriptome_processor: Union[
         GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor
     ],
@@ -404,7 +404,7 @@ def anndata_to_scored_keywords(
     :param transcriptome_input: Either: anndata.AnnData instance, then all cells in the object will be used to compute a single transcriptome embedding. \
                   Or: torch.tensor instance (n_cells * embedding_dim), then the provided transcriptome embeddings will be used.
     :param model: TranscriptomeTextDualEncoderModel instance. Both transcriptome and text embeddings will be computed using this model.
-    :param terms_json_path: Path to the json file containing the EnrichR terms (keys: libraries, values: list of terms)
+    :param terms: Either a `Path` or `str` to the json file containing the biological terms to match transcriptomes against (e.g. Enrichr) or a dict containing such terms. Expected format in both cases: (keys: library name, values: list of terms)
     :param transcriptome_processor: GeneformerTranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to tokenize/prepare the transcriptome.
     :param text_tokenizer: AutoTokenizer instance. Used to tokenize the text.
     :param average_mode: "cells" or "embeddings". If "cells", first average the transcriptome data across all cells, then tokenize and embed. \
@@ -442,9 +442,6 @@ def anndata_to_scored_keywords(
             f"transcriptome_input must be either an anndata.AnnData instance or a torch.tensor, but is {type(transcriptome_input)}"
         )
 
-    assert os.path.exists(
-        terms_json_path
-    ), f"terms_json_path {terms_json_path} does not exist"
     assert score_norm_method in [
         "zscore",
         "softmax",
@@ -452,11 +449,14 @@ def anndata_to_scored_keywords(
         None,
     ], f"score_norm_method must be one of ['zscore', 'softmax', '01norm'], but is {score_norm_method}"
 
-    ### Prepare text ###
+    if isinstance(terms, (str, Path)):
+        assert os.path.exists(terms), f"terms json path {terms} does not exist"
 
-    # EnrichR terms
-    with open(terms_json_path, "r") as f:
-        terms = json.load(f)
+        ### Prepare text ###
+
+        # EnrichR terms
+        with open(terms, "r") as f:
+            terms = json.load(f)
 
     n_terms_per_lib = {lib: len(terms[lib]) for lib in terms.keys()}
     terms_list = [term for lib in terms.keys() for term in terms[lib]]  # 16366 terms

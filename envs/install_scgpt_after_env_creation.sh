@@ -11,3 +11,6 @@ pip install --no-deps scgpt
 
 # potentially useful: https://github.com/bowang-lab/scGPT/issues/15#issuecomment-1791120487
 # or https://github.com/bowang-lab/scGPT/issues/69#issuecomment-1737520314
+
+
+# TODO expand this to also install cellxgene

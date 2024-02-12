@@ -86,7 +86,7 @@ if run_example:
     similarity_scores_df = anndata_to_scored_keywords(
         adata_or_embedding=adata,
         model=model,
-        terms_json_path=terms_json_path,
+        terms=terms_json_path,
         transcriptome_processor=transcriptome_processor,
         text_tokenizer=text_tokenizer,
         device=device,

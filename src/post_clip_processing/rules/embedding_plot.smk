@@ -47,7 +47,6 @@ rule single_cellm_annotate_clusters:
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
     output:
         csv=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "single_cellm_annotated_clusters.csv",
-        term_embeddings=
     conda:
         "single-cellm"
     log:
@@ -81,13 +80,15 @@ rule compile_h5ad:
 
     input:
         llava_labels=rules.llava_annotate_clusters.output.adata,  # TODO use CSV in future and take rules.leiden_umap_embeddings.output.adata as additional input
-        # single_cellm_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels,
+        single_cellm_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels,
         full_data=PROJECT_DIR / config["paths"]["full_dataset"],
         processed_data=PROJECT_DIR / config["paths"]["model_processed_dataset"], # rules.process_full_dataset.output.model_outputs,
         enrichr_terms=PROJECT_DIR / config["paths"]["enrichr_terms_json"],
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
     output:
         adata=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "cellxgene.h5ad"
+    params:
+        max_categories_filter=500
     conda:
         "single-cellm"
     log:

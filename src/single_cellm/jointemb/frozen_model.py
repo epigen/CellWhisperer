@@ -16,7 +16,7 @@ import torch
 import hashlib
 import logging
 from single_cellm.jointemb.scgpt_model import ScGPTConfig
-from single_cellm.config import get_path
+from single_cellm.config import get_cache_dir
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,9 @@ def hash_object(obj):
         return hashlib.sha256(
             str({k: hash_object(v) for k, v in obj.items()}).encode()
         ).hexdigest()
-    elif isinstance(obj, ScGPTConfig):  # need to convert unhashable Path for ScGPTConfig
+    elif isinstance(
+        obj, ScGPTConfig
+    ):  # need to convert unhashable Path for ScGPTConfig
         obj_to_dict = obj.to_dict()
         obj_to_dict["vocab_path"] = str(
             obj_to_dict["vocab_path"]
@@ -62,7 +64,7 @@ class FrozenCachedModel(nn.Module):
         logging.info(f"Initializing frozen model with hash {self.model_hash}")
         logging.debug(f"Corresponding model config: {self.model.config}")
 
-        self.cache_file = get_path(["paths", "model_cache"], model_hash=self.model_hash)
+        self.cache_file = Path(get_cache_dir()) / f"{self.model_hash}.pkl"
         self.cache = self._load_cache()
 
     @property
@@ -91,6 +93,7 @@ class FrozenCachedModel(nn.Module):
         Try to load the cache file and if it does not exist, return an empty cache
         """
         cache = {}
+        logging.info(f"Loading cache: {self.cache_file}")
         if self.cache_file is not None:
             for _ in range(3):
                 try:
@@ -119,7 +122,7 @@ class FrozenCachedModel(nn.Module):
     def save_cache(self):
         if self.cache_file is None:
             return
-        logger.info("Saving cache")
+        logger.info(f"Saving cache: {self.cache_file}")
 
         assert self.model_hash == hash_object(
             self.model.parameters()
@@ -127,7 +130,7 @@ class FrozenCachedModel(nn.Module):
 
         logger.info(f"Saving cache for model {self.model_hash}")
         # make sure the directory exists
-        Path(self.cache_file).parent.mkdir(parents=True, exist_ok=True)
+        self.cache_file.parent.mkdir(parents=True, exist_ok=True)
         for _ in range(3):
             try:
                 with open(self.cache_file, "wb") as f:

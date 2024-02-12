@@ -15,8 +15,6 @@ from lightning import LightningDataModule
 import logging
 from single_cellm.jointemb.processing import TranscriptomeTextDualEncoderProcessor
 from torch.utils.data import Dataset, DataLoader
-from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
-from single_cellm.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
 from transformers import AutoTokenizer
 import anndata
 from single_cellm.config import get_path, model_path_from_name

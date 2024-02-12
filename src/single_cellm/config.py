@@ -3,6 +3,7 @@ from pathlib import Path
 import logging
 import yaml
 import torch
+import os
 
 
 def _read_config(config_file: Optional[Union[str, Path]] = None) -> Dict:
@@ -31,6 +32,10 @@ def _read_config(config_file: Optional[Union[str, Path]] = None) -> Dict:
 
 
 config = _read_config()
+
+
+def get_cache_dir():
+    return os.getenv("CELLWHISPERER_CACHE", get_path(["paths", "cache"]))
 
 
 def get_path(config_keys: List[str], __c=config, __testing=False, **kwargs):

@@ -8,7 +8,7 @@ TARGET_DATASETS = ["tabula_sapiens"]  # config["datasets"]  # , later: "tabula_s
 
 include: "rules/dataset_processing.smk"
 include: "rules/llava.smk"
-include: "rules/embedding_plot.smk"
+include: "rules/embedding_plot.smk"  # TODO rename
 include: "rules/single_cell_finetune.smk"
 
 

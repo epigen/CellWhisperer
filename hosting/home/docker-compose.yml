@@ -1,0 +1,72 @@
+version: '3.8'
+services:
+  cellxgene_tabsap: &default-service
+    build: .
+    runtime: nvidia
+    working_dir: /opt/single-cellm
+    volumes:
+      - ./docker_conda:/opt/miniconda3
+      - ./start.sh:/start.sh
+      - ~/single-cellm:/opt/single-cellm
+      - ~/single-cellm/results/tabula_sapiens/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+      - ~/single-cellm/results/models/jointemb/03jujd8s.ckpt:/model.ckpt
+      - cache_tabsap:/cache/
+    command: /bin/bash /start.sh
+    stdin_open: true
+    tty: true
+    environment:
+      NVIDIA_VISIBLE_DEVICES: GPU-c38cbc2d-129a-dddf-9ed4-8a0e06763d33
+      # CXG_CLIENT_PORT: 3000
+      CXG_OPTIONS: "--host 0.0.0.0 --max-category-items 500 --backed"
+      CXG_SERVER_PORT: 5005
+      DATASET: "/dataset.h5ad"
+      MODEL: "/model.ckpt"
+      JEST_ENV: "prod"
+      RETRY_ATTEMPTS: 2
+      CONDA_ENV: single-cellm
+      TRANSFORMERS_CACHE: /cache/transformers
+      CELLWHISPERER_CACHE: /cache/cellwhisperer
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              driver: nvidia
+
+  cellxgene_geo:
+    <<: *default-service
+    volumes:
+      - ./docker_conda:/opt/miniconda3
+      - ./start.sh:/start.sh
+      - ~/single-cellm:/opt/single-cellm
+      - ~/single-cellm/results/archs4_metasra/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+      - ~/single-cellm/results/models/jointemb/03jujd8s.ckpt:/model.ckpt
+      - cache_geo:/cache/
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./static:/static
+    ports:
+      - "80:80"
+    depends_on:
+      - cellxgene_tabsap
+      - cellxgene_geo  # Add dependency if needed
+    restart: unless-stopped
+
+  website_builder:  # TODO untested
+    build: .
+    volumes:
+      - ~/single-cellm:/opt/single-cellm
+    working_dir: /opt/single-cellm/modules/cellxgene
+    environment:
+      CONDA_ENV: single-cellm
+    command: sh -c "conda activation source $INSTALL_DIR/etc/profile.d/conda.sh; source activate ${CONDA_ENV}; make build-for-server-dev"
+    deploy:
+      restart_policy:
+        condition: none
+
+volumes:
+  cache_geo:
+  cache_tabsap:

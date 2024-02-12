@@ -2,9 +2,7 @@ from typing import Union, Iterable, Optional, Any
 import logging
 from single_cellm.jointemb.model import TranscriptomeTextDualEncoderModel
 from single_cellm.config import get_path, model_path_from_name
-from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
 from single_cellm.jointemb.processing import TranscriptomeTextDualEncoderProcessor
-from single_cellm.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
 from single_cellm.validation.zero_shot.functions import (
     get_performance_metrics_transcriptome_vs_text,
 )

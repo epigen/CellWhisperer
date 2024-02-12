@@ -25,7 +25,8 @@ https://github.com/epigen/single-cellm/wiki
 
 See [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md). In short:
 
-- Run `export NODE_OPTIONS=--openssl-legacy-provider` ([workaround](https://stackoverflow.com/questions/69692842/error-message-error0308010cdigital-envelope-routinesunsupported))
+- Make sure you have npm (install via conda or apt-get)
+- For older versions of npm, run `export NODE_OPTIONS=--openssl-legacy-provider` ([workaround](https://stackoverflow.com/questions/69692842/error-message-error0308010cdigital-envelope-routinesunsupported))
 - Build the client and put static files in place: `make build-for-server-dev`
 - Install from local files: `make install-dev`
 - Install prereqs for client: `make dev-env`
@@ -69,6 +70,9 @@ To run sweeps, refer to [this README](./src/experiments/sweeps/README.md). You c
 `trainer.fast_dev_run`: Name is self-explanatory. Super useful for debugging
 `ckpt_path`: a path (to load a model, e.g. for resuming)
 
+### Run
+Use `CELLWHISPERER_CACHE=/cache/cellwhisperer` to define a different cache folder
+
 ## Folder structure
 
 - data: Computationally non-reproducible, expensive, or painful to reproduce
@@ -79,7 +83,7 @@ To run sweeps, refer to [this README](./src/experiments/sweeps/README.md). You c
 
 ### Code style
 
-We use `blacken` for automated code formatting. 
+We use `blacken` for automated code formatting.
 
 ## How to install a new library (i.e. extend the environment)?
 
@@ -90,3 +94,6 @@ We use `blacken` for automated code formatting.
 4.1 Update your env conda env: `conda env update --file environment.yml`
 4.2 create a fresh environment for testing from the new main.yaml (`conda env create -f envs/main.yml -n test_tmp_env`)
 
+
+## Deploy
+See files in `hosting/home`
