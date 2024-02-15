@@ -1,14 +1,14 @@
 from pathlib import Path
 import logging
 import torch
-from single_cellm.jointemb.model import TranscriptomeTextDualEncoderModel
-from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
-from single_cellm.validation.zero_shot.functions import (
+from cellwhisperer.jointemb.model import TranscriptomeTextDualEncoderModel
+from cellwhisperer.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
+from cellwhisperer.validation.zero_shot.functions import (
     anndata_to_scored_keywords,
     formatted_text_from_df,
 )
-from single_cellm.misc.cuda import get_device
-from single_cellm.config import get_path, config
+from cellwhisperer.misc.cuda import get_device
+from cellwhisperer.config import get_path, config
 from transformers import AutoTokenizer
 import anndata
 import subprocess
@@ -48,14 +48,14 @@ if run_example:
         )
         adata = adata[adata.obs["cell_ontology_class"] == "mature nk t cell"]
 
-    # Load the enrichr terms path (assumes this is already pre-computed, see single-cellm/src/validation/zero_shot/write_enrichr_terms.py):
+    # Load the enrichr terms path (assumes this is already pre-computed, see cellwhisperer/src/validation/zero_shot/write_enrichr_terms.py):
     terms_json_path = get_path(["paths", "enrichr_terms_json"])
 
     # Model loading
     logging.info("Loading LLM embedding model...")
-    # TODO load trained model checkpoint (see single_cellm_lightning.py)
+    # TODO load trained model checkpoint (see cellwhisperer_lightning.py)
     geneformer_biogpt_model_path = Path(
-        "~/projects/single-cellm/results/models/geneformer-biogpt"
+        "~/projects/cellwhisperer/results/models/geneformer-biogpt"
     ).expanduser()
     device = get_device()
     model = TranscriptomeTextDualEncoderModel.from_pretrained(

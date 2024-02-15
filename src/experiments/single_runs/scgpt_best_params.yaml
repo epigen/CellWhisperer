@@ -23,7 +23,7 @@ trainer:
       checkpoint_name: null
       job_type: null
       config: null
-      entity: single-cellm
+      entity: cellwhisperer
       reinit: null
       tags: null
       group: null

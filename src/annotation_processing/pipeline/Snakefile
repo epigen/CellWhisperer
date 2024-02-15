@@ -67,7 +67,7 @@ rule process_annotation_openai:
         processed_annotation = protected(PROCESSED_FILE_OPENAI),  # I marked this as protected as it might be costly to produce
     conda:
         PROJECT_DIR / "envs" / "main.yaml"
-        # "single-cellm"
+        # "cellwhisperer"
     script:
         "scripts/process_annotations.py"
 
@@ -125,7 +125,7 @@ rule integrate_dataset:
     params:
         anndata_label_name=config["anndata_label_name"],
     conda:
-        "single-cellm"
+        "cellwhisperer"
         # PROJECT_DIR / "envs" / "main.yaml"
     script:
         "scripts/integrate_dataset.py"

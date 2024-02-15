@@ -5,7 +5,7 @@
             "type": "python",
             "request": "launch",
             "name": "Run training fast_dev_run with default config",
-            "program": "${workspaceFolder}/src/single_cellm/jointemb/training.py",
+            "program": "${workspaceFolder}/src/cellwhisperer/jointemb/training.py",
             "args": [
                 "fit",
                 "--trainer.fast_dev_run",
@@ -27,7 +27,7 @@
             "type": "python",
             "request": "launch",
             "name": "Run training fit with run_config.yaml",
-            "program": "${workspaceFolder}/src/single_cellm/jointemb/training.py",
+            "program": "${workspaceFolder}/src/cellwhisperer/jointemb/training.py",
             "args": [
                 "fit",
                 "--config",
@@ -49,8 +49,8 @@
             },
             "pathMappings": [
                 {
-                    "localRoot": "/home/moritz/Projects/single-cellm",
-                    "remoteRoot": "/msc/home/mschae83/single-cellm"
+                    "localRoot": "/home/moritz/Projects/cellwhisperer",
+                    "remoteRoot": "/msc/home/mschae83/cellwhisperer"
                 }
             ],
             "justMyCode": false
@@ -59,7 +59,7 @@
             "type": "python",
             "request": "launch",
             "name": "Debug sweeping",
-            "program": "${workspaceFolder}/src/single_cellm/jointemb/sweeping.py",
+            "program": "${workspaceFolder}/src/cellwhisperer/jointemb/sweeping.py",
             "args": [
                 "--sweep_config",
                 "${workspaceFolder}/src/experiments/sweeps/debug_sweep/sweep_config.yaml",

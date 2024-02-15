@@ -1,19 +1,19 @@
-# single-cellm
-single ceLLM project
+# cellwhisperer
+CellWhisperer project
 
 For more information on project management, follow
-https://github.com/epigen/single-cellm/wiki
+https://github.com/epigen/cellwhisperer/wiki
 
 
 ## Installation instructions
 
-1. Run `git clone git@github.com:epigen/single-cellm.git --recurse-submodules`
+1. Run `git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules`
   If you already cloned, but did not add the `--recurse-submodules` run the following:
   `git submodule update --init --recursive`
 2. Install the environment
   ```
   mamba env create -f envs/main.yaml  # this already includes `pip install -e .`
-  conda activate single-cellm
+  conda activate cellwhisperer
   ```
 3. Install scgpt and flash-attn (they need pip installation flags to be installed properly)
    ```
@@ -50,9 +50,9 @@ We rely on pytorch lightning, which significantly reduces boilerplate for a mult
 Before training, make sure to read the [LightningCLI documentation](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html) (the three Basics are enough). It's short and really helpful! E.g. to start a run do this:
 
 ```bash
-single_cellm fit --print_config > run_config.yaml
+cellwhisperer fit --print_config > run_config.yaml
 # configure run_config.yaml
-single_cellm fit --config run_config.yaml
+cellwhisperer fit --config run_config.yaml
 ```
 
 ### Sweeps
@@ -87,7 +87,7 @@ We use `blacken` for automated code formatting.
 
 ## How to install a new library (i.e. extend the environment)?
 
-1. Load the environment, defined by envs/main.yaml with conda (`conda activate singlecellm`)
+1. Load the environment, defined by envs/main.yaml with conda (`conda activate cellwhisperer`)
 2. Install the package of interest (`conda install <your_package>`)
 3. If everything works pin the package you installed in main.yaml with its version.
 4. Before commiting do one of the two

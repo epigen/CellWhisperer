@@ -2,9 +2,9 @@
 requires = ["setuptools", "wheel"]
 
 [project]
-name = "single-cellm"
+name = "cellwhisperer"
 version = "0.1.0"
-description = "single ceLLM"
+description = "CellWhisperer"
 readme = "README.md"
 authors = [{name = "Moritz Schaefer", email = "mail@moritzs.de"}]
 keywords = ["single cell llm"]
@@ -16,18 +16,18 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
 ]
-# homepage = "https://github.com/epigen/single-cellm"
+# homepage = "https://github.com/epigen/cellwhisperer"
 
 [project.scripts]
-single_cellm = "single_cellm.jointemb.training:cli_main"
-single_cellm_sweeping = "single_cellm.jointemb.sweeping:main"
+cellwhisperer = "cellwhisperer.jointemb.training:cli_main"
+cellwhisperer_sweeping = "cellwhisperer.jointemb.sweeping:main"
 
 [tool.setuptools.packages.find]
 where = ["src", "modules/Geneformer", "modules"]
 namespaces = false
-# packages = ["single_cellm", "geneformer"]
+# packages = ["cellwhisperer", "geneformer"]
 
 [tool.setuptools.package-dir]
-"single_cellm" = "src/single_cellm"
+"cellwhisperer" = "src/cellwhisperer"
 "geneformer" = "modules/Geneformer/geneformer"
 "clip_lite" = "modules/clip_lite"

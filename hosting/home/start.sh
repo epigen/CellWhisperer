@@ -20,7 +20,7 @@ if [ ! -f "$INSTALL_DIR/bin/conda" ]; then
     # Remove the installer
     rm /tmp/miniconda.sh
     # Initialize Miniconda
-    $INSTALL_DIR/bin/conda init bash  # TODO this maybe needs to always be executed?
+    $INSTALL_DIR/bin/conda init bash  # NOTE this might not be necessary
 else
     echo "Miniconda is already installed in $INSTALL_DIR."
 fi

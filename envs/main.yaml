@@ -1,4 +1,4 @@
-name: single-cellm
+name: cellwhisperer
 channels:
   - conda-forge
   - pytorch
@@ -20,6 +20,7 @@ dependencies:
   - bioconda::pybiomart=0.2.0
   - anaconda::utf8proc=2.6.1
   - pytorch-cuda=12.1
+  - notebook=7.0.8
   - cuda-nvcc=12.1
   - cuda-toolkit=12.1
   - snakemake=7.32.4
@@ -48,3 +49,4 @@ dependencies:
     - cell-gears==0.0.2
     - umap-learn==0.5.5
     - -e ..
+    - -e ../modules/cellxgene/

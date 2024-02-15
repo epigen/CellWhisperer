@@ -1,14 +1,14 @@
 # requires you to set up kaggle API (https://github.com/Kaggle/kaggle-api?tab=readme-ov-file)
 
 sys.path.insert(0, Path(workflow.basedir).parents[1].as_posix())
-from single_cellm.config import get_path, config  # TODO could replace this with configfile:
+from cellwhisperer.config import get_path, config  # TODO could replace this with configfile:
 
 DATASET_NAME = "perturbation_kaggle"
 RESOURCE_PATH = config["PROJECT_ROOT"] / "resources" / DATASET_NAME
 RESULTS_PATH = config["PROJECT_ROOT"] / "results" / DATASET_NAME
 
 EMBEDDING_SENTENCE = lambda wildcards: "{cell_type} sample treated with {sm_name} ({sm_lincs_id})"
-CONDA_ENV_NAME = "single-cellm6"
+CONDA_ENV_NAME = "cellwhisperer6"
 NUM_FOLDS = 3
 
 rule all:
@@ -61,7 +61,7 @@ rule pretrain:
         CONDA_ENV_NAME
         #config["PROJECT_ROOT"] / "envs" / "main.yaml"
     shell: """
-        single_cellm fit --config configs/pretrain.yaml --best_model_path {output}
+        cellwhisperer fit --config configs/pretrain.yaml --best_model_path {output}
     """
 
 # TODO from here on below should go somewhere else maybe
@@ -78,7 +78,7 @@ rule fine_tune:
         CONDA_ENV_NAME
         #config["PROJECT_ROOT"] / "envs" / "main.yaml"
     shell: """
-        single_cellm fit --ckpt_path {input.model} --config {input.fine_tuning_config} --best_model_path {output} --trainer.logger.init_args.mode disabled
+        cellwhisperer fit --ckpt_path {input.model} --config {input.fine_tuning_config} --best_model_path {output} --trainer.logger.init_args.mode disabled
     """
 
 rule train_deg_head:

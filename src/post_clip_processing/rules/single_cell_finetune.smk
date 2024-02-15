@@ -20,12 +20,12 @@ rule tabsap_finetuning:
         mem_mb=100000,
         slurm="cpus-per-task=20 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
     conda:
-        "single-cellm"
+        "cellwhisperer"
     shell:
         """
         # TODO note that this was last time run without the last 3 params
-        cd /msc/home/mschae83/single-cellm/
-        single_cellm fit \
+        cd /msc/home/mschae83/cellwhisperer/
+        cellwhisperer fit \
         --config {input.config} \
         --model_ckpt {input.model} \
         --data.dataset_name {wildcards.dataset} \

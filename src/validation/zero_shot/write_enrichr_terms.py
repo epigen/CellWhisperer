@@ -11,7 +11,7 @@ import anndata
 try:
     pwd = Path(__file__).parent
 except NameError:
-    pwd = "/home/moritz/Projects/single-cellm/src"
+    pwd = "/home/moritz/Projects/cellwhisperer/src"
 PROJECT_DIR = Path(
     subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=pwd)
     .decode("utf-8")

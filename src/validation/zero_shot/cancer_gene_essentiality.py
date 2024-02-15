@@ -1,7 +1,7 @@
-from single_cellm.jointemb.single_cellm_lightning import (
+from cellwhisperer.jointemb.cellwhisperer_lightning import (
     TranscriptomeTextDualEncoderLightning,
 )
-from single_cellm.validation.zero_shot.cancer_gene_essentiality import (
+from cellwhisperer.validation.zero_shot.cancer_gene_essentiality import (
     evaluate_cancer_gene_essentiality,
 )
 

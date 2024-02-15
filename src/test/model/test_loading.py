@@ -1,22 +1,22 @@
 import unittest
 from pathlib import Path
 import torch
-from single_cellm.validation import initialize_validation_functions
-from single_cellm.jointemb.single_cellm_lightning import (
+from cellwhisperer.validation import initialize_validation_functions
+from cellwhisperer.jointemb.cellwhisperer_lightning import (
     TranscriptomeTextDualEncoderLightning,
 )  # Replace with the correct import
 
-from server.common.compute.single_cellm_wrapper import SingleCeLLMWrapper
+from server.common.compute.cellwhisperer_wrapper import CellWhispererWrapper
 
 
 class TestModel(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Load the model as part of the setup.
-        cls.single_cellm = SingleCeLLMWrapper(
-            "~/single-cellm/results/wandb_logging/JointEmbed_Training/f6fjywkb/checkpoints/last.ckpt"
+        cls.cellwhisperer = CellWhispererWrapper(
+            "~/cellwhisperer/results/wandb_logging/JointEmbed_Training/f6fjywkb/checkpoints/last.ckpt"
         )
-        cls.pl_model = cls.single_cellm.pl_model
+        cls.pl_model = cls.cellwhisperer.pl_model
 
         cls.validation_functions = initialize_validation_functions(
             batch_size=32,
@@ -33,7 +33,7 @@ class TestModel(unittest.TestCase):
     def test_model_parameters(self):
         # Check if the model parameters are the same as in the checkpoint
         checkpoint = torch.load(
-            str(self.single_cellm.model_path), map_location=self.single_cellm.device
+            str(self.cellwhisperer.model_path), map_location=self.cellwhisperer.device
         )
         state_dict = checkpoint["state_dict"]
         for name, param in self.pl_model.named_parameters():

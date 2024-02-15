@@ -12,7 +12,7 @@ user=$(whoami)
 
 source /msc/home/mschae83/.bashrc
 # conda info --envs
-source activate single-cellm-moritz2
+source activate cellwhisperer-moritz2
 
-cd /msc/home/mschae83/single-cellm/src/single_cellm/jointemb
+cd /msc/home/mschae83/cellwhisperer/src/cellwhisperer/jointemb
 python training.py

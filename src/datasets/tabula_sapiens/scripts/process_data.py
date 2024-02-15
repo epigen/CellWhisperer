@@ -2,7 +2,7 @@ import anndata
 
 data = anndata.read_h5ad(snakemake.input[0])
 
-# Rename gene_symbol to gene_name (default name in single ceLLM framework)
+# Rename gene_symbol to gene_name (default name in CellWhisperer framework)
 data.var.rename(columns={"gene_symbol": "gene_name"}, inplace=True)
 
 # Set the raw counts as the default layer

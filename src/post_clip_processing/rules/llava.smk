@@ -25,13 +25,13 @@ rule create_text_dataset:
         transcriptome_tag="<image>",  # we stick to <image> because of the llava code base
         anndata_label_name=config["anndata_label_name"]
     conda:
-        "single-cellm"
+        "cellwhisperer"
     notebook:
         "../notebooks/create_text_dataset.py.ipynb"
 
 rule pretrain_llava:
     """
-    Based on /home/moritz/Projects/single-cellm/modules/LLaVA/scripts/v1_5/pretrain.sh
+    Based on /home/moritz/Projects/cellwhisperer/modules/LLaVA/scripts/v1_5/pretrain.sh
 
     LLaVA takes these image patches as tokens, so a single image leads to ~100(?) text tokens.
     Our transcriptome model returns a single embedding, so to provide more "information power" to the language model, I convert it to 4 tokens.
@@ -61,7 +61,7 @@ rule pretrain_llava:
             CMD="python $PYTHON_SCRIPT"
         fi
 
-        # TODO for faster debugging try facebook/opt-125m
+        # NOTE for faster debugging try facebook/opt-125m
         $CMD \
             --data_path {input.data_path} \
             --image_data {input.image_data} \
@@ -98,12 +98,12 @@ rule pretrain_llava:
 
 rule finetune_llava:
     """
-    Based on /home/moritz/Projects/single-cellm/modules/LLaVA/scripts/v1_5/pretrain.sh
+    Based on /home/moritz/Projects/cellwhisperer/modules/LLaVA/scripts/v1_5/pretrain.sh
 
     # Runs like this on 3 80GB GPUs:
     srun -N1 -q a100-sxm4-80gb -c 30 --partition gpu --gres=gpu:a100-sxm4-80gb:4 --mem=200G --pty bash
 
-    # TODO maybe decrease learning rate (or the number of training samples)
+    # TODO consider decreasing learning rate (in function of the number of training samples)
     """
     input:
         data_path=rules.create_text_dataset.output[0].format(dataset=TRAINING_DATASET),
@@ -130,7 +130,7 @@ rule finetune_llava:
             CMD="python $PYTHON_SCRIPT"
         fi
 
-        # TODO for faster debugging try facebook/opt-125m
+        # NOTE for faster debugging try facebook/opt-125m
         $CMD \
             --data_path {input.data_path} \
             --image_data {input.image_data} \

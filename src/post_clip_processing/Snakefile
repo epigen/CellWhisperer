@@ -2,13 +2,13 @@ PROJECT_DIR = Path(workflow.basedir).resolve().parents[1]
 configfile: PROJECT_DIR / "config.yaml"
 
 TRAINING_DATASET = "archs4_metasra"  # Don't change this
-CLIP_MODEL = config["model_name_path_map"]["single_cellm"]
+CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
 LLAVA_BASE_MODEL = "vicuna-7b-v1.5"
-TARGET_DATASETS = ["tabula_sapiens"]  # config["datasets"]  # , later: "tabula_sapiens", "daniel"
+TARGET_DATASETS = ["daniel"]  # config["datasets"] "tabula_sapiens", 
 
 include: "rules/dataset_processing.smk"
 include: "rules/llava.smk"
-include: "rules/embedding_plot.smk"  # TODO rename
+include: "rules/dataset_annotation.smk"
 include: "rules/single_cell_finetune.smk"
 
 

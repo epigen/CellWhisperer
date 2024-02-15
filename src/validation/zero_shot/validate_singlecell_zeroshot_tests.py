@@ -1,15 +1,15 @@
-from single_cellm.jointemb.model import TranscriptomeTextDualEncoderModel
-from single_cellm.validation.zero_shot.single_cell_annotation import (
+from cellwhisperer.jointemb.model import TranscriptomeTextDualEncoderModel
+from cellwhisperer.validation.zero_shot.single_cell_annotation import (
     SingleCellZeroshotValidationScoreCalculator,
 )
-from single_cellm.validation.zero_shot.retrieval import RetrievalScoreCalculator
+from cellwhisperer.validation.zero_shot.retrieval import RetrievalScoreCalculator
 
-from single_cellm.config import get_path, config
+from cellwhisperer.config import get_path, config
 import torch
-from single_cellm.jointemb.dataset.jointemb import JointEmbedDataModule
+from cellwhisperer.jointemb.dataset.jointemb import JointEmbedDataModule
 import torch
-from single_cellm.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
-from single_cellm.validation.zero_shot.functions import (
+from cellwhisperer.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
+from cellwhisperer.validation.zero_shot.functions import (
     get_performance_metrics_transcriptome_vs_text,
 )
 from transformers import AutoTokenizer
@@ -152,7 +152,7 @@ if True:
         transcriptome_processor=transcriptome_processor,
         text_list_or_text_embeds=text_tensor,
         correct_text_idx_per_transcriptome=transcriptome_annotations,
-        transcriptome_annotations=transcriptome_annotations,
+        grouping_keys=grouping_keys,
         average_mode="embeddings",
     )
 

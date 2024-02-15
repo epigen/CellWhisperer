@@ -1,7 +1,7 @@
 """
 Deduplication of datasets through clustering on the level (BERT) language model embeddings
 """
-from single_cellm.config import get_path, config
+from cellwhisperer.config import get_path, config
 import json
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -259,7 +259,7 @@ if __name__ == "__main__":
     adata_subset.write_h5ad(outpath)
 
     # TODO: Currently we're using the subsetted adatas, but we could use the full adatas and subset them later based on the obs column
-    # https://github.com/epigen/single-cellm/pull/186#discussion_r1427978801
+    # https://github.com/epigen/cellwhisperer/pull/186#discussion_r1427978801
     # This is also already prepared for in the deduplicate_dataset function. The obs column is always called "is_in_{deduplicated_dataset_name}"
     # adata.obs["is_in_immgen_deduplicated"] = [x in keep_idx for x in range(len(adata))]
     # adata.write_h5ad(get_path(["paths", f"full_dataset"], dataset="immgen"))

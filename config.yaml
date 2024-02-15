@@ -41,7 +41,7 @@ model_name_path_map:
   biogpt: microsoft/biogpt
   bert: dmis-lab/biobert-v1.1
   scgpt: resources/scGPT_human
-  single_cellm: 03jujd8s
+  cellwhisperer: 03jujd8s
     # poor choice with scgpt: 609rcmt4
 
 # Only used, if not dedicated hyperparameter config file is provided
