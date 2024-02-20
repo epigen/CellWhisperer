@@ -25,9 +25,16 @@ done
 
 ## oobabooga
 
+With this configuration (8 bit quantization), needs an 80GB GPU
+
 ```bash
-conda activate textgen
-python server.py --listen-host 0.0.0.0 --listen --api --api-port 5002 --model microsoft_Orca-2-13b
+cd /msc/home/mschae83/text-generation-webui
+./start_linux.sh  # see `git diff`, as I configured everything
+
+# alternative:
+# conda activate textgen
+# python server.py --listen-host 0.0.0.0 --listen --api --api-port 5000 --model mixtral-8x7b-instruct-v0.1.Q8_0.gguf --public-api --api-key OdNFpEua0T5TNdd0
+
 ```
 
 ## nginx
