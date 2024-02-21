@@ -473,6 +473,7 @@ rule generate_anndata_file:
     run:
         import anndata as ad
         import pandas as pd
+        import numpy as np
         from metadatamapping import archs4, metadata
 
         def read_compessed_tsv(filename):
@@ -482,7 +483,6 @@ rule generate_anndata_file:
                 compression = 'gzip'
             )
             return df
-
 
         srauids_to_biosampleuids = read_compessed_tsv(input[1])
         biosample_metadata = read_compessed_tsv(input[2])
@@ -516,4 +516,10 @@ rule generate_anndata_file:
             n_processes = threads
         )
 
-        archs4_data.write(output[0])
+        expression_index = np.array(
+            [(row > 0).sum() for row in archs4_data.X]
+        )
+
+        # based on visualization and the objective to retain as many samples as possible we use 250
+        # see notebooks/filter_samples_by_expression.ipynb for more details
+        archs4_data[expression_index > 250].write(output[0])
