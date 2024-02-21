@@ -55,6 +55,8 @@ def text_list_to_embeds(
 ) -> torch.Tensor:
     """
     Compute the text embeddings for each text in text_list.
+
+    TODO deprecated in favor of lighining module API
     :param text: List[str] instance. Each text will be tokenized and embedded.
     :param model: TranscriptomeTextDualEncoderModel instance. Used to compute the text embeddings.
     :param text_tokenizer: AutoTokenizer instance. Used to tokenize the text.

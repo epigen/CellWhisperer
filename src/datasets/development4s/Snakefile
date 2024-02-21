@@ -1,0 +1,46 @@
+"""
+Need to run `rclone --drive-shared-with-me  copy gdrive:forMoritz resources/development4s` to download the data to the resources folder :)
+GDrive link also: https://drive.google.com/drive/folders/12TiQgxzMqbkNHL49F_NahceT_AUhVlKe
+"""
+
+from pathlib import Path
+
+PROJECT_DIR = Path(workflow.basedir).resolve().parents[2]
+configfile: PROJECT_DIR / "config.yaml"
+STAGES = [1, 2, 3]
+
+rule all:
+    input:
+        expand(PROJECT_DIR / config["paths"]["read_count_table"], dataset=["development4s_raw", "development4s_scvi"]),
+        expand(PROJECT_DIR / config["paths"]["processed_annotations"], dataset=["development4s_raw", "development4s_scvi"]),
+
+rule process_read_count_matrix:
+    """
+    Preprocess and reformat the datasets to make them usable in our pipeline
+    TODO convert scvi to float32 (it's float64)
+    """
+    input:
+        raw=[PROJECT_DIR / "resources" / "development4s" / f"harm_s{stage}_raw_totgenes_moritz.adata" for stage in STAGES],
+        scvi=[PROJECT_DIR / "resources" / "development4s" / f"harm_s{stage}_scvi2500genes_moritz_potential_cellcycle.adata" for stage in STAGES]
+    output:
+        raw=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="development4s_raw"),
+        scvi=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="development4s_scvi")
+    params:
+        stages=STAGES
+    resources:
+        mem_mb=50000
+    conda:
+        "cellwhisperer"
+    notebook:
+        "notebooks/process_read_count_matrix.py.ipynb"
+
+rule generate_annotations:
+    input:
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"]
+    output:
+        structured=PROJECT_DIR / config["paths"]["structured_annotations"],
+        processed=PROJECT_DIR / config["paths"]["processed_annotations"]
+    conda:
+        "cellwhisperer"
+    script:
+        "scripts/generate_annotations.py"

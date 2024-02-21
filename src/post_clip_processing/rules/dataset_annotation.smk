@@ -15,7 +15,6 @@ rule leiden_umap_embeddings:
 
 rule llava_annotate_clusters:
     """
-    Needs a 20GB GPU
 
     Generated CSV has two cols. (1) leiden cluster ID. (2) annotation
     TODO need to change code to not produce the h5ad
@@ -32,7 +31,7 @@ rule llava_annotate_clusters:
         num_beams=10
     resources:
         mem_mb=40000,
-        slurm="cpus-per-task=5 gres=gpu:3g.20gb:1 qos=3g.20gb partition=gpu"
+        slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
     log:
         notebook="../log/llava_annotate_clusters_{dataset}_{model}.py.ipynb"
     notebook:
@@ -40,7 +39,8 @@ rule llava_annotate_clusters:
 
 rule cellwhisperer_annotate_clusters:
     """
-    Needs a 5GB GPU (we do 20 to be on the save side)
+    Needs a 5GB GPU
+
     """
     input:
         adata=rules.leiden_umap_embeddings.output.adata,
@@ -51,7 +51,7 @@ rule cellwhisperer_annotate_clusters:
         "cellwhisperer"
     resources:
         mem_mb=40000,
-        slurm="cpus-per-task=5 gres=gpu:3g.20gb:1 qos=3g.20gb partition=gpu"
+        slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
     log:
         notebook="../log/cellwhisperer_annotate_clusters_{dataset}_{model}.py.ipynb"
     notebook:
@@ -59,11 +59,15 @@ rule cellwhisperer_annotate_clusters:
 
 rule gpt4_curate_cluster_keywords:
     """
+    Output is protected to prevent high GPT-4 cost. Script also fails with more than 200 clusters
+    TODO: my key is stored in here. needs to be provided as environment variable
     """
     input:
         cellwhisperer_labels=rules.cellwhisperer_annotate_clusters.output.csv,
     output:
-        curated_labels=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "cellwhisperer_curated_annotated_clusters.csv"
+        curated_labels=protected(PROJECT_DIR / "results" / "{dataset}" / "{model}" / "cellwhisperer_curated_annotated_clusters.csv")
+    params:
+        max_num_clusters=200  # to prevent high GPT-4 cost
     conda:
         "cellwhisperer"
     notebook:

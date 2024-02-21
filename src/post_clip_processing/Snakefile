@@ -4,7 +4,7 @@ configfile: PROJECT_DIR / "config.yaml"
 TRAINING_DATASET = "archs4_metasra"  # Don't change this
 CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
 LLAVA_BASE_MODEL = "vicuna-7b-v1.5"
-TARGET_DATASETS = ["daniel"]  # config["datasets"] "tabula_sapiens", 
+TARGET_DATASETS = ["daniel", "development4s_raw", "development4s_scvi"]  # config["datasets"] "tabula_sapiens", 
 
 include: "rules/dataset_processing.smk"
 include: "rules/llava.smk"

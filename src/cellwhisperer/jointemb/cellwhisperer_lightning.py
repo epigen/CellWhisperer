@@ -15,6 +15,7 @@ from cellwhisperer.jointemb.model import (
     TranscriptomeTextDualEncoderModel,
     CLIPOutput,
 )
+from cellwhisperer.jointemb.processing import TranscriptomeTextDualEncoderProcessor
 
 from lightning.pytorch.cli import OptimizerCallable, LRSchedulerCallable
 from wandb import Artifact, Table
@@ -350,3 +351,31 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         super(TranscriptomeTextDualEncoderLightning, self).optimizer_step(
             epoch, batch_idx, optimizer, optimizer_closure
         )
+
+    # inference API
+    def embed_texts(self, texts: List[str], chunk_size=64):
+        """
+        Embed the given texts into the LLM space
+        """
+
+        processor = TranscriptomeTextDualEncoderProcessor(
+            self.model.transcriptome_model.config.model_type,
+            model_path_from_name(self.model.text_model.config.model_type),
+        )
+
+        tokenizer = processor.tokenizer
+
+        ret_list = []
+        for chunk in [
+            texts[i : i + chunk_size] for i in range(0, len(texts), chunk_size)
+        ]:
+            text_tokens = tokenizer(chunk, return_tensors="pt", padding=True)
+            for k, v in text_tokens.items():
+                text_tokens[k] = v.to(self.model.device)
+
+            # Compute text embeddings
+            _, text_embeds = self.model.get_text_features(**text_tokens)
+            text_embeds = text_embeds / text_embeds.norm(dim=-1, keepdim=True)
+            ret_list.append(text_embeds)
+
+        return torch.cat(ret_list, dim=0)

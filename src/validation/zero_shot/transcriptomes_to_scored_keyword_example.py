@@ -1,10 +1,15 @@
+"""
+TODO this example is not working anymore because anndata_to_scored_keywords has been decomposed into smaller functions.
+"""
 from pathlib import Path
 import logging
 import torch
 from cellwhisperer.jointemb.model import TranscriptomeTextDualEncoderModel
 from cellwhisperer.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
-from cellwhisperer.validation.zero_shot.functions import (
-    anndata_to_scored_keywords,
+from cellwhisperer.utils.inference import (
+    score_transcriptomes_vs_texts,
+    prepare_terms,
+    rank_terms_by_score,
     formatted_text_from_df,
 )
 from cellwhisperer.misc.cuda import get_device

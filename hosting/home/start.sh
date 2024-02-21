@@ -30,7 +30,9 @@ source activate ${CONDA_ENV}
 # Activate the conda environment of your choice
 # source $INSTALL_DIR/bin/activate $CONDA_ENV
 
-cellxgene launch -p ${CXG_SERVER_PORT} ${CXG_OPTIONS} ${DATASET} ${MODEL}
+# Run the provided command
+$@
+
 
 # If cellxgene fails, start a shell in the conda environment
-exec /bin/bash --rcfile <(echo "source activate $CONDA_ENV")
+# exec /bin/bash --rcfile <(echo "source activate $CONDA_ENV")

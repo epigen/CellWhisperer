@@ -1,4 +1,5 @@
 import os
+
 from pathlib import Path
 import logging
 import numpy as np
@@ -64,9 +65,10 @@ def get_performance_metrics_transcriptome_vs_text(
     # Get the scores.
     # grouping_keys will be updated (deduplicated and put into correct order) if averaging is used, else kept the same.
     scores, grouping_keys = score_transcriptomes_vs_texts(
-        model=model,
         transcriptome_input=transcriptome_input,
         text_list_or_text_embeds=text_list_or_text_embeds,
+        model=model,
+        logit_scale=model.discriminator.temperature.exp(),
         average_mode=average_mode,
         grouping_keys=grouping_keys,
         transcriptome_processor=transcriptome_processor,
@@ -193,150 +195,3 @@ def get_performance_metrics_transcriptome_vs_text(
         macro_average_results,
         per_class_df,
     )
-
-
-def anndata_to_scored_keywords(
-    transcriptome_input: Union[anndata.AnnData, torch.Tensor],
-    model: Optional[TranscriptomeTextDualEncoderModel],
-    terms: Union[str, Path, Dict],
-    transcriptome_processor: Union[
-        GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor
-    ],
-    text_tokenizer: AutoTokenizer,
-    average_mode: str = "cells",
-    batch_size: int = 64,
-    additional_text_dict: dict = {},
-    score_norm_method: Optional[str] = "zscore",
-) -> pd.DataFrame:
-    """
-    Compute the similarity between transcriptome embeddings on the on hand and the EnrichR terms + cell metadata on the other hand. \
-    TODO potential improvement: Creating the dataframe from the start would make the code simpler. 
-    :param transcriptome_input: Either: anndata.AnnData instance, then all cells in the object will be used to compute a single transcriptome embedding. \
-                  Or: torch.tensor instance (n_cells * embedding_dim), then the provided transcriptome embeddings will be used.
-    :param model: TranscriptomeTextDualEncoderModel instance. Both transcriptome and text embeddings will be computed using this model.
-    :param terms: Either a `Path` or `str` to the json file containing the biological terms to match transcriptomes against (e.g. Enrichr) or a dict containing such terms. Expected format in both cases: (keys: library name, values: list of terms)
-    :param transcriptome_processor: GeneformerTranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to tokenize/prepare the transcriptome.
-    :param text_tokenizer: AutoTokenizer instance. Used to tokenize the text.
-    :param average_mode: "cells" or "embeddings". If "cells", first average the transcriptome data across all cells, then tokenize and embed. \
-        If "embeddings", first tokenize and embed each cell, then average the embeddings. TODO what is better?
-    :param batch_size: int. The text will be chunked into chunks of this size before computing the text \
-          embeddings and similarity to the transcriptome. This is necessary to avoid out-of-memory errors.
-    :param additional_text_dict: dict. Additional text to compute the similarity to the transcriptome for. \
-        Will be embedded as '<key>: <value>'.\
-          E.g. if additional_text_dict={"day_of_induction": ["10","20"]}, the similarity to the transcriptome will be computed for \
-          "day_of_induction: 10" and "day_of_induction: 20". 
-    :param score_norm_method: "zscore", "softmax", "01norm" or None. TODO - unclear what is best. How to normalize the logits \
-            (similarity to the transcriptome). "zscore" will zscore the logits across all terms. "softmax" will apply softmax to the logits.\
-            "01norm" will normalize the logits to the range [0,1]. If None, don't normalize.
-    :return: pd.DataFrame with the normalized logits (similarity to the transcriptome) for each term.
-    """
-
-    # we don't allow average_mode=None here, because we always want to create a single embedding from all provided cells
-    assert average_mode in [
-        "cells",
-        "embeddings",
-    ], f"average_mode must be one of ['cells', 'embeddings'], but is {average_mode}"
-
-    if type(transcriptome_input) == anndata.AnnData:
-        # We give every cell the same annotation (selected_cells), so that will be averaged to the same embedding later
-        grouping_keys = [
-            "selected_cells" for _ in range(transcriptome_input.obs.shape[0])
-        ]
-    elif type(transcriptome_input) == torch.Tensor:
-        # We give every cell the same annotation (selected_cells), so that will be averaged to the same embedding later
-        grouping_keys = ["selected_cells" for _ in range(transcriptome_input.shape[0])]
-    else:
-        raise ValueError(
-            f"transcriptome_input must be either an anndata.AnnData instance or a torch.tensor, but is {type(transcriptome_input)}"
-        )
-
-    assert score_norm_method in [
-        "zscore",
-        "softmax",
-        "01norm",
-        None,
-    ], f"score_norm_method must be one of ['zscore', 'softmax', '01norm'], but is {score_norm_method}"
-
-    if isinstance(terms, (str, Path)):
-        assert os.path.exists(terms), f"terms json path {terms} does not exist"
-
-        ### Prepare text ###
-
-        # EnrichR terms
-        with open(terms, "r") as f:
-            terms = json.load(f)
-
-    n_terms_per_lib = {lib: len(terms[lib]) for lib in terms.keys()}
-    terms_list = [term for lib in terms.keys() for term in terms[lib]]  # 16366 terms
-
-    # Add values in the provided obs columns to the text
-    text = terms_list
-
-    # Add additional text to the text
-    for key, value in additional_text_dict.items():
-        text += value
-        terms[key] = value
-        n_terms_per_lib[key] = len(terms[key])
-
-    #### Get text embeddings and compare to transcriptome embeddings ####
-    logging.info("Computing text embeddings and logits...")
-
-    scores, _ = score_transcriptomes_vs_texts(
-        model=model,
-        transcriptome_input=transcriptome_input,
-        text_list_or_text_embeds=text,
-        average_mode=average_mode,
-        grouping_keys=grouping_keys,
-        text_tokenizer=text_tokenizer,
-        transcriptome_processor=transcriptome_processor,
-        batch_size=batch_size,
-        score_norm_method=score_norm_method,
-    )  # n_text * 1
-
-    logits_per_text = scores.squeeze(
-        dim=1
-    )  # squeeze the dimension 1, which is 1 because we only have one transcriptome embedding. Now: dim = n_text
-
-    # split text into the different libraries and obs columns, and rank by normalized logits
-    logits_df = pd.DataFrame(logits_per_text.numpy(), index=text, columns=["logits"])
-    logits_df["term_without_prefix"] = np.nan
-    logits_df["term_without_prefix"] = logits_df["term_without_prefix"].astype("object")
-    i = 0
-    # TODO all of this might be easier
-    for library in terms.keys():
-        text_this_lib = text[i : i + n_terms_per_lib[library]]
-        logits_df.loc[text_this_lib, "library"] = library
-        logits_df.loc[text_this_lib, "term_without_prefix"] = logits_df.loc[
-            text_this_lib
-        ].index.str.replace(f"{library}: ", "")
-        i += n_terms_per_lib[library]
-    logits_df["rank_in_library"] = logits_df.groupby("library")["logits"].rank(
-        ascending=False
-    )
-    logits_df["rank_total"] = logits_df["logits"].rank(ascending=False)
-
-    return logits_df.sort_values(by="logits", ascending=False)
-
-
-def formatted_text_from_df(df, n_top_per_term):
-    """
-    Format the output of anndata_to_scored_keywords() as a string.
-    :param df: pd.DataFrame. Output of anndata_to_scored_keywords().
-    :param n_top_per_term: int. The top n terms per library will be returned.
-    :return: str. Formatted text.
-    """
-    top_n_per_split = []
-    for library, group in df.groupby("library"):
-        top_n_terms = group.sort_values(by="logits", ascending=False).head(
-            n_top_per_term
-        )
-        top_n_text = "\n\t".join(
-            [
-                f"{row['term_without_prefix']} ({row['logits']:.2f})"
-                for _, row in top_n_terms.iterrows()
-            ]
-        )
-        top_n_text = f"{library}:\n\t{top_n_text}"
-        top_n_per_split.append(top_n_text)
-
-    return "\n".join(top_n_per_split)

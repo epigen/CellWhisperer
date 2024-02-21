@@ -1,3 +1,21 @@
+rule integrate_dataset:
+    """
+    Note: this rule is copied from /home/moritz/Projects/cellwhisperer/src/annotation_processing/pipeline/Snakefile
+    """
+    input:
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
+        processed_annotations=PROJECT_DIR / config["paths"]["processed_annotations"]
+    output:
+        PROJECT_DIR / config["paths"]["full_dataset"]
+    params:
+        anndata_label_name=config["anndata_label_name"],
+    conda:
+        "cellwhisperer"
+        # PROJECT_DIR / "envs" / "main.yaml"
+    script:
+        "../../annotation_processing/pipeline/scripts/integrate_dataset.py"
+
+
 rule process_full_dataset:
     """
     Run CellWhisperer on the full (provided) dataset and store all outputs in a single file (features, embeddings, and cross-modal-similarities).

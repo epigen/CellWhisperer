@@ -96,4 +96,6 @@ We use `blacken` for automated code formatting.
 
 
 ## Deploy
-See files in `hosting/home`
+- `cd` to `hosting/home`
+    - To deploy, run `docker compose up -d`
+    - To rebuild the website, run `docker compose up -f website-builder-compose.yaml`

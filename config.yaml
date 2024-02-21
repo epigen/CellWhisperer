@@ -29,6 +29,8 @@ datasets:
   - tabula_sapiens
   - tabula_sapiens_100_cells_per_type
   - archs4_metasra
+  - development4s_raw
+  - development4s_scvi
   # - perturbation_kaggle
 
 retrieval_validation_sets:
