@@ -1,0 +1,432 @@
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+import torch
+from pathlib import Path
+from cellwhisperer.config import get_path
+from cellwhisperer.utils.inference import score_transcriptomes_vs_texts
+from cellwhisperer.validation.zero_shot.functions import get_performance_metrics_transcriptome_vs_text
+from utils import eval_scib_metrics, umap_on_embedding, count_keywords_in_dataset,TABSAP_WELLSTUDIED_COLORMAPPING, PANCREAS_ORDER
+from embedding_generation import get_adata_with_embedding
+from dataset_preparation import load_and_preprocess_dataset
+from plotting import (
+    plot_embeddings_with_scores,
+    plot_cellwhisperer_predictions_on_umap,
+    plot_confusion_matrix,
+    plot_keyword_occurance_vs_performance,
+    plot_best_worst_and_all_celltype_performances,
+    plot_term_search_result
+)
+from cellwhisperer.utils.model_io import load_cellwhisperer_model
+import os
+import pandas as pd
+import logging
+import numpy as np
+from collections import defaultdict
+
+for ckpt_file_name in [
+    #"h4wbhcag_tabsap_finetune_epoch33.ckpt",
+    #"0s1ydf4c_finetune.ckpt",
+     "03jujd8s_epoch5_maxval.ckpt",
+    #"03jujd8s_epoch12_maxtabsap.ckpt",
+    #"03jujd8s_last.ckpt",   
+    ]: 
+
+    #### Parameters ####
+
+    # Whether or not to normalize and log1p in the single-cellm model
+    norm_and_log1p = False # NOTE: Activate this for scGPT models (if appropriate)
+
+    result_dir = os.path.dirname(
+        os.path.dirname(get_path(["paths", "full_dataset"], dataset="daniel"))
+    )  # Not the most elegant
+
+    result_dir = Path(result_dir) / "MS_zero_shot_scfoundation_replication_v3" / ckpt_file_name
+
+    ## Choose the datasets and analysis types to run
+    analysis_types = [
+        "cellwhisperer",
+    #    "geneformer",
+    #    "scgpt",
+        "hvg_with_PCA",
+    #    "hvg_without_PCA",
+    #    "all_genes",
+    #   "scvi",
+    ]
+    dataset_names = [
+#  "pancreas",
+#   "immgen",
+#   "immune_330k_500_cells_per_type",
+#   "immune_330k",
+#   "daniel",
+#   "covid_trainingset",
+#   "tabula_sapiens",
+    "tabula_sapiens_well_studied_celltypes"
+#   "tabula_sapiens_100_cells_per_type_well_studied_celltypes"
+#   "tabula_sapiens_100_cells_per_type_min_100",
+#   "tabula_sapiens_100_cells_per_type",
+    ]  
+
+    ## Select which columns to predict against. 
+    label_cols_per_dataset_dict = defaultdict(list)
+    label_cols_per_dataset_dict.update({x: ["celltype"] for x in dataset_names}) # always predict celltype
+    if True: # toggle
+
+        for dataset in dataset_names:
+            if "tabula_sapiens" in dataset:
+                label_cols_per_dataset_dict[dataset] += ["organ_tissue","compartment","gender"]
+
+        label_cols_per_dataset_dict["daniel"] += [
+            "Tissue",
+            "Tissue_subtype",
+            "Disease",
+            "Disease_subtype",
+            "Treated",
+        ]
+        label_cols_per_dataset_dict["immune_330k"] += ["organ_full_name"]
+        label_cols_per_dataset_dict["immune_330k_500_cells_per_type"] += ["organ_full_name"]
+        label_cols_per_dataset_dict["covid_trainingset"] += ["sex", "smoking"]
+        label_cols_per_dataset_dict["immgen"] += ["natural_language_annotation"]
+
+        ## Define the suffix and prefix for the text embeddings
+        suffix_prefix_dict = {}
+        suffix_prefix_dict["celltype"] = ("A sample of ", " from a healthy individual")
+        suffix_prefix_dict["organ_tissue"] = ("A sample of ", " from a healthy individual")
+        suffix_prefix_dict["compartment"] = ("A sample of the ", " compartment from a healthy individual")
+        suffix_prefix_dict["gender"] = ("A sample of a healthy, "," individual")
+        suffix_prefix_dict["sex"] = ("A sample of a healthy, "," individual")
+        suffix_prefix_dict["organ_full_name"] = ("A sample of ", " from a healthy individual")
+        suffix_prefix_dict["Disease"] = ("A sample from an individual with ","")
+        suffix_prefix_dict["Disease_subtype"] = ("A sample from an individual with ","")
+        suffix_prefix_dict["Tissue"] = ("A "," sample from a healthy individual")
+        suffix_prefix_dict["Tissue_subtype"] = ("A "," sample from a healthy individual")
+        suffix_prefix_dict["Treated"] = ("A sample of a ", " individual")
+
+    use_prefix_suffix_version = True
+
+    debug = False
+    debug_n_cells = 500  # 30000
+    if debug:
+        analysis_types = ["cellwhisperer", "hvg_with_PCA", "hvg_without_PCA"]
+
+    #### If necessary, repair the checkpoint:
+    repaired_path = get_path(["paths", "jointemb_models"]) / ckpt_file_name.replace(
+        ".ckpt", "_repaired.ckpt"
+    )
+    if not os.path.exists(repaired_path):
+        ckpt = torch.load(get_path(["paths", "jointemb_models"]) / ckpt_file_name)
+        ckpt["hyper_parameters"]["model_config"].transcriptome_config.vocab_path = str(
+            get_path(["model_name_path_map", "scgpt"]) / "vocab.json"
+        )
+        torch.save(ckpt, repaired_path)
+    ckpt_file_path = repaired_path
+
+    #### Load models
+    models_and_processors_dict = {}
+
+    # Load the proper single-cellm model
+    (
+        pl_model_cellwhisperer,
+        text_processor_cellwhisperer,
+        transcriptome_processor_cellwhisperer,
+    ) = load_cellwhisperer_model(model_path=ckpt_file_path, eval=True)
+    models_and_processors_dict["cellwhisperer"] = (
+        pl_model_cellwhisperer.model,
+        transcriptome_processor_cellwhisperer,
+    )
+    if norm_and_log1p:
+        transcriptome_processor_cellwhisperer.adata_do_normalize_total=True
+        transcriptome_processor_cellwhisperer.adata_do_log1p=True
+
+    # Load a model with a pretrained Geneformer transcriptome model backbone
+    (
+        model_w_geneformer,
+        text_processor_geneformer,
+        transcriptome_processor_geneformer,
+    ) = load_cellwhisperer_model(
+        model_path=None, eval=True, transcriptome_model_type="geneformer"
+    )
+    models_and_processors_dict["geneformer"] = (
+        model_w_geneformer.model,
+        transcriptome_processor_geneformer,
+    )
+    # Load a model with a pretrained scGPT transcriptome model backbone
+    (
+        model_w_scgpt,
+        text_processor_scgpt,
+        transcriptome_processor_scgpt,
+    ) = load_cellwhisperer_model(
+        model_path=None, eval=True, transcriptome_model_type="scgpt"
+    )
+    models_and_processors_dict["scgpt"] = (
+        model_w_scgpt.model,
+        transcriptome_processor_scgpt,
+    )
+
+
+    #### Iterate over datasets
+    result_metrics_dict = {}
+    for dataset_name in dataset_names:
+        logging.info(f"Starting with {dataset_name}")
+        os.makedirs(f"{result_dir}/{dataset_name}", exist_ok=True)
+
+        #### Load data
+        adata = load_and_preprocess_dataset(dataset_name)
+        print(adata.obs.celltype)
+        if debug:
+            np.random.seed(42)
+            adata = adata[
+                adata.obs.index.isin(
+                    adata.obs.index[
+                        np.random.choice(len(adata.obs), debug_n_cells, replace=False)
+                    ]
+                )
+            ]
+        logging.info(f"Data loaded and preprocessed. Shape: {adata.shape}")
+
+        #### Create embeddings and calculate metrics
+        for analysis_type in analysis_types:
+            logging.info(f"Starting with {analysis_type}")
+
+            # Add the embeddings to the adata:
+            adata = get_adata_with_embedding(
+                adata=adata,
+                models_and_processors_dict=models_and_processors_dict,
+                analysis_type=analysis_type,
+            )
+
+            # Calculate UMAPs based on the embeddings
+            adata = umap_on_embedding(
+                adata,
+                embedding_key=f"X_{analysis_type}",
+                neighbors_key=f"neighbors_{analysis_type}",
+                umap_key=f"X_umap_on_neighbors_{analysis_type}",
+            )
+
+            # Calculate integration metrics
+            result_metrics_dict[(dataset_name, analysis_type)] = eval_scib_metrics(
+                adata,
+                label_key="celltype",
+                batch_key="batch",
+                embedding_key=f"X_{analysis_type}",
+            )
+
+            logging.info(f"Finished with {analysis_type}")
+
+        # Plot the embeddings generated by all different methods, colored by celltype and batch
+        plot_embeddings_with_scores(
+            adata=adata,
+            analysis_types=analysis_types,
+            result_metrics_dict=result_metrics_dict,
+            dataset_name=dataset_name,
+            result_dir=result_dir,
+        )
+
+        #### Save metrics
+        metrics_df = pd.DataFrame(result_metrics_dict).T
+        metrics_df.to_csv(f"{result_dir}/{dataset_name}/metrics_MS_zero_shot.csv")
+
+
+        if "well_studied_celltypes" in dataset_name:
+            color_mapping = TABSAP_WELLSTUDIED_COLORMAPPING
+        else:
+            color_mapping = dict(zip(adata.obs["celltype"].cat.categories, adata.uns[f"celltype_colors"]))
+        color_mapping.update(dict(zip(adata.obs["batch"].cat.categories, adata.uns[f"batch_colors"])))
+
+        #### Predict the labels using single-cellm
+
+        for label_col in label_cols_per_dataset_dict[dataset_name]:
+            adata_no_nans = adata[
+                ~(adata.obs[label_col].isna()) & ~(adata.obs[label_col] == "nan")
+            ].copy()
+
+            if use_prefix_suffix_version and label_col in suffix_prefix_dict:
+                prefix, suffix = suffix_prefix_dict[label_col]
+                text_list=[f"{prefix}{x}{suffix}" for x in adata_no_nans.obs[label_col].unique().tolist()]
+            elif label_col not in suffix_prefix_dict:
+                logging.warning(f"Label column {label_col} not found in suffix_prefix_dict, continuing without prefix/suffix")
+            else:
+                text_list = adata_no_nans.obs[label_col].unique().tolist()
+
+            scores, _ = score_transcriptomes_vs_texts(
+                model=models_and_processors_dict["cellwhisperer"][0],
+                transcriptome_input=torch.tensor(adata_no_nans.obsm["X_cellwhisperer"],
+                                                  device=models_and_processors_dict["cellwhisperer"][0].device),
+                text_list_or_text_embeds=text_list,
+                average_mode=None,
+                grouping_keys=None,
+                transcriptome_processor=models_and_processors_dict["cellwhisperer"][1],
+                text_tokenizer=text_processor_cellwhisperer,
+                batch_size=32,
+                score_norm_method=None,  
+            )
+            scores = scores.T  # n_cells * n_text
+            predicted_labels = [
+                adata_no_nans.obs[label_col].unique().tolist()[x]
+                for x in scores.argmax(axis=1)
+            ]
+            adata_no_nans.obs["predicted_labels_cellwhisperer"] = predicted_labels
+            adata_no_nans.obs["confidence_cellwhisperer"] = scores.max(axis=1).values
+
+            #### Plot the single-cellm predicted labels
+
+            # Put them in correct order
+            if "well_studied_celltypes" in dataset_name and label_col=="celltype":
+                adata_no_nans.obs["celltype"] = pd.Categorical(
+                    values=adata_no_nans.obs["celltype"],
+                    categories=list(TABSAP_WELLSTUDIED_COLORMAPPING.keys()),
+                    ordered=True)
+                adata_no_nans.obs["predicted_labels_cellwhisperer"] = pd.Categorical(
+                    values=adata_no_nans.obs["predicted_labels_cellwhisperer"],
+                    categories=adata_no_nans.obs["celltype"].cat.categories)
+
+            plot_cellwhisperer_predictions_on_umap(
+                adata=adata_no_nans,
+                result_dir=result_dir,
+                dataset_name=dataset_name,
+                label_col=label_col,
+                color_mapping=color_mapping if label_col == "celltype" else None,
+            )
+
+
+            #### Get classification performance metrics for single-cellm
+            # NOTE: It's a bit wasteful to run this again
+            # (does most of the things that score_transcriptomes_vs_texts does again), but it was fast enough for now
+            (
+                performance_metrics,
+                performance_metrics_per_label_df,
+            ) = get_performance_metrics_transcriptome_vs_text(
+                model=models_and_processors_dict["cellwhisperer"][0],
+                transcriptome_input=torch.tensor(adata_no_nans.obsm["X_cellwhisperer"], device=models_and_processors_dict["cellwhisperer"][0].device),
+                text_list_or_text_embeds=text_list,#adata_no_nans.obs[label_col].unique().tolist(),
+                average_mode=None,
+                grouping_keys=None,
+                transcriptome_processor=models_and_processors_dict["cellwhisperer"][1],
+                text_tokenizer=text_processor_cellwhisperer,
+                batch_size=32,
+                score_norm_method=None,
+                correct_text_idx_per_transcriptome=[
+                    adata_no_nans.obs[label_col].unique().tolist().index(x)
+                    for x in adata_no_nans.obs[label_col].values
+                ],
+            )
+            print(pd.Series(performance_metrics))
+            pd.Series(performance_metrics).to_csv(
+                f"{result_dir}/{dataset_name}/performance_metrics_cellwhisperer.{label_col}_as_label.macrovag.csv"
+            )
+            performance_metrics_per_label_df.to_csv(
+                f"{result_dir}/{dataset_name}/performance_metrics_cellwhisperer.{label_col}_as_label.per_{label_col}.csv"
+            )
+
+            ## Plot the confusion matrix
+
+            if dataset_name =="pancreas":
+                order=PANCREAS_ORDER
+            elif "well_studied_celltypes" in dataset_name and label_col=="celltype":
+                order = list(TABSAP_WELLSTUDIED_COLORMAPPING.keys())
+            else :
+                order=None
+
+            performance_metrics_per_label_df_wo_prefix_suffix = performance_metrics_per_label_df.copy()
+            performance_metrics_per_label_df_wo_prefix_suffix.index = [
+                x.replace("Sample of a ", "").replace("A sample of ","").replace(" from a healthy individual","")
+                for x in performance_metrics_per_label_df.index.values
+            ]
+            # same for cols
+            performance_metrics_per_label_df_wo_prefix_suffix.columns = [
+                x.replace("Sample of a ", "").replace("A sample of ","").replace(" from a healthy individual","")
+                for x in performance_metrics_per_label_df.columns.values
+            ]
+
+            title = f"$\\text{{ROC-AUC}}_{{macro}}={round(float(performance_metrics['rocauc_macroAvg']),2)}$"
+            plot_confusion_matrix(
+                performance_metrics_per_label_df=performance_metrics_per_label_df_wo_prefix_suffix,
+                result_dir=result_dir,
+                dataset_name=dataset_name,
+                label_col=label_col,
+                order=order,
+                title=title
+            )
+
+            # Plot a correlation between the number of times a keyword appears in the dataset and the performance of the model on that keyword.
+            if False: # Toggle - takes a long time
+                keyword_occurance_dict = count_keywords_in_dataset(
+                    keywords=[
+                        x.replace("Sample of a ", "").replace("A sample of ","").replace(" from a healthy individual","")
+                        for x in performance_metrics_per_label_df.index.values
+                    ]
+                )
+                performance_metrics_per_label_df[
+                    "keyword_occurance"
+                ] = performance_metrics_per_label_df.index.map(keyword_occurance_dict)
+
+                performance_metrics_per_label_df.to_csv(
+                    f"{result_dir}/{dataset_name}/performance_metrics_cellwhisperer.{label_col}_as_label.per_{label_col}.csv"
+                )
+
+                plot_keyword_occurance_vs_performance(
+                    performance_metrics_per_label_df=performance_metrics_per_label_df,
+                    keyword_occurance_dict=keyword_occurance_dict,
+                    result_dir=result_dir,
+                    dataset_name=dataset_name,
+                    label_col=label_col,
+                )
+
+            for metric in ["rocauc", "accuracy","recall_at_5","recall_at_1"]:
+                plot_best_worst_and_all_celltype_performances(performance_metrics_per_label_df, performance_metrics, metric, result_dir, dataset_name, label_col)
+
+            del adata_no_nans
+
+
+        ## Term search in tabula sapiens
+        if "tabula_sapiens" in dataset_name and not "well_studied_celltypes" in dataset_name:
+
+            prefix, suffix = suffix_prefix_dict["celltype"]
+
+            terms_celltype_dict={
+                "red blood cells": "erythrocyte",
+                "erythrocyte": "erythrocyte",
+                "Natural killer cells":"nk cell",
+                "T cells":"t cell",
+                "B cells":"b cell",
+                "blood platelets":"platelet",
+            }
+            for term,celltype in terms_celltype_dict.items():
+
+                scores, _ = score_transcriptomes_vs_texts(
+                model=models_and_processors_dict["cellwhisperer"][0],
+                transcriptome_input=torch.tensor(adata.obsm["X_cellwhisperer"], device=models_and_processors_dict["cellwhisperer"][0].device),
+                text_list_or_text_embeds=[f"{prefix}{term}{suffix}"],
+                average_mode=None,
+                grouping_keys=None,
+                transcriptome_processor=models_and_processors_dict["cellwhisperer"][1],
+                text_tokenizer=text_processor_cellwhisperer,
+                batch_size=32,
+                score_norm_method=None,
+                )
+                scores = scores.T  # n_cells * n_text
+                adata.obs[f"score_for_{term}"] = scores.squeeze().tolist()
+                adata.obs[f"label contains '{celltype}'"] = adata.obs["celltype"].str.contains(celltype).astype(int)
+
+                plot_term_search_result(term, celltype, adata, result_dir, dataset_name, prefix, suffix)
+
+
+
+
+    # Simple barplot for one of the sub-panels (hardcoded here)
+
+    # rocaucs= {
+    #     "Tabula sapiens": 0.91,
+    #     "Tabula sapiens\n(common cell types)": 0.94,
+    #     "Pancreas": 0.83,
+    #     "Immgen (human)": 0.95
+    # }
+
+    # performance_df=pd.DataFrame({"Dataset":list(rocaucs.keys()),"ROC-AUC":list(rocaucs.values())})
+    # sns.barplot(data=performance_df,x="Dataset",y="ROC-AUC", color="grey")
+    # for i, row in performance_df.iterrows():
+    #     plt.text(x=i,y=row["ROC-AUC"]+0.01,s=f"{round(row['ROC-AUC'],2)}",ha="center",fontsize=12)
+    # plt.xticks(rotation=45)
+    # plt.ylim(0,1)
+    # plt.subplots_adjust(bottom=0.3)
+    # plt.savefig(f"{result_dir}/overview_batplots_rocauc.pdf")

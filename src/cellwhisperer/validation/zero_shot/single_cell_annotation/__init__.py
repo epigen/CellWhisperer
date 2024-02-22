@@ -93,6 +93,10 @@ class SingleCellZeroshotValidationScoreCalculator:
             get_path(["paths", "read_count_table"], dataset=dataset)
         )
 
+        # TODO is this necessary?
+        if "raw_counts" in self.adata.layers:
+            self.adata.X = self.adata.layers["raw_counts"]
+
         if isinstance(celltypes, int):
             self.counts_per_celltype = self.adata.obs.value_counts(celltype_obs_colname)
             self.celltypes_to_process = [
