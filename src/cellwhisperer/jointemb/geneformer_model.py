@@ -46,6 +46,9 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
         # adata.obs["cell type rough"] = [
         #     x.split(".")[0] for x in adata.obs["cell type"].values
         # ]
+        annot = pd.read_csv(get_path(["paths", "ensembl_gene_symbol_map"]), index_col=0)
+        adata_var = pd.DataFrame(adata.var)
+        # no need to re-gather ensembl_id if they are already present
         if adata.var.index[0].startswith("ENSG0") or "ensembl_id" in adata.var.columns:
             # No need to translate IDs
             if "ensembl_id" in adata.var.columns:
@@ -54,20 +57,11 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
                 ensembl_ids = adata.var.index
             if "." in ensembl_ids[0]:
                 # Trim version
-                ensembl_ids = ensembl_ids.map(lambda v: v[: v.index(".")])
-            adata_w_id = adata
-            adata_var = pd.DataFrame(adata_w_id.var)
+                ensembl_ids = ensembl_ids.map(
+                    lambda v: v[: v.index(".") if "." in v else len(v)]
+                )
             adata_var["ensembl_id"] = ensembl_ids
-            adata_w_id = anndata.AnnData(
-                X=adata_w_id.X,
-                var=adata_var,
-                obs=pd.DataFrame(adata_w_id.obs),
-            )
         else:
-            annot = pd.read_csv(
-                get_path(["paths", "ensembl_gene_symbol_map"]), index_col=0
-            )
-
             assert (
                 len(
                     {
@@ -98,26 +92,28 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
                 > 0
             ), "adata.var.index should contain a gene symbols but none are found"
 
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", message=".*is_categorical_dtype is deprecated.*"
-                )
-                adata_w_id = adata[:, [x for x in adata.var.index if x in annot.index]]
-            # Since the implicit copy() mechanism seems to be broken, I need to do it explicitly
-            adata_w_id = anndata.AnnData(
-                X=adata_w_id.X.copy(),
-                var=pd.DataFrame(adata_w_id.var),
-                obs=pd.DataFrame(adata_w_id.obs),
-            )
-
-            # if isinstance(adata_w_id.X, anndata._core.views.ArrayView):  # use this code snippets, if complications arise with the copy() above
-            #     X = np.array(adata_w_id.X)
-            # elif isinstance(adata_w_id.X, anndata._core.views.SparseCSRView):
-            #     X = adata_w_id.X.copy()
-
-            adata_w_id.var["ensembl_id"] = annot.loc[
-                adata_w_id.var.index.values, "ensembl_gene_id"
+            adata_var["ensembl_id"] = annot.loc[
+                adata_var.var.index.values, "ensembl_gene_id"
             ].values
+
+        # Filter genes that don't have an ensembl_id
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", message=".*is_categorical_dtype is deprecated.*"
+            )
+            adata_w_id = adata[:, [x for x in adata.var.index if x in annot.index]]
+
+        # Since the implicit copy() mechanism seems to be broken, I need to do it explicitly
+        adata_w_id = anndata.AnnData(
+            X=adata_w_id.X.copy(),
+            var=pd.DataFrame(adata_w_id.var),
+            obs=pd.DataFrame(adata_w_id.obs),
+        )
+
+        # if isinstance(adata_w_id.X, anndata._core.views.ArrayView):  # use this code snippets, if complications arise with the copy() above
+        #     X = np.array(adata_w_id.X)
+        # elif isinstance(adata_w_id.X, anndata._core.views.SparseCSRView):
+        #     X = adata_w_id.X.copy()
 
         sc.pp.calculate_qc_metrics(adata_w_id, inplace=True)
         adata_w_id.obs["n_counts"] = adata_w_id.obs.total_counts
