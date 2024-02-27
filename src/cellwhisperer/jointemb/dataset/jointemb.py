@@ -53,6 +53,9 @@ class JointEmbedDataModule(pl.LightningDataModule):
         train_fraction=0.95,
     ):
         """
+
+        Note: This is also used after training in `post_clip_processing` (val_dataloader)
+
         Args:
             tokenizer: name of the tokenizer to use. Must be a valid name for the AutoTokenizer.from_pretrained() function.
             transcriptome_processor: name of the transcriptome processor to use. Must be a valid name for the GeneformerTranscriptomeProcessor class.

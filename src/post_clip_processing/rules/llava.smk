@@ -51,7 +51,7 @@ rule pretrain_llava:
         mem_mb=100000,
         slurm="cpus-per-task=20 gres=gpu:a100-sxm4-80gb:4 qos=a100-sxm4-80gb partition=gpu"
     log:
-        "log/pretrain_llava_{base_model}_{model}.log"
+        "logs/pretrain_llava_{base_model}_{model}.log"
     threads: 16
     shell: """
         PYTHON_SCRIPT=../../modules/LLaVA/llava/train/train_mem.py
@@ -120,7 +120,7 @@ rule finetune_llava:
         mem_mb=100000,
         slurm="cpus-per-task=20 gres=gpu:a100-sxm4-80gb:4 qos=a100-sxm4-80gb partition=gpu"
     log:
-        "log/pretrain_llava_{base_model}_{model}.log"
+        "logs/finetune_llava_{base_model}_{model}.log"
     threads: 16
     shell: """
         PYTHON_SCRIPT=../../modules/LLaVA/llava/train/train_mem.py

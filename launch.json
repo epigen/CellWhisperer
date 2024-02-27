@@ -44,7 +44,7 @@
             "type": "python",
             "request": "attach",
             "connect": {
-                "host": "s0-n12.hpc.meduniwien.ac.at",
+                "host": "s0-n11.hpc.meduniwien.ac.at",
                 "port": 5678
             },
             "pathMappings": [

@@ -95,19 +95,21 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
             adata_var["ensembl_id"] = annot.loc[
                 adata_var.var.index.values, "ensembl_gene_id"
             ].values
+        adata.var = adata_var
 
-        # Filter genes that don't have an ensembl_id
+        # Filter genes that don't have an ensembl_id (according to our mapping file)
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore", message=".*is_categorical_dtype is deprecated.*"
             )
-            adata_w_id = adata[:, [x for x in adata.var.index if x in annot.index]]
+            adata = adata[:, [x.startswith("ENSG0") for x in adata.var["ensembl_id"]]]
+            # alternatively check for `x in annot["ensembl_gene_id"].values`
 
         # Since the implicit copy() mechanism seems to be broken, I need to do it explicitly
         adata_w_id = anndata.AnnData(
-            X=adata_w_id.X.copy(),
-            var=pd.DataFrame(adata_w_id.var),
-            obs=pd.DataFrame(adata_w_id.obs),
+            X=adata.X.copy(),
+            var=pd.DataFrame(adata.var),
+            obs=pd.DataFrame(adata.obs),
         )
 
         # if isinstance(adata_w_id.X, anndata._core.views.ArrayView):  # use this code snippets, if complications arise with the copy() above
@@ -214,6 +216,7 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
         tokens, expression_token_lengths = self._tokenize(
             prepared_features, *args, **kwargs
         )
+        assert all(expression_token_lengths), "Some cells have 0 genes"
 
         if return_tensors == "pt":
             max_len = max(expression_token_lengths)
