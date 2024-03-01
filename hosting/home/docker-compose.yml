@@ -49,6 +49,10 @@ services:
       JEST_ENV: "prod"
       RETRY_ATTEMPTS: 2
       CONDA_ENV: cellwhisperer
+    deploy:
+      resources:
+        limits:
+          memory: 16G
 
   cellxgene_daniel:
     <<: *default-service
