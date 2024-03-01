@@ -82,6 +82,14 @@ services:
       - ~/cellwhisperer:/opt/cellwhisperer
       - ~/cellwhisperer/results/archs4_metasra/03jujd8s/cellxgene.h5ad:/dataset.h5ad
 
+  cellxgene_car_t:
+    <<: *default-service
+    volumes:
+      - ./docker_conda:/opt/miniconda3
+      - ./start.sh:/start.sh
+      - ~/cellwhisperer:/opt/cellwhisperer
+      - ~/cellwhisperer/results/car_t/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+
   nginx:
     image: nginx:latest
     volumes:
@@ -93,6 +101,7 @@ services:
       - cellxgene_tabsap
       - cellxgene_geo  # Add dependency if needed
     restart: unless-stopped
+
 
   ngrok:
     image: ngrok/ngrok:latest
