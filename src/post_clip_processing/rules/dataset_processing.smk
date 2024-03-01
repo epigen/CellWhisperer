@@ -1,6 +1,7 @@
 rule integrate_dataset:
     """
-    Note: this rule is copied from /home/moritz/Projects/cellwhisperer/src/annotation_processing/pipeline/Snakefile
+    Note: this rule is copied from /home/moritz/Projects/cellwhisperer/src/pre_training_processing/Snakefile
+    TODO this probably fails now, given that integrate_dataset.py changed. I only need the "old" integration here anyways
     """
     input:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
