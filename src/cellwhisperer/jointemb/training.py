@@ -76,6 +76,7 @@ class CellWhispererCLI(LightningCLI):
                 "model.model_config": obj_signature(TranscriptomeTextDualEncoderConfig),
                 "model.loss_config": obj_signature(LossConfig),
                 "trainer.max_epochs": 100,
+                "trainer.reload_dataloaders_every_n_epochs": 1,  # this allows sampling of replicates (see data module)
                 "trainer.accumulate_grad_batches": 64,  # the higher the better more or less
             }
         )

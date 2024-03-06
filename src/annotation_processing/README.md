@@ -33,8 +33,8 @@ cd /msc/home/mschae83/text-generation-webui
 
 # alternative:
 # conda activate textgen
-# python server.py --listen-host 0.0.0.0 --listen --api --api-port 5000 --model mixtral-8x7b-instruct-v0.1.Q8_0.gguf --public-api --api-key OdNFpEua0T5TNdd0
-
+# Note https://www.reddit.com/r/LocalLLaMA/comments/18jxehq/guide_to_run_mixtral_correctly_i_see_a_lot_of/
+# python server.py --listen-host 0.0.0.0 --listen --api --api-port 5000 --model mixtral-8x7b-instruct-v0.1.Q5_K_M.gguf --public-api --api-key OdNFpEua0T5TNdd0
 ```
 
 ## nginx

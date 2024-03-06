@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TOTAL_NUM_JOBS=1
+TOTAL_NUM_JOBS=20
 NUM_SIMULT_JOBS=1
 
 gpu_type="a100-sxm4-80gb"

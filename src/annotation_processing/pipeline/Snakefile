@@ -6,19 +6,21 @@ PROJECT_DIR = Path(workflow.basedir).resolve().parents[2]
 configfile: PROJECT_DIR / "config.yaml"
 
 DATASETS = config["datasets"]
+DATASETS = ["daniel"]
+REPLICATES = range(config["num_epochs"])
 
-PROCESSED_FILE = PROJECT_DIR / "results" / "annotation_processing" / "processed" / "{dataset}" / "{sample_id}.txt"
+PROCESSED_FILE = PROJECT_DIR / "results" / "annotation_processing" / "processed" / "{dataset}" / "{replicate}" / "{sample_id}.txt"
 PROCESSED_FILE_OPENAI = PROJECT_DIR / "results" / "annotation_processing" / "processed_openai" / "{dataset}" / "{sample_id}.txt"
 
 
-def annotation_ids(wildcards, base_path=PROCESSED_FILE):
+def annotation_ids(wildcards, base_path=PROCESSED_FILE, replicates=REPLICATES):
     """
     Return the paths to all the annotations for a given dataset.
     """
     import json
     with open(PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset=wildcards.dataset)) as f:
         annotations = json.load(f)
-    return [str(base_path).format(sample_id=sample_id, dataset=wildcards.dataset) for sample_id in annotations.keys()]
+    return [str(base_path).format(sample_id=sample_id, replicate=replicate, dataset=wildcards.dataset).replace("//", "/") for sample_id in annotations.keys() for replicate in replicates]
 
 rule all:
     input:
@@ -40,10 +42,11 @@ checkpoint prepare_requests:
         with open(input.structured_annotations) as f:
             annotations = json.load(f)
 
-        json_fns = annotation_ids(wildcards, base_path=Path(output[0]) / "{sample_id}.json")
-        yaml_fns = annotation_ids(wildcards, base_path=Path(output[0]) / "{sample_id}.yaml")
+        json_fns = annotation_ids(wildcards, base_path=Path(output[0]) / "{sample_id}.json", replicates=[""])
+        yaml_fns = annotation_ids(wildcards, base_path=Path(output[0]) / "{sample_id}.yaml", replicates=[""])
 
         Path(json_fns[0]).parent.mkdir(parents=True, exist_ok=True)
+
         for json_fn, yaml_fn in zip(json_fns, yaml_fns):
             sample_id = Path(json_fn).stem
             sample = annotations[sample_id]
@@ -58,7 +61,7 @@ rule process_annotation_openai:
     """
     Alternative annotation processing using OpenAI's API.
 
-    Currently unused
+    Currently unused (and outdated)
     """
     input:
         human_message=lambda wildcards: checkpoints.prepare_requests.get(dataset=wildcards.dataset).output[0] + f"/{wildcards.sample_id}.yaml",
@@ -82,26 +85,31 @@ rule process_annotation_local:
     output:
         processed_annotation = protected(PROCESSED_FILE),  # I marked this as protected as it might be costly to produce
     params:
-        api_url = "http://s0-l00.hpc.meduniwien.ac.at:5000/v1/completions"  # TODO make sure that the nginx server is running alongside oobabooga clients
+        api_url = "http://s0-n02.hpc.meduniwien.ac.at:5000/v1/completions"  # TODO make sure that the nginx server is running alongside oobabooga clients
     run:
         import requests
         import json
 
-        headers = {"Content-Type": "application/json"}
         instruction = Path(input.instruction).read_text()
         sample_yaml = Path(input.sample_yaml).read_text()
-        data = {
-            "prompt": f"User: {instruction}:\n{sample_yaml}\n\nAssistant: ",
-            "max_tokens": 300,
-            "seed": 10,
-            "temperature": 0.2,
-            "top_p": 0.95,
-            "top_k": 50
-        }
+        # first sample, set temperature to 0.2. for the others set it to 0.5
+        temperature = 0.2 if wildcards.replicate == "0" else 0.7
 
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer OdNFpEua0T5TNdd0"
+        }
+        data = {
+            "prompt": f"<s>[INST] {instruction}:\n{sample_yaml} [/INST] ",
+            "max_tokens": 300,
+            "seed": hash(sample_yaml) % 2**30,
+            "temperature": temperature,
+            "top_p": 0.9,
+            "top_k": 50,
+        }
         response = requests.post(params.api_url, headers=headers, data=json.dumps(data))
 
-        result = response.json()["choices"][0]["text"]
+        result = response.json()["choices"][0]["text"].strip()
 
         Path(output[0]).write_text(result)
 
@@ -112,14 +120,15 @@ rule aggregate_processed:
     input:
         processed_annotations=annotation_ids
     output:
-        PROJECT_DIR / config["paths"]["processed_annotations"]
+        single=PROJECT_DIR / config["paths"]["processed_annotations"],
+        multi=PROJECT_DIR / config["paths"]["processed_multi_annotations"],
     script:
         "scripts/aggregate_processed.py"
 
 rule integrate_dataset:
     input:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
-        processed_annotations=PROJECT_DIR / config["paths"]["processed_annotations"]
+        processed_annotations=PROJECT_DIR / config["paths"]["processed_multi_annotations"]
     output:
         PROJECT_DIR / config["paths"]["full_dataset"]
     params:

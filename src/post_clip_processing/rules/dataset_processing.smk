@@ -27,7 +27,7 @@ rule process_full_dataset:
         full_data=PROJECT_DIR / config["paths"]["full_dataset"],
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
     output:
-        model_outputs=protected(PROJECT_DIR / config["paths"]["model_processed_dataset"]),  # TODO protection did not work :/
+        model_outputs=protected(PROJECT_DIR / config["paths"]["model_processed_dataset"]),
     resources:
         mem_mb=100000,
         slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"

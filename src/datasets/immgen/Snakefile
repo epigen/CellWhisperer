@@ -34,7 +34,9 @@ rule format_annotations:
     """
     Convert the annotations from xlsx to json, using the index as the keys
     """
-    output: PROJECT_DIR / config["paths"]["processed_annotations"].format(dataset="immgen")
+    output:
+        processed=PROJECT_DIR / config["paths"]["processed_annotations"].format(dataset="immgen"),
+        structured=PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="immgen"),
     run:
         import json
         data = {
@@ -69,5 +71,7 @@ rule format_annotations:
             for i in range(num_repl):
                 data[f"{k[:-1]}{i+2}"] = v
 
-        with open(output[0], "w") as f:
+        with open(output["processed"], "w") as f:
             json.dump(data, f, indent=4)
+
+        # TODO also generate structured (by wrapping the string into a dict with a "description" key)

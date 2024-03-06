@@ -1,10 +1,12 @@
 anndata_label_name: natural_language_annotation
+num_epochs: 2
 
 paths:
   read_count_table: resources/{dataset}/read_count_table.h5ad
   raw_annotations: resources/{dataset}/annotations.tsv
   structured_annotations: results/{dataset}/annotations.json
   processed_annotations: results/{dataset}/processed_annotations.json
+  processed_multi_annotations: results/{dataset}/processed_multi_annotations.json
   llava_pretrain_text_dataset: results/{dataset}/llava_pretrain_texts.json
   model_processed_dataset: results/{dataset}/{model}/full_output.npz
   llava_pretrained_model_dir: results/llava/pretrained/{base_model}__{model}/

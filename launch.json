@@ -4,6 +4,28 @@
         {
             "type": "python",
             "request": "launch",
+            "name": "Train immgen",
+            "program": "${workspaceFolder}/src/cellwhisperer/jointemb/training.py",
+            "args": [
+                "fit",
+                "--model.model_config.projection_dim",
+                "128",
+                "--model.model_config.locking_mode",
+                "LU",
+                "--model.model_config.transcriptome_model_type",
+                "geneformer",
+                "--data.nproc",
+                "0",
+                "--data.dataset_name",
+                "immgen",
+            ],
+            "cwd": "${workspaceFolder}",
+            "module": null,
+            "justMyCode": true,
+        },
+        {
+            "type": "python",
+            "request": "launch",
             "name": "Run training fast_dev_run with default config",
             "program": "${workspaceFolder}/src/cellwhisperer/jointemb/training.py",
             "args": [
@@ -15,7 +37,7 @@
                 "--model.model_config.locking_mode",
                 "LU",
                 "--model.model_config.transcriptome_model_type",
-                "scgpt",
+                "geneformer",
                 "--data.nproc",
                 "0"
             ],

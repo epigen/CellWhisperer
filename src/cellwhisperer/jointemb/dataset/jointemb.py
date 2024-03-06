@@ -13,15 +13,18 @@ from cellwhisperer.jointemb.processing import TranscriptomeTextDualEncoderProces
 
 from cellwhisperer.config import get_path, model_path_from_name
 
+from typing import Optional, Dict
+
 
 class JointEmbedDataset(Dataset):
     """
     Dataset of dicts
     """
 
-    def __init__(self, inputs, orig_ids=None):
+    def __init__(self, inputs, orig_ids=None, replicate_inputs: Dict = {}):
         self.inputs = inputs
         self.orig_ids = orig_ids
+        self.replicate_inputs = replicate_inputs
 
     def __len__(self):
         return len(next(iter(self.inputs.values())))
@@ -29,6 +32,13 @@ class JointEmbedDataset(Dataset):
     def __getitem__(self, idx):
         sample = {key: val[idx] for key, val in self.inputs.items()}
         return sample
+
+    def set_epoch(self, epoch: int):
+        """
+        Update the dataset to "load" the replicate for a specific epoch
+        """
+        for key, feature_data in self.replicate_inputs.items():
+            self.inputs[key] = feature_data[epoch % len(feature_data)]
 
 
 class JointEmbedDataModule(pl.LightningDataModule):
@@ -47,9 +57,9 @@ class JointEmbedDataModule(pl.LightningDataModule):
         nproc=8,
         transcriptome_processor_kwargs={},
         tokenizer_kwargs={
-            "model_max_length": 100  # 100 seems to be a decent fit, which cuts very few inputs (both for biogpt and biobert)
+            "model_max_length": 128  # 128 seems to be a decent fit, which cuts very few inputs (Mixtral outputs)
         },  # see https://github.com/epigen/cellwhisperer/issues/193
-        min_genes=200,
+        min_genes=1,
         train_fraction=0.95,
     ):
         """
@@ -62,7 +72,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             dataset_name: name of the dataset to use. Must be a valid name for the get_path() function.
             batch_size: batch size to use for training and validation
             nproc: number of processes to use for transcriptome processing
-            min_genes: minimum number of genes to use for a sample. This increases the dataset quality, but also prevents NaNs, which can occur when the number of genes is 0
+            min_genes: minimum number of genes to use for a sample. A larger value may increase the dataset quality. Choose a value > 0 to prevent NaNs, which can occur when the number of genes is 0
         """
         super().__init__()
         self.batch_size = batch_size
@@ -90,9 +100,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         # check whether data has already been prepared
         if self.processed_path.exists() and not force_prepare:
             logging.info("data already prepared")
-
-            if "orig_ids" in torch.load(self.processed_path):
-                return
+            # return
         logging.info("preparing data...")
 
         processor = TranscriptomeTextDualEncoderProcessor(
@@ -110,6 +118,32 @@ class JointEmbedDataModule(pl.LightningDataModule):
             padding=True,
         )
 
+        # Take the length from the first one and apply it to all of them
+        # This is not required per se (the dimensionalities could also vary from epoch to epoch), however, it feels cleaner to remain dimensionalities across epochs.
+        # We could also stack them into a single tensor, but I see little benefit at the moment
+        # Note that the first one is computed twice (redundantly)
+        max_length = inputs["input_ids"].shape[1]
+
+        replicate_inputs = {
+            "input_ids": [],
+            "attention_masks": [],
+        }
+
+        # TODO generalize this later towards adata.layers for single-cell replicates
+        if "natural_language_annotation_replicates" in adata.uns:
+            replicate_df = adata.uns["natural_language_annotation_replicates"]
+            logging.info(f"Loading {len(replicate_df.columns)} replicate annotations")
+            for col_name in replicate_df:
+                replicate_annotations = replicate_df[col_name]
+                replicate_input = processor(
+                    text=replicate_annotations.to_list(),
+                    return_tensors="pt",
+                    padding="max_length",  # enforces fixed size (https://huggingface.co/docs/transformers/en/pad_truncation)
+                    max_length=max_length,
+                )
+                for key, feature_data in replicate_input:
+                    replicate_inputs[key].append(feature_data)
+
         # Filter for empty inputs
         if self.transcriptome_processor == "geneformer":
             n_genes_filter = inputs["expression_token_lengths"] >= self.min_genes
@@ -122,14 +156,18 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 "Transcriptome processor {self.transcriptome_processor} not supported"
             )
 
-        inputs = {key: val[n_genes_filter] for key, val in inputs.items()}
-        inputs["orig_ids"] = adata.obs.index[n_genes_filter]
-
         if sum(n_genes_filter) == len(n_genes_filter):
             logging.info(
                 f"No samples were filtered out (All cells had >= {self.min_genes} genes)"
             )
         else:
+            inputs = {key: val[n_genes_filter] for key, val in inputs.items()}
+            inputs["orig_ids"] = adata.obs.index[n_genes_filter]
+            if len(replicate_inputs["input_ids"]) > 0:
+                raise NotImplementedError(
+                    "would also need to filter the replicates fields"
+                )
+
             logging.warning(
                 f"Filtered for {sum(n_genes_filter)} of {len(n_genes_filter)} samples with >={self.min_genes} genes."
             )
@@ -137,12 +175,12 @@ class JointEmbedDataModule(pl.LightningDataModule):
         # save the inputs dict to a file using torch
         self.processed_path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(
-            inputs,
+            (inputs, replicate_inputs),
             self.processed_path,
         )
 
     def setup(self, stage=None):
-        inputs = torch.load(self.processed_path)
+        (inputs, replicate_inputs) = torch.load(self.processed_path)
         # Assuming you want to split the data into train and val for simplicity
         train_size = int(self.train_fraction * len(inputs["input_ids"]))
         # randomly sample train_size indices for train and use the rest for val
@@ -153,15 +191,24 @@ class JointEmbedDataModule(pl.LightningDataModule):
         val_ids = sorted(list(set(total_ids) - set(train_ids)))
 
         self.train_dataset = JointEmbedDataset(
-            {key: val[train_ids] for key, val in inputs.items() if key != "orig_ids"},
+            {
+                key: value[train_ids]
+                for key, value in inputs.items()
+                if key != "orig_ids"
+            },
             orig_ids=inputs["orig_ids"][train_ids],
+            replicate_inputs={
+                key: [value[i][train_ids] for i in train_ids]
+                for key, value in replicate_inputs.items()
+            },
         )
         self.val_dataset = JointEmbedDataset(
-            {key: val[val_ids] for key, val in inputs.items() if key != "orig_ids"},
+            {key: value[val_ids] for key, value in inputs.items() if key != "orig_ids"},
             orig_ids=inputs["orig_ids"][val_ids],
         )
 
     def train_dataloader(self):
+        self.train_dataset.set_epoch(self.trainer.current_epoch)
         return DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
