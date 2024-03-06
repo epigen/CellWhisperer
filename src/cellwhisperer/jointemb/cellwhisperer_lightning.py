@@ -183,7 +183,11 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
         for loss in self.loss_functions:
             # Calculate the loss for the current batch using the specific loss function.
-            loss_value = loss["fn"](**outputs)
+            loss_value = loss["fn"](
+                **outputs,
+                transcriptome_weights=batch.get("transcriptome_weights"),
+                annotation_weights=batch.get("annotation_weights"),
+            )
             combined_loss = combined_loss + (loss_value * loss["lambda"])
 
             # Log the individual loss value for monitoring.

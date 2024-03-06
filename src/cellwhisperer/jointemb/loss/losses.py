@@ -3,6 +3,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from clip_lite.loss import JSDInfoMaxLoss
+from typing import Optional
 
 
 class JSDInfoMaxLossCellWhisperer(JSDInfoMaxLoss):
@@ -42,9 +43,11 @@ class JSDInfoMaxLossCellWhisperer(JSDInfoMaxLoss):
         return loss_results["total_loss"]
 
 
-def contrastive_loss(logits: torch.Tensor) -> torch.Tensor:
+def contrastive_loss(
+    logits: torch.Tensor, weight: Optional[torch.Tensor] = None
+) -> torch.Tensor:
     return nn.functional.cross_entropy(
-        logits, torch.arange(len(logits), device=logits.device)
+        logits, torch.arange(len(logits), device=logits.device), weight=weight
     )
 
 
@@ -52,7 +55,14 @@ class ClipLoss(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, logits_per_text: torch.Tensor, *args, **kwargs) -> torch.Tensor:
+    def forward(
+        self,
+        logits_per_text: torch.Tensor,
+        transcriptome_weights: Optional[torch.Tensor] = None,
+        annotation_weights: Optional[torch.Tensor] = None,
+        *args,
+        **kwargs,
+    ) -> torch.Tensor:
         """
         Computes the CLIP loss given a similarity matrix between two modalities, typically transcriptome and text embeddings.
 
@@ -70,8 +80,11 @@ class ClipLoss(nn.Module):
         Note:
             The function internally calls `ContrastiveLoss` twice, once with the similarity matrix (logits_per_text) as is, and once with its transpose (logits_per_transcriptome), to calculate the losses for both modalities (text and transcriptome).
         """
-        text_loss = contrastive_loss(logits_per_text)
-        transcriptome_loss = contrastive_loss(logits_per_text.t())
+        # TODO ensure that this is not flipped!
+        text_loss = contrastive_loss(logits_per_text, weight=annotation_weights)
+        transcriptome_loss = contrastive_loss(
+            logits_per_text.t(), weight=transcriptome_weights
+        )
         return (text_loss + transcriptome_loss) / 2.0
 
 

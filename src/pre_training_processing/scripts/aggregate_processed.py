@@ -13,7 +13,7 @@ all_annots = snakemake.input.processed_annotations
 def extract_fields_from_path(path):
     """Extract fields replicate and sample_id from a path
 
-    PROCESSED_FILE = PROJECT_DIR / "results" / "annotation_processing" / "processed" / "dataset" / "{replicate}" / "{sample_id}.txt"
+    PROCESSED_FILE = PROJECT_DIR / "results" / "pre_training_processing" / "processed" / "dataset" / "{replicate}" / "{sample_id}.txt"
     """
     match = re.match(r".*/(?P<replicate>\d+)/(?P<sample_id>.+).txt", path)
     return match.groupdict()

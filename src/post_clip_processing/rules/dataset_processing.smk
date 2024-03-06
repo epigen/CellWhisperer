@@ -14,7 +14,7 @@ rule integrate_dataset:
         "cellwhisperer"
         # PROJECT_DIR / "envs" / "main.yaml"
     script:
-        "../../annotation_processing/pipeline/scripts/integrate_dataset.py"
+        "../../pre_training_processing/scripts/integrate_dataset.py"
 
 
 rule process_full_dataset:

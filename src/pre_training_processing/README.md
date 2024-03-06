@@ -40,6 +40,6 @@ cd /msc/home/mschae83/text-generation-webui
 ## nginx
 `conda activate nginx`
 
-Start with `nginx -c $HOME/cellwhisperer/src/annotation_processing/pipeline/nginx/load_balancer.conf`
+Start with `nginx -c $HOME/cellwhisperer/src/pre_training_processing/llm/nginx_load_balancer.conf`
 
 After adding server, run `nginx -s reload -p  /msc/home/mschae83/miniconda3/envs/nginx/` to reload the config on the fly :)

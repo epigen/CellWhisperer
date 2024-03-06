@@ -57,7 +57,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         nproc=8,
         transcriptome_processor_kwargs={},
         tokenizer_kwargs={
-            "model_max_length": 128  # 128 seems to be a decent fit, which cuts very few inputs (Mixtral outputs)
+            "model_max_length": 128  # 128 seems to be a decent fit (previously 100)
         },  # see https://github.com/epigen/cellwhisperer/issues/193
         min_genes=1,
         train_fraction=0.95,
@@ -117,6 +117,38 @@ class JointEmbedDataModule(pl.LightningDataModule):
             return_tensors="pt",
             padding=True,
         )
+        # Add weights tensors (if available)
+        for modality_weights_key in ["transcriptome_weights", "annotation_weights"]:
+            if modality_weights_key in adata.obs:
+                inputs[modality_weights_key] = torch.from_numpy(
+                    adata.obs[modality_weights_key]
+                )
+
+        # Take the length from the first one and apply it to all of them
+        # This is not required per se (the dimensionalities could also vary from epoch to epoch), however, it feels cleaner to remain dimensionalities across epochs.
+        # We could also stack them into a single tensor, but I see little benefit at the moment
+        # Note that the first one is computed twice (redundantly)
+        max_length = inputs["input_ids"].shape[1]
+
+        replicate_inputs = {
+            "input_ids": [],
+            "attention_masks": [],
+        }
+
+        # TODO generalize this later towards adata.layers for single-cell replicates
+        if "natural_language_annotation_replicates" in adata.uns:
+            replicate_df = adata.uns["natural_language_annotation_replicates"]
+            logging.info(f"Loading {len(replicate_df.columns)} replicate annotations")
+            for col_name in replicate_df:
+                replicate_annotations = replicate_df[col_name]
+                replicate_input = processor(
+                    text=replicate_annotations.to_list(),
+                    return_tensors="pt",
+                    padding="max_length",  # enforces fixed size (https://huggingface.co/docs/transformers/en/pad_truncation)
+                    max_length=max_length,
+                )
+                for key, feature_data in replicate_input:
+                    replicate_inputs[key].append(feature_data)
 
         # Take the length from the first one and apply it to all of them
         # This is not required per se (the dimensionalities could also vary from epoch to epoch), however, it feels cleaner to remain dimensionalities across epochs.

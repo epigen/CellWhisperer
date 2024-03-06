@@ -1,30 +1,18 @@
-"""
-Use `langchain` to convert structured annotations (JSON) from diverse sources into curated natural language.
-"""
 
-PROJECT_DIR = Path(workflow.basedir).resolve().parents[2]
-configfile: PROJECT_DIR / "config.yaml"
-
-DATASETS = config["datasets"]
-DATASETS = ["daniel"]
-REPLICATES = range(config["num_epochs"])
-
-PROCESSED_FILE = PROJECT_DIR / "results" / "annotation_processing" / "processed" / "{dataset}" / "{replicate}" / "{sample_id}.txt"
-PROCESSED_FILE_OPENAI = PROJECT_DIR / "results" / "annotation_processing" / "processed_openai" / "{dataset}" / "{sample_id}.txt"
+PROCESSED_FILE = PROJECT_DIR / "results" / "pre_training_processing" / "processed" / "{dataset}" / "{replicate}" / "{sample_id}.txt"
+PROCESSED_FILE_OPENAI = PROJECT_DIR / "results" / "pre_training_processing" / "processed_openai" / "{dataset}" / "{sample_id}.txt"
 
 
-def annotation_ids(wildcards, base_path=PROCESSED_FILE, replicates=REPLICATES):
+def annotation_ids(wildcards, base_path=PROCESSED_FILE, num_replicates=NUM_REPLICATES):
     """
     Return the paths to all the annotations for a given dataset.
     """
     import json
     with open(PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset=wildcards.dataset)) as f:
         annotations = json.load(f)
-    return [str(base_path).format(sample_id=sample_id, replicate=replicate, dataset=wildcards.dataset).replace("//", "/") for sample_id in annotations.keys() for replicate in replicates]
 
-rule all:
-    input:
-        [PROJECT_DIR / config["paths"]["full_dataset"].format(dataset=dataset) for dataset in DATASETS]
+    replicates = range(num_replicates) if num_replicates else [""]
+    return [str(base_path).format(sample_id=sample_id, replicate=replicate, dataset=wildcards.dataset).replace("//", "/") for sample_id in annotations.keys() for replicate in replicates]
 
 
 checkpoint prepare_requests:
@@ -34,7 +22,7 @@ checkpoint prepare_requests:
     input:
         structured_annotations = lambda wildcards: ancient(PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset=wildcards.dataset)),
     output:
-        directory(PROJECT_DIR / "results/annotation_processing/requests/{dataset,[^/]+}"),
+        directory(PROJECT_DIR / "results/pre_training_processing/requests/{dataset,[^/]+}"),
     run:
         import json
         import yaml
@@ -42,8 +30,8 @@ checkpoint prepare_requests:
         with open(input.structured_annotations) as f:
             annotations = json.load(f)
 
-        json_fns = annotation_ids(wildcards, base_path=Path(output[0]) / "{sample_id}.json", replicates=[""])
-        yaml_fns = annotation_ids(wildcards, base_path=Path(output[0]) / "{sample_id}.yaml", replicates=[""])
+        json_fns = annotation_ids(wildcards, base_path=Path(output[0]) / "{sample_id}.json", num_replicates=None)
+        yaml_fns = annotation_ids(wildcards, base_path=Path(output[0]) / "{sample_id}.yaml", num_replicates=None)
 
         Path(json_fns[0]).parent.mkdir(parents=True, exist_ok=True)
 
@@ -72,7 +60,7 @@ rule process_annotation_openai:
         PROJECT_DIR / "envs" / "main.yaml"
         # "cellwhisperer"
     script:
-        "scripts/process_annotations.py"
+        "../scripts/process_annotations.py"
 
 
 rule process_annotation_local:
@@ -123,18 +111,4 @@ rule aggregate_processed:
         single=PROJECT_DIR / config["paths"]["processed_annotations"],
         multi=PROJECT_DIR / config["paths"]["processed_multi_annotations"],
     script:
-        "scripts/aggregate_processed.py"
-
-rule integrate_dataset:
-    input:
-        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
-        processed_annotations=PROJECT_DIR / config["paths"]["processed_multi_annotations"]
-    output:
-        PROJECT_DIR / config["paths"]["full_dataset"]
-    params:
-        anndata_label_name=config["anndata_label_name"],
-    conda:
-        "cellwhisperer"
-        # PROJECT_DIR / "envs" / "main.yaml"
-    script:
-        "scripts/integrate_dataset.py"
+        "../scripts/aggregate_processed.py"

@@ -74,4 +74,6 @@ rule format_annotations:
         with open(output["processed"], "w") as f:
             json.dump(data, f, indent=4)
 
-        # TODO also generate structured (by wrapping the string into a dict with a "description" key)
+        with open(output["structured"], "w") as f:
+            json.dump({key:
+                       {"free text label": value} for key, value in data.items()}, f, indent=4)

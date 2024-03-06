@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# TODO maybe this script is unnecessary
+
 source /msc/home/mschae83/miniconda3/etc/profile.d/conda.sh
 source activate textgen
 

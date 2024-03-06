@@ -1,5 +1,5 @@
 anndata_label_name: natural_language_annotation
-num_epochs: 2
+num_epochs: 5
 
 paths:
   read_count_table: resources/{dataset}/read_count_table.h5ad
