@@ -1,0 +1,9 @@
+{
+    "geo_title": "BM273",
+    "geo_metadata": "subject status: acute myeloid leukemia (AML) patient,response to standard induction chemotherapy: CR (complete remission),tissue: bone marrow",
+    "geo_source_name": "CR_bone marrow",
+    "sample_type": "tissue",
+    "mapped_ontology_terms": "acute myeloid leukemia, disease of cellular proliferation, neoplasm, leukemia, lymphoid neoplasm, acute myeloid leukemia, hematological system disease, cancer, bone marrow, disease",
+    "raw_biosample_metadata": "source_name: CR_bone marrow; subject status: acute myeloid leukemia (AML) patient; response to standard induction chemotherapy: CR (complete remission); tissue: bone marrow",
+    "treatment": ""
+}

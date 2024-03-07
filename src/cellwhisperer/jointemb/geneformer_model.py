@@ -92,9 +92,11 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
                 > 0
             ), "adata.var.index should contain a gene symbols but none are found"
 
-            adata_var["ensembl_id"] = annot.loc[
-                adata_var.var.index.values, "ensembl_gene_id"
-            ].values
+            adata_var["ensembl_id"] = [
+                annot["ensembl_gene_id"].get(gene_name, "")
+                for gene_name in adata_var.index.values
+            ]
+
         adata.var = adata_var
 
         # Filter genes that don't have an ensembl_id (according to our mapping file)

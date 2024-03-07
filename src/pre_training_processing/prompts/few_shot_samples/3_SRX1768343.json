@@ -1,0 +1,9 @@
+{
+    "geo_title": "C1-30-C5_GGACTCCT-TATCCTCT_L004_R1_all",
+    "geo_metadata": "donor: HSB313,age: PCW16,c1_chip: C1-30",
+    "geo_source_name": "Dorsolateral prefrontal cortex",
+    "sample_type": "tissue",
+    "mapped_ontology_terms": "dorsolateral prefrontal cortex",
+    "raw_biosample_metadata": "source_name: Dorsolateral prefrontal cortex; donor: HSB313; age: PCW16; c1_chip: C1-30",
+    "treatment": ""
+}

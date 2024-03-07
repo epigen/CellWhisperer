@@ -5,7 +5,7 @@ NUM_SIMULT_JOBS=1
 
 gpu_type="a100-sxm4-80gb"
 
-JOBID=$(sbatch --array=0-$((TOTAL_NUM_JOBS-1))%${NUM_SIMULT_JOBS} --mem 200GB -N 1 -q $gpu_type --partition gpu --gres gpu:${gpu_type}:1 --ntasks-per-node=1 -c 30 /msc/home/mschae83/single-cellm/src/pre_training_processing/llm/start_llm.sh | awk '{print $4}')
+JOBID=$(sbatch --array=0-$((TOTAL_NUM_JOBS-1))%${NUM_SIMULT_JOBS} --mem 200GB -N 1 -q $gpu_type --partition gpu --gres gpu:${gpu_type}:1 --ntasks-per-node=1 -c 30 /msc/home/mschae83/single-cellm/src/pre_training_processing/misc/start_llm_slurm_helper.sh | awk '{print $4}')
 
 echo $JOBID
 

@@ -1,0 +1,9 @@
+{
+    "geo_title": "1002_GO4H8T1",
+    "geo_metadata": "tissue: high-grade serous ovarian tumour,patient: 1002,source_pre_or_post_chemotherapy: POST,extraction_methods: LCM",
+    "geo_source_name": "High-grade serous ovarian carcinoma",
+    "sample_type": "tissue",
+    "mapped_ontology_terms": "Mantle cell lymphoma, brain disease, ovarian neoplasm, disease of cellular proliferation, lymphocytic choriomeningitis, ovarian carcinoma, carcinoma, epithelial neoplasm, infectious disease, ovarian carcinoma, reproductive system disease, cancer, neoplasm, nervous system disease, ovarian disease, viral disease, carcinoma, disease, endocrine system disease",
+    "raw_biosample_metadata": "source_name: High-grade serous ovarian carcinoma; tissue: high-grade serous ovarian tumour; patient: 1002; source_pre_or_post_chemotherapy: POST; extraction_methods: LCM",
+    "treatment": ""
+}

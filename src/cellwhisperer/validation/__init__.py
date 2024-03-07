@@ -58,7 +58,7 @@ def initialize_validation_functions(
         dm = JointEmbedDataModule(
             tokenizer=text_model_type,
             transcriptome_processor=transcriptome_model_type,
-            dataset_name=name,
+            dataset_names=name,
             batch_size=batch_size,
             train_fraction=0.0,
         )

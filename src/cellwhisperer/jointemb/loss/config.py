@@ -23,6 +23,7 @@ class LossConfig:
         False  # TODO requires image_dim (no big deal to add)
     )
     clip_lite_text_prior: bool = False
+    sample_weighting: bool = True
 
     def configure_losses(self, discriminator):
         """

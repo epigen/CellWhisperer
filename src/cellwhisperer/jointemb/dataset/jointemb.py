@@ -1,11 +1,14 @@
 from torch.utils.data import Dataset, DataLoader
 import anndata
+from collections import defaultdict
+from itertools import zip_longest
 
 import torch
 import random
 import logging
 
 import torch
+from torch.utils.data import ConcatDataset
 import lightning as pl
 
 from transformers import AutoTokenizer
@@ -52,7 +55,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self,
         tokenizer="biogpt",
         transcriptome_processor="geneformer",
-        dataset_name="daniel",
+        dataset_names="daniel",
         batch_size=32,
         nproc=8,
         transcriptome_processor_kwargs={},
@@ -69,114 +72,79 @@ class JointEmbedDataModule(pl.LightningDataModule):
         Args:
             tokenizer: name of the tokenizer to use. Must be a valid name for the AutoTokenizer.from_pretrained() function.
             transcriptome_processor: name of the transcriptome processor to use. Must be a valid name for the GeneformerTranscriptomeProcessor class.
-            dataset_name: name of the dataset to use. Must be a valid name for the get_path() function.
+            dataset_names: Comma-separated list of names of the datasets to use. Must be valid name for the get_path() function.
             batch_size: batch size to use for training and validation
             nproc: number of processes to use for transcriptome processing
             min_genes: minimum number of genes to use for a sample. A larger value may increase the dataset quality. Choose a value > 0 to prevent NaNs, which can occur when the number of genes is 0
         """
         super().__init__()
         self.batch_size = batch_size
-        self.dataset_name = dataset_name
+        self.dataset_names = dataset_names.split(",")
         self.tokenizer = model_path_from_name(tokenizer)
         self.transcriptome_processor = transcriptome_processor
         self.nproc = nproc
         self.min_genes = min_genes
-        self.processed_path = get_path(
-            ["paths", "datamodule_prepared_path"],
-            dataset=self.dataset_name,
-            hash="_".join(
-                [
-                    self.transcriptome_processor,
-                    tokenizer,
-                    str(self.min_genes),
-                ]
-            ),
-        )
         self.train_fraction = train_fraction
         self.transcriptome_processor_kwargs = transcriptome_processor_kwargs.copy()
         self.tokenizer_kwargs = tokenizer_kwargs.copy()
 
+    def _processed_path(self, dataset_name):
+        return get_path(
+            ["paths", "datamodule_prepared_path"],
+            dataset=dataset_name,
+            hash="_".join(
+                [
+                    self.transcriptome_processor,
+                    self.tokenizer,
+                    str(self.min_genes),
+                ]
+            ),
+        )
+
     def prepare_data(self, force_prepare=False):
+        # Generate all datasets
+        for dataset_name in self.dataset_names:
+            self.prepare_data_single(dataset_name, force_prepare)
+
+    def prepare_data_single(self, dataset_name, force_prepare=False):
+        processed_path = self._processed_path(dataset_name)
+
         # check whether data has already been prepared
-        if self.processed_path.exists() and not force_prepare:
+        if processed_path.exists() and not force_prepare:
             logging.info("data already prepared")
-            # return
+            return
         logging.info("preparing data...")
 
+        # Load data and processor
         processor = TranscriptomeTextDualEncoderProcessor(
             self.transcriptome_processor,
             AutoTokenizer.from_pretrained(self.tokenizer, **self.tokenizer_kwargs),
         )
         adata = anndata.read_h5ad(
-            (get_path(["paths", "full_dataset"], dataset=self.dataset_name))
+            (get_path(["paths", "full_dataset"], dataset=dataset_name))
         )
 
+        # Fixed size embedding (https://huggingface.co/docs/transformers/en/pad_truncation), as we combine multiple datasets
         inputs = processor(
             text=list(adata.obs["natural_language_annotation"]),
             transcriptomes=adata,
             return_tensors="pt",
-            padding=True,
+            padding="max_length",
         )
+
         # Add weights tensors (if available)
         for modality_weights_key in ["transcriptome_weights", "annotation_weights"]:
             if modality_weights_key in adata.obs:
                 inputs[modality_weights_key] = torch.from_numpy(
-                    adata.obs[modality_weights_key]
+                    adata.obs[modality_weights_key].values
                 )
+            else:
+                # add 1 if no weights are available
+                inputs[modality_weights_key] = torch.ones(len(adata.obs))
 
-        # Take the length from the first one and apply it to all of them
-        # This is not required per se (the dimensionalities could also vary from epoch to epoch), however, it feels cleaner to remain dimensionalities across epochs.
-        # We could also stack them into a single tensor, but I see little benefit at the moment
-        # Note that the first one is computed twice (redundantly)
-        max_length = inputs["input_ids"].shape[1]
+        replicate_inputs = self._prepare_replicate_inputs(inputs, adata, processor)
 
-        replicate_inputs = {
-            "input_ids": [],
-            "attention_masks": [],
-        }
-
-        # TODO generalize this later towards adata.layers for single-cell replicates
-        if "natural_language_annotation_replicates" in adata.uns:
-            replicate_df = adata.uns["natural_language_annotation_replicates"]
-            logging.info(f"Loading {len(replicate_df.columns)} replicate annotations")
-            for col_name in replicate_df:
-                replicate_annotations = replicate_df[col_name]
-                replicate_input = processor(
-                    text=replicate_annotations.to_list(),
-                    return_tensors="pt",
-                    padding="max_length",  # enforces fixed size (https://huggingface.co/docs/transformers/en/pad_truncation)
-                    max_length=max_length,
-                )
-                for key, feature_data in replicate_input:
-                    replicate_inputs[key].append(feature_data)
-
-        # Take the length from the first one and apply it to all of them
-        # This is not required per se (the dimensionalities could also vary from epoch to epoch), however, it feels cleaner to remain dimensionalities across epochs.
-        # We could also stack them into a single tensor, but I see little benefit at the moment
-        # Note that the first one is computed twice (redundantly)
-        max_length = inputs["input_ids"].shape[1]
-
-        replicate_inputs = {
-            "input_ids": [],
-            "attention_masks": [],
-        }
-
-        # TODO generalize this later towards adata.layers for single-cell replicates
-        if "natural_language_annotation_replicates" in adata.uns:
-            replicate_df = adata.uns["natural_language_annotation_replicates"]
-            logging.info(f"Loading {len(replicate_df.columns)} replicate annotations")
-            for col_name in replicate_df:
-                replicate_annotations = replicate_df[col_name]
-                replicate_input = processor(
-                    text=replicate_annotations.to_list(),
-                    return_tensors="pt",
-                    padding="max_length",  # enforces fixed size (https://huggingface.co/docs/transformers/en/pad_truncation)
-                    max_length=max_length,
-                )
-                for key, feature_data in replicate_input:
-                    replicate_inputs[key].append(feature_data)
-
-        # Filter for empty inputs
+        # Filter for empty inputs (NOTE: empty inputs should be avoided)
         if self.transcriptome_processor == "geneformer":
             n_genes_filter = inputs["expression_token_lengths"] >= self.min_genes
         elif self.transcriptome_processor == "scgpt":
@@ -192,6 +160,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             logging.info(
                 f"No samples were filtered out (All cells had >= {self.min_genes} genes)"
             )
+            inputs["orig_ids"] = adata.obs.index[n_genes_filter]
         else:
             inputs = {key: val[n_genes_filter] for key, val in inputs.items()}
             inputs["orig_ids"] = adata.obs.index[n_genes_filter]
@@ -205,44 +174,108 @@ class JointEmbedDataModule(pl.LightningDataModule):
             )
 
         # save the inputs dict to a file using torch
-        self.processed_path.parent.mkdir(parents=True, exist_ok=True)
+        processed_path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(
             (inputs, replicate_inputs),
-            self.processed_path,
+            processed_path,
         )
+
+    def _prepare_replicate_inputs(self, inputs, adata, processor):
+        """
+        Take the length from the first one and apply it to all of them
+        This is not required per se (the dimensionalities could also vary from epoch to epoch), however, it feels cleaner to remain dimensionalities across epochs.
+        We could also stack them into a single tensor, but I see little benefit at the moment
+        Note that the first one is computed twice (redundantly)
+
+        # TODO generalize this later for single-cell replicates
+        """
+        max_length = inputs["input_ids"].shape[
+            1
+        ]  # TODO this is actually redundant as we anyways force it to 128
+
+        replicate_inputs = defaultdict(list)
+
+        # Annotation replicates
+        if "natural_language_annotation_replicates" in adata.uns:
+            replicate_df = adata.uns["natural_language_annotation_replicates"]
+            logging.info(f"Loading {len(replicate_df.columns)} replicate annotations")
+            for col_name in replicate_df:
+                replicate_annotations = replicate_df[col_name]
+                replicate_input = processor(
+                    text=replicate_annotations.to_list(),
+                    return_tensors="pt",
+                    padding="max_length",  # enforces fixed size (https://huggingface.co/docs/transformers/en/pad_truncation)
+                    max_length=max_length,
+                )
+                for key, feature_data in replicate_input.items():
+                    replicate_inputs[key].append(feature_data)
+
+        # Transcriptome replicates
+        # replicate_layers = sorted(
+        #     [key for key in adata.layers.keys() if "replicate" in key]
+        # )
+        # logging.info(f"Loading {len(replicate_layers)} replicate transcriptomes")
+        # # X = adata.X
+        # for layer_name in replicate_layers:
+        #     # adata.X = adata.layers[layer_name]
+        #     replicate_input = processor(
+        #         transcriptomes=adata([~adata.obs.is_pseudobulk) & adata.obs.],
+        #         return_tensors="pt",
+        #     )
+        #     for key, feature_data in replicate_input.items():
+        #         replicate_inputs[key].append(feature_data)
+        # restore adata.X to the original value
+        # adata.X = X
+
+        return replicate_inputs
 
     def setup(self, stage=None):
-        (inputs, replicate_inputs) = torch.load(self.processed_path)
-        # Assuming you want to split the data into train and val for simplicity
-        train_size = int(self.train_fraction * len(inputs["input_ids"]))
-        # randomly sample train_size indices for train and use the rest for val
-        # fix the seed
-        random.seed(42)
-        total_ids = list(range(len(inputs["input_ids"])))
-        train_ids = random.sample(total_ids, train_size)
-        val_ids = sorted(list(set(total_ids) - set(train_ids)))
+        self.train_datasets = []
+        self.val_datasets = []
+        for dataset_name in self.dataset_names:
+            (inputs, replicate_inputs) = torch.load(self._processed_path(dataset_name))
+            # Assuming you want to split the data into train and val for simplicity
+            train_size = int(self.train_fraction * len(inputs["input_ids"]))
+            # randomly sample train_size indices for train and use the rest for val
+            # fix the seed
+            random.seed(42)
+            total_ids = list(range(len(inputs["input_ids"])))
+            train_ids = random.sample(total_ids, train_size)
+            val_ids = sorted(list(set(total_ids) - set(train_ids)))
 
-        self.train_dataset = JointEmbedDataset(
-            {
-                key: value[train_ids]
-                for key, value in inputs.items()
-                if key != "orig_ids"
-            },
-            orig_ids=inputs["orig_ids"][train_ids],
-            replicate_inputs={
-                key: [value[i][train_ids] for i in train_ids]
-                for key, value in replicate_inputs.items()
-            },
-        )
-        self.val_dataset = JointEmbedDataset(
-            {key: value[val_ids] for key, value in inputs.items() if key != "orig_ids"},
-            orig_ids=inputs["orig_ids"][val_ids],
-        )
+            self.train_datasets.append(
+                JointEmbedDataset(
+                    {
+                        key: value[train_ids]
+                        for key, value in inputs.items()
+                        if key != "orig_ids"
+                    },
+                    orig_ids=inputs["orig_ids"][train_ids],
+                    replicate_inputs={
+                        key: [value[i][train_ids] for i in range(len(value))]
+                        for key, value in replicate_inputs.items()
+                    },
+                )
+            )
+            self.val_datasets.append(
+                JointEmbedDataset(
+                    {
+                        key: value[val_ids]
+                        for key, value in inputs.items()
+                        if key != "orig_ids"
+                    },
+                    orig_ids=inputs["orig_ids"][val_ids],
+                )
+            )
 
     def train_dataloader(self):
-        self.train_dataset.set_epoch(self.trainer.current_epoch)
+        # TODO balance the weights such that archs4_metasra has at least 50% total weights
+        # Update the current epoch to sample the replicates
+        for dataset in self.train_datasets:
+            dataset.set_epoch(self.trainer.current_epoch)
+
         return DataLoader(
-            self.train_dataset,
+            ConcatDataset(self.train_datasets),
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=self.nproc,
@@ -250,8 +283,11 @@ class JointEmbedDataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self):
+        """
+        In principle, we could also return a list of DataLoaders, but it is currently incompatibl with RetrievalScoreCalculator
+        """
         return DataLoader(
-            self.val_dataset,
+            ConcatDataset(self.val_datasets),
             batch_size=self.batch_size,
             num_workers=self.nproc,
             drop_last=False,

@@ -1,0 +1,9 @@
+{
+    "geo_title": "MC-75_RNA-Seq [FGC1243_s_8_1_TAATGCGC-AGGCGAAG]",
+    "geo_metadata": "cohort: Penn Cohort 2,tissue: liver,individual: MC-75",
+    "geo_source_name": "Liver",
+    "sample_type": "tissue",
+    "mapped_ontology_terms": "liver",
+    "raw_biosample_metadata": "source_name: Liver; cohort: Penn Cohort 2; tissue: liver; individual: MC-75",
+    "treatment": ""
+}

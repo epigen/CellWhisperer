@@ -1,73 +1,23 @@
-Given the structured annotation of a RNA sequencing study of a single sample, return a concise formulation of this sample's specific information in natural language. Ignore information that is not relevant to the cell state (such as study-specific information) and focus on the biological properties of the sample that are reflected in the cellular phenotype and transcriptome.
+You are a biomedical researcher. Your task is to extract the biological information from an RNA sequencing sample's metadata indicated by <<<>>> and representing them in natural language.
 
-I provide three examples
+# Instructions
+## Natural Language
+Be brief and focus solely on the biological aspects of the sample that contribute to understanding its cellular state.
 
-Example Input 1:
-{
-    "sra_title": "RNA-seq of human lung tissue",
-    "sra_study_title": "Study of gene expression in human lung tissue",
-    "sra_study_abstract": "This study aims to understand the gene expression patterns in human lung tissue [...]",
-    "sra_sample_attributes": "age=45;sex=female;tissue=lung;BioSampleModel=Human",
-    "sample_name": NaN,
-    "mapped_ontology_terms": NaN,
-    "raw_SRA_metadata": NaN,
-    "geo_title": NaN,
-    "Tissue": "Lung",
-    "Tissue_subtype": NaN,
-    "Disease": "Healthy",
-    "Disease_subtype": NaN,
-    "Treated": 0,
-    "Type": "Primary",
-    "Comment": NaN
-}
+## Biological Information
+Only consider information that are reflective of the sample's biology, i.e. the phenotype and transcriptome of the contained cells, such as cell type and any pertinent conditions or treatments. Incorporate information about the sample's study only if it helps describing the sample's biology.
 
-Example Output 1:
-The sample is derived from the lung tissue of a 45-year-old female human. The individual was healthy at the time of sample collection. The sample is primary and has not undergone any treatment. The study aims to understand the gene expression patterns in human lung tissue, but this particular sample does not pertain to any disease condition.
+## Ignored Information
+Ignore information that is not relevant to the cellular state. Specifically, exclude all technical and methodological details of the sequencing process, including but not limited to library type, read length, sequencing platform, or any other laboratory technique-related information. Also exclude information about the study context, if it does not impact the sample's biology.
 
-Example Input 2:
-{
-    "sra_title": "RNA-seq of human liver tissue with Hepatitis C",
-    "sra_study_title": "Study of gene expression in human liver tissue with Hepatitis C",
-    "sra_study_abstract": "This study aims to understand the gene expression patterns in human liver tissue with Hepatitis C [...]",
+# Examples
+Here are some examples:
 
-"sra_sample_attributes": "age=60;sex=male;tissue=liver;BioSampleModel=Human;disease=Hepatitis C",
-    "sample_name": NaN,
-    "mapped_ontology_terms": "Hepatitis C, male organism",
-    "raw_SRA_metadata": NaN,
-    "geo_title": NaN,
-    "Tissue": "Liver",
-    "Tissue_subtype": NaN,
-    "Disease": "Liver disease",
-    "Disease_subtype": "Hepatitis C",
-    "Treated": 0,
-    "Type": "Primary",
-    "Comment": NaN
-}
+{few_shot_block}
 
-Example Output 2:
-The sample is from a 60-year-old male patient diagnosed with Hepatitis C, a subtype of liver disease. The tissue sample was taken from the liver, which is the primary site of the disease. The sample was not treated before sequencing. The sequencing was performed to understand the gene expression patterns in human liver tissue with Hepatitis C.
+# Instruction Query
 
-Example Input 3:
-{
-    "sra_title": "RNA-seq of human skin tissue with Melanoma",
-    "sra_study_title": "Study of gene expression in human skin tissue with Melanoma",
-    "sra_study_abstract": "This study aims to understand the gene expression patterns in human skin tissue with Melanoma [...]",
-
-"sra_sample_attributes": "age=70;sex=female;tissue=skin;BioSampleModel=Human;disease=Melanoma",
-    "sample_name": NaN,
-    "mapped_ontology_terms": "Melanoma, female organism",
-    "raw_SRA_metadata": NaN,
-    "geo_title": NaN,
-    "Tissue": "Skin",
-    "Tissue_subtype": NaN,
-    "Disease": "Skin cancer",
-    "Disease_subtype": "Melanoma",
-    "Treated": 0,
-    "Type": "Primary",
-    "Comment": NaN
-}
-
-Example Output 3:
-This sample is from a 70-year-old female patient diagnosed with Melanoma, a subtype of skin cancer. The sample was collected from the skin, which is the primary site of the disease. The RNA sequencing was performed to understand the gene expression patterns in human skin tissue with Melanoma. The study did not involve any treatment and the sample is of primary type.
-
-Please follow this structure to convert the given JSON data into a coherent and succinct annotation.
+<<<
+Structured: {query}
+>>>
+Natural Language: 

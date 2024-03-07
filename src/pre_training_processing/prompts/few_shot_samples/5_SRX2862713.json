@@ -1,0 +1,9 @@
+{
+    "geo_title": "Ctrl_TFAP2C/T, day4, MS081Y96",
+    "geo_metadata": "sampled time point: day4 PGCLC,cell line: 585B1,transgenes: Blimp1-tdTomato,genotype/variation: WT control,differentiation series: Series 2, TFAP2C KO and T KO",
+    "geo_source_name": "day4, from 585B1 hiPSC line",
+    "sample_type": "in_vitro_differentiated_cells",
+    "mapped_ontology_terms": "induced pluripotent stem cell, stem cell, pluripotent stem cell, somatic stem cell, 585B1, cultured cell, cell line",
+    "raw_biosample_metadata": "source_name: day4, from 585B1 hiPSC line; sampled time point: day4 PGCLC; cell_line: 585B1; transgenes: Blimp1-tdTomato; genotype: WT control; differentiation series: Series 2, TFAP2C KO and T KO",
+    "treatment": ""
+}

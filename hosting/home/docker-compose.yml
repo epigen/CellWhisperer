@@ -13,6 +13,7 @@ services:
     command: /bin/bash /start.sh python src/model_server/main.py
     stdin_open: true
     tty: true
+    restart: unless-stopped
     environment:
       NVIDIA_VISIBLE_DEVICES: GPU-c38cbc2d-129a-dddf-9ed4-8a0e06763d33
       MODEL: "/model.ckpt"
@@ -39,6 +40,7 @@ services:
     command: /bin/bash /start.sh cellxgene launch --debug -v -p 5005  --host 0.0.0.0 --max-category-items 500 --backed /dataset.h5ad  "http://cellwhisperer_api:8910/api"
     stdin_open: true
     tty: true
+    restart: unless-stopped
     environment:
       NVIDIA_VISIBLE_DEVICES: GPU-c38cbc2d-129a-dddf-9ed4-8a0e06763d33
       # CXG_CLIENT_PORT: 3000
@@ -104,6 +106,10 @@ services:
     depends_on:
       - cellxgene_tabsap
       - cellxgene_geo  # Add dependency if needed
+      - cellxgene_development_raw
+      - cellxgene_development_scvi
+      - cellxgene_daniel
+      # ...
     restart: unless-stopped
 
 

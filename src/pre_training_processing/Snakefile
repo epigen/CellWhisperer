@@ -6,9 +6,10 @@ PROJECT_DIR = Path(workflow.basedir).resolve().parents[1]
 configfile: PROJECT_DIR / "config.yaml"
 
 DATASETS = config["datasets"]
-DATASETS = ["daniel"]
-NUM_REPLICATES = 2
+DATASETS = ["archs4_metasra"]
 RESULTS_DIR = PROJECT_DIR / "results" / "pre_training_preparation"
+REPLICATES = list(range(config["num_epochs"]))
+REPLICATES = [0]
 
 include: "rules/annotation_processing.smk"
 include: "rules/training_sample_weights.smk"

@@ -50,6 +50,10 @@ class CellWhispererCLI(LightningCLI):
     def __init__(self, *args, **kwargs):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         warnings.filterwarnings("ignore", category=FutureWarning)
+        warnings.filterwarnings(
+            "ignore", category=ResourceWarning
+        )  # "ResourceWarning: Implicitly cleaning up <TemporaryDirectory..."
+
         super().__init__(*args, **kwargs)
 
     def add_arguments_to_parser(self, parser):

@@ -161,9 +161,11 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         expression_expr: Optional[torch.LongTensor] = None,
         expression_key_padding_mask: Optional[torch.LongTensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
+        transcriptome_weights: Optional[torch.FloatTensor] = None,
+        annotation_weights: Optional[torch.FloatTensor] = None,
         **kwargs,  # token_type_ids
     ) -> CLIPOutput:
-        return self.model(
+        output = self.model(
             input_ids=input_ids,
             expression_tokens=expression_tokens,
             expression_token_lengths=expression_token_lengths,
@@ -174,20 +176,24 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             return_dict=True,
             **kwargs,
         )
+        output["transcriptome_weights"] = transcriptome_weights
+        output["annotation_weights"] = annotation_weights
+        return output
 
     def process_step(self, batch, batch_idx, step_type):
         outputs = self(**batch)
+
+        if not self.loss_config.sample_weighting:
+            outputs["transcriptome_weights"] = None
+            outputs["annotation_weights"] = None
 
         # outputs = {k: v.to(device) if v is not None else None for k, v in outputs.items()}
         combined_loss = torch.tensor(0.0, device=self.device)
 
         for loss in self.loss_functions:
             # Calculate the loss for the current batch using the specific loss function.
-            loss_value = loss["fn"](
-                **outputs,
-                transcriptome_weights=batch.get("transcriptome_weights"),
-                annotation_weights=batch.get("annotation_weights"),
-            )
+
+            loss_value = loss["fn"](**outputs)
             combined_loss = combined_loss + (loss_value * loss["lambda"])
 
             # Log the individual loss value for monitoring.

@@ -40,7 +40,11 @@ class RetrievalScoreCalculator:
         for i, batch in enumerate(self.dataloader):
             if i * self.batch_size >= self.max_n_samples:
                 break
-            batch = {k: v.to(model.device) for k, v in batch.items()}
+            batch = {
+                k: v.to(model.device)
+                for k, v in batch.items()
+                if k not in ["transcriptome_weights", "annotation_weights"]
+            }
             res = model(**batch)
             res.text_embeds = res.text_embeds.detach()  # .cpu()
             res.transcriptome_embeds = res.transcriptome_embeds.detach()  # .cpu()

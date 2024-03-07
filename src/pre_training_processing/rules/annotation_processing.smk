@@ -1,28 +1,20 @@
+from collections import defaultdict
 
-PROCESSED_FILE = PROJECT_DIR / "results" / "pre_training_processing" / "processed" / "{dataset}" / "{replicate}" / "{sample_id}.txt"
-PROCESSED_FILE_OPENAI = PROJECT_DIR / "results" / "pre_training_processing" / "processed_openai" / "{dataset}" / "{sample_id}.txt"
+scattergather:
+    split=256
 
-
-def annotation_ids(wildcards, base_path=PROCESSED_FILE, num_replicates=NUM_REPLICATES):
-    """
-    Return the paths to all the annotations for a given dataset.
-    """
-    import json
-    with open(PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset=wildcards.dataset)) as f:
-        annotations = json.load(f)
-
-    replicates = range(num_replicates) if num_replicates else [""]
-    return [str(base_path).format(sample_id=sample_id, replicate=replicate, dataset=wildcards.dataset).replace("//", "/") for sample_id in annotations.keys() for replicate in replicates]
-
-
-checkpoint prepare_requests:
+rule prepare_requests:
     """
     Open the structured annotations dataframe and extract the sample with the appropriate ID. For performance reasons, extract all requested at once.
+
+    NOTE: if we wanted to introduce variability in the requests, we could do it here in function of the replicate number.
     """
     input:
-        structured_annotations = lambda wildcards: ancient(PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset=wildcards.dataset)),
+        # structured_annotations = lambda wildcards: ancient(PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset=wildcards.dataset)),
+        structured_annotations = ancient(PROJECT_DIR / config["paths"]["structured_annotations"])
     output:
-        directory(PROJECT_DIR / "results/pre_training_processing/requests/{dataset,[^/]+}"),
+        yaml_splits=scatter.split(PROJECT_DIR / "results/pre_training_processing/requests/{{dataset,[^/]+}}/{{replicate}}/{scatteritem}.yaml")
+        # optionally add json
     run:
         import json
         import yaml
@@ -30,37 +22,33 @@ checkpoint prepare_requests:
         with open(input.structured_annotations) as f:
             annotations = json.load(f)
 
-        json_fns = annotation_ids(wildcards, base_path=Path(output[0]) / "{sample_id}.json", num_replicates=None)
-        yaml_fns = annotation_ids(wildcards, base_path=Path(output[0]) / "{sample_id}.yaml", num_replicates=None)
+        # wildcards.scatteritem contains i-of-n.yaml
+        for split_fn in output.yaml_splits:
+            split_i, split_n = map(int, Path(split_fn).stem.split('-of-'))
+            split_i -= 1  # 0-indexing
+            # take the i-th split from annotations:
+            split_annotations = {k: v for i, (k, v) in enumerate(annotations.items()) if i % split_n == split_i}
 
-        Path(json_fns[0]).parent.mkdir(parents=True, exist_ok=True)
+            # write the split to a file
+            with open(split_fn, "w") as f:
+                yaml.dump(split_annotations, f)
 
-        for json_fn, yaml_fn in zip(json_fns, yaml_fns):
-            sample_id = Path(json_fn).stem
-            sample = annotations[sample_id]
-            sample = {k: v for k, v in sample.items() if v==v}  # v==v filters out nan values
-            with open(json_fn, "w") as f:
-                json.dump(sample, f, indent=4)
+# rule process_annotation_openai:
+#     """
+#     Alternative annotation processing using OpenAI's API.
 
-            with open(yaml_fn, "w") as f:
-                yaml.dump(sample, f)
-
-rule process_annotation_openai:
-    """
-    Alternative annotation processing using OpenAI's API.
-
-    Currently unused (and outdated)
-    """
-    input:
-        human_message=lambda wildcards: checkpoints.prepare_requests.get(dataset=wildcards.dataset).output[0] + f"/{wildcards.sample_id}.yaml",
-        system_message = "prompts/process_annotations_zero_shot_gpt4.txt",
-    output:
-        processed_annotation = protected(PROCESSED_FILE_OPENAI),  # I marked this as protected as it might be costly to produce
-    conda:
-        PROJECT_DIR / "envs" / "main.yaml"
-        # "cellwhisperer"
-    script:
-        "../scripts/process_annotations.py"
+#     Currently unused (and outdated)
+#     """
+#     input:
+#         human_message=lambda wildcards: checkpoints.prepare_requests.get(dataset=wildcards.dataset).output[0] + f"/{wildcards.sample_id}.yaml",
+#         system_message = "prompts/process_annotations_zero_shot_gpt4.txt",
+#     output:
+#         processed_annotation = protected(PROCESSED_FILE_OPENAI),  # I marked this as protected as it might be costly to produce
+#     conda:
+#         PROJECT_DIR / "envs" / "main.yaml"
+#         # "cellwhisperer"
+#     script:
+#         "../scripts/process_annotations.py"
 
 
 rule process_annotation_local:
@@ -68,45 +56,26 @@ rule process_annotation_local:
     Requires running the oobabooga server. See the README for instructions.
     """
     input:
-        instruction="prompts/process_annotations_zero_shot_local.txt",
-        sample_yaml=lambda wildcards: checkpoints.prepare_requests.get(dataset=wildcards.dataset).output[0] + f"/{wildcards.sample_id}.yaml"
+        model=Path("~/text-generation-webui/models/mixtral-8x7b-instruct-v0.1.Q5_K_M.gguf").expanduser(),
+        instruction="prompts/process_annotations_few_shot.txt",
+        yaml_split=PROJECT_DIR / "results/pre_training_processing/requests/{dataset,[^/]+}/{replicate}/{scatteritem}.yaml",
+        few_shot_samples=ancient(directory("prompts/few_shot_samples/")),
     output:
-        processed_annotation = protected(PROCESSED_FILE),  # I marked this as protected as it might be costly to produce
-    params:
-        api_url = "http://s0-n02.hpc.meduniwien.ac.at:5000/v1/completions"  # TODO make sure that the nginx server is running alongside oobabooga clients
-    run:
-        import requests
-        import json
-
-        instruction = Path(input.instruction).read_text()
-        sample_yaml = Path(input.sample_yaml).read_text()
-        # first sample, set temperature to 0.2. for the others set it to 0.5
-        temperature = 0.2 if wildcards.replicate == "0" else 0.7
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer OdNFpEua0T5TNdd0"
-        }
-        data = {
-            "prompt": f"<s>[INST] {instruction}:\n{sample_yaml} [/INST] ",
-            "max_tokens": 300,
-            "seed": hash(sample_yaml) % 2**30,
-            "temperature": temperature,
-            "top_p": 0.9,
-            "top_k": 50,
-        }
-        response = requests.post(params.api_url, headers=headers, data=json.dumps(data))
-
-        result = response.json()["choices"][0]["text"].strip()
-
-        Path(output[0]).write_text(result)
+        processed_annotation = protected(PROJECT_DIR / "results" / "pre_training_processing" / "processed" / "{dataset}" / "{replicate}" / "{scatteritem}.csv"),  # I marked this as protected as it might be costly to produce
+    resources:
+        mem_mb=100000,
+        slurm="cpus-per-task=25 gres=gpu:a100:1 qos=a100 partition=gpu"
+    conda: "textgen"  # "../envs/llamacpp.yaml" fails to install :/
+    script: "../scripts/process_annotations_local.py"
 
 rule aggregate_processed:
     """
-    Read in all the generated annotations and aggregate them into a single JSON file.
+    Read in all the generated annotations and aggregate them into a single JSON file
     """
     input:
-        processed_annotations=annotation_ids
+        yaml_splits=[split.format(dataset="{dataset}", replicate=replicate)
+                     for split in gather.split(PROJECT_DIR / "results" / "pre_training_processing" / "processed" / "{{dataset}}" / "{{replicate}}" / "{scatteritem}.csv")
+                     for replicate in REPLICATES],
     output:
         single=PROJECT_DIR / config["paths"]["processed_annotations"],
         multi=PROJECT_DIR / config["paths"]["processed_multi_annotations"],

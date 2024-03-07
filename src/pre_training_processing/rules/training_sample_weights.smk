@@ -12,7 +12,7 @@ rule transcriptome_representation:
     params:
         n_dimensions=768  # match the annotation dimensionality
     resources:
-        mem_mb=40000,
+        mem_mb=800000,
     script:
         "../scripts/transcriptome_representation.py"
 
@@ -29,7 +29,7 @@ rule annotation_representation:
     conda:
         "../envs/pydata.yaml"
     resources:
-        mem_mb=40000,
+        mem_mb=400000,
         slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
     script:
         "../scripts/annotation_representation.py"

@@ -10,22 +10,19 @@ export OPENAI_API_KEY=sk-ctiercntie
 
 # Snakemake
 
-Run like below. Seems hacky but works. It batches the relevant rule, to prevent snakemake-stalling (due to large DAG size)
+Just run:
 
 ```bash
-for i in $(seq 100); do
-  echo "Running batch $i/100"
-  # NOTE: I needed to add `-R process_annotation_local` as some sort of a workaround
-  SNAKEMAKE_PROFILE= snakemake -j12 -R process_annotation_local --rerun-triggers mtime --batch aggregate_processed=$i/100
-done
-
+SNAKEMAKE_PROFILE=muwhpc_slurm snakemake
 ```
+
+This automatically splits the heavy load of annotation processing into 256 manageable splits, which are then processed 1 by 1 (and/or in parallel)
 
 # LLM server
 
 ## oobabooga
 
-With this configuration (8 bit quantization), needs an 80GB GPU
+With this configuration (5 bit quantization), needs a 40GB GPU
 
 ```bash
 cd /msc/home/mschae83/text-generation-webui

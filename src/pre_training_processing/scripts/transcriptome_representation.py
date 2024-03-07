@@ -8,7 +8,7 @@ sc.pp.normalize_total(adata, target_sum=10000, exclude_highly_expressed=True)
 sc.pp.log1p(adata)
 
 # Compute PCA of the data
-sc.pp.pca(adata, n_comps=snakemake.params.n_dimensions)
+sc.pp.pca(adata, n_comps=min(snakemake.params.n_dimensions, len(adata) - 1))
 
 # compute HVGs (epxected log data)
 # sc.pp.highly_variable_genes(adata, n_top_genes=2048)

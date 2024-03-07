@@ -1,0 +1,9 @@
+{
+    "geo_title": "1_2685_1_TimePoint1",
+    "geo_metadata": "treatment: pertussis antigenic challenge,primed: aP,time: 0 days,cell type: PBMC",
+    "geo_source_name": "peripheral blood mononuclear cells",
+    "sample_type": "primary_cells",
+    "mapped_ontology_terms": "whooping cough, infectious disease, pertussis, hematopoietic cell, leukocyte, peripheral blood mononuclear cell, blood, treatment, disease, mononuclear cell",
+    "raw_biosample_metadata": "source_name: peripheral blood mononuclear cells; treatment: pertussis antigenic challenge; primed: aP; time: 0 days; cell_type: PBMC",
+    "treatment": "treatment: pertussis antigenic challenge"
+}
