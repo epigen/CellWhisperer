@@ -36,6 +36,7 @@ dependencies:
   - scib=1.1.4
   - louvain=0.8.1
   - pynndescent=0.5.11
+  - biopython=1.83
   - pip:
     - torchtext==0.16.1
     - gseapy==1.0.6
@@ -51,5 +52,6 @@ dependencies:
     - scvi-tools==0.20.3
     - cell-gears==0.0.2
     - umap-learn==0.5.5
+    - cellxgene-census
     - -e ..
     - -e ../modules/cellxgene/
