@@ -1,3 +1,5 @@
+# TODO deprecated. rely on preprocessing snakemake files and just integrate it into our cellxgene.h5ad
+
 import subprocess
 from pathlib import Path
 import logging
@@ -53,7 +55,7 @@ def load_enrichr_terms(
     """
     terms = {}
     for lib in selected_libraries:
-        terms[lib] = list(gp.get_library(lib, organism=organism).keys())
+        terms[lib] = gp.get_library(lib, organism=organism)
     return terms
 
 
@@ -79,7 +81,7 @@ def load_tabsap_terms(
 # Prepare the enrichr terms:
 # TODO get team feedback on which libraries to include by default - list of all available libraries with 'gp.get_library_name()'
 logging.info("Preparing EnrichR terms...")
-enrichr_terms = load_enrichr_terms()
+enrichr_terms = {lib: list(sets.keys()) for lib, sets in load_enrichr_terms().items()}
 
 # load terms from tabsap as well
 

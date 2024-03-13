@@ -45,7 +45,7 @@ rule local_density_to_sample_weight:
     input:
         representation=RESULTS_DIR / "{dataset}" / "{modality}_representation.npz"
     output:
-        weight=RESULTS_DIR / "{dataset}" / "{modality}_weights.npz",
+        weight=protected(RESULTS_DIR / "{dataset}" / "{modality}_weights.npz"),
         plot_orig_radii=RESULTS_DIR / "{dataset}" / "{modality}_weights_dist.png",
     conda:
         "../envs/pydata.yaml"

@@ -8,6 +8,36 @@ import json
 # Load dataset
 dataset = anndata.read_h5ad(snakemake.input.read_count_table, backed="r")
 
+# Load GSVA data
+def load_gsva_data(top_n=50):
+    """
+    Identify the top_n pathways for each sample (by GSVA score) and store them as top50 categorical dataframe.
+    I also tried a sparse type dataframe, but it unfortunately did not store with the anndata object's h5py .
+    """
+    gsva = pd.read_csv(snakemake.input.gsva_csv, index_col=0)
+    gsva.index.name = "pathway"
+
+    # NOTE: this operation might be slow/big
+    top_n_pathways = gsva.apply(lambda x: x.nlargest(top_n).index, axis=0)
+
+    # Convert to categorical
+    top_n_pathways = top_n_pathways.apply(
+        lambda x: pd.Categorical(x, categories=gsva.index)
+    )
+
+    # Select the scores for each of the top_n_pathways from `gsva`
+    scores = top_n_pathways.apply(lambda sample: gsva.loc[sample, sample.name])
+
+    top_n_pathways.index = top_n_pathways.index.map(
+        str
+    )  # required to be storable as anndata
+
+    return top_n_pathways.T, scores.T
+
+
+# Add GSVA data to the dataset
+dataset.obsm["top_50_gsva_names"], dataset.obsm["top_50_gsva_scores"] = load_gsva_data()
+
 # Load annotations
 with open(snakemake.input.processed_annotations) as f:
     annotations = json.load(f)

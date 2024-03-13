@@ -8,6 +8,8 @@ paths:
   processed_annotations: results/{dataset}/processed_annotations.json
   processed_multi_annotations: results/{dataset}/processed_multi_annotations.json
   llava_pretrain_text_dataset: results/{dataset}/llava_pretrain_texts.json
+  geneset_gmt: results/genesets/{library}.gmt
+  gsva_results: results/{dataset}/gsva.parquet
   model_processed_dataset: results/{dataset}/{model}/full_output.npz
   llava_pretrained_model_dir: results/llava/pretrained/{base_model}__{model}/
   llava_finetuned_model_dir: results/llava/finetuned/{base_model}__{model}/
@@ -47,6 +49,20 @@ model_name_path_map:
   scgpt: resources/scGPT_human
   cellwhisperer: 03jujd8s
     # poor choice with scgpt: 609rcmt4
+
+
+genesets:
+  - "Azimuth_2023"
+  - "GO_Biological_Process_2023"
+  - "GO_Cellular_Component_2023"
+  - "GO_Molecular_Function_2023"
+  - "OMIM_Expanded"
+  - "PanglaoDB_Augmented_2021"
+  - "Tabula_Sapiens"
+  - "Cytopus_immune_identities"
+  - "Cytopus_processes"
+
+
 
 # Only used, if not dedicated hyperparameter config file is provided
 SWEEP_HYPERPARAMETERS:

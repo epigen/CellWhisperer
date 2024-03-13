@@ -1,0 +1,10 @@
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - gseapy
+  - pandas
+  - pip
+  - pip:
+    - cytopus

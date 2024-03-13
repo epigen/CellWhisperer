@@ -1,0 +1,12 @@
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - r-base
+  - bioconductor-gsva
+  - jupyter
+  - jupyterlab_code_formatter
+  - r-irkernel
+  - bioconductor-zellkonverter
+
