@@ -68,8 +68,9 @@ ALLOWED_ASSAYS = [
 #  'BD Rhapsody Targeted mRNA',
 #  'sci-RNA-seq']
 
-# Tabula Sapiens dataset IDs (need to be excluded)
+# Tabula Sapiens dataset IDs (need to be excluded). Note: only the first one is considered. The other ones are not "primary"
 CONTROL_DATASET_IDS = {
+    "53d208b0-2cfd-4366-9866-c3c6114081bc",
     "ff45e623-7f5f-46e3-b47d-56be0341f66b",
     "f01bdd17-4902-40f5-86e3-240d66dd2587",
     "e6a11140-2545-46bc-929e-da243eed2cae",
