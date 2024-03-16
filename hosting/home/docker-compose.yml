@@ -96,6 +96,37 @@ services:
       - ~/cellwhisperer:/opt/cellwhisperer
       - ~/cellwhisperer/results/car_t/03jujd8s/cellxgene.h5ad:/dataset.h5ad
 
+  cellxgene_hcaorganoids_cancer__organoid:
+    <<: *default-service
+    volumes:
+      - ./docker_conda:/opt/miniconda3
+      - ./start.sh:/start.sh
+      - ~/cellwhisperer:/opt/cellwhisperer
+      - ~/cellwhisperer/results/hcaorganoids_cancer__organoid/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+  cellxgene_hcaorganoids_cancer__primary:
+    <<: *default-service
+    volumes:
+      - ./docker_conda:/opt/miniconda3
+      - ./start.sh:/start.sh
+      - ~/cellwhisperer:/opt/cellwhisperer
+      - ~/cellwhisperer/results/hcaorganoids_cancer__primary/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+
+  cellxgene_hcaorganoids_normal__primary:
+    <<: *default-service
+    volumes:
+      - ./docker_conda:/opt/miniconda3
+      - ./start.sh:/start.sh
+      - ~/cellwhisperer:/opt/cellwhisperer
+      - ~/cellwhisperer/results/hcaorganoids_normal__primary/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+
+  cellxgene_hcaorganoids_normal__organoid:
+    <<: *default-service
+    volumes:
+      - ./docker_conda:/opt/miniconda3
+      - ./start.sh:/start.sh
+      - ~/cellwhisperer:/opt/cellwhisperer
+      - ~/cellwhisperer/results/hcaorganoids_normal__organoid/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+
   nginx:
     image: nginx:latest
     volumes:
