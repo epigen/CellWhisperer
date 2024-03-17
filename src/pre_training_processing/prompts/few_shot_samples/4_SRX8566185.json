@@ -1,9 +1,12 @@
 {
-    "geo_title": "1_2685_1_TimePoint1",
-    "geo_metadata": "treatment: pertussis antigenic challenge,primed: aP,time: 0 days,cell type: PBMC",
-    "geo_source_name": "peripheral blood mononuclear cells",
-    "sample_type": "primary_cells",
-    "mapped_ontology_terms": "whooping cough, infectious disease, pertussis, hematopoietic cell, leukocyte, peripheral blood mononuclear cell, blood, treatment, disease, mononuclear cell",
-    "raw_biosample_metadata": "source_name: peripheral blood mononuclear cells; treatment: pertussis antigenic challenge; primed: aP; time: 0 days; cell_type: PBMC",
-    "treatment": "treatment: pertussis antigenic challenge"
+    "growth_protocol": NaN,
+    "mapped_ontology_terms": "cancer, disease of cellular proliferation, melanoma, neoplasm, disease, melanoma",
+    "sample_type": "tissue",
+    "series_design": "91 samples from 50 patients showing a long-term response (LR) or a short-term response (SR) to treatment are included",
+    "series_summary": "Transcriptional profiles of formalin-fixed-paraffin-embedded melanoma metastases including pre-treatment (PRE) and post-treatment (POST) specimens from 50 patients treated with BRAF inhibitors or with BRAF and MEK inhibitors",
+    "treatment_protocol": NaN,
+    "geo_source_name": "melanoma metastases",
+    "geo_title": "EY15 [pt38]",
+    "raw_biosample_metadata": "source_name: melanoma metastases; tissue: melanoma metastases; tumor_id: 2; sample_class: PRE SR; drug: BRAFi",
+    "treatment": NaN
 }

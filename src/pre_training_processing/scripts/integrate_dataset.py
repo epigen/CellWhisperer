@@ -54,7 +54,9 @@ annotation_replicates = pd.DataFrame(
     index=dataset.obs.index,
     columns=[str(i) for i in range(len(annotations[0]))],
 )
-dataset.uns[snakemake.params.anndata_label_name + "_replicates"] = annotation_replicates
+dataset.obsm[
+    snakemake.params.anndata_label_name + "_replicates"
+] = annotation_replicates
 
 # Store the sample weights
 for modality_weight_key in ["transcriptome_weights", "annotation_weights"]:

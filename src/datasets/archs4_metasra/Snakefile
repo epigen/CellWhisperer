@@ -34,6 +34,7 @@ rule filter_final_file:
         # compression is 5x slower and 5x smaller (makes sense to use though as this file is intermediary)
         archs4_filtered.write_h5ad(output[0], compression="gzip")
 
+
 rule structured_json:
     input:
         PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="archs4_metasra")
@@ -56,8 +57,10 @@ rule structured_json:
         fields_to_keep_reductionist_v1 = (
             "sample_name sample_type mapped_ontology_terms raw_SRA_metadata".split(" ")
         )
+
         fields_to_keep_reductionist_v2 = (
-            "geo_title geo_metadata geo_source_name sample_type mapped_ontology_terms raw_biosample_metadata treatment".split(" ")
+            "study_title geo_title geo_source_name sample_type mapped_ontology_terms raw_biosample_metadata treatment".split(" ")
+        )
         )
 
         json_list = archs4.obs[fields_to_keep_reductionist_v2].to_json(orient="index")
@@ -65,6 +68,7 @@ rule structured_json:
         # Write the JSON string to a file
         with open(output[0], "w") as f:
             f.write(json_list)
+
 
 rule archs4_accessions_to_srauids:
     """
@@ -449,6 +453,52 @@ def conditional_metasra_input(wildcards):
 
 =======
 >>>>>>> 125c158ff3031fe1e4ec47df9f0704821fb990f7
+rule fetch_study_level_metadata_from_geo:
+    """
+    uses GEO accessions for sample and series from archs4 metadata to fetch
+    treatment and growth protocol as well as study summary from GEO FTP to
+    enrich metadata
+    """
+    input:
+        PROJECT_DIR / config["archs4_h5"]
+    output:
+        PROJECT_DIR / "metadata/geo_metadata.tsv.gz"
+    conda:
+        PROJECT_DIR / "envs/metadatamapping.yaml"
+    threads: config['geo_metadata']['n_processes']
+    run:
+        from metadatamapping import geo, archs4
+
+        retain_keys = [
+            'geo_accession', 'characteristics_ch1', 'molecule_ch1', 'readsaligned', 'relation', 
+            'series_id', 'singlecellprobability', 'source_name_ch1', 'title'
+        ]
+        archs4_metadata = archs4.get_filtered_sample_metadata(
+            input[0],
+            retain_keys
+        )
+        geo_accessions = [
+            (r.geo_accession, r.series_id) for _, r in archs4_metadata.iterrows()
+        ]
+
+        geo_metadata = geo.geo_metadata(
+            geo_accessions,
+            n_processes = 16
+        )
+
+        geo_metadata.reset_index(
+            names = 'geo',
+            inplace = True
+        )
+
+        geo_metadata.to_csv(
+            output[0],
+            sep = '\t',
+            index = False,
+            compression = 'gzip'
+        )
+
+
 rule generate_anndata_file:
     """
     collects the results of all steps, extracts the relevant expression data
@@ -465,6 +515,7 @@ rule generate_anndata_file:
 =======
         PROJECT_DIR / "metadata/metasra_metadata.tsv.gz"
 >>>>>>> 125c158ff3031fe1e4ec47df9f0704821fb990f7
+        PROJECT_DIR / "metadata/geo_metadata.tsv.gz"
     output:
         PROJECT_DIR / "data/archs4_metasra.h5ad"
     threads: config['archs4_data_extraction']['n_processes']
@@ -488,6 +539,7 @@ rule generate_anndata_file:
         biosample_metadata = read_compessed_tsv(input[2])
         ncbi_accessions = read_compessed_tsv(input[3])
         metasra_metadata = read_compessed_tsv(input[4])
+        geo_metadata = read_compressed_tsv(input[5])
 
         retain_keys = [
             'geo_accession', 'characteristics_ch1', 'molecule_ch1', 'readsaligned', 'relation', 
@@ -502,7 +554,8 @@ rule generate_anndata_file:
             biosample_metadata,
             srauids_to_biosampleuids,
             ncbi_accessions,
-            archs4_metadata
+            archs4_metadata,
+            geo_metadata
         )
 
         archs4_metasra = metadata.annotated_with_metasra_and_treatment(

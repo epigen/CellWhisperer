@@ -1,0 +1,23 @@
+I am providing you with an elaborate prompt for a LLM and with several generated responses to that prompt. Your job is to evaluate the responses to determine the one(s) with the highest quality.
+
+Provide your evaluation in JSON format for three categories. For each category provide an explanation first, describing all the shortcomings you can identify alongside the index(es) of the response(s) you identified it in.
+
+
+##### JSON Format Response:
+
+"explanation_correctness": <str: Shortcomings for correctness include wrong and irrelevant information, such as technical information, patient or sample IDs, study-information that does not reflect the biology of the sample, etc.).>,
+"correctness": <List[int]: The indices of the responses with the fewest correctness shortcomings>,
+"explanation_completeness": <str: Shortcomings for completeness include lacking biologically relevant sample information that could have been inferred from the input. Examples of such relevant information are cell type, disease state, genetic modifications, treatment effects, etc., as they all impact the biological state of the sample. The response does not need to contain information beyond what is provided through the prompt.>,
+"explanation": <List[int]: The indices of the responses with the fewest completeness shortcomings>,
+"overall_explanation": <str: Provide a very brief summary for the quality of each of the responses, including your above assessment and anything else that might not be covered there.>,
+"overall": <List[int]: The indices of the responses with the overall highest quality>
+
+##### Prompt:
+
+{few_shot_prompt}
+
+##### LLM Responses to be compared:
+
+{llm_responses}
+
+##### Your Evaluation of the Response:

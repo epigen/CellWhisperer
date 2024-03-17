@@ -50,18 +50,20 @@ rule prepare_requests:
 #     script:
 #         "../scripts/process_annotations.py"
 
-
 rule process_annotation_local:
     """
-    Requires running the oobabooga server. See the README for instructions.
     """
     input:
         model=Path("~/text-generation-webui/models/mixtral-8x7b-instruct-v0.1.Q5_K_M.gguf").expanduser(),
         instruction="prompts/process_annotations_few_shot.txt",
         yaml_split=PROJECT_DIR / "results/pre_training_processing/requests/{dataset,[^/]+}/{replicate}/{scatteritem}.yaml",
         few_shot_samples=ancient(directory("prompts/few_shot_samples/")),
+        json_schema="prompts/output_schema.json"
     output:
         processed_annotation = protected(PROJECT_DIR / "results" / "pre_training_processing" / "processed" / "{dataset}" / "{replicate}" / "{scatteritem}.csv"),  # I marked this as protected as it might be costly to produce
+        requests = (PROJECT_DIR / "results" / "pre_training_processing" / "formatted_requests" / "{dataset}" / "{replicate}" / "{scatteritem}.yaml")
+    params:
+        study_specific_fields="treatment_protocol series_summary series_design growth_protocol sample_type mapped_ontology_terms".split(" ")
     resources:
         mem_mb=100000,
         slurm="cpus-per-task=25 gres=gpu:a100:1 qos=a100 partition=gpu"

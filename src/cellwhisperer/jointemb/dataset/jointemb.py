@@ -197,7 +197,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
         # Annotation replicates
         if "natural_language_annotation_replicates" in adata.uns:
-            replicate_df = adata.uns["natural_language_annotation_replicates"]
+            replicate_df = adata.obsm["natural_language_annotation_replicates"]
             logging.info(f"Loading {len(replicate_df.columns)} replicate annotations")
             for col_name in replicate_df:
                 replicate_annotations = replicate_df[col_name]
