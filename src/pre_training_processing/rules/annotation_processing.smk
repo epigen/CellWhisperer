@@ -57,16 +57,18 @@ rule process_annotation_local:
         model=Path("~/text-generation-webui/models/mixtral-8x7b-instruct-v0.1.Q5_K_M.gguf").expanduser(),
         instruction="prompts/process_annotations_few_shot.txt",
         yaml_split=PROJECT_DIR / "results/pre_training_processing/requests/{dataset,[^/]+}/{replicate}/{scatteritem}.yaml",
-        few_shot_samples=ancient(directory("prompts/few_shot_samples/")),
+        few_shot_prompts=expand("prompts/few_shot_samples/{i}_request.json", i=range(9)),
+        few_shot_responses=expand("prompts/few_shot_samples/{i}_response.json", i=range(9)),
         json_schema="prompts/output_schema.json"
     output:
         processed_annotation = protected(PROJECT_DIR / "results" / "pre_training_processing" / "processed" / "{dataset}" / "{replicate}" / "{scatteritem}.csv"),  # I marked this as protected as it might be costly to produce
         requests = (PROJECT_DIR / "results" / "pre_training_processing" / "formatted_requests" / "{dataset}" / "{replicate}" / "{scatteritem}.yaml")
     params:
-        study_specific_fields="treatment_protocol series_summary series_design growth_protocol sample_type mapped_ontology_terms".split(" ")
+        study_specific_fields="treatment_protocol series_summary series_design growth_protocol sample_type mapped_ontology_terms study_description study_title".split(" ")
     resources:
         mem_mb=100000,
-        slurm="cpus-per-task=25 gres=gpu:a100:1 qos=a100 partition=gpu"
+        slurm="cpus-per-task=25 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
+        # slurm="cpus-per-task=25 gres=gpu:a100:1 qos=a100 partition=gpu"
     conda: "textgen"  # "../envs/llamacpp.yaml" fails to install :/
     script: "../scripts/process_annotations_local.py"
 

@@ -1,0 +1,64 @@
+### You are a biomedical researcher. Your task is to extract the biological information from an RNA sequencing sample's metadata indicated by <<<>>> and representing them in natural language.
+
+# Instructions
+## Natural Language
+Be brief and focus solely on the biological aspects of the sample that contribute to understanding its cellular state.
+
+## Biological Information
+Only consider information that are reflective of the sample's biology, i.e. the phenotype and transcriptome of the contained cells, such as cell type and any pertinent conditions or treatments. Incorporate information about the sample's study only if it helps describing the sample's biology.
+
+## Ignored Information
+Ignore information that is not relevant to the cellular state. Specifically, exclude all technical and methodological details of the sequencing process, including but not limited to library type, read length, sequencing platform, or any other laboratory technique-related information. Also exclude information about the study context, if it does not impact the sample's biology.
+
+# Examples
+Here are some examples:
+
+Structured: {"geo_title": "MC-75_RNA-Seq [FGC1243_s_8_1_TAATGCGC-AGGCGAAG]", "geo_metadata": "cohort: Penn Cohort 2,tissue: liver,individual: MC-75", "geo_source_name": "Liver", "sample_type": "tissue", "mapped_ontology_terms": "liver", "raw_biosample_metadata": "source_name: Liver; cohort: Penn Cohort 2; tissue: liver; individual: MC-75", "treatment": ""}
+Natural Language: Non-treated liver cells
+
+Structured: {"geo_title": "BM273", "geo_metadata": "subject status: acute myeloid leukemia (AML) patient,response to standard induction chemotherapy: CR (complete remission),tissue: bone marrow", "geo_source_name": "CR_bone marrow", "sample_type": "tissue", "mapped_ontology_terms": "acute myeloid leukemia, disease of cellular proliferation, neoplasm, leukemia, lymphoid neoplasm, acute myeloid leukemia, hematological system disease, cancer, bone marrow, disease", "raw_biosample_metadata": "source_name: CR_bone marrow; subject status: acute myeloid leukemia (AML) patient; response to standard induction chemotherapy: CR (complete remission); tissue: bone marrow", "treatment": ""}
+Natural Language: Bone marrow cells from an acute myeloid leukemia (AML) patient who achieved complete remission after standard induction chemotherapy.
+
+Structured: {"geo_title": "1002_GO4H8T1", "geo_metadata": "tissue: high-grade serous ovarian tumour,patient: 1002,source_pre_or_post_chemotherapy: POST,extraction_methods: LCM", "geo_source_name": "High-grade serous ovarian carcinoma", "sample_type": "tissue", "mapped_ontology_terms": "Mantle cell lymphoma, brain disease, ovarian neoplasm, disease of cellular proliferation, lymphocytic choriomeningitis, ovarian carcinoma, carcinoma, epithelial neoplasm, infectious disease, ovarian carcinoma, reproductive system disease, cancer, neoplasm, nervous system disease, ovarian disease, viral disease, carcinoma, disease, endocrine system disease", "raw_biosample_metadata": "source_name: High-grade serous ovarian carcinoma; tissue: high-grade serous ovarian tumour; patient: 1002; source_pre_or_post_chemotherapy: POST; extraction_methods: LCM", "treatment": ""}
+Natural Language: High-grade serous ovarian tumor from a patient who had chemotherapy treatment.
+
+
+# Instruction Query
+
+<<<
+Structured: {"cell_type": "endothelial cell", "development_stage": "unknown", "is_primary_data": "True", "organism": "Homo sapiens", "self_reported_ethnicity": "unknown", "sex": "female", "suspension_type": "cell", "tissue": "forebrain", "study_description": "Aging is a complex progression of changes best characterized as the chronic dysregulation of cellular processes leading to deteriorated tissue and organ function. Although aging cannot currently be prevented, its impact on life- and healthspan in the elderly can potentially be minimized by interventions that aim to return these cellular processes to optimal function. Recent studies have demonstrated that partial reprogramming using the Yamanaka factors (or a subset; <i>OCT4</i>, <i>SOX2,</i> and <i>KLF4; OSK)</i> can reverse age-related changes <i>in vitro</i> and <i>in vivo</i>. However, it is still unknown whether the Yamanaka factors (or a subset) are capable of extending the lifespan of aged wild-type (WT) mice. In this study, we show that systemically delivered adeno-associated viruses, encoding an inducible OSK system, in 124-week-old male mice extend the median remaining lifespan by 109% over WT controls and enhance several health parameters. Importantly, we observed a significant improvement in frailty scores indicating that we were able to improve the healthspan along with increasing the lifespan. Furthermore, in human keratinocytes expressing exogenous OSK, we observed significant epigenetic markers of age reversal, suggesting a potential reregulation of genetic networks to a younger potentially healthier state. Together, these results may have important implications for the development of partial reprogramming interventions to reverse age-associated diseases in the elderly.", "study_title": "Extended GBmap", "stage": "Primary", "method": "cell", "location": "Left parietooccipital", "ATRX": "unknown", "EGFR": "unknown", "MET": "unknown", "MGMT": "UM", "PDGFR": "unknown", "PTEN": "unknown", "TERT": "unknown", "annotation_level_1": "Non-neoplastic", "annotation_level_2": "Vascular", "annotation_level_3": "Endothelial", "author": "Abdelfattah2022", "celltype_original": "unknown", "chr1p19q": "unknown", "gbmap": "Extended", "p53": "unknown", "sector": "Brain"}
+
+
+>>>
+Natural Language: Endothelial cells from the forebrain of a female Homo sapiens, characterized as non-neoplastic, vascular, and endothelial in nature. The sample is relevant to studies on aging and potential age-reversal interventions.
+
+### 
+
+
+
+Myeloid cells from the lung of a 73-year-old female with advanced non-small cell lung cancer (NSCLC), stage III or IV. The cells are identified as myeloid dividing cells, suggesting active cell division, and are derived from a primary tumor site.
+
+### 
+
+
+### 
+
+
+
+
+
+
+
+
+
+orig file:
+/home/moritz/chatgpt-log/gptel-20240309T1100.txt
+
+
+
+# TODO move to /home/moritz/Projects/cellwhisperer/src/experiments/few_shot_prompts_for_single_cell/gpt_4
+
+;; Local Variables:
+;; gptel-model: "gpt-4-1106-preview"
+;; gptel--bounds: ((5623 . 5840) (5850 . 6096))
+;; End:

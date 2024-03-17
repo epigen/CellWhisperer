@@ -21,13 +21,12 @@ temperature = 0.2 if int(snakemake.wildcards.replicate) == 0 else 0.7
 llm = Llama(
     model_path=snakemake.input.model,
     n_ctx=32000,  # The max sequence length to use - note that longer sequence lengths require much more resources
-    n_threads=25,  # The number of CPU threads to use
+    n_threads=5,  # The number of CPU threads to use
+    n_threads_batch=25,
     n_gpu_layers=86,  # High enough number to load the full model
 )
 
 few_shot_block = []
-
-few_shot_prompts = sorted(Path(snakemake.input.few_shot_samples).glob("*.json"))
 
 
 def build_example(data, response_file=None):
@@ -43,14 +42,11 @@ def build_example(data, response_file=None):
     return example
 
 
-for prompt_file in few_shot_prompts:
-    response_file = prompt_file.parent / f"{prompt_file.stem}.txt"
-    if not response_file.exists():
-        continue
-
+for prompt_file, response_file in zip(
+    snakemake.input.few_shot_prompts, snakemake.input.few_shot_responses
+):
     data = json.loads(Path(prompt_file).read_text())
     few_shot_block.append(build_example(data, response_file))
-
 
 results = []
 requests = []

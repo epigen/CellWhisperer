@@ -47,7 +47,7 @@ rule structured_json:
         import numpy as np
         import re
 
-        archs4 = anndata.read_h5ad(input[0])
+        archs4 = anndata.read_h5ad(input[0], backed="r")
 
         # Convert a subset of the 'obs' DataFrame to a JSON string with index orientation
         fields_to_keep_redundant = "study_title sample_name sample_type mapped_ontology_terms raw_SRA_metadata sample_species biosample_title raw_biosample_metadata accession_type geo_metadata molecule_ch1 geo_source_name geo_title".split(
