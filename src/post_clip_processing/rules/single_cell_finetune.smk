@@ -1,3 +1,4 @@
+# DEPRECATED (we just train on massive amounts of single cells now)
 FINETUNE_DATASET = "tabula_sapiens"
 rule tabsap_finetuning:
     """

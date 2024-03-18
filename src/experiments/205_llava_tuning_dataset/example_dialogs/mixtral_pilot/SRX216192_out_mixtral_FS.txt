@@ -1,0 +1,17 @@
+Researcher: Can you tell me more about the bone marrow tissue sample from a patient diagnosed with acute myeloid leukemia (AML)?
+
+AI Assistant: The bone marrow tissue sample is from a patient diagnosed with acute myeloid leukemia (AML) of the NPM1+/FLT3+ subtype. AML is a type of cancer that affects the blood and bone marrow, leading to an overproduction of abnormal white blood cells, which impairs the production of normal blood cells. The NPM1+/FLT3+ subtype indicates that the patient's leukemia cells have a mutated NPM1 gene and an activated FLT3 gene, which can contribute to more aggressive disease and a poorer prognosis.
+
+Researcher: What diseases or conditions are associated with this sample?
+
+AI Assistant: The primary condition associated with this sample is acute myeloid leukemia (AML), which falls under the categories of hematological system diseases, cancers, neoplasms, and diseases of cellular proliferation. The NPM1+/FLT3+ subtype further specifies the genetic background of the leukemia.
+
+Researcher: How does the transcriptomic profile of this sample compare to other samples or tissues?
+
+AI Assistant: The transcriptomic profile of this AML sample shares similarities with various hematopoietic and lymphoid tissue samples, such as SKMM2, AML193, MOLM13, and HNT34, based on the Achilles fitness decrease and increase indexes. This suggests that the sample retains features of the bone marrow microenvironment and leukemia cells.
+
+The Azimuth 2023 data also indicates similarity to specific bone marrow cell types, including megakaryocyte progenitors, erythroid megakaryocyte progenitors, basophil eosinophil mast progenitors, early erythroid cells, and stromal cells. This further supports the notion that the sample reflects the bone marrow niche and leukemia biology.
+
+Researcher: Could you give me details on any upregulated genes that stand out in this sample?
+
+AI Assistant: In this AML sample, several upregulated genes are noteworthy. Some of these include CHRNA5, SLC16A6, JAKMIP2, CATSPER4, P2RY6, SYT12, DAXX, MFGE8, IFT20, KMT5A, MRGPRG, CRCP, CCDC106, H2AC25, MIR1268A, LTB4R, TNFAIP1, ALAD, OR13C9, HOXD9, BTN3A2, MIR6069, NIF3L1, GSTCD, MIR6865, TMEM47, SEPTIN6, DPY19L2, USP21, MIR548F3, MIR125B2, MIR1204, LYSMD4, CCDC121, TLCD4-RWDD3, UNCX, CCDC74B, ENSG00000228157, MIR380, PPP4R3B, MIR518D, ENSG00000285382, MIR6783, MIR1324, SPEM3, CTAGE1, SHISAL2A, TMEM88B, TM4SF4, DUT, TEX35, CMTR2, NBEAL1, KRTAP10-8, TPH2, MMP16, UCP1, FOSL1, CSNK1G1, KDM4D, POTEB, INPP4B, GADD45GIP1, MIR3118-4, SNX9, MIR1299, MIR132, TADA2A, F2RL1, SLU7, RPLP2, OR4D10, KCNH4, SH3BGRL3, SPATA31A5, TCEAL5, CT45A2, ZNF703, CIMIP2B, ZDH

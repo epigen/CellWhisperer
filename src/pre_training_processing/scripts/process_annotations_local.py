@@ -9,13 +9,14 @@ from pathlib import Path
 import logging
 
 
-prompt_template = Path(snakemake.input.instruction).read_text()
+prompt_template = Path(snakemake.input.instruction).read_text()  # type: ignore [reportUndefinedVariable]
+
+
 with open(snakemake.input.yaml_split) as f:
     yaml_split = yaml.load(f, Loader=yaml.FullLoader)
 
 # first sample, set temperature to 0.2. for the others set it to 0.7
 temperature = 0.2 if int(snakemake.wildcards.replicate) == 0 else 0.7
-
 
 # load the model
 llm = Llama(

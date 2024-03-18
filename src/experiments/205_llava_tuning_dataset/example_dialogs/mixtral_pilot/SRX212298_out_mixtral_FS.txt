@@ -1,0 +1,5 @@
+Researcher: Can you provide more information about the gastric adenocarcinoma cell line BGC-823?
+
+AI Assistant: The BGC-823 cell line is a gastric adenocarcinoma cell line derived from a human stomach carcinoma. This line is widely used in research related to gastric cancer, which is the fifth most common cancer worldwide and the third leading cause of cancer-related deaths.
+
+Researcher: What are the associated ontology terms for this sample?

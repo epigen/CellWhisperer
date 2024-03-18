@@ -2,12 +2,14 @@ anndata_label_name: natural_language_annotation
 num_epochs: 5
 
 paths:
+  mixtral_model: ~/text-generation-webui/models/mixtral-8x7b-instruct-v0.1.Q5_K_M.gguf
   read_count_table: resources/{dataset}/read_count_table.h5ad
   raw_annotations: resources/{dataset}/annotations.tsv
   structured_annotations: results/{dataset}/annotations.json
   processed_annotations: results/{dataset}/processed_annotations.json
   processed_multi_annotations: results/{dataset}/processed_multi_annotations.json
-  llava_pretrain_text_dataset: results/{dataset}/llava_pretrain_texts.json
+  llava_pretrain_text_dataset: results/llava_pretrain_texts.json
+  llava_finetune_text_dataset: results/llava_finetune_conversations.json
   geneset_gmt: results/genesets/{library}.gmt
   gsva_results: results/{dataset}/gsva.parquet
   model_processed_dataset: results/{dataset}/{model}/full_output.npz

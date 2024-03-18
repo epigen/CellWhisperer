@@ -1,6 +1,6 @@
 version: '3.8'
 services:
-  cellwhisperer_api:
+  cellwhisperer_clip:
     build: .
     runtime: nvidia
     working_dir: /opt/cellwhisperer
@@ -27,8 +27,45 @@ services:
             - capabilities: [gpu]
               driver: nvidia
 
+  cellwhisperer_llava_controller:  &llava-service
+    stdin_open: true
+    tty: true
+    runtime: nvidia
+    working_dir: /opt/cellwhisperer
+    volumes:
+      - ./docker_conda:/opt/miniconda3
+      - ./start.sh:/start.sh
+      - ~/cellwhisperer:/opt/cellwhisperer
+    environment:
+      CONDA_ENV: llava2
+    build: .
+    command: /bin/bash /start.sh python -m llava.serve.controller --host 0.0.0.0 --port 10000
 
-  cellxgene_tabsap: &default-service
+  cellwhisperer_llava_model:
+    <<: *llava-service
+    command: /bin/bash /start.sh python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 --controller http://cellwhisperer_llava_controller:10000 --port 40000 --worker http://0.0.0.0:40000 --model-path /model/
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              driver: nvidia
+    volumes:
+      - ./docker_conda:/opt/miniconda3
+      - ./start.sh:/start.sh
+      - ~/cellwhisperer:/opt/cellwhisperer
+      - ~/cellwhisperer/results/llava/finetuned/Mistral-7B-Instruct-v0.2__03jujd8s:/model
+      - cache:/cache/
+    environment:
+      NVIDIA_VISIBLE_DEVICES: GPU-c38cbc2d-129a-dddf-9ed4-8a0e06763d33
+      CONDA_ENV: llava2
+      TRANSFORMERS_CACHE: /cache/transformers
+
+  # cellwhisperer_llava_server:
+  #   <<: *llava-service
+  #   command: /bin/bash /start.sh python -m llava.serve.gradio_web_server --controller http://cellwhisperer_llava_controller:10000 --model-list-mode reload
+
+  cellxgene_tabsap: &cellxgene-service
     build: .
     working_dir: /opt/cellwhisperer
     volumes:
@@ -37,7 +74,7 @@ services:
       - ~/cellwhisperer:/opt/cellwhisperer
       - ~/cellwhisperer/results/tabula_sapiens/03jujd8s/cellxgene.h5ad:/dataset.h5ad
     # TODO add --debug here if more debug info is needed
-    command: /bin/bash /start.sh cellxgene launch --debug -v -p 5005  --host 0.0.0.0 --max-category-items 500 --backed /dataset.h5ad  "http://cellwhisperer_api:8910/api"
+    command: /bin/bash /start.sh cellxgene launch --debug -v -p 5005  --host 0.0.0.0 --max-category-items 500 --backed /dataset.h5ad  "http://cellwhisperer_clip:8910/api"
     stdin_open: true
     tty: true
     restart: unless-stopped
@@ -47,7 +84,7 @@ services:
       CXG_OPTIONS: "--host 0.0.0.0 --max-category-items 500 --backed"
       CXG_SERVER_PORT: 5005
       DATASET: "/dataset.h5ad"
-      MODEL: "http://cellwhisperer_api:8910/api"
+      MODEL: "http://cellwhisperer_clip:8910/api"
       JEST_ENV: "prod"
       RETRY_ATTEMPTS: 2
       CONDA_ENV: cellwhisperer
@@ -57,7 +94,7 @@ services:
           memory: 16G
 
   cellxgene_daniel:
-    <<: *default-service
+    <<: *cellxgene-service
     volumes:
       - ./docker_conda:/opt/miniconda3
       - ./start.sh:/start.sh
@@ -65,7 +102,7 @@ services:
       - ~/cellwhisperer/results/daniel/03jujd8s/cellxgene.h5ad:/dataset.h5ad
 
   cellxgene_development_scvi:
-    <<: *default-service
+    <<: *cellxgene-service
     volumes:
       - ./docker_conda:/opt/miniconda3
       - ./start.sh:/start.sh
@@ -73,7 +110,7 @@ services:
       - ~/cellwhisperer/results/development4s_scvi/03jujd8s/cellxgene.h5ad:/dataset.h5ad
 
   cellxgene_development_raw:
-    <<: *default-service
+    <<: *cellxgene-service
     volumes:
       - ./docker_conda:/opt/miniconda3
       - ./start.sh:/start.sh
@@ -81,7 +118,7 @@ services:
       - ~/cellwhisperer/results/development4s_raw/03jujd8s/cellxgene.h5ad:/dataset.h5ad
 
   cellxgene_geo:
-    <<: *default-service
+    <<: *cellxgene-service
     volumes:
       - ./docker_conda:/opt/miniconda3
       - ./start.sh:/start.sh

@@ -1,0 +1,21 @@
+You are a scientific play writer with a great intuition about molecular biology. Your task is to generate a realistic conversation between a biomedical researcher and an AI assistant, chatting about a biological sample of human cells.
+
+# Instructions
+
+## Provided information
+You are given a description of a biological sample of cells, that represents its state/phenotype. This description includes
+- a concise natural language annotation of the biological state of the sample
+- a ranked list of the most strongly expressed genes (most upregulated genes come first)
+- a ranked list of the most active pathways and enriched gene ontological terms (most signifcant ones come first)
+
+## The researcher's questions
+The researcher has an interest in molecular biology, immunology, cancer biology, etc. and initially doesn't know anything about the provided biological sample. He asks questions to learn as much about it as possible. The questions should be relevant, diverse, addressable (given the provided information) and in the natural tone of a scientist curious about the nature/biology of the sample. Specifically use simple and conversational language and avoid the use of unnatural language, such as the mentioning of sample names/IDs. 
+
+## The AI assistant's responses
+The AI assistant's task is to help the researcher learn as much relevant information about the sample as possible. The AI assistant has access to the transcriptomic state of the sample (via the 'provided information') and responds to the questions as good as possible to satisfy the researcher’s curiosity. The responses should be in a tone reflecting the AI assistant's access to the sample information, but with a lack of absolute certainty. The responses must be fully in accordance with the provided information about the sample. If the researcher asks a question that cannot be answered with the provided information, the AI assistant should indicate so.
+
+## Format
+Generate the conversation in the JSON format, following this schema:
+
+[{"from": "researcher", "value": <str: the researcher's question>}, {"from": "ai", "value": <str: the AI assistant's response>}, ...]
+

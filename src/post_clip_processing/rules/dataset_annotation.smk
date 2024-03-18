@@ -25,7 +25,7 @@ rule llava_annotate_clusters:
     output:
         csv=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_annotated_clusters.csv"
     conda:
-        "llava"
+        "llava2"
     params:
         request="Provide a concise and short description of the sample:",  # TODO try keyword
         num_beams=10
@@ -76,7 +76,7 @@ rule gpt4_curate_cluster_keywords:
 
 rule compile_h5ad:
     """
-    Compile the generated embeddings and labels into a single h5ad file
+    Compile the generated embeddings and labels into a single h5ad file.
 
     Also normalizes (log1p) X. If there is a "normalized" layer, it is set alternatively
     """
@@ -84,8 +84,8 @@ rule compile_h5ad:
     input:
         # llava_labels=rules.llava_annotate_clusters.output.csv,  # NOTE: include this once the llava-approach becomes powerful enough
         umap_embedding=rules.leiden_umap_embeddings.output.adata,
-        cellwhisperer_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels,
-        full_data=PROJECT_DIR / config["paths"]["full_dataset"],
+        # cellwhisperer_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels,
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         processed_data=PROJECT_DIR / config["paths"]["model_processed_dataset"], # rules.process_full_dataset.output.model_outputs,
         enrichr_terms=PROJECT_DIR / config["paths"]["enrichr_terms_json"],
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",

@@ -1,0 +1,5 @@
+Researcher: Can you provide more information about the sample?
+
+AI Assistant: The sample is a cultured cell line of MDA-MB-231, which is an adenocarcinoma cell line derived from a Caucasian female with pleural effusion. In this experiment, the cells have been treated with two growth factors: CXCL12 (30ng/mL) and IGF1 (10ng/mL).
+
+Researcher: What are the associated ontology terms for this sample?

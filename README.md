@@ -99,3 +99,8 @@ We use `blacken` for automated code formatting.
 - `cd` to `hosting/home`
     - To deploy, run `docker compose up -d`
     - To rebuild the website, run `docker compose up -f website-builder-compose.yaml`
+
+## Processing of new (single cell) datasets
+- Make sure your dataset adheres to the prerequisites described in the [wiki](https://github.com/epigen/cellwhisperer/wiki/Datasets)
+- Place the dataset into a folder `cellxgene/resources/<dataset_name>/read_count_table.h5ad`
+- Go to `cellwhisperer/src/post_clip_processing` and run `/msc/home/mschae83/cellwhisperer/results/<dataset_name>/03jujd8s/cellxgene.h5ad` (replace 03jujd8s with the CellWhisperer model name)

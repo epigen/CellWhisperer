@@ -1,36 +1,14 @@
-rule integrate_dataset:
+rule process_full_dataset:
     """
-    Note: this rule is copied from /home/moritz/Projects/cellwhisperer/src/pre_training_processing/Snakefile
-    TODO this probably fails now, given that integrate_dataset.py changed. I only need the "old" integration here anyways
-    TODO: I might want to get rid of processed_annotations altogether here? or make it optional?
+    Run CellWhisperer on the read_count_table (provided) dataset and store the outputs in an npz file.
     """
     input:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
-        processed_annotations=PROJECT_DIR / config["paths"]["processed_annotations"]
-    output:
-        PROJECT_DIR / config["paths"]["full_dataset"]
-    params:
-        anndata_label_name=config["anndata_label_name"],
-    conda:
-        "cellwhisperer"
-        # PROJECT_DIR / "envs" / "main.yaml"
-    script:
-        "../../pre_training_processing/scripts/integrate_dataset.py"
-
-
-rule process_full_dataset:
-    """
-    Run CellWhisperer on the full (provided) dataset and store all outputs in a single file (features, embeddings, and cross-modal-similarities).
-
-    By setting `min_genes=1` in the data module, we try to include all cells in the dataset. Need to double check whether this worked via the log file.
-    """
-    input:
-        full_data=PROJECT_DIR / config["paths"]["full_dataset"],
-        model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
+        model=ancient(PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt"),
     output:
         model_outputs=protected(PROJECT_DIR / config["paths"]["model_processed_dataset"]),
     resources:
-        mem_mb=100000,
+        mem_mb=600000,  # could be made more efficient...
         slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
     log:
         notebook="../logs/notebooks/process_full_dataset_{dataset}_{model}.py.ipynb",

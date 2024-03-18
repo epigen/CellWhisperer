@@ -54,7 +54,7 @@ rule process_annotation_local:
     """
     """
     input:
-        model=Path("~/text-generation-webui/models/mixtral-8x7b-instruct-v0.1.Q5_K_M.gguf").expanduser(),
+        model=Path(config["paths"]["mixtral_model"]).expanduser(),
         instruction="prompts/process_annotations_few_shot.txt",
         yaml_split=PROJECT_DIR / "results/pre_training_processing/requests/{dataset,[^/]+}/{replicate}/{scatteritem}.yaml",
         few_shot_prompts=expand("prompts/few_shot_samples/{i}_request.json", i=range(9)),
@@ -67,7 +67,7 @@ rule process_annotation_local:
         study_specific_fields="treatment_protocol series_summary series_design growth_protocol sample_type mapped_ontology_terms study_description study_title".split(" ")
     resources:
         mem_mb=100000,
-        slurm="cpus-per-task=25 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
+        slurm="cpus-per-task=25 gres=gpu:a100:1 qos=a100 partition=gpu"
         # slurm="cpus-per-task=25 gres=gpu:a100:1 qos=a100 partition=gpu"
     conda: "textgen"  # "../envs/llamacpp.yaml" fails to install :/
     script: "../scripts/process_annotations_local.py"

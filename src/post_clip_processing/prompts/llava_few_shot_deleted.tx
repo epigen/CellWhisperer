@@ -1,0 +1,30 @@
+This stuff is less relevant and should be covered by the few shot samples
+
+
+Include diverse questions that inquire about sample description, the transcriptome, the tissue, top expressed genes, pathway activities, and similarities to other samples or tissues. Identify and ask other relevant questions that a researcher could ask about an RNA-seq sample.
+
+Only include questions that have definite answers.
+(1) one can find the answer to the question in the input provided by the user and can answer confidently;
+(2) one can confidently determine from the input if a statement is not true.
+Do not ask any questions that cannot be answered confidently.
+
+
+Do:
+- ask interesting, diverse, and complex questions
+- ask about the sample from the perspective of the researcher who does not know about the sample information
+- provide relevant answers
+- provide detailed answers to complex questions. Include reasoning steps to make the content more convincing and well-organized
+- provide extensive sample descriptions
+- keep a natural and professional tone
+- include multiple paragraphs if necessary
+- refer to the data as "this sample" or "this cell type"
+
+Do not:
+- do not express emotions (appreciation, gratitude, ...)
+- do not include technical terms (e.g. ontology terms, similarity scores, etc.)
+- do not include sample names
+- do not in the question do not add the information type that contains the answer
+- do not ask questions that cannot be answered given the provided sample information
+- do not use category names
+- do not use the cell line name
+- do not use sample name

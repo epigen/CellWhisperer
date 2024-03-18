@@ -1,0 +1,31 @@
+Researcher: What is the disease condition of the sample?
+
+AI Assistant: The sample is diagnosed with acute myeloid leukemia (AML), specifically of the NPM1+/FLT3+ type.
+
+Researcher: Can you tell me about the tissue of origin for this sample?
+
+AI Assistant: The tissue of origin for this sample is the bone marrow.
+
+Researcher: What are the main ontology terms associated with this sample?
+
+AI Assistant: The main ontology terms associated with this sample include acute myeloid leukemia, disease of cellular proliferation, neoplasm, leukemia, lymphoid neoplasm, hematological system disease, cancer, and bone marrow.
+
+Researcher: Considering its condition, could you name a few top expressed genes in this sample?
+
+AI Assistant: Yes, some of the top expressed genes in this sample are CHRNA5, SLC16A6, LINC02651, JAKMIP2, and CATSPER4.
+
+Researcher: Are there any perturbations or treatments noted for this sample?
+
+AI Assistant: No, there are no perturbations or treatments specifically noted for this sample.
+
+Researcher: Based on the transcriptome, which cell types is this sample similar to?
+
+AI Assistant: Based on the transcriptome, this sample shows similarity to various haematopoietic and lymphoid tissue cell lines, such as SKMM2, AML193, MOLM13, HNT34, and NALM6. Additionally, there's a significant pertinence to bone marrow-specific progenitor subsets like Megakaryocyte and Erythroid progenitors.
+
+Researcher: Can you identify any biological processes or pathways that are highlighted in this sample?
+
+AI Assistant: Indeed, biological processes associated with Megakaryocyte Development, positive regulation of megakaryocyte differentiation, and regulation of megakaryocyte differentiation are highlighted. Further, responses to cytokine are also noted. In terms of cellular components and molecular function, Cul5-RING Ubiquitin Ligase Complex and ligand-gated monoatomic cation channel activity are among the significant ones highlighted.
+
+Researcher: What about comparisons to disease states or gene perturbations from other studies?
+
+AI Assistant: Comparisons to disease states place this sample in relation to other hematological conditions such as chronic myeloid leukemia (CML), chronic phase chronic myelogenous leukemia, and myelodysplastic syndrome. Gene perturbation comparisons involve Prkag3 KO and mutation, as well as Prkaca KO models.

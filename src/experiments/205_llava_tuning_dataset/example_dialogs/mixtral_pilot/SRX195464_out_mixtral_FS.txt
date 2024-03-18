@@ -1,0 +1,21 @@
+Researcher: Can you tell me more about the biological sample you've described?
+
+AI Assistant: The sample is a cell line of corneal endothelial cells derived from a fetus at 16-18 weeks of gestation. These cells are crucial for maintaining the cornea's transparency and preventing corneal edema. They have a limited capacity for self-renewal, which makes it challenging to study them in vivo. Therefore, establishing a cell line is essential for understanding their behavior and potential therapeutic applications.
+
+Researcher: What are the ontology terms associated with this sample?
+
+AI Assistant: The primary ontology terms associated with this sample are corneal endothelial cell and endothelial cell. These terms describe the cell type and its broader category, respectively.
+
+Researcher: How does the transcriptomic profile of this sample compare to other samples or tissues?
+
+AI Assistant: Based on the similarity scores of the transcriptome embedding, this corneal endothelial cell sample shares transcriptomic features with various tissues and cell types. For instance, it shows similarity to ovary and kidney cell lines, such as JHOM1 and SKRC20, according to the Achilles fitness decrease and increase indexes. Additionally, the Azimuth 2023 data indicates similarity to mouse motor cortex pericytes, fetal development pancreas ENS neurons, and fetal development cerebrum limbic system neurons.
+
+Researcher: Are there any specific diseases or conditions related to this sample?
+
+AI Assistant: The transcriptomic profile of this sample does not directly relate to specific diseases or conditions. However, the Disease Perturbations from GEO data shows similarity to various arthritis subgroups, such as systemic juvenile idiopathic arthritis (sJIA) and pauciarticular juvenile arthritis. This similarity may be due to shared cellular mechanisms or pathways, but it does not necessarily imply a direct connection between corneal endothelial cells and these arthritis subgroups.
+
+Researcher: Can you provide information on any upregulated genes in this sample?
+
+AI Assistant: Certainly! In this corneal endothelial cell sample, several genes are notably upregulated. Some of these include FAM90A16, SPHKAP, WDR53, ARHGEF40, OSER1, TOPBP1, VSTM1, LINC02911, SENP3, TBC1D3, GDF11, ZNF84, OTUD6A, IL17RC, MBNL2, PBXIP1, NDST3, AIF1, TRH, VWA7, KCNJ6, ZWILCH, UTRN, NEPRO, MIR3960, LPAR1, ENSG00000269179, OR2J2, MIR8088, BEX1, MIR3118-4, MIR8078, ZNF599, C8orf76, B4GALT5, MIR187, CABCOCO1, MPP3, APOC1, SYPL2, IFI44, SPATA17, NDUFA4, MECP2, POU4F1, RNASEH2A, SAPCD2, NR1D1, PKP4, HLA-F, ZNF3, CHRNA3, ZDHHC17, KRTAP4-8, UBA2, TAMM41, AQP7B, MORN5, MZT2B, TIMP4, CNTF, ARHGAP11A, ENTPD7, C21orf91, MT1H, MIR6894, MIR4469, DDX31, PFKFB2, C3orf62, RPS23, ZNF404, LRRC58, HLA-DQA2, POLR2M.
+
+These upregulated genes are involved in various cellular processes, such as signal transduction, gene regulation, and cell adhesion. For example, TOPBP1 is a DNA replication checkpoint protein, while IL17RC

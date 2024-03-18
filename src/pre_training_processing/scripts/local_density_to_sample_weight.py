@@ -10,51 +10,64 @@ import umap
 import scanpy as sc
 import seaborn as sns
 import matplotlib.pyplot as plt
+import re
+import sys
+import logging
 
 
 data = np.load(snakemake.input.representation, allow_pickle=True)
 
+# Code to configure snakemake logging to redirect all std out to the logfile
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    filename=snakemake.log[0],
+    filemode="w",
+)
+
 
 # https://github.com/lmcinnes/umap/issues/763#issuecomment-1520913313
-# class ProgressWriter:
-#     def write(self, text):
+class ProgressWriter:
+    def write(self, text):
+        match = re.search(r"(\d+)/(\d+)", text)
+        if match:
+            n, total = map(int, match.groups())
+            # custom reporting logic here
+            logging.info(f"Progress: {n}/{total}")
+        else:
+            logging.info(text)
 
-#         match = re.search(r"(\d+)/(\d+)", text)
-#         if match:
-#             n, total = map(int, match.groups())
-#             print("custom progress", n, total)
-#             # custom reporting logic here
+    def flush(self):
+        pass
 
-#     def flush(self):
-#         pass
 
+logging.info("Starting local density to sample weight conversion")
 embedding, r_orig, r_emb = umap.UMAP(
     densmap=True,
     dens_lambda=2.0,
     n_neighbors=30,
     output_dens=True,
-    tqdm_kwds={"disable": False},  # "file": progress_writer"
+    tqdm_kwds={"disable": False, "file": ProgressWriter()},
     verbose=True,
 ).fit_transform(data["representation"])
+logging.info("Finished UMAP")
 
 # normalize such that the sum of radii corresponds to len(dataset)
 # note that the radii are in log space (so if we want greater variation, take their exp)
 
-weight = r_orig
+np.savez(snakemake.output.orig_radii, r_orig)  # type: ignore [reportUndefinedVariable]
 
-# Clamp outliers (based on 2 stds). They would otherwise explode a bit. NOTE: could be improved with soft clamping
-mean = np.mean(weight)
-std_dev = np.std(weight)
-weight = np.clip(weight, mean - 2 * std_dev, mean + 2 * std_dev)
+exped = np.exp(r_orig)
 
-# Revert log, then square to get from radius to area (yields satisfying distribution)
-weight = np.exp(weight) ** 2
+exped_shifted = exped + (
+    exped.mean() / 10
+)  # shift the distribution a bit to the right to avoid close-to-zero values
 
-# Normalize to retain library size (total weight = len(dataset))
-weight /= weight.mean()
+clipped = np.clip(exped_shifted, 0, np.percentile(exped_shifted, 99.9))
+weight = clipped / np.mean(clipped)
 
 np.savez(
-    snakemake.output.weight,
+    snakemake.output.weight,  # type: ignore [reportUndefinedVariable]
     weight=weight,
     orig_ids=data["orig_ids"],
 )
@@ -63,7 +76,7 @@ np.savez(
 plt.subplots(figsize=(3, 2))
 sns.histplot(weight)
 # plt.xlim(0, 3)
-plt.savefig(snakemake.output.plot_orig_radii, bbox_inches="tight")
+plt.savefig(snakemake.output.plot_orig_radii, bbox_inches="tight")  # type: ignore [reportUndefinedVariable]
 
 print(
     "Please verify the distribution plot. We want many values at 1 and slightly below it (e.g. 0.8). And some values at ~2-3."

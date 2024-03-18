@@ -10,6 +10,9 @@ rule download_genesets:
         "../scripts/download_genesets.py"
 
 rule prepare_gsva_dataset:
+    """
+
+    """
     input:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         weights=rules.local_density_to_sample_weight.output.weight.format(dataset="{dataset}", modality="transcriptome")  # could also take mean of transcriptome and annotation
@@ -18,10 +21,9 @@ rule prepare_gsva_dataset:
         colnames=PROJECT_DIR / "results" / "{dataset}" / "tmp" / "gsva_prepared.columns",
         rownames=PROJECT_DIR / "results" / "{dataset}" / "tmp" / "gsva_prepared.rows"
     params:
-        # num_hvg=20000, # aim for 10k
-        filter_protein_coding=True,
+        filter_protein_coding=lambda wildcards: wildcards.dataset == "archs4_metasra",
         seed=42,
-        num_samples=5000  # TODO later 50000
+        num_samples=50000
     conda:
         "cellwhisperer"
     resources:
@@ -48,7 +50,7 @@ rule gsva:
         gsva_csv=PROJECT_DIR / "results" / "{dataset}" / "tmp" / "gsva_{library}.csv"  # make temporary
     threads: 122
     resources:
-        mem_mb=200000,
+        mem_mb=600000,
         slurm="cpus-per-task=122"  # 124 is max
     conda:
         "../envs/gsva.yaml"

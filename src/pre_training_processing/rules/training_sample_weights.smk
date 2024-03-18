@@ -27,7 +27,7 @@ rule annotation_representation:
     output:
         representation=RESULTS_DIR / "{dataset}" / "annotation_representation.npz"
     conda:
-        "../envs/pydata.yaml"
+        "cellwhisperer"
     resources:
         mem_mb=400000,
         slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
@@ -47,10 +47,13 @@ rule local_density_to_sample_weight:
     output:
         weight=protected(RESULTS_DIR / "{dataset}" / "{modality}_weights.npz"),
         plot_orig_radii=RESULTS_DIR / "{dataset}" / "{modality}_weights_dist.png",
+        orig_radii=RESULTS_DIR / "{dataset}" / "{modality}_orig_radii.npz",
     conda:
         "../envs/pydata.yaml"
+    log:
+        "logs/local_density_to_sample_weight_{dataset}_{modality}.log"
     resources:
         mem_mb=40000,
-        slurm="cpus-per-task=200"
+        slurm="cpus-per-task=140"
     script:
         "../scripts/local_density_to_sample_weight.py"
