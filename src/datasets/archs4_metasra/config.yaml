@@ -12,4 +12,4 @@ archs4_to_uid:
 archs4_data_extraction:
   n_processes: 4
 geo_metadata:
-  n_processes: 16
+  n_processes: 24

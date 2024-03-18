@@ -469,7 +469,7 @@ rule fetch_study_level_metadata_from_geo:
         PROJECT_DIR / "envs/metadatamapping.yaml"
     threads: config['geo_metadata']['n_processes']
     run:
-        from metadatamapping import geo, archs4
+        from metadatamapping import metadata, archs4
 
         retain_keys = [
             'geo_accession', 'characteristics_ch1', 'molecule_ch1', 'readsaligned', 'relation', 
@@ -483,22 +483,23 @@ rule fetch_study_level_metadata_from_geo:
             (r.geo_accession, r.series_id) for _, r in archs4_metadata.iterrows()
         ]
 
-        geo_metadata = geo.geo_metadata(
+        geo_metadata = metadata.fetch_geo_metadata(
             geo_accessions,
-            n_processes = 16
-        )
-
-        geo_metadata.reset_index(
-            names = 'geo',
-            inplace = True
-        )
-
-        geo_metadata.to_csv(
             output[0],
-            sep = '\t',
-            index = False,
-            compression = 'gzip'
+            n_processes = threads
         )
+
+
+rule gzip_geo_metadata:
+    """
+    compresses the raw textfile to save space
+    """
+    input:
+        PROJECT_DIR / "metadata/geo_metadata.tsv"
+    output:
+        PROJECT_DIR / "metadata/geo_metadata.tsv.gz"
+    shell:
+        "gzip {input}"
 
 
 rule generate_anndata_file:
@@ -529,7 +530,7 @@ rule generate_anndata_file:
         import numpy as np
         from metadatamapping import archs4, metadata
 
-        def read_compessed_tsv(filename):
+        def read_compressed_tsv(filename):
             df = pd.read_csv(
                 filename,
                 sep = '\t',
@@ -560,7 +561,7 @@ rule generate_anndata_file:
             geo_metadata
         )
 
-        archs4_metasra = metadata.annotated_with_metasra_and_treatment(
+        archs4_metasra = metadata.annotate_with_metasra_and_treatment(
             archs4_annotated,
             metasra_metadata
         )
