@@ -106,7 +106,7 @@ def score_transcriptomes_vs_texts(
         # Compute logits (similarity to expression embedding) for the current chunk and append to the list
         logits_per_text = (
             torch.matmul(text_embeds.cpu(), transcriptome_embeds.t().cpu())
-            * logit_scale.cpu()
+            * logit_scale
         )  # n_text * n_adatas
         logits_per_text_list.append(logits_per_text.cpu().detach())
 

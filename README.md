@@ -98,7 +98,7 @@ We use `blacken` for automated code formatting.
 ## Deploy
 - `cd` to `hosting/home`
     - To deploy, run `docker compose up -d`
-    - To rebuild the website, run `docker compose up -f website-builder-compose.yaml`
+    - To rebuild the website, run `docker compose -f website-builder-compose.yml up`
 
 ## Processing of new (single cell) datasets
 - Make sure your dataset adheres to the prerequisites described in the [wiki](https://github.com/epigen/cellwhisperer/wiki/Datasets)
