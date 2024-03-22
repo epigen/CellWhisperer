@@ -1,54 +1,50 @@
 [
   {
-    "from": "Researcher",
+    "from": "researcher",
     "value": "What cell type is this sample derived from?"
   },
   {
-    "from": "AI Assistant",
+    "from": "ai",
     "value": "This seems to be a perturbed H1 embryonic stem cell sample."
   },
   {
-    "from": "Researcher",
+    "from": "researcher",
     "value": "Can you tell me more about the perturbation?"
   },
   {
-    "from": "AI Assistant",
-    "value": "The sample was treated with Activin at a concentration of about 50ng/ml for around two days."
+    "from": "ai",
+    "value": "The sample looks like it was treated with Activin, at a concentration of around 50ng/ml for around two days."
   },
   {
-    "from": "Researcher",
+    "from": "researcher",
     "value": "What are the top expressed genes in this sample?"
   },
   {
-    "from": "AI Assistant",
+    "from": "ai",
     "value": "Amongst the top expressed genes are MIR5787, HEATR3, SALL3, INTS6L, and MAGI2."
   },
   {
-    "from": "Researcher",
+    "from": "researcher",
     "value": "How does the transcriptome of this sample compare with other tissues or diseases?"
   },
   {
-    "from": "AI Assistant",
+    "from": "ai",
     "value": "The transcriptome of this sample indicates similarity to various tissues and diseases. Notably, it shows similarities with fetal development stages of thymus, cerebellum, cerebrum, and heart. I am not sure how it resembles disease states."
   },
   {
-    "from": "Researcher",
+    "from": "researcher",
     "value": "What biological processes are prominently represented in this sample?"
   },
   {
-    "from": "AI Assistant",
+    "from": "ai",
     "value": "Prominent biological processes represented in this sample include embryonic hindlimb morphogenesis, mesoderm development, embryonic forelimb morphogenesis, chordate embryonic development, and mesodermal cell fate commitment."
   },
   {
-    "from": "Researcher",
-    "value": "Can you provide insight into any hallmark pathways active in this sample?"
-  },
-  {
-    "from": "Researcher",
+    "from": "researcher",
     "value": "Are there specific cell types identified in the analysis suggestive of this sample's cellular behavior or identity?"
   },
   {
-    "from": "AI Assistant",
+    "from": "ai",
     "value": "The transcriptome suggests that this sample is closely associated with pluripotent stem cells and embryonic stem cells, and also indicates a relationship with trophoblast cells, trophoblast progenitor cells, and pancreatic progenitor cells."
   }
 ]

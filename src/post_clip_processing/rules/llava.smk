@@ -1,5 +1,6 @@
 # snakemake remote HTTP object
 from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+import glob
 
 HTTP = HTTPRemoteProvider()
 
@@ -19,6 +20,33 @@ QUESTIONS = [
     "Describe the transcriptome concisely.",
 ]
 
+# TODO random sample (n=100) of the GSVA dataset (which is already weight-corrected)
+TEST_IDS = ['SRX8856161', 'SRX2945912', 'SRX12688894', 'SRX7833821',
+       'SRX4361085', 'SRX1467354', 'SRX2984546', 'SRX15304075',
+       'SRX3364766', 'SRX5215396', 'SRX7652714', 'SRX14745891',
+       'SRX4982710', 'SRX6390561', 'SRX15921104', 'SRX1772896',
+       'SRX4049419', 'SRX7020537', 'SRX3908039', 'SRX5967356',
+       'SRX7749853', 'SRX3161428', 'SRX3650581', 'SRX14286752',
+       'SRX7833851', 'SRX13730096', 'SRX3650869', 'SRX4531237',
+       'SRX2669558', 'SRX8658385', 'SRX10935235', 'SRX4361797',
+       'SRX15139593', 'SRX9959080', 'SRX3806591', 'SRX2810346',
+       'SRX11928893', 'SRX15391922', 'SRX4362691', 'SRX4356966',
+       'SRX7070031', 'SRX2044754', 'SRX2637359', 'SRX3946791',
+       'SRX8816289', 'SRX15919275', 'SRX14745562', 'SRX5496155',
+       'SRX1772968', 'SRX5331351', 'SRX7835903', 'SRX15470936',
+       'SRX379801', 'SRX8414341', 'SRX3266594', 'SRX9920278',
+       'SRX6393360', 'SRX3927543', 'SRX2912916', 'SRX7840513',
+       'SRX5178075', 'SRX3802495', 'SRX3806754', 'SRX11146832',
+       'SRX2965355', 'SRX17581835', 'SRX5052947', 'SRX7622905',
+       'SRX1357859', 'SRX17915534', 'SRX8109658', 'SRX8707050',
+       'SRX8455328', 'SRX6682858', 'SRX7549151', 'SRX3606578',
+       'SRX8437909', 'SRX18011210', 'SRX3154941', 'SRX5222273',
+       'SRX7833468', 'SRX17580837', 'SRX10313523', 'SRX7773354',
+       'SRX1301658', 'SRX2325175', 'SRX3806838', 'SRX5216799',
+       'SRX1161823', 'SRX1503192', 'SRX3365172', 'SRX5618987',
+       'SRX2806190', 'SRX3444884', 'SRX7839000', 'SRX2388408',
+       'SRX2491340', 'SRX15036995', 'SRX10659509', 'SRX1789190']
+
 scattergather:
     split=128
 
@@ -35,12 +63,14 @@ rule llava_stage1_dataset:
         annotations_archs4_metasra=PROJECT_DIR / config["paths"]["processed_annotations"].format(dataset="archs4_metasra"),
         # annotations_cellxgene_census=PROJECT_DIR / config["paths"]["processed_annotations"].format(dataset="cellxgene_census"),
     output:
-        PROJECT_DIR / config["paths"]["llava_pretrain_text_dataset"]
+        train_set=PROJECT_DIR / config["paths"]["llava_pretrain_text_dataset"],
+        test_set="tmp_output/llava_test_set.json"
     params:
         seed=42,
         questions=QUESTIONS,
         transcriptome_tag="<image>",  # we stick to <image> because of the llava code base
-        anndata_label_name=config["anndata_label_name"]
+        anndata_label_name=config["anndata_label_name"],
+        test_ids=TEST_IDS
     conda:
         "cellwhisperer"
     notebook:
@@ -100,8 +130,6 @@ rule prepare_llava_stage2_requests:
     - Top-most expressed genes
 
     Few shot input format: JSON (top_gene_sets: list(ranked, avoid scores or ), top_genes: list(ranked), annotation:string, sample_id: string)
-
-    TODO: This notebook is currently subject to manual filtering. See https://github.com/epigen/cellwhisperer/issues/339. Check the warning within the notebook
     """
     input:
         processed_annotations=PROJECT_DIR / config["paths"]["processed_annotations"],
@@ -154,13 +182,20 @@ rule aggregate_llava_stage2_dataset:
     Read in all the generated annotations and aggregate them into a single JSON file
     """
     input:
-        json_splits=[split.format(dataset=dataset)
-                     for dataset in ["archs4_metasra"] # , "cellxgene_census"]  # TODO enable
-                     for split in ["/msc/home/mschae83/cellwhisperer/results/post_clip_processing/llava_processed/{dataset}/1-of-128.json"]
-                     # gather.split(PROJECT_DIR / "results" / "post_clip_processing" / "llava_processed" / "{{dataset}}" / "{scatteritem}.json")
-                     ]
+        json_splits = glob.glob("/msc/home/mschae83/cellwhisperer/results/post_clip_processing/llava_processed/archs4_metasra/second/*-of-128.json"),  # , i=[1, 103, 118, 20, 35, 48, 61, 7, 89, 1, 104, 120, 23, 36, 5, 62, 74, 9, 102, 107, 122, 33, 37, 50, 65, 79, 93])
+
+        # json_splits=[split.format(dataset=dataset)
+        #              for dataset in ["archs4_metasra"] # , "cellxgene_census"]  # TODO enable
+        #              for split in gather.split(PROJECT_DIR / "results" / "post_clip_processing" / "llava_processed" / "{{dataset}}" / "{scatteritem}.json")
+        #              ],
+        stage1_train_set = rules.llava_stage1_dataset.output.train_set,
+        stage1_test_set = rules.llava_stage1_dataset.output.test_set,
+    params:
+        test_ids=TEST_IDS,
+        transcriptome_tag="<image>",  # we stick to <image> because of the llava code base
     output:
         llava_stage2_dataset=PROJECT_DIR / config["paths"]["llava_finetune_text_dataset"],
+        evaluation_dataset=PROJECT_DIR / config["paths"]["llava_evaluation_text_dataset"]
     script:
         "../scripts/aggregate_llava_stage2_dataset.py"
 
@@ -188,7 +223,7 @@ rule pretrain_llava:
         output_dir=protected(directory(PROJECT_DIR / config["paths"]["llava_pretrained_model_dir"])),
     resources:
         mem_mb=300000,
-        slurm="cpus-per-task=40 gres=gpu:a100-sxm4-80gb:5 qos=a100-sxm4-80gb partition=gpu"
+        slurm="cpus-per-task=40 gres=gpu:a100-sxm4-80gb:4 qos=a100-sxm4-80gb partition=gpu"
     log:
         "logs/pretrain_llava_{base_model}_{model}.log"
     threads: 16
@@ -199,7 +234,6 @@ rule pretrain_llava:
         else
             CMD="CUDA_LAUNCH_BLOCKING=1 python -m ipdb $PYTHON_SCRIPT"
         fi
-
 
         # NOTE for faster debugging try facebook/opt-125m
         $CMD \
@@ -258,7 +292,7 @@ rule finetune_llava:
         output_dir=protected(directory(PROJECT_DIR / config["paths"]["llava_finetuned_model_dir"])),
     resources:
         mem_mb=300000,
-        slurm="cpus-per-task=40 gres=gpu:a100-sxm4-80gb:5 qos=a100-sxm4-80gb partition=gpu"
+        slurm="cpus-per-task=40 gres=gpu:a100-sxm4-80gb:4 qos=a100-sxm4-80gb partition=gpu"
     log:
         "logs/finetune_llava_{base_model}_{model}.log"
     threads: 16
@@ -276,13 +310,13 @@ rule finetune_llava:
             --image_data {input.image_data} \
             --output_dir {output.output_dir} \
             --model_name_or_path mistralai/{wildcards.base_model} \
-            --version conv_mistral_instruct \
+            --version mistral_instruct \
             --pretrain_mm_mlp_adapter {input.pretrained_projector} \
             --mm_projector_type {params.projector_type} \
             --mm_vision_select_layer -1 \
             --mm_use_im_start_end False \
             --mm_use_im_patch_token False \
-            --group_by_modality_length True \
+            --group_by_modality_length False \
             --bf16 True \
             --num_train_epochs 1 \
             --per_device_train_batch_size 16 \
@@ -305,3 +339,42 @@ rule finetune_llava:
             --lazy_preprocess True 2>&1 | tee {log}
             # --report_to wandb
     """
+
+rule llava_evaluation_perplexity:
+    """
+
+    """
+    input:
+        llava_model=ancient(rules.finetune_llava.output.output_dir.format(base_model=LLAVA_BASE_MODEL, model=config["model_name_path_map"]["cellwhisperer"])),
+        evaluation_dataset=rules.aggregate_llava_stage2_dataset.output.evaluation_dataset,
+        image_data=rules.process_full_dataset.output.model_outputs.format(dataset=TRAINING_DATASET, model=config["model_name_path_map"]["cellwhisperer"]),
+    conda:
+        "llava2"
+    output:
+        log_perplexity_ratio=PROJECT_DIR / "results" / "post_clip_processing" / "llava_evaluation_log_mean_perplexity.ratio",  # smaller is better log(ppl_real/ppl_neg_control)
+        all_perplexities=PROJECT_DIR / "results" / "post_clip_processing" / "llava_evaluation_all_perplexities.csv",
+        comparison_plot=PROJECT_DIR / "results" / "post_clip_processing" / "llava_evaluation_comparison.png"
+    params:
+        num_projector_tokens=int(PROJECTOR_TYPE.split("_")[1].strip("t"))
+    resources:
+        mem_mb=300000,
+        slurm="cpus-per-task=40 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
+    log:
+        "logs/llava_evaluation_perplexity.log"
+    threads: 16
+    notebook:
+        "../notebooks/llava_evaluation_perplexity.py.ipynb"
+
+
+rule llava_evaluation_generation:
+    """
+    Evaluate the generation of the LLaVA model
+
+    # This one here provides an easy going start: /home/moritz/Projects/cellwhisperer/modules/LLaVA/llava/eval/model_vqa.py
+    # /home/moritz/Projects/cellwhisperer/modules/LLaVA/llava/eval/model_vqa_loader.py
+
+    # The code fragments stored in the script work (although they are disconnected), but we might want to refrain more to the code in the two files above
+    """
+    script:
+        "../scripts/llava_evaluation_generation.py"
+

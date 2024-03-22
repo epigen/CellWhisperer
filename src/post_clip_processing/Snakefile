@@ -18,5 +18,6 @@ rule all:
         # PROJECT_DIR / config["paths"]["model_processed_dataset"].format(dataset=TRAINING_DATASET, model=CLIP_MODEL),
         # PROJECT_DIR / config["paths"]["llava_finetuned_model_dir"].format(base_model=LLAVA_BASE_MODEL),
         # expand(rules.plot_embeddings_with_llava_labels.output["png"], dataset=TARGET_DATASETS, model=CLIP_MODEL),
-        expand(rules.compile_h5ad.output["adata"], dataset=TARGET_DATASETS, model=CLIP_MODEL),
+        # expand(rules.compile_h5ad.output["adata"], dataset=TARGET_DATASETS, model=CLIP_MODEL),
+        rules.llava_evaluation_perplexity.output.log_perplexity_ratio,
 

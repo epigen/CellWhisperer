@@ -10,6 +10,7 @@ paths:
   processed_multi_annotations: results/{dataset}/processed_multi_annotations.json
   llava_pretrain_text_dataset: results/llava_pretrain_texts.json
   llava_finetune_text_dataset: results/llava_finetune_conversations.json
+  llava_evaluation_text_dataset: results/llava_evaluation_conversations.json
   geneset_gmt: results/genesets/{library}.gmt
   gsva_results: results/{dataset}/gsva.parquet
   model_processed_dataset: results/{dataset}/{model}/full_output.npz
