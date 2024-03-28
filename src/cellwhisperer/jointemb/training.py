@@ -34,6 +34,8 @@ from cellwhisperer.jointemb.cellwhisperer_lightning import (
 )
 from cellwhisperer.jointemb.dataset import JointEmbedDataModule
 
+logger = logging.getLogger(__name__)
+
 
 PROJECT_DIR = Path(
     subprocess.check_output(
@@ -79,7 +81,7 @@ class CellWhispererCLI(LightningCLI):
             {
                 "model.model_config": obj_signature(TranscriptomeTextDualEncoderConfig),
                 "model.loss_config": obj_signature(LossConfig),
-                "trainer.max_epochs": 16,
+                "trainer.max_epochs": 5,
                 "trainer.reload_dataloaders_every_n_epochs": 1,  # this allows sampling of replicates (see data module)
                 "trainer.accumulate_grad_batches": 64,  # the higher the better more or less
             }
@@ -154,7 +156,7 @@ class CellWhispererCLI(LightningCLI):
                 and self.model.model.transcriptome_model.config.model_type == "scgpt"
             ):
                 #  NOTE: because of FSDP being incapable of implicitly handling fp16 and fp32 conversion, we need to use scGPT without flash-attention and with 32 bit
-                logging.warning(
+                logger.warning(
                     "scgpt requireds 32 bit (and in consequence not flash attention). make sure that scgpt_config.fast_transformer is False"
                 )
 
@@ -164,7 +166,7 @@ class CellWhispererCLI(LightningCLI):
                     text_model_path,
                 )
             except FileNotFoundError:
-                logging.error(
+                logger.error(
                     "Unable to find the transcriptome model. Please download first (see `rna` snakemake pipeline). For scGPT: https://drive.google.com/drive/folders/1oWh_-ZRdhtoGQ2Fw24HP41FgLoomVo-y"
                 )
                 raise
@@ -175,7 +177,7 @@ class CellWhispererCLI(LightningCLI):
                     self.model, datamodule=self.datamodule, mode="binsearch", init_val=8
                 )  # requires batch_size argument in datamodule or model
         elif self.config["fit.model_ckpt"]:  # model loading needs to be done implicitly
-            logging.warning("Loading model from checkpoint. All other args are ignored")
+            logger.warning("Loading model from checkpoint. All other args are ignored")
             self.model = TranscriptomeTextDualEncoderLightning.load_from_checkpoint(
                 self.config["fit.model_ckpt"]
             )
@@ -187,13 +189,13 @@ class CellWhispererCLI(LightningCLI):
         if self.config["fit.best_model_path"] is not None:
             # copy the best model_path
             if self.trainer.checkpoint_callback.best_model_path == "":
-                logging.error(
+                logger.error(
                     "No best model path found. Please check if the checkpoint callback is enabled."
                 )
             else:
                 # Make sure file does not exist
                 if self.config["fit.best_model_path"].exists():
-                    logging.error(
+                    logger.error(
                         f"File {self.config['fit.best_model_path']} already exists. Overwriting {self.trainer.checkpoint_callback.best_model_path}."
                     )
                 shutil.copy(

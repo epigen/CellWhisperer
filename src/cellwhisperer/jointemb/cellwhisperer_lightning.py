@@ -29,6 +29,8 @@ import logging
 
 from cellwhisperer.jointemb.regularization import InputRegularization
 
+logger = logging.getLogger(__name__)
+
 warnings.filterwarnings(
     "ignore",
     category=FutureWarning,
@@ -45,7 +47,8 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         gauss_noise_std: float = 0.0,
         max_epochs: int = 16,
         learning_rate: float = 1e-3,
-        lr_warmup: Union[int, float] = 0.05,
+        lr_warmup: Union[int, float] = 0.03,
+        frozen_warmup: Union[int, float] = 0.03,
     ):
         """
         Args:
@@ -56,6 +59,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             max_epochs: maximum number of epochs to train for
             learning_rate: learning rate to use for the optimizer.
             lr_warmup: number of steps to use for learning rate warmup. If set to 0, no warmup is used. If set to a float, it is interpreted as a fraction of the total number of steps.
+            frozen_warmup: number of steps to use for pure projection layer training. If set to 0, no warmup is used. If set to a float, it is interpreted as a fraction of the total number of steps.
         """
         super(TranscriptomeTextDualEncoderLightning, self).__init__()
 
@@ -72,6 +76,9 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         self.max_epochs = max_epochs
         self.learning_rate = learning_rate
         self.lr_warmup = lr_warmup
+        self.warmup_reset_step = 0
+
+        self.frozen_warmup = frozen_warmup
 
         self.loss_config = loss_config
         self.loss_functions = self.loss_config.configure_losses(
@@ -212,7 +219,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         )
         # NOTE: this is a hack to avoid NaNs in the loss. We should fix this properly.
         if torch.isnan(combined_loss):
-            logging.warning("NaN loss detected. Setting loss to 0.0.")
+            logger.warning("NaN loss detected. Setting loss to 0.0.")
             return torch.tensor(0.0, device=self.device)
 
         return combined_loss
@@ -231,20 +238,20 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             text_model_type=self.model.text_model.config.model_type,
             val_dataloader=self.trainer.datamodule.val_dataloader(),
         )
-        if stage == "fit":
-            if isinstance(self.lr_warmup, float):
-                self.lr_warmup_steps = int(
-                    len(self.trainer.datamodule.train_dataloader())
-                    * self.max_epochs
-                    * self.lr_warmup
-                )
-            else:
-                self.lr_warmup_steps = self.lr_warmup
+        if isinstance(self.frozen_warmup, float):
+            self.frozen_warmup_steps = int(
+                len(self.trainer.datamodule.train_dataloader())
+                * self.max_epochs
+                * self.frozen_warmup
+                / self.trainer.accumulate_grad_batches
+            )
+        else:
+            self.frozen_warmup_steps = self.frozen_warmup
 
     def on_validation_epoch_end(self):
         # For convenience (speed), I disable this when "fast_dev_run" is enabled
         if not self.trainer.fast_dev_run:
-            logging.info("Running validation functions")
+            logger.info("Running validation functions")
             for val_fn_name, val_fn in self.validation_functions.items():
                 with torch.no_grad():  # necessary, despite model being in eval mode
                     val_results = val_fn(self.model)
@@ -272,6 +279,21 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                         artifact.add(table, "performance_metrics")
                         self.logger.experiment.log_artifact(artifact)
 
+    def on_train_batch_end(self, *args):
+        if self.trainer.global_step >= self.frozen_warmup_steps:
+            logger.debug("Unfreezing U towers")
+            self.model.unfreeze_U_towers()
+
+            logger.debug("Warmup again")
+            self.warmup_reset_step = self.trainer.global_step
+
+            # Reset the optimizer (doesn't work because of the scheduler. would need to find the correct function)
+            # new_optimizers = self.configure_optimizers()
+            # self.trainer.optimizers = [new_optimizers["optimizer"]]
+            # self.trainer.lr_schedulers_configs = [new_optimizers["lr_scheduler"]]
+
+            self.frozen_warmup_steps = 1e9  # never warmup again
+
     def on_train_epoch_end(self):
         """
         This function is called at the end of each epoch, after training AND validation.
@@ -280,14 +302,14 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         """
 
         if self.trainer.current_epoch == 0:
-            logging.debug("Storing cache of model")
+            logger.debug("Storing cache of model")
             self.model.store_cache()
 
     def on_train_end(self):
         """
         Store the cache of the model, at the end of training. Since we drop the last batch (in training), we don't get all samples in the first batch
         """
-        logging.debug("Storing cache of model")
+        logger.debug("Storing cache of model")
         self.model.store_cache()
 
     def test_step(self, batch, batch_idx):
@@ -296,6 +318,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
     def configure_optimizers(self):
         """
         Use AdamW optimizer for decoupled weight decay. Apply decay weights only (e.g. not biases), as indicated by the CLIP paper(s).
+        In reality we train with L and U only, so no decay is applied anyways
 
         Also implement cosine learning rate schedule, as indicated by the CLIP paper(s).
 
@@ -320,7 +343,6 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             param for name, param in self.named_parameters() if not decay_selector(name)
         ]
 
-        # Workaround to all using --config <file> (otherwise it does not work :())
         optimizer = AdamW(
             [
                 {"params": weight_params, "weight_decay": 0.01},
@@ -330,11 +352,28 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             betas=(0.9, 0.98),  # SigLiT recommends even 0.95 for beta2
         )
 
-        scheduler = CosineAnnealingLR(optimizer, T_max=self.max_epochs, eta_min=0)
+        if isinstance(self.lr_warmup, float):
+            self.lr_warmup_steps = int(
+                len(self.trainer.datamodule.train_dataloader())
+                * self.max_epochs
+                * self.lr_warmup
+                / self.trainer.accumulate_grad_batches
+            )
+        else:
+            self.lr_warmup_steps = self.lr_warmup
+        logger.info("Using lr_warmup_steps: %d", self.lr_warmup_steps)
+
+        scheduler = CosineAnnealingLR(
+            optimizer,
+            T_max=len(self.trainer.datamodule.train_dataloader())
+            * self.max_epochs
+            / self.trainer.accumulate_grad_batches,
+            eta_min=self.learning_rate / 20,
+        )
 
         scheduler = {
             "scheduler": scheduler,
-            "interval": "epoch",
+            "interval": "step",
             "monitor": "val_loss",
         }
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
@@ -344,17 +383,18 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         Override `optimizer_step` to allow learning-rate warmup
         """
 
+        # If we are still in the warmup phase, overwrite learning rate
+        current_step = self.trainer.global_step - self.warmup_reset_step
+
+        if current_step < self.lr_warmup_steps:
+            lr_scale = min(1.0, float(current_step + 1) / self.lr_warmup_steps)
+            for pg in optimizer.param_groups:
+                pg["lr"] = lr_scale * self.learning_rate
+
+        # Call the original optimizer_step. (It's fine if it applies cosine scheduling there)
         super(TranscriptomeTextDualEncoderLightning, self).optimizer_step(
             epoch, batch_idx, optimizer, optimizer_closure
         )
-
-        # If we are still in the warmup phase, overwrite learning rate
-        if self.trainer.global_step < self.lr_warmup_steps:
-            lr_scale = min(
-                1.0, float(self.trainer.global_step + 1) / self.lr_warmup_steps
-            )
-            for pg in optimizer.param_groups:
-                pg["lr"] = lr_scale * self.learning_rate
 
         for pg in optimizer.param_groups:
             self.log(

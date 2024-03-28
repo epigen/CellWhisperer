@@ -8,7 +8,6 @@ import logging
 from utils import get_abstract
 import sys
 import gc
-import scanpy as sc
 
 
 def is_count_matrix(matrix, threshold=1e-6, max_entries=10000):
@@ -36,8 +35,6 @@ else:
 
 assert adata.obs.is_primary_data.dtype == "bool"
 adata = adata[adata.obs.is_primary_data]#.copy()
-sc.pp.filter_cells(adata, min_genes=snakemake.params.min_genes_per_cell)
-
 gc.collect() # call this everywhere to prevent apparent memory leaks
 adata.obs["is_primary_data"] = "True" # neeeds to be a string for write_h5ad
 

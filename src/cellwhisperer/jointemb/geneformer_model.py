@@ -22,6 +22,8 @@ import anndata
 import scanpy as sc
 
 
+logger = logging.getLogger(__name__)
+
 # Set as constants here, so they are available in the TranscriptomeProcessor
 PAD_TOKEN_ID = 0
 MODEL_INPUT_SIZE = 2048
@@ -165,7 +167,7 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
                 [i == 1 for i in prepared_features.obs["filter_pass"]]
             )[0]
         except KeyError:
-            logging.info(
+            logger.info(
                 "prepared_features has no column attribute 'filter_pass'; tokenizing all cells."
             )
             filter_pass_loc = np.array([i for i in range(prepared_features.shape[0])])
@@ -197,7 +199,7 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
         expression_token_lengths = [len(tc) for tc in tokenized_cells]
 
         if not all(expression_token_lengths):
-            logging.warning(
+            logger.warning(
                 f"Encountered {(np.array(expression_token_lengths) == 0).sum()} cell(s) with 0 counts or gene with 0 median expression. Hacking low expression here to prevent nans and subsequent failures"
             )
             expression_token_lengths = [
@@ -351,7 +353,7 @@ class GeneformerModel(
             self.config.forward_batch_size,
             self.config.summary_stat,
         )
-        return (embs,)
+        return (None, embs)
 
         # if not return_dict:
         #     head_outputs = (
@@ -382,7 +384,7 @@ class GeneformerModel(
                 )
         else:
             config = GeneformerConfig()
-            logging.warning(
+            logger.warning(
                 "No configuration provided. Using default configuration from checkpoint."
             )
 

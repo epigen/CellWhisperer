@@ -495,7 +495,7 @@ class ScGPTModel(PreTrainedModel):
         if self.config.normalize_features:
             features = F.normalize(features, p=2, dim=1)
 
-        return (features,)
+        return (None, features)
 
     @classmethod
     def from_pretrained(

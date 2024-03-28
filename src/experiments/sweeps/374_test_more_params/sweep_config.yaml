@@ -1,0 +1,12 @@
+method: random
+name: multi-dataset-training
+metric:
+  goal: minimize
+  name: val_loss
+parameters:
+  model.model_config.locking_mode:
+    values: ["LU", "UL", "UU"]
+  model.learning_rate:
+    distribution: log_uniform_values
+    min: 1e-6
+    max: 1e-2

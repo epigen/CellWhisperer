@@ -61,8 +61,8 @@ class FrozenCachedModel(nn.Module):
         self._models = [model.eval().cpu()]
 
         self.model_hash = hash_object(self.model.parameters())
-        logging.info(f"Initializing frozen model with hash {self.model_hash}")
-        logging.debug(f"Corresponding model config: {self.model.config}")
+        logger.info(f"Initializing frozen model with hash {self.model_hash}")
+        logger.debug(f"Corresponding model config: {self.model.config}")
 
         self.cache_file = Path(get_cache_dir()) / f"{self.model_hash}.pkl"
         self.cache = self._load_cache()
@@ -93,7 +93,7 @@ class FrozenCachedModel(nn.Module):
         Try to load the cache file and if it does not exist, return an empty cache
         """
         cache = {}
-        logging.info(f"Loading cache: {self.cache_file}")
+        logger.info(f"Loading cache: {self.cache_file}")
         if self.cache_file is not None:
             for _ in range(3):
                 try:
@@ -137,10 +137,10 @@ class FrozenCachedModel(nn.Module):
                     fcntl.flock(f, fcntl.LOCK_EX)  # Exclusive lock
                     pickle.dump(self.cache, f)
                     fcntl.flock(f, fcntl.LOCK_UN)  # Unlock the file
-                    logging.info(f"Saved cache to {self.cache_file}")
+                    logger.info(f"Saved cache to {self.cache_file}")
                     break
             except OSError:
-                logging.info(f"File {self.cache_file} blocked. Waiting 5 seconds")
+                logger.info(f"File {self.cache_file} blocked. Waiting 5 seconds")
                 time.sleep(5)  # wait 5 seconds before trying again
         else:
             logger.error("Unable to save cache. Aborting.")
@@ -160,6 +160,12 @@ class FrozenCachedModel(nn.Module):
 
     def forward(self, *args, **kwargs):
         """
+
+        If the model returns a tuple, then the first element is assumed to be the token embeddings and the second element the sentence embeddings. Then the token embeddings are discarded
+
+        If the model only returns a single tensor, then the sentence embeddings are assumed to be None.
+
+
         Returns a tuple of tensors (token_embeddings, Optional[sentence_embedding]). The sentence_embedding is just returned if provided by the model
         """
         assert len(args) == 0, "not implemented for positional args"
@@ -179,14 +185,15 @@ class FrozenCachedModel(nn.Module):
         res_1_list = []
         has_aggregation = None
 
+        # NOTE this is much more complicated than necessary
         for i in range(batch_size):
             if sample_hashes[i] in self.cache:
                 cached_result = self.cache[sample_hashes[i]]
-                res_0_list.append(cached_result[0].to(device=device))
-                if len(cached_result) > 1 and cached_result[1] is not None:
-                    res_1_list.append(cached_result[1].to(device=device))
-                else:
-                    res_1_list = None
+                assert (
+                    len(cached_result) == 2
+                ), f"Cached result has wrong length {len(cached_result)}"
+                res_0_list.append(cached_result[0])
+                res_1_list.append(cached_result[1])
             else:
                 if self.model.device == torch.device("cpu"):
                     logger.warning(
@@ -204,29 +211,30 @@ class FrozenCachedModel(nn.Module):
                         has_aggregation = len(model_output) > 1 and isinstance(
                             model_output[1], torch.Tensor
                         )
-                    res_0_list.append(model_output[0][0].detach())
+
+                    # only store what's necessary in the cache
                     if has_aggregation:
-                        res_1_list.append(
-                            model_output[1][0].detach()
-                            if res_1_list is not None
-                            else None
-                        )
+                        entry = (None, model_output[1][0].detach().cpu())
                     else:
-                        res_1_list = None
-                    entry = (
-                        (
-                            model_output[0][0].detach().cpu(),
-                            model_output[1][0].detach().cpu(),
-                        )
-                        if has_aggregation
-                        else (model_output[0][0].detach().cpu(), None)
-                    )
+                        entry = (model_output[0][0].detach().cpu(), None)
+                    res_0_list.append(entry[0])
+                    res_1_list.append(entry[1])
+
                     self.cache[sample_hashes[i]] = entry
 
-        res_0 = torch.stack(res_0_list).to(device=device)
+        res_0 = (
+            torch.stack(res_0_list).to(device=device)
+            if res_0_list is not None
+            and len(res_0_list) > 0
+            and res_0_list[0] is not None
+            else None
+        )
+
         res_1 = (
             torch.stack(res_1_list).to(device=device)
             if res_1_list is not None
+            and len(res_1_list) > 0
+            and res_1_list[0] is not None
             else None
         )
         res = (res_0, res_1)

@@ -27,7 +27,7 @@ if run_example:
     logger = logging.getLogger(__name__)
 
     # Prepare the anndata object
-    logging.info("Loading anndata...")
+    logger.info("Loading anndata...")
 
     if use_immgen:
         # To read from csv:
@@ -57,7 +57,7 @@ if run_example:
     terms_json_path = get_path(["paths", "enrichr_terms_json"])
 
     # Model loading
-    logging.info("Loading LLM embedding model...")
+    logger.info("Loading LLM embedding model...")
     # TODO load trained model checkpoint (see cellwhisperer_lightning.py)
     geneformer_biogpt_model_path = Path(
         "~/projects/cellwhisperer/results/models/geneformer-biogpt"
@@ -70,10 +70,10 @@ if run_example:
     transcriptome_processor = GeneformerTranscriptomeProcessor(
         nproc=1, emb_label=model.transcriptome_model.config.emb_label
     )
-    logging.info("Loading done")
+    logger.info("Loading done")
 
     # Compute the top n keywords per cell type
-    logging.info("Computing cell/keyword similarities ...")
+    logger.info("Computing cell/keyword similarities ...")
 
     obs_cols = (
         ["cell_ontology_class"] if not use_immgen else ["cell type", "cell type rough"],

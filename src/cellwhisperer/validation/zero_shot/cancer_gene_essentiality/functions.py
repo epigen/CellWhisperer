@@ -18,6 +18,8 @@ from .dataset import (
 import torch
 import statsmodels.api as sm
 
+logger = logging.getLogger(__name__)
+
 
 def _per_cell_line_mannwhineyu(
     df: pd.DataFrame,
@@ -103,7 +105,7 @@ def _log_reg_statistics(df: pd.DataFrame) -> Tuple[Dict[str, float], pd.DataFram
     try:
         result = logit_model.fit(disp=0)
     except np.linalg.LinAlgError as e:
-        logging.warning(
+        logger.warning(
             f"LinAlgError: {e}. Returning empty metrics for Cancer Gene Essentiality."
         )
         df["predictions"] = np.nan
@@ -125,7 +127,7 @@ def _log_reg_statistics(df: pd.DataFrame) -> Tuple[Dict[str, float], pd.DataFram
             task="binary",
         )
     except Exception as e:
-        logging.warning(
+        logger.warning(
             f"Error calculating f1 score: {e}. Returning empty metrics for Cancer Gene Essentiality."
         )
         f1 = np.nan
@@ -191,7 +193,7 @@ class EvaluateCancerGeneEssentiality:
         :param model: a trained model
 
         """
-        logging.info("Performing gene cancer essentiality evaluation...")
+        logger.info("Performing gene cancer essentiality evaluation...")
 
         model = model.eval()
         anchor_embed = self._embed_cancer_sentence(model)

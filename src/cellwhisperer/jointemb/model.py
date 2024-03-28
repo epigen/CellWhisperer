@@ -88,6 +88,9 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                     "Only geneformer and scgpt are supported for now"
                 )
 
+        if text_model is None:
+            text_model = AutoModel.from_config(self.config.text_config)
+
         self.prepare_models(transcriptome_model, text_model)
 
         # make sure that the individual model's config refers to the shared config
@@ -108,7 +111,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
 
     def prepare_models(self, transcriptome_model, text_model, force_freeze=False):
         """
-        Freeze the transcriptome and text model if indicated by self.config
+        Freeze the transcriptome and text model (if they are not marked as "u"). They will get unfrozen after an warmup phase (if marked as "L")
 
         Args:
             transcriptome_model (*): The transcriptome model to be used.
@@ -117,16 +120,17 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         """
         # TODO need to make sure to modify the config according to the model. Idea: predict a unified input (all_zero, or all_one or so) and take the output as the hash
 
-        if self.config.locking_mode[0] == "L" or force_freeze:
+        if self.config.locking_mode[0] != "u" or force_freeze:
             if not isinstance(transcriptome_model, FrozenCachedModel):
                 transcriptome_model = FrozenCachedModel(transcriptome_model)
         elif self.config.unlocked_fp16:
             transcriptome_model.half()
 
-        if text_model is None:
-            text_model = AutoModel.from_config(self.config.text_config)
+        assert (
+            text_model is not None
+        ), "text_model must be provided"  # doesn't make sense that only transcriptome_model gets initialized before
 
-        if self.config.locking_mode[1] == "L" or force_freeze:
+        if self.config.locking_mode[1] != "u" or force_freeze:
             if not isinstance(text_model, FrozenCachedModel):
                 text_model = FrozenCachedModel(text_model)
         elif self.config.unlocked_fp16:
@@ -135,8 +139,23 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         self.text_model = text_model
         self.transcriptome_model = transcriptome_model
 
+    def unfreeze_U_towers(self):
+        """
+        Unfreeze the transcriptome and text model according to config
+
+        .train() is called, as this method is called in the train loop `on_train_epoch_batch_end` in the `LightningModule`). See https://lightning.ai/docs/pytorch/stable/common/lightning_module.html#hooks
+        """
+
+        if self.config.locking_mode[0] == "U":
+            self.transcriptome_model = self.transcriptome_model.model.train().to(
+                self.device
+            )
+        if self.config.locking_mode[1] == "U":
+            self.text_model = self.text_model.model.train().to(self.device)
+
     def _text_pooling(self, text_outputs: Tuple, attention_mask: torch.FloatTensor):
         if isinstance(text_outputs[1], torch.Tensor):
+            assert not torch.isnan(text_outputs[1]).any()
             return text_outputs[
                 1
             ].float()  # counter implicit conversion into bfloat16 in dense layer in BERT pooler
@@ -204,7 +223,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             expression_expr=expression_expr,
             expression_key_padding_mask=expression_key_padding_mask,
             return_dict=False,
-        )[0]
+        )[1]
 
         transcriptome_embeds = self.discriminator.img_block(transcriptome_features)
 
@@ -243,7 +262,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             expression_expr=expression_expr,
             expression_key_padding_mask=expression_key_padding_mask,
             return_dict=False,
-        )[0]
+        )[1]
 
         text_features = self.text_model(
             input_ids=input_ids,

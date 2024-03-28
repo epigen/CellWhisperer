@@ -18,6 +18,8 @@ from cellwhisperer.config import get_path, model_path_from_name
 
 from typing import Optional, Dict
 
+logger = logging.getLogger(__name__)
+
 
 class JointEmbedDataset(Dataset):
     """
@@ -44,9 +46,16 @@ class JointEmbedDataset(Dataset):
         Treat the original input as one additional replicate
         """
         # get length of replicate dict elements
-        num_replicates = len(next(iter(self.replicate_inputs.values())))
+        try:
+            num_replicates = len(next(iter(self.replicate_inputs.values())))
+            logging.debug(f"Found {num_replicates} replicates")
+        except StopIteration:
+            logging.debug("No replicates found. Fall back to 0")
+            num_replicates = 0
+
         # add 1 because of the original input
         replicate_i = epoch % (num_replicates + 1)
+        logging.debug(f"Selecting replicate #{replicate_i}")
 
         if replicate_i == 0:
             self.inputs = self.orig_inputs
@@ -122,9 +131,9 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
         # check whether data has already been prepared
         if processed_path.exists() and not force_prepare:
-            logging.info("data already prepared")
+            logger.info("data already prepared")
             return
-        logging.info("preparing data...")
+        logger.info("preparing data...")
 
         # Load data and processor
         processor = TranscriptomeTextDualEncoderProcessor(
@@ -168,12 +177,12 @@ class JointEmbedDataModule(pl.LightningDataModule):
             )
 
         if sum(n_genes_filter) == len(n_genes_filter):
-            logging.info(
+            logger.info(
                 f"No samples were filtered out (All cells had >= {self.min_genes} genes)"
             )
             inputs["orig_ids"] = adata.obs.index[n_genes_filter]
         else:
-            logging.warning(
+            logger.warning(
                 f"Filtering for {sum(n_genes_filter)} of {len(n_genes_filter)} samples with >={self.min_genes} genes."
             )
             inputs = {key: val[n_genes_filter] for key, val in inputs.items()}
@@ -206,7 +215,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         # Annotation replicates
         if "natural_language_annotation_replicates" in adata.obsm:
             replicate_df = adata.obsm["natural_language_annotation_replicates"]
-            logging.info(f"Loading {len(replicate_df.columns)} replicate annotations")
+            logger.info(f"Loading {len(replicate_df.columns)} replicate annotations")
             for col_name in replicate_df:
                 replicate_annotations = replicate_df[col_name]
                 replicate_input = processor(
@@ -226,7 +235,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 if "replicate" in key or "sampled_cell" in key
             ]
         )
-        logging.info(f"Loading {len(replicate_layers)} replicate transcriptomes")
+        logger.info(f"Loading {len(replicate_layers)} replicate transcriptomes")
         X = adata.X
         for layer_name in replicate_layers:
             adata.X = adata.layers[layer_name]
