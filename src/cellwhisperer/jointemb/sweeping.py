@@ -18,7 +18,7 @@ def init_wandb(args):
     wandb_folder = get_path(["paths", "wandb_logs"])
 
     kwargs = {
-        "entity": "cellwhisperer",
+        "entity": "single-cellm",
         "project": "JointEmbed_Training",
         "reinit": True,
         "job_type": "sweep-training",
@@ -142,7 +142,7 @@ def main():
                 sweep_configuration = yaml.safe_load(f)
         sweep_id = wandb.sweep(
             sweep=sweep_configuration,
-            entity="cellwhisperer",
+            entity="single-cellm",
             project="JointEmbed_Training",
         )
         args.sweep_id = sweep_id
@@ -155,7 +155,7 @@ def main():
         args.sweep_id,
         function=partial(sweep_train, args=args),
         count=args.num_runs,
-        entity="cellwhisperer",
+        entity="single-cellm",
         project="JointEmbed_Training",
     )
 

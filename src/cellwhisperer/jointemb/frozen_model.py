@@ -105,7 +105,7 @@ class FrozenCachedModel(nn.Module):
                 except FileNotFoundError:
                     logger.warning("Unable to find cache file. Creating new one")
                     break
-                except EOFError:
+                except (EOFError, pickle.UnpicklingError):
                     logger.error("Unable to load cache (EOFError). Resetting.")
                     continue  # maybe it works next time
                 except OSError:

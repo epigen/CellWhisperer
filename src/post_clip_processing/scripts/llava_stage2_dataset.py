@@ -62,11 +62,8 @@ for key, sample in yaml_split.items():
     for i in range(10):
         output = llm(
             f"<s>[INST] {prompt} [/INST] ",
-            max_tokens=1024,  # for training, we only use a max of 128. observe whether this matches..
+            max_tokens=1024,
             stop=["</s>"],  # stop token for Mixtral
-            # logit_bias={
-            #     llm.tokenizer().encode("\n")[-1]: float("-inf")
-            # },  # Prevent newlines
             echo=False,  # don't echo the prompt as part of the response
             seed=hash(f"{key}{snakemake.wildcards.replicate}{i}") % 2**30,
             grammar=LlamaGrammar.from_json_schema(

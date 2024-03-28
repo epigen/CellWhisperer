@@ -51,9 +51,9 @@ dataset.obs[snakemake.params.anndata_label_name] = [v[0] for v in annotations]  
 
 # Create new dataframe with index `obs.index` and as many columns as there are replicates per annotations:
 annotation_replicates = pd.DataFrame(
-    data=annotations.tolist(),
+    data=[v[1:] for v in annotations],
     index=dataset.obs.index,
-    columns=[str(i) for i in range(len(annotations[0]))],
+    columns=[str(i) for i in range(1, len(annotations[0]))],
 )
 dataset.obsm[
     snakemake.params.anndata_label_name + "_replicates"  # type: ignore [reportUndefinedVariable]

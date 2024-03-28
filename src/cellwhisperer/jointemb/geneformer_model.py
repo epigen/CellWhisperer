@@ -141,7 +141,7 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
         """
         # copied from def tokenize_anndata(self, adata_file_path, target_sum=10_000, chunk_size=512):
 
-        coding_miRNA_loc = np.where(
+        coding_and_miRNA_loc = np.where(
             [
                 self.tokenizer.genelist_dict.get(i, False)
                 for i in prepared_features.var["ensembl_id"]
@@ -150,26 +150,21 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
         norm_factor_vector = np.array(
             [
                 self.tokenizer.gene_median_dict[i]
-                for i in prepared_features.var["ensembl_id"].iloc[coding_miRNA_loc]
+                for i in prepared_features.var["ensembl_id"].iloc[coding_and_miRNA_loc]
             ]
         )
-        coding_miRNA_ids = prepared_features.var["ensembl_id"].iloc[coding_miRNA_loc]
+        coding_miRNA_ids = prepared_features.var["ensembl_id"].iloc[
+            coding_and_miRNA_loc
+        ]
         coding_miRNA_tokens = np.array(
             [self.tokenizer.gene_token_dict[i] for i in coding_miRNA_ids]
         )
 
         try:
-            _ = prepared_features.obs["filter_pass"]
-        except KeyError:
-            var_exists = False
-        else:
-            var_exists = True
-
-        if var_exists:
             filter_pass_loc = np.where(
                 [i == 1 for i in prepared_features.obs["filter_pass"]]
             )[0]
-        else:
+        except KeyError:
             logging.info(
                 "prepared_features has no column attribute 'filter_pass'; tokenizing all cells."
             )
@@ -185,18 +180,10 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
                     "ignore", message=".*is_categorical_dtype is deprecated.*"
                 )
                 n_counts = prepared_features[idx].obs["n_counts"].values[:, None]
-                X_view = prepared_features[idx, coding_miRNA_loc].X
-            with warnings.catch_warnings():  # We can ignore this warning, because we later filter for cells with 0 counts
-                warnings.filterwarnings(
-                    "ignore", message=".*divide by zero encountered in divide.*"
-                )
+                X_view = prepared_features[idx, coding_and_miRNA_loc].X
 
-                X_norm = X_view / n_counts * target_sum / norm_factor_vector
-                if 0 in n_counts or 0 in norm_factor_vector:
-                    logging.warning(
-                        "Encountered cell(s) with 0 counts or gene with 0 median expression. Hacking low expression here to fix nans"
-                    )
-                    X_norm[n_counts == 0, :] = 1.0 / X_norm.shape[1]
+            X_norm = X_view / n_counts * target_sum / norm_factor_vector
+
             X_norm = sp.csr_matrix(X_norm)
 
             tokenized_cells += [
@@ -208,6 +195,19 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
         # NOTE: strong limitation of 2048 tokens -.-
         tokenized_cells = [tc[:MODEL_INPUT_SIZE] for tc in tokenized_cells]
         expression_token_lengths = [len(tc) for tc in tokenized_cells]
+
+        if not all(expression_token_lengths):
+            logging.warning(
+                f"Encountered {(np.array(expression_token_lengths) == 0).sum()} cell(s) with 0 counts or gene with 0 median expression. Hacking low expression here to prevent nans and subsequent failures"
+            )
+            expression_token_lengths = [
+                1 if l == 0 else l for l in expression_token_lengths
+            ]
+            # I picked `9743` randomly. It should anyways be filtered
+            tokenized_cells = [
+                np.array([9743], dtype=np.int16) if len(tc) == 0 else tc
+                for tc in tokenized_cells
+            ]
 
         return tokenized_cells, expression_token_lengths
 

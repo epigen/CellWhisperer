@@ -3,6 +3,7 @@ from cellwhisperer.jointemb.model import TranscriptomeTextDualEncoderModel
 
 from typing import Union, List, Optional, Tuple, Dict
 import anndata
+import logging
 import torch
 from transformers import AutoTokenizer
 from cellwhisperer.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
@@ -12,7 +13,6 @@ import os
 import json
 from pathlib import Path
 import pandas as pd
-import numpy as np
 
 
 def score_transcriptomes_vs_texts(
@@ -104,6 +104,12 @@ def score_transcriptomes_vs_texts(
             )  # batch_size * 512
 
         # Compute logits (similarity to expression embedding) for the current chunk and append to the list
+        if isinstance(logit_scale, torch.Tensor):
+            logit_scale = logit_scale.item()
+            logging.info(
+                "Converting logit_scale to float. Call score_transcriptomes_vs_texts with `logit_scale=float(logit_scale)"
+            )
+
         logits_per_text = (
             torch.matmul(text_embeds.cpu(), transcriptome_embeds.t().cpu())
             * logit_scale

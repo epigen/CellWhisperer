@@ -409,10 +409,9 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             text_model=text_model,
         )
 
-        logger.info(
+        logger.debug(
             "The projection layer and logit scale weights `['transcriptome_projection.weight', 'text_projection.weight',"
-            " 'logit_scale']` are newly initialized. You should probably TRAIN this model on a down-stream task to be"
-            " able to use it for predictions and inference."
+            " 'logit_scale']` are freshly initialized."
         )
 
         return model

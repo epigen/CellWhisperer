@@ -1,5 +1,5 @@
 anndata_label_name: natural_language_annotation
-num_epochs: 5
+num_replicates: 5
 
 paths:
   mixtral_model: ~/text-generation-webui/models/mixtral-8x7b-instruct-v0.1.Q5_K_M.gguf

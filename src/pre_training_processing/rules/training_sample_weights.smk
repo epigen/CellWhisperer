@@ -54,6 +54,6 @@ rule local_density_to_sample_weight:
         "logs/local_density_to_sample_weight_{dataset}_{modality}.log"
     resources:
         mem_mb=40000,
-        slurm="cpus-per-task=140"
+        slurm="cpus-per-task=210"
     script:
         "../scripts/local_density_to_sample_weight.py"

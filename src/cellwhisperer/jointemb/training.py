@@ -64,7 +64,7 @@ class CellWhispererCLI(LightningCLI):
             help="Path to a checkpoint to load. This might override some of the other args (to be tested). Difference to --ckpt_path is that it does not restore the trainer/optimizer state.",
         )
         parser.add_argument("--best_model_path", type=Path, default=None)
-        parser.add_argument("--log_level", default="WARNING")
+        parser.add_argument("--log_level", default="INFO")
         parser.add_argument("--dap_debug", action="store_true")
         parser.add_argument(
             "--batch_size", default=32, type=int
@@ -79,7 +79,7 @@ class CellWhispererCLI(LightningCLI):
             {
                 "model.model_config": obj_signature(TranscriptomeTextDualEncoderConfig),
                 "model.loss_config": obj_signature(LossConfig),
-                "trainer.max_epochs": 100,
+                "trainer.max_epochs": 16,
                 "trainer.reload_dataloaders_every_n_epochs": 1,  # this allows sampling of replicates (see data module)
                 "trainer.accumulate_grad_batches": 64,  # the higher the better more or less
             }
@@ -225,7 +225,7 @@ def cli_main(args: Optional[List] = None):
     torch.multiprocessing.set_sharing_strategy("file_system")
     os.environ["TOKENIZERS_PARALLELISM"] = "false"  # disable warning from tokenizers
 
-    LOG_DIR = (PROJECT_DIR / "results" / "model_training").relative_to(os.getcwd())
+    LOG_DIR = os.path.relpath(PROJECT_DIR / "results" / "model_training", os.getcwd())
 
     val_metric = "valfn_daniel_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/recall_at_10_macroAvg"
 
@@ -271,9 +271,11 @@ def cli_main(args: Optional[List] = None):
             logger={
                 "class_path": WandbLogger.__module__ + "." + WandbLogger.__name__,
                 "init_args": dict(
-                    save_dir=get_path(["paths", "wandb_logs"]).relative_to(os.getcwd()),
+                    save_dir=os.path.relpath(
+                        get_path(["paths", "wandb_logs"]), os.getcwd()
+                    ),
                     project="JointEmbed_Training",
-                    entity="cellwhisperer",
+                    entity="single-cellm",
                     log_model=False,
                 ),
             },

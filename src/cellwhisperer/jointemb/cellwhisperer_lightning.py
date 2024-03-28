@@ -43,13 +43,9 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         loss_config: Dict,
         val_batch_size: int = 32,
         gauss_noise_std: float = 0.0,
-        max_epochs: int = 100,
-        optimizer: OptimizerCallable = torch.optim.AdamW,
-        scheduler: LRSchedulerCallable = lambda optimizer: CosineAnnealingLR(
-            optimizer, T_max=100, eta_min=0
-        ),  # TODO need to find a solution to make T_max flexible here
+        max_epochs: int = 16,
         learning_rate: float = 1e-3,
-        lr_warmup_steps: int = 100,
+        lr_warmup: Union[int, float] = 0.05,
     ):
         """
         Args:
@@ -58,9 +54,8 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             val_batch_size: batch size to used for dedicated validation functions. 32 should be feasible on most GPUs.
             gauss_noise_std: Currently inactive: standard deviation of the gaussian noise to add to the input embeddings (features). if 0.0 or None noise won't be added to training embeddings
             max_epochs: maximum number of epochs to train for
-            optimizer: optimizer to use. Must be a callable that returns an optimizer object.
-            scheduler: scheduler to use. Must be a callable that returns a scheduler object.
-            learning_rate: learning rate to use for the optimizer
+            learning_rate: learning rate to use for the optimizer.
+            lr_warmup: number of steps to use for learning rate warmup. If set to 0, no warmup is used. If set to a float, it is interpreted as a fraction of the total number of steps.
         """
         super(TranscriptomeTextDualEncoderLightning, self).__init__()
 
@@ -75,10 +70,8 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             config=model_config,
         )
         self.max_epochs = max_epochs
-        self.optimizer = optimizer
-        self.scheduler = scheduler
         self.learning_rate = learning_rate
-        self.lr_warmup_steps = lr_warmup_steps
+        self.lr_warmup = lr_warmup
 
         self.loss_config = loss_config
         self.loss_functions = self.loss_config.configure_losses(
@@ -204,7 +197,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                 on_epoch=True,
                 prog_bar=True,
                 logger=True,
-                sync_dist=True,  # NOTE: might lead to more synchronization overhead
+                # sync_dist=True,  # NOTE: might lead to more synchronization overhead and requires loss_value to be on GPU
             )
 
         # After processing all loss functions, log the total combined loss.
@@ -213,9 +206,9 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             combined_loss,
             on_step=True,
             on_epoch=True,
-            prog_bar=True,
+            prog_bar=False,
             logger=True,
-            sync_dist=True,  # NOTE: might lead to more synchronization overhead
+            # sync_dist=True,  # NOTE: might lead to more synchronization overhead and requires loss_value to be on GPU
         )
         # NOTE: this is a hack to avoid NaNs in the loss. We should fix this properly.
         if torch.isnan(combined_loss):
@@ -238,6 +231,15 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             text_model_type=self.model.text_model.config.model_type,
             val_dataloader=self.trainer.datamodule.val_dataloader(),
         )
+        if stage == "fit":
+            if isinstance(self.lr_warmup, float):
+                self.lr_warmup_steps = int(
+                    len(self.trainer.datamodule.train_dataloader())
+                    * self.max_epochs
+                    * self.lr_warmup
+                )
+            else:
+                self.lr_warmup_steps = self.lr_warmup
 
     def on_validation_epoch_end(self):
         # For convenience (speed), I disable this when "fast_dev_run" is enabled
@@ -258,7 +260,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                         on_epoch=True,
                         prog_bar=False,
                         logger=True,
-                        # sync_dist=True,
+                        # sync_dist=True,  # needs tensor on gpu
                     )
                     if val_results[1] is not None:
                         artifact = Artifact(
@@ -301,7 +303,6 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
         Alternative could be to use AdaBelief (which works well according to "ItalianClip")
         """
-
         # Decay weights as indicated in docstring
         # NOTE subject this to ablation study
         decay_selector = lambda name: "weight" in name and (
@@ -320,7 +321,6 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         ]
 
         # Workaround to all using --config <file> (otherwise it does not work :())
-        logging.warning("passed optimizer arg is being ignored in favor of adamw")
         optimizer = AdamW(
             [
                 {"params": weight_params, "weight_decay": 0.01},
@@ -329,8 +329,11 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             lr=self.learning_rate,
             betas=(0.9, 0.98),  # SigLiT recommends even 0.95 for beta2
         )
+
+        scheduler = CosineAnnealingLR(optimizer, T_max=self.max_epochs, eta_min=0)
+
         scheduler = {
-            "scheduler": self.scheduler(optimizer),
+            "scheduler": scheduler,
             "interval": "epoch",
             "monitor": "val_loss",
         }
@@ -340,6 +343,12 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         """
         Override `optimizer_step` to allow learning-rate warmup
         """
+
+        super(TranscriptomeTextDualEncoderLightning, self).optimizer_step(
+            epoch, batch_idx, optimizer, optimizer_closure
+        )
+
+        # If we are still in the warmup phase, overwrite learning rate
         if self.trainer.global_step < self.lr_warmup_steps:
             lr_scale = min(
                 1.0, float(self.trainer.global_step + 1) / self.lr_warmup_steps
@@ -357,10 +366,6 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                 logger=True,
             )
             break  # (only the first one is needed)
-
-        super(TranscriptomeTextDualEncoderLightning, self).optimizer_step(
-            epoch, batch_idx, optimizer, optimizer_closure
-        )
 
     # inference API
     def embed_texts(self, texts: List[str], chunk_size=64):

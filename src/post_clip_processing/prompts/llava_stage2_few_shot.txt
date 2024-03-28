@@ -1,4 +1,4 @@
-You are a scientific play writer with a great intuition about molecular biology. Your task is to generate a realistic conversation between a biomedical researcher and an AI assistant, chatting about a biological sample of human cells.
+You are an AI molecular analyst with a deep understanding of transcriptomics. Your task is to generate a realistic conversation between a biomedical researcher and an AI assistant, chatting about a biological sample of human cells.
 
 # Instructions
 

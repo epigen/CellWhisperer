@@ -27,6 +27,7 @@ class JointEmbedDataset(Dataset):
     def __init__(self, inputs, orig_ids=None, replicate_inputs: Dict = {}):
         self.inputs = inputs
         self.orig_ids = orig_ids
+        self.orig_inputs = inputs  # save for being able to switch around replicates
         self.replicate_inputs = replicate_inputs
 
     def __len__(self):
@@ -38,10 +39,20 @@ class JointEmbedDataset(Dataset):
 
     def set_epoch(self, epoch: int):
         """
-        Update the dataset to "load" the replicate for a specific epoch
+        Update the dataset to "load" the replicate for a specific epoch.
+
+        Treat the original input as one additional replicate
         """
-        for key, feature_data in self.replicate_inputs.items():
-            self.inputs[key] = feature_data[epoch % len(feature_data)]
+        # get length of replicate dict elements
+        num_replicates = len(next(iter(self.replicate_inputs.values())))
+        # add 1 because of the original input
+        replicate_i = epoch % (num_replicates + 1)
+
+        if replicate_i == 0:
+            self.inputs = self.orig_inputs
+        else:
+            for key, feature_data in self.replicate_inputs.items():
+                self.inputs[key] = feature_data[replicate_i - 1]
 
 
 class JointEmbedDataModule(pl.LightningDataModule):
@@ -62,7 +73,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         tokenizer_kwargs={
             "model_max_length": 128  # 128 seems to be a decent fit (previously 100)
         },  # see https://github.com/epigen/cellwhisperer/issues/193
-        min_genes=1,
+        min_genes=100,
         train_fraction=0.95,
     ):
         """
@@ -162,16 +173,14 @@ class JointEmbedDataModule(pl.LightningDataModule):
             )
             inputs["orig_ids"] = adata.obs.index[n_genes_filter]
         else:
+            logging.warning(
+                f"Filtering for {sum(n_genes_filter)} of {len(n_genes_filter)} samples with >={self.min_genes} genes."
+            )
             inputs = {key: val[n_genes_filter] for key, val in inputs.items()}
             inputs["orig_ids"] = adata.obs.index[n_genes_filter]
-            if len(replicate_inputs["input_ids"]) > 0:
-                raise NotImplementedError(
-                    "would also need to filter the replicates fields"
-                )
-
-            logging.warning(
-                f"Filtered for {sum(n_genes_filter)} of {len(n_genes_filter)} samples with >={self.min_genes} genes."
-            )
+            if len(replicate_inputs) > 0:
+                for key, value in replicate_inputs.items():
+                    replicate_inputs[key] = [val[n_genes_filter] for val in value]
 
         # save the inputs dict to a file using torch
         processed_path.parent.mkdir(parents=True, exist_ok=True)
@@ -187,7 +196,6 @@ class JointEmbedDataModule(pl.LightningDataModule):
         We could also stack them into a single tensor, but I see little benefit at the moment
         Note that the first one is computed twice (redundantly)
 
-        # TODO generalize this later for single-cell replicates
         """
         max_length = inputs["input_ids"].shape[
             1
@@ -211,21 +219,25 @@ class JointEmbedDataModule(pl.LightningDataModule):
                     replicate_inputs[key].append(feature_data)
 
         # Transcriptome replicates
-        # replicate_layers = sorted(
-        #     [key for key in adata.layers.keys() if "replicate" in key]
-        # )
-        # logging.info(f"Loading {len(replicate_layers)} replicate transcriptomes")
-        # # X = adata.X
-        # for layer_name in replicate_layers:
-        #     # adata.X = adata.layers[layer_name]
-        #     replicate_input = processor(
-        #         transcriptomes=adata([~adata.obs.is_pseudobulk) & adata.obs.],
-        #         return_tensors="pt",
-        #     )
-        #     for key, feature_data in replicate_input.items():
-        #         replicate_inputs[key].append(feature_data)
+        replicate_layers = sorted(
+            [
+                key
+                for key in adata.layers.keys()
+                if "replicate" in key or "sampled_cell" in key
+            ]
+        )
+        logging.info(f"Loading {len(replicate_layers)} replicate transcriptomes")
+        X = adata.X
+        for layer_name in replicate_layers:
+            adata.X = adata.layers[layer_name]
+            replicate_input = processor(
+                transcriptomes=adata,
+                return_tensors="pt",
+            )
+            for key, feature_data in replicate_input.items():
+                replicate_inputs[key].append(feature_data)
         # restore adata.X to the original value
-        # adata.X = X
+        adata.X = X
 
         return replicate_inputs
 

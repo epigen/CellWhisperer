@@ -8,7 +8,7 @@ configfile: PROJECT_DIR / "config.yaml"
 DATASETS = config["datasets"]
 DATASETS = ["archs4_metasra"]
 RESULTS_DIR = PROJECT_DIR / "results" / "pre_training_processing"
-REPLICATES = list(range(config["num_epochs"]))
+REPLICATES = list(range(config["num_replicates"]))
 REPLICATES = [1]
 
 include: "rules/annotation_processing.smk"
@@ -23,8 +23,9 @@ rule integrate_dataset:
     input:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         # gsva_csv=PROJECT_DIR / config["paths"]["gsva_results"],
-        processed_annotations=rules.aggregate_processed.output.multi,
-        **dict(zip(["transcriptome_weights", "annotation_weights"], expand(rules.local_density_to_sample_weight.output.weight, modality=["transcriptome", "annotation"], allow_missing=True))),
+        processed_annotations=ancient(rules.aggregate_processed.output.multi),
+        transcriptome_weights=ancient(rules.local_density_to_sample_weight.output.weight.format(modality="transcriptome", dataset="{dataset}")),
+        annotation_weights=ancient(rules.local_density_to_sample_weight.output.weight.format(modality="annotation", dataset="{dataset}")),
     output:
         PROJECT_DIR / config["paths"]["full_dataset"]
     params:

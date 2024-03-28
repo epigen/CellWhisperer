@@ -159,9 +159,9 @@ rule write_census_datasets_info_csv:
                 df = pd.json_normalize(json.load(f))
                 dfs.append(df)
         dataset_info = pd.concat(dfs)
-        # save as json and csv, in case one is more convenient to use than the other 
+        # save as json and csv, in case one is more convenient to use than the other
         # (the entries with lists in them are easier to read in the json file, but the csv file is easier to read in a spreadsheet program)
-        dataset_info.to_json(str(output).replace(".csv",".json"), orient="records") 
+        dataset_info.to_json(str(output).replace(".csv",".json"), orient="records")
         dataset_info = dataset_info.set_index("dataset_id")
         dataset_info.to_csv(str(output))
 
@@ -176,7 +176,7 @@ rule integrate_data:
     output:
         PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="cellxgene_census")
     params:
-        num_replicates=config["num_epochs"]
+        num_replicates=config["num_replicates"],
     resources:
         mem_mb=400000,
         slurm="cpus-per-task=2"
