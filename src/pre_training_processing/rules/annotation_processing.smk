@@ -33,23 +33,6 @@ rule prepare_requests:
             with open(split_fn, "w") as f:
                 yaml.dump(split_annotations, f)
 
-# rule process_annotation_openai:
-#     """
-#     Alternative annotation processing using OpenAI's API.
-
-#     Currently unused (and outdated)
-#     """
-#     input:
-#         human_message=lambda wildcards: checkpoints.prepare_requests.get(dataset=wildcards.dataset).output[0] + f"/{wildcards.sample_id}.yaml",
-#         system_message = "prompts/process_annotations_zero_shot_gpt4.txt",
-#     output:
-#         processed_annotation = protected(PROCESSED_FILE_OPENAI),  # I marked this as protected as it might be costly to produce
-#     conda:
-#         PROJECT_DIR / "envs" / "main.yaml"
-#         # "cellwhisperer"
-#     script:
-#         "../scripts/process_annotations.py"
-
 rule process_annotation_local:
     """
     """

@@ -1,26 +1,32 @@
 # snakemake remote HTTP object
 from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
 import glob
+import pandas as pd
+
 
 HTTP = HTTPRemoteProvider()
 
 PROJECTOR_TYPE = "mlp2x_8t_gelu"  # TODO fails if > 8 (12 and 16 both failed. either due to  dual-digit not being ok or because they become too large for some reason ). Here is the error evoked (can use pdb to trace (breakpoint before beaks)): /msc/home/mschae83/miniconda3/envs/llava2/lib/python3.10/site-packages/torch/nn/utils/clip_grad.py(55)
 
-QUESTIONS = [
-    "What does the sample represent?",
-    "What does the transcriptome represent?",
-    "Give a brief description of the sample.",
-    "Give a brief description of the transcriptome.",
-    "Present a compact description of the sample's key features.",
-    "Present a compact description of the transcriptome's key features.",
-    "Summarize the transcriptomic content of the sample.",
-    "Provide a brief description of the given transcriptome.",
-    "Provide a brief description of the given sample.",
-    "Describe the sample concisely.",
-    "Describe the transcriptome concisely.",
-]
 
-# TODO random sample (n=100) of the GSVA dataset (which is already weight-corrected)
+# matching concise and extensive questions
+QUESTION_MAP = {
+    "What does the sample represent?": "Provide an extensive description of the sample",
+    "What does the transcriptome represent?": "What does the transcriptome represent? Respond comprehensively.",
+    "What do these cells represent?": "Provide a detailed description of these cells.",
+    "Give a brief description of the sample.": "Provide a detailed description of the sample.",
+    "Give a brief description of these cells.": "Provide a detailed description of these cells.",
+    "Present a compact description of the sample's key features.": "Present a detailed description of the sample's key features.",
+    "Summarize the state of these cells.": "Provide a detailed description of the state of these cells.",
+    "Provide a brief description of these cells.": "Provide a detailed description of these cells.",
+    "Provide a brief description of the given sample.": "Provide a detailed description of the given sample.",
+    "Describe the sample concisely.": "Describe the sample in detail.",
+    "Describe these cells concisely.": "Describe these cells in detail.",
+}
+
+QUESTIONS = list(QUESTION_MAP.keys())
+
+# random sample (n=100) of the GSVA dataset (which is already weight-corrected)
 TEST_IDS = ['SRX8856161', 'SRX2945912', 'SRX12688894', 'SRX7833821',
        'SRX4361085', 'SRX1467354', 'SRX2984546', 'SRX15304075',
        'SRX3364766', 'SRX5215396', 'SRX7652714', 'SRX14745891',
@@ -47,6 +53,16 @@ TEST_IDS = ['SRX8856161', 'SRX2945912', 'SRX12688894', 'SRX7833821',
        'SRX2806190', 'SRX3444884', 'SRX7839000', 'SRX2388408',
        'SRX2491340', 'SRX15036995', 'SRX10659509', 'SRX1789190']
 
+# NOTE this is only for archs4_metasra. Would need to be adapted for cellxgene_census.
+# TODO make this a rule (because the pipeline becomes slow with this)
+GSVA_SAMPLES = pd.read_parquet(PROJECT_DIR / config["paths"]["gsva_results"].format(dataset="archs4_metasra")).set_index("Unnamed: 0").drop(columns=["library"]).columns
+
+# make sure they are not part of TEST_IDS or any other set (yet, they should be complementary to the other stage 2 sets. E.g. subsample 15.000 from the 50000 GSVA set)
+NUM_COMPLEX_SAMPLES = 5000
+NUM_DETAILED_SAMPLES = 10000
+CONVERSATION_START = NUM_COMPLEX_SAMPLES + NUM_DETAILED_SAMPLES
+COMPLEX_SAMPLES = GSVA_SAMPLES.to_list()[:NUM_COMPLEX_SAMPLES]  # 5000  # list comprehension preserves 'random' order
+DETAILED_SAMPLES = GSVA_SAMPLES.to_list()[NUM_COMPLEX_SAMPLES:CONVERSATION_START]
 scattergather:
     split=128
 
@@ -60,13 +76,14 @@ rule llava_stage1_dataset:
     In a nutshell, take the questions (above) and use the previously generated sample annotations as answers
     """
     input:
-        annotations_archs4_metasra=PROJECT_DIR / config["paths"]["processed_annotations"].format(dataset="archs4_metasra"),
+        annotations_archs4_metasra=ancient(PROJECT_DIR / config["paths"]["processed_multi_annotations"].format(dataset="archs4_metasra")),
         # annotations_cellxgene_census=PROJECT_DIR / config["paths"]["processed_annotations"].format(dataset="cellxgene_census"),
     output:
         train_set=PROJECT_DIR / config["paths"]["llava_pretrain_text_dataset"],
         test_set="tmp_output/llava_test_set.json"
     params:
         seed=42,
+        annotation_replicate=1,
         questions=QUESTIONS,
         transcriptome_tag="<image>",  # we stick to <image> because of the llava code base
         anndata_label_name=config["anndata_label_name"],
@@ -132,7 +149,7 @@ rule prepare_llava_stage2_requests:
     Few shot input format: JSON (top_gene_sets: list(ranked, avoid scores or ), top_genes: list(ranked), annotation:string, sample_id: string)
     """
     input:
-        processed_annotations=PROJECT_DIR / config["paths"]["processed_annotations"],
+        processed_annotations=PROJECT_DIR / config["paths"]["processed_multi_annotations"],
         gsva=PROJECT_DIR / config["paths"]["gsva_results"],
         top_genes=rules.compute_top_genes.output.top_genes,
         request_template="prompts/llava_stage2_request_template.txt",
@@ -142,8 +159,9 @@ rule prepare_llava_stage2_requests:
         request_splits=scatter.split(PROJECT_DIR / "results/post_clip_processing/llava_requests/{{dataset,[^/]+}}/{scatteritem}.json"),
         few_shot_block="prompts/few_shot_messages_{dataset}.json",
     params:
-        top_n_genes=20,
-        top_n_gene_sets=20
+        top_n_genes=50,
+        top_n_gene_sets=50,
+        start_from_num=CONVERSATION_START,
     conda:
         "cellwhisperer"
     resources:
@@ -152,6 +170,68 @@ rule prepare_llava_stage2_requests:
     notebook:
         "../notebooks/prepare_llava_stage2_requests.py.ipynb"
 
+rule generate_llava_complex:
+    """
+    Stage 2 complex data generation (GPT-4)
+
+    Currently *without* gene names, forcing the model to focus on the provided transcriptome.
+    """
+    input:
+        processed_annotations=PROJECT_DIR / config["paths"]["processed_multi_annotations"],
+        gsva=PROJECT_DIR / config["paths"]["gsva_results"],
+        top_genes=rules.compute_top_genes.output.top_genes,
+        system_message=ancient("prompts/llava_stage2_complex_few_shot.txt"),
+        request_template="prompts/llava_stage2_request_template.txt",
+        few_shot_prompts=ancient(expand("prompts/llava_stage2_complex_few_shot_samples/{i}_request.json", i=[2, 3, 5])),
+        few_shot_responses=ancient(expand("prompts/llava_stage2_complex_few_shot_samples/{i}_response.json", i=[2, 3, 5])),
+    output:
+        processed_annotation = protected(PROJECT_DIR / "results" / "post_clip_processing" / "llava_processed_complex" / "{dataset}" / "{sample_id}.json"),
+    log:
+        "logs/generate_llava_complex_{dataset}_{sample_id}.log"
+    params:
+        top_n_genes=50,
+        top_n_gene_sets=50,
+        annotation_replicate=1,
+        temperature=0.4
+    conda:
+        # PROJECT_DIR / "envs" / "main.yaml"
+        "cellwhisperer"
+    resources:
+        mem_mb=50000,
+    script:
+        "../scripts/generate_llava_complex.py"
+
+rule generate_llava_detailed:
+    """
+    Stage 2 detailed data generation (GPT-4)
+
+    # TODO check how many failed. go through logs and filter the ones that failed (can we fix them easily?)
+
+    Currently *without* gene names, forcing the model to focus on the provided transcriptome.
+    """
+    input:
+        processed_annotations=PROJECT_DIR / config["paths"]["processed_multi_annotations"],
+        gsva=PROJECT_DIR / config["paths"]["gsva_results"],
+        top_genes=rules.compute_top_genes.output.top_genes,
+        system_message=ancient("prompts/llava_stage2_detailed.txt"),
+        request_template="prompts/llava_stage2_request_template.txt",
+    output:
+        processed_annotation = protected(PROJECT_DIR / "results" / "post_clip_processing" / "llava_processed_detailed" / "{dataset}" / "{sample_id}.json"),  # I marked this as protected as it might be costly to produce  # TODO add protected
+    log:
+        "logs/generate_llava_detailed_{dataset}_{sample_id}.log"
+    params:
+        top_n_genes=50,
+        top_n_gene_sets=50,
+        annotation_replicate=1,
+        temperature=0.0,
+        question_map=QUESTION_MAP,
+    conda:
+        # PROJECT_DIR / "envs" / "main.yaml"
+        "cellwhisperer"
+    resources:
+        mem_mb=50000,
+    script:
+        "../scripts/generate_llava_detailed.py"
 
 rule generate_llava_stage2_conversations:
     """
@@ -177,22 +257,38 @@ rule generate_llava_stage2_conversations:
     conda: "textgen"  # "../envs/llamacpp.yaml" fails to install :/
     notebook: "../notebooks/llava_stage2_dataset.py.ipynb"
 
+
+
 rule aggregate_llava_stage2_dataset:
     """
     Read in all the generated annotations and aggregate them into a single JSON file
+
+    # TODO check the log after running
+
+    NOTE consider oversampling complex items (e.g. use them twice, as they are fewer)
     """
     input:
         json_splits = glob.glob("/msc/home/mschae83/cellwhisperer/results/post_clip_processing/llava_processed/archs4_metasra/second/*-of-128.json"),  # , i=[1, 103, 118, 20, 35, 48, 61, 7, 89, 1, 104, 120, 23, 36, 5, 62, 74, 9, 102, 107, 122, 33, 37, 50, 65, 79, 93])
 
         # json_splits=[split.format(dataset=dataset)
-        #              for dataset in ["archs4_metasra"] # , "cellxgene_census"]  # TODO enable
+        #              for dataset in ["archs4_metasra"] # , "cellxgene_census"]  # TODO enable (and make sure to enable the assertion in the script: "assert sample_id not in all_conversations_dict")
         #              for split in gather.split(PROJECT_DIR / "results" / "post_clip_processing" / "llava_processed" / "{{dataset}}" / "{scatteritem}.json")
         #              ],
         stage1_train_set = rules.llava_stage1_dataset.output.train_set,
         stage1_test_set = rules.llava_stage1_dataset.output.test_set,
+        complex_conversations=expand(rules.generate_llava_complex.output.processed_annotation, sample_id=COMPLEX_SAMPLES, dataset="archs4_metasra"),
+        detailed_conversations=expand(rules.generate_llava_detailed.output.processed_annotation, sample_id=DETAILED_SAMPLES, dataset="archs4_metasra"),
+        transcriptome_weights=PROJECT_DIR / "results/pre_training_processing/archs4_metasra/transcriptome_weights.npz",
+        annotation_weights=PROJECT_DIR / "results/pre_training_processing/archs4_metasra/annotation_weights.npz",
     params:
         test_ids=TEST_IDS,
+        num_stage1_samples=20000,
+        seed=42,
         transcriptome_tag="<image>",  # we stick to <image> because of the llava code base
+    log:
+        "logs/aggregate_llava_stage2_dataset.log"
+    resources:
+        mem_mb=100000,
     output:
         llava_stage2_dataset=PROJECT_DIR / config["paths"]["llava_finetune_text_dataset"],
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava_evaluation_text_dataset"]

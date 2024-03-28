@@ -40,7 +40,7 @@ dependencies:
   - pip:
     - torchtext==0.16.1
     - gseapy==1.0.6
-    - openai==0.28.1
+    - openai==1.14.2
     - loompy==3.0.7
     - tdigest==0.5.2.2
     - plotly==5.3.1
