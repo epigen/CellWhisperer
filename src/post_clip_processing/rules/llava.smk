@@ -1,3 +1,8 @@
+"""
+
+NOTE this is only for archs4_metasra. Would need to be adapted for cellxgene_census.
+"""
+
 # snakemake remote HTTP object
 from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
 import glob
@@ -53,9 +58,14 @@ TEST_IDS = ['SRX8856161', 'SRX2945912', 'SRX12688894', 'SRX7833821',
        'SRX2806190', 'SRX3444884', 'SRX7839000', 'SRX2388408',
        'SRX2491340', 'SRX15036995', 'SRX10659509', 'SRX1789190']
 
-# NOTE this is only for archs4_metasra. Would need to be adapted for cellxgene_census.
-# TODO make this a rule (because the pipeline becomes slow with this)
-GSVA_SAMPLES = pd.read_parquet(PROJECT_DIR / config["paths"]["gsva_results"].format(dataset="archs4_metasra")).set_index("Unnamed: 0").drop(columns=["library"]).columns
+# For efficiency, extract the samples once and store them
+if not os.path.exists("./tmp_gsva_samples.csv"):
+    GSVA_SAMPLES = pd.read_parquet(PROJECT_DIR / config["paths"]["gsva_results"].format(dataset="archs4_metasra")).set_index("Unnamed: 0").drop(columns=["library"]).columns
+    # store GSVA samples
+    with open("./tmp_gsva_samples.csv", "w") as f:
+        f.write("\n".join(GSVA_SAMPLES.to_list()))
+else:
+    GSVA_SAMPLES = pd.read_csv("./tmp_gsva_samples.csv", header=None).iloc[:, 0]
 
 # make sure they are not part of TEST_IDS or any other set (yet, they should be complementary to the other stage 2 sets. E.g. subsample 15.000 from the 50000 GSVA set)
 NUM_COMPLEX_SAMPLES = 5000
@@ -263,8 +273,6 @@ rule aggregate_llava_stage2_dataset:
     """
     Read in all the generated annotations and aggregate them into a single JSON file
 
-    # TODO check the log after running
-
     NOTE consider oversampling complex items (e.g. use them twice, as they are fewer)
     """
     input:
@@ -282,9 +290,10 @@ rule aggregate_llava_stage2_dataset:
         annotation_weights=PROJECT_DIR / "results/pre_training_processing/archs4_metasra/annotation_weights.npz",
     params:
         test_ids=TEST_IDS,
-        num_stage1_samples=20000,
+        num_stage1_samples=20000,  # maybe only use 10000. or train with them only in the beginning?
         seed=42,
         transcriptome_tag="<image>",  # we stick to <image> because of the llava code base
+        accept_num_erroneous_jsons=200,
     log:
         "logs/aggregate_llava_stage2_dataset.log"
     resources:
@@ -319,7 +328,7 @@ rule pretrain_llava:
         output_dir=protected(directory(PROJECT_DIR / config["paths"]["llava_pretrained_model_dir"])),
     resources:
         mem_mb=300000,
-        slurm="cpus-per-task=40 gres=gpu:a100-sxm4-80gb:4 qos=a100-sxm4-80gb partition=gpu"
+        slurm="cpus-per-task=40 gres=gpu:a100-sxm4-80gb:3 qos=a100-sxm4-80gb partition=gpu"
     log:
         "logs/pretrain_llava_{base_model}_{model}.log"
     threads: 16
@@ -374,6 +383,8 @@ rule finetune_llava:
     # Runs like this on 3+ 80GB GPUs:
     srun -N1 -q a100-sxm4-80gb-sxm4-80gb -c 30 --partition gpu --gres=gpu:a100-sxm4-80gb-sxm4-80gb:4 --mem=200G --pty bash
 
+    TODO: consider curriculum learning: first all of dataset1, then the generated ones
+    TODO: consider biomistral (simply assess how well it performs using the perplexity analysis below)
     """
     input:
         data_path=rules.aggregate_llava_stage2_dataset.output[0].format(dataset=TRAINING_DATASET),
@@ -388,7 +399,7 @@ rule finetune_llava:
         output_dir=protected(directory(PROJECT_DIR / config["paths"]["llava_finetuned_model_dir"])),
     resources:
         mem_mb=300000,
-        slurm="cpus-per-task=40 gres=gpu:a100-sxm4-80gb:4 qos=a100-sxm4-80gb partition=gpu"
+        slurm="cpus-per-task=40 gres=gpu:a100-sxm4-80gb:3 qos=a100-sxm4-80gb partition=gpu"
     log:
         "logs/finetune_llava_{base_model}_{model}.log"
     threads: 16

@@ -4,7 +4,6 @@ import random
 from pathlib import Path
 import numpy as np
 
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -28,6 +27,7 @@ if len(all_conversations_dict) != summed_length:
     logging.warning("Found duplicate keys in the splits")
 
 # Add the complex and detailed questions
+num_erroneous_jsons = 0
 for special_conversation_fn in snakemake.input.complex_conversations + snakemake.input.detailed_conversations:  # type: ignore [reportUndefinedVariable]
     conv_text = Path(special_conversation_fn).read_text()
     if conv_text.startswith("```"):
@@ -42,6 +42,7 @@ for special_conversation_fn in snakemake.input.complex_conversations + snakemake
         logging.warning(
             f"Error while loading conversation file {special_conversation_fn}: {e}"
         )
+        num_erroneous_jsons += 1
         continue
 
     sample_id = Path(special_conversation_fn).stem
@@ -55,11 +56,9 @@ for special_conversation_fn in snakemake.input.complex_conversations + snakemake
         )
 
     # assert sample_id not in all_conversations_dict  # TODO enable later
-    all_conversations_dict[sample_id] = {
-        "id": sample_id,
-        "image": sample_id,
-        "conversations": complex_conversation,
-    }
+    all_conversations_dict[sample_id] = complex_conversation
+if num_erroneous_jsons > snakemake.params.accept_num_erroneous_jsons:
+    raise ValueError(f"Too many erroneous conversations ({num_erroneous_jsons})")
 
 
 # Add the description questions from dataset1
@@ -75,8 +74,7 @@ with open(snakemake.input.stage1_test_set) as f:  # type: ignore [reportUndefine
 
 # Choose the stage1 samples to include
 stage1_candidates = list(
-    set(stage1_train_set.keys())
-    + set(stage1_test_set.keys())
+    (set(stage1_train_set.keys()) | set(stage1_test_set.keys()))
     - set(all_conversations_dict.keys())
 )
 
