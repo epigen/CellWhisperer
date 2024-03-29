@@ -258,18 +258,18 @@ def cli_main(args: Optional[List] = None):
         trainer_defaults=dict(
             default_root_dir=LOG_DIR,
             precision="bf16-mixed",
-            strategy={
-                "class_path": "lightning.pytorch.strategies.FSDPStrategy",
-                "init_args": {
-                    "activation_checkpointing_policy": {  # TODO need to add the relevant layers for the transcriptome models as well, if we want to fine-tune them ever
-                        BioGptDecoderLayer,
-                        BertLayer,
-                        TransformerEncoderLayer,  # scGPT
-                        FlashTransformerEncoderLayer,  # scGPT
-                    },
-                    "sharding_strategy": "NO_SHARD",  # corresponds to DDP. no need to go fancy for the moment.. We can try later
-                },
-            },
+            # strategy={
+            #     "class_path": "lightning.pytorch.strategies.FSDPStrategy",
+            #     "init_args": {
+            #         "activation_checkpointing_policy": {  # TODO need to add the relevant layers for the transcriptome models as well, if we want to fine-tune them ever
+            #             BioGptDecoderLayer,
+            #             BertLayer,
+            #             TransformerEncoderLayer,  # scGPT
+            #             FlashTransformerEncoderLayer,  # scGPT
+            #         },
+            #         "sharding_strategy": "NO_SHARD",  # corresponds to DDP. no need to go fancy for the moment.. We can try later
+            #     },
+            # },
             logger={
                 "class_path": WandbLogger.__module__ + "." + WandbLogger.__name__,
                 "init_args": dict(
