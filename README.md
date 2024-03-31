@@ -10,6 +10,22 @@ https://github.com/epigen/cellwhisperer/wiki
 1. Run `git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules`
   If you already cloned, but did not add the `--recurse-submodules` run the following:
   `git submodule update --init --recursive`
+2. Ensure correct environment (conda flexible channel prio and CUDA >= 12)
+
+```bash
+cat `~/.condarc`
+...
+channel_priority: flexible
+```
+
+```bash
+(base) mschae83@s0-n11:~/cellwhisperer$ nvidia-smi
+Sun Mar 31 17:36:31 2024
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 470.199.02   Driver Version: 470.199.02   CUDA Version: 12.2     |
+...
+```
+
 2. Install the environment
   ```
   mamba env create -f envs/main.yaml  # this already includes `pip install -e .`
@@ -33,10 +49,7 @@ See [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md)
 
 ### Sane git defaults
 
-
-1. `git config --global submodule.recurse true`
-   This way you don't need to keep track of whether the submodules are up to date. Note: This may lead to code loss on the remote repo upon pull.
-2. `git config --global pull.rebase true`
+1. `git config --global pull.rebase true`
    Rebasing retains a better history
 
 ## Run/Train with Pytorch Lightning

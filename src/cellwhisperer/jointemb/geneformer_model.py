@@ -167,7 +167,7 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
                 [i == 1 for i in prepared_features.obs["filter_pass"]]
             )[0]
         except KeyError:
-            logger.info(
+            logger.debug(
                 "prepared_features has no column attribute 'filter_pass'; tokenizing all cells."
             )
             filter_pass_loc = np.array([i for i in range(prepared_features.shape[0])])

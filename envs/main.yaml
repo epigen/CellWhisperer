@@ -55,3 +55,4 @@ dependencies:
     - cellxgene-census
     - -e ..
     - -e ../modules/cellxgene/
+    - -e ../modules/Geneformer/

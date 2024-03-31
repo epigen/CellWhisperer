@@ -279,7 +279,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                         artifact.add(table, "performance_metrics")
                         self.logger.experiment.log_artifact(artifact)
 
-    def on_train_batch_end(self, *args):
+    def on_train_batch_start(self, *args):
         if self.trainer.global_step >= self.frozen_warmup_steps:
             logger.debug("Unfreezing U towers")
             self.model.unfreeze_U_towers()
@@ -292,7 +292,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             # self.trainer.optimizers = [new_optimizers["optimizer"]]
             # self.trainer.lr_schedulers_configs = [new_optimizers["lr_scheduler"]]
 
-            self.frozen_warmup_steps = 1e9  # never warmup again
+            self.frozen_warmup_steps = 1e9  # never evaluate this code again
 
     def on_train_epoch_end(self):
         """

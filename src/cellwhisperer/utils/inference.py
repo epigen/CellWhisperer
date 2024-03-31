@@ -18,7 +18,7 @@ import pandas as pd
 def score_transcriptomes_vs_texts(
     transcriptome_input: Union[anndata.AnnData, torch.Tensor],
     text_list_or_text_embeds: Union[List[str], torch.Tensor],
-    logit_scale: float,
+    logit_scale: Union[float, torch.Tensor],
     model: Optional[TranscriptomeTextDualEncoderModel] = None,
     average_mode: Optional[str] = "embeddings",
     grouping_keys: Optional[List[str]] = None,
@@ -105,10 +105,8 @@ def score_transcriptomes_vs_texts(
 
         # Compute logits (similarity to expression embedding) for the current chunk and append to the list
         if isinstance(logit_scale, torch.Tensor):
+            logging.debug("Converting logit_scale to float.")
             logit_scale = logit_scale.item()
-            logging.info(
-                "Converting logit_scale to float. Call score_transcriptomes_vs_texts with `logit_scale=float(logit_scale)"
-            )
 
         logits_per_text = (
             torch.matmul(text_embeds.cpu(), transcriptome_embeds.t().cpu())
