@@ -124,6 +124,6 @@ model_ckpt: null
 best_model_path: null
 log_level: INFO
 dap_debug: false
-batch_size: 32
+batch_size: 16
 wandb: ''
 ckpt_path: null
