@@ -19,3 +19,6 @@ lightning_logs
 wandb/
 logs/
 log/
+.virtual_documents/
+/src/experiments/205_llava_tuning_dataset/getting_mixtral_output.md
+/src/experiments/205_llava_tuning_dataset/getting_mixtral_output.org
