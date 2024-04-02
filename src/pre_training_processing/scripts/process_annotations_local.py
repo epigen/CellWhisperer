@@ -107,7 +107,7 @@ for key, sample in yaml_split.items():
     results.append(
         {
             "sample_id": key,
-            "replicate": int(snakemake.wildcards.replicate),
+            "replicate": int(snakemake.wildcards.replicate),  # type: ignore [reportUndefinedVariable]
             "annotation": result,
         }
     )

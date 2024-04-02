@@ -60,7 +60,7 @@ TEST_IDS = ['SRX8856161', 'SRX2945912', 'SRX12688894', 'SRX7833821',
 
 # For efficiency, extract the samples once and store them
 if not os.path.exists("./tmp_gsva_samples.csv"):
-    GSVA_SAMPLES = pd.read_parquet(PROJECT_DIR / config["paths"]["gsva_results"].format(dataset="archs4_metasra")).set_index("Unnamed: 0").drop(columns=["library"]).columns
+    GSVA_SAMPLES = pd.read_parquet(PROJECT_DIR / config["paths"]["gsva"]["result"].format(dataset="archs4_metasra")).set_index("Unnamed: 0").drop(columns=["library"]).columns
     # store GSVA samples
     with open("./tmp_gsva_samples.csv", "w") as f:
         f.write("\n".join(GSVA_SAMPLES.to_list()))
@@ -160,7 +160,7 @@ rule prepare_llava_stage2_requests:
     """
     input:
         processed_annotations=PROJECT_DIR / config["paths"]["processed_multi_annotations"],
-        gsva=PROJECT_DIR / config["paths"]["gsva_results"],
+        gsva=PROJECT_DIR / config["paths"]["gsva"]["result"],
         top_genes=rules.compute_top_genes.output.top_genes,
         request_template="prompts/llava_stage2_request_template.txt",
         few_shot_prompts=ancient(expand("prompts/llava_stage2_few_shot_samples/{i}_request.json", i=range(3))),
@@ -188,7 +188,7 @@ rule generate_llava_complex:
     """
     input:
         processed_annotations=PROJECT_DIR / config["paths"]["processed_multi_annotations"],
-        gsva=PROJECT_DIR / config["paths"]["gsva_results"],
+        gsva=PROJECT_DIR / config["paths"]["gsva"]["result"],
         top_genes=rules.compute_top_genes.output.top_genes,
         system_message=ancient("prompts/llava_stage2_complex_few_shot.txt"),
         request_template="prompts/llava_stage2_request_template.txt",
@@ -221,7 +221,7 @@ rule generate_llava_detailed:
     """
     input:
         processed_annotations=PROJECT_DIR / config["paths"]["processed_multi_annotations"],
-        gsva=PROJECT_DIR / config["paths"]["gsva_results"],
+        gsva=PROJECT_DIR / config["paths"]["gsva"]["result"],
         top_genes=rules.compute_top_genes.output.top_genes,
         system_message=ancient("prompts/llava_stage2_detailed.txt"),
         request_template="prompts/llava_stage2_request_template.txt",

@@ -10,6 +10,7 @@ include: "rules/dataset_processing.smk"
 include: "rules/llava.smk"
 include: "rules/dataset_annotation.smk"
 include: "rules/single_cell_finetune.smk"
+include: "rules/gsva_correlation.smk"
 
 
 rule all:

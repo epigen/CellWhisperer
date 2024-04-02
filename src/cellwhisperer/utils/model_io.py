@@ -63,11 +63,7 @@ def load_cellwhisperer_model(
 
     if cache:
         # # This is just for allow caching based on `FrozenCachedModels`, you can omit it
-        pl_model.model.prepare_models(
-            pl_model.model.transcriptome_model,
-            pl_model.model.text_model,
-            force_freeze=True,
-        )
+        pl_model.model.freeze_models(force_freeze=True)
 
     # this is for freezing.
     pl_model.freeze()

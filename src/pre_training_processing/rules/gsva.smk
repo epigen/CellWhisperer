@@ -60,6 +60,6 @@ rule combine_gsvas:
     input:
         expand(rules.gsva.output.gsva_csv, library=config["genesets"], dataset=["{dataset}"]),
     output:
-        combined_gsvas=PROJECT_DIR / config["paths"]["gsva_results"]
+        combined_gsvas=PROJECT_DIR / config["paths"]["gsva"]["result"]
     conda: "cellwhisperer"
     script: "../scripts/combine_gsvas.py"

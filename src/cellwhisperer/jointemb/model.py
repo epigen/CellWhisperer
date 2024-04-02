@@ -92,7 +92,6 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             text_model = AutoModel.from_config(self.config.text_config)
 
         self.prepare_models(transcriptome_model, text_model)
-
         # make sure that the individual model's config refers to the shared config
         # so that the updates to the config will be synced
         self.transcriptome_model.config = self.config.transcriptome_config
@@ -111,6 +110,38 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
 
     def prepare_models(self, transcriptome_model, text_model, force_freeze=False):
         """
+        Freeze the transcriptome and text model if indicated by self.config
+
+        Comparing to "L" (see below) is important to retain the correct weights in the model for checkpoint loading
+
+        Args:
+            transcriptome_model (*): The transcriptome model to be used.
+            text_model (PreTrainedModel): The text model to be used.
+            force_freeze (bool): Whether to force freezing the models even if the config does not indicate it.
+        """
+        # TODO need to make sure to modify the config according to the model. Idea: predict a unified input (all_zero, or all_one or so) and take the output as the hash
+
+        if self.config.locking_mode[0] == "L" or force_freeze:
+            if not isinstance(transcriptome_model, FrozenCachedModel):
+                transcriptome_model = FrozenCachedModel(transcriptome_model)
+        elif self.config.unlocked_fp16:
+            transcriptome_model.half()
+
+        assert (
+            text_model is not None
+        ), "text_model must be provided"  # doesn't make sense that only transcriptome_model gets initialized before
+
+        if self.config.locking_mode[1] == "L" or force_freeze:
+            if not isinstance(text_model, FrozenCachedModel):
+                text_model = FrozenCachedModel(text_model)
+        elif self.config.unlocked_fp16:
+            text_model.half()
+
+        self.text_model = text_model
+        self.transcriptome_model = transcriptome_model
+
+    def freeze_models(self, force_freeze=False):
+        """
         Freeze the transcriptome and text model (if they are not marked as "u"). They will get unfrozen after an warmup phase (if marked as "L")
 
         Args:
@@ -121,23 +152,12 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         # TODO need to make sure to modify the config according to the model. Idea: predict a unified input (all_zero, or all_one or so) and take the output as the hash
 
         if self.config.locking_mode[0] != "u" or force_freeze:
-            if not isinstance(transcriptome_model, FrozenCachedModel):
-                transcriptome_model = FrozenCachedModel(transcriptome_model)
-        elif self.config.unlocked_fp16:
-            transcriptome_model.half()
-
-        assert (
-            text_model is not None
-        ), "text_model must be provided"  # doesn't make sense that only transcriptome_model gets initialized before
+            if not isinstance(self.transcriptome_model, FrozenCachedModel):
+                transcriptome_model = FrozenCachedModel(self.transcriptome_model)
 
         if self.config.locking_mode[1] != "u" or force_freeze:
-            if not isinstance(text_model, FrozenCachedModel):
-                text_model = FrozenCachedModel(text_model)
-        elif self.config.unlocked_fp16:
-            text_model.half()
-
-        self.text_model = text_model
-        self.transcriptome_model = transcriptome_model
+            if not isinstance(self.text_model, FrozenCachedModel):
+                text_model = FrozenCachedModel(self.text_model)
 
     def unfreeze_U_towers(self):
         """

@@ -12,7 +12,6 @@ paths:
   llava_finetune_text_dataset: results/llava_finetune_conversations.json
   llava_evaluation_text_dataset: results/llava_evaluation_conversations.json
   geneset_gmt: results/genesets/{library}.gmt
-  gsva_results: results/{dataset}/gsva.parquet
   model_processed_dataset: results/{dataset}/{model}/full_output.npz
   llava_pretrained_model_dir: results/llava/pretrained/{base_model}__{model}/
   llava_finetuned_model_dir: results/llava/finetuned/{base_model}__{model}/
@@ -29,6 +28,13 @@ paths:
     ccle_expression: CCLE_RNAseq_genes_counts_20180929.gct.gz
     essential_genes: resources/cancer_gene_essentiality/CRISPRInferredCommonEssentials.csv
     nonessential_genes: resources/cancer_gene_essentiality/AchillesNonessentialControls.csv
+
+  gsva:
+    result: results/{dataset}/gsva.parquet
+    correlation: results/{dataset}/{model}/gsva_correlations.csv
+    cw_transcriptome_term_scores: results/{dataset}/{model}/cw_transcriptome_term_scores.parquet
+    plots: results/{dataset}/{model}/gsva_plots
+
 
 datasets:
   - immgen

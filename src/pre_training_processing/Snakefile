@@ -17,12 +17,13 @@ include: "rules/gsva.smk"
 
 rule all:
     input:
-        [PROJECT_DIR / config["paths"]["full_dataset"].format(dataset=dataset) for dataset in DATASETS],
+        expand(PROJECT_DIR / config["paths"]["full_dataset"], dataset=DATASETS),
+        expand(PROJECT_DIR / config["paths"]["gsva"]["result"], dataset=DATASETS),
 
 rule integrate_dataset:
     input:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
-        # gsva_csv=PROJECT_DIR / config["paths"]["gsva_results"],
+        # gsva_csv=PROJECT_DIR / config["paths"]["gsva"]["result"],
         processed_annotations=ancient(rules.aggregate_processed.output.multi),
         transcriptome_weights=ancient(rules.local_density_to_sample_weight.output.weight.format(modality="transcriptome", dataset="{dataset}")),
         annotation_weights=ancient(rules.local_density_to_sample_weight.output.weight.format(modality="annotation", dataset="{dataset}")),

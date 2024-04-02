@@ -238,15 +238,20 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             text_model_type=self.model.text_model.config.model_type,
             val_dataloader=self.trainer.datamodule.val_dataloader(),
         )
-        if isinstance(self.frozen_warmup, float):
-            self.frozen_warmup_steps = int(
-                len(self.trainer.datamodule.train_dataloader())
-                * self.max_epochs
-                * self.frozen_warmup
-                / self.trainer.accumulate_grad_batches
-            )
-        else:
-            self.frozen_warmup_steps = self.frozen_warmup
+        if stage == "fit":
+            if isinstance(self.frozen_warmup, float):
+                self.frozen_warmup_steps = int(
+                    len(self.trainer.datamodule.train_dataloader())
+                    * self.max_epochs
+                    * self.frozen_warmup
+                    / self.trainer.accumulate_grad_batches
+                )
+            else:
+                self.frozen_warmup_steps = self.frozen_warmup
+
+    def on_fit_start(self):
+        # freeze for first epoch to train only the projection layer
+        self.model.freeze_models()
 
     def on_validation_epoch_end(self):
         # For convenience (speed), I disable this when "fast_dev_run" is enabled
