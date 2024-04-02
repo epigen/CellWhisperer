@@ -1,15 +1,12 @@
-import cellxgene_census
 import resource
 import pyarrow as pa
 import numpy as np
 import anndata
 import pandas as pd
-import tiledbsoma
 import os
 import pathlib
 import requests
 from scipy import sparse
-from Bio import Entrez
 import requests
 import re
 import glob
@@ -44,29 +41,6 @@ CENSUS_VERSION = "2023-12-15"
 # only allow assays which dont require gene length normalization
 # the allowed cover 31025079 out of 36227903   cells
 # https://cellxgene.cziscience.com/docs/04__Analyze%20Public%20Data/4_2__Gene%20Expression%20Documentation/4_2_3__Gene%20Expression%20Data%20Processing
-ALLOWED_ASSAYS = [
-    "10x 3' v1",
-    "10x 3' v2",
-    "10x 3' v3",
-    "10x 5' v1",
-    "10x 5' v2",
-    "10x 3' transcription profiling",
-    "10x 5' transcription profiling",
-    'Seq-Well',
-    'Drop-seq',
-    'CEL-seq2'
-]
-# NOTE: We therfore forbid these assays:
-# ['Smart-seq v4',
-#  'MARS-seq',
-#  'Smart-seq2',
-#  'BD Rhapsody Whole Transcriptome Analysis',
-#  'GEXSCOPE technology',
-#  'inDrop',
-#  'microwell-seq',
-#  'STRT-seq',
-#  'BD Rhapsody Targeted mRNA',
-#  'sci-RNA-seq']
 
 # Tabula Sapiens dataset IDs (need to be excluded). Note: only the first one is considered. The other ones are not "primary"
 CONTROL_DATASET_IDS = {
@@ -102,15 +76,9 @@ OUTDIR = PROJECT_DIR / "resources" / "cellxgene_census"
 
 configfile: PROJECT_DIR / "config.yaml"
 
-# Get the list of datasets to process
-with cellxgene_census.open_soma(census_version=CENSUS_VERSION) as census:
-    cell_metadata = census["census_data"]["homo_sapiens"].obs.read(
-        value_filter = "is_primary_data == True",
-        column_names = ["dataset_id","assay" ])
-    cell_metadata = cell_metadata.concat().to_pandas()
-    all_dataset_ids = set(cell_metadata[cell_metadata["assay"].isin(ALLOWED_ASSAYS)]["dataset_id"].unique())
-    DATASET_IDS = list(all_dataset_ids - CONTROL_DATASET_IDS)
-
+# include: "rules/census_ids.smk"  # requires installed `cellxgene_census` package
+all_dataset_ids = set(pd.read_csv("ids", header=None)[0].to_list())
+DATASET_IDS = list(all_dataset_ids - CONTROL_DATASET_IDS)
 
 rule all:
     input:
@@ -119,17 +87,16 @@ rule all:
         PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="cellxgene_census"),
 
 rule retrieve_census_datasets_csv:
+    params:
+        census_version = CENSUS_VERSION
     output: OUTDIR/"cellxgene_census_datasets.csv"
-    run:
-        with cellxgene_census.open_soma(census_version=CENSUS_VERSION) as census:
-            census_datasets = census["census_info"]["datasets"].read().concat().to_pandas()
-            census_datasets = census_datasets.set_index("dataset_id")
-            census_datasets.to_csv(str(output))
+    conda: "envs/cellxgene_census.yaml"
+    script: "scripts/retrieve_census_datasets_csv.py"
 
 rule download_census_data:
-    output: OUTDIR/"{dataset_id}.h5ad" # TODO: make this temporary once tweaking is done
-    run:
-        cellxgene_census.download_source_h5ad(wildcards.dataset_id, to_path=str(output))
+    output: OUTDIR/"{dataset_id,.+(?<!_processed)}.h5ad" # TODO: make this temporary once tweaking is done
+    conda: "envs/cellxgene_census.yaml"
+    script: "scripts/download_census_data.py"
 
 rule process_dataset:
     input:
@@ -166,7 +133,8 @@ rule write_census_datasets_info_csv:
 rule integrate_data:
     """
     Generate a single dataset from all the Census datasets
-    Format mimicks what we generated for ArchS4 and integrates well into our training pipeline
+    Format mimicks what we generated for ArchS4 and integrates well into our training pipeline.
+    NOTE: for some reason, there is a limit of 100GB RAM usage on the jupyter notebook kernel process, which makes this one fail in an (interactive) notebook.
     """
     input:
         datasets=expand(rules.process_dataset.output.adata, dataset_id=DATASET_IDS),
@@ -176,7 +144,7 @@ rule integrate_data:
     params:
         num_replicates=config["num_replicates"],
     resources:
-        mem_mb=400000,
+        mem_mb=300000,
         slurm="cpus-per-task=2"
     conda: "cellwhisperer"
     notebook:
