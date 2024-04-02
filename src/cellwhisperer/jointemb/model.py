@@ -150,8 +150,12 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             self.transcriptome_model = self.transcriptome_model.model.train().to(
                 self.device
             )
+            if self.config.unlocked_fp16:
+                self.transcriptome_model.half()
         if self.config.locking_mode[1] == "U":
             self.text_model = self.text_model.model.train().to(self.device)
+            if self.config.unlocked_fp16:
+                self.text_model.half()
 
     def _text_pooling(self, text_outputs: Tuple, attention_mask: torch.FloatTensor):
         if isinstance(text_outputs[1], torch.Tensor):
