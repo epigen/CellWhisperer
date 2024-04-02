@@ -1,8 +1,10 @@
 from .zero_shot.cancer_gene_essentiality import EvaluateCancerGeneEssentiality
 from .zero_shot.single_cell_annotation import (
+    SingleCellDataSetForValidationScoring,
     SingleCellZeroshotValidationScoreCalculator,
     TOP20_LUNG_LIVER_BLOOD_CELLTYPES,
 )
+from .integration import SingleCellIntegrationScoreCalculator
 from .zero_shot.retrieval import RetrievalScoreCalculator
 from torch.utils.data import DataLoader
 from cellwhisperer.config import get_path, config
@@ -16,36 +18,49 @@ def initialize_validation_functions(
     text_model_type: str,
     val_dataloader: Optional[DataLoader] = None,
 ):
+    tabsap_sc_dataset = SingleCellDataSetForValidationScoring(celltypes=134) # 134: The # of cell types with at least 100 cells in tabula sapiens
+    tabsap_wellstudied_sc_dataset = SingleCellDataSetForValidationScoring(
+        celltypes=TOP20_LUNG_LIVER_BLOOD_CELLTYPES
+    )
+
     training_validation_functions = {
         # "zshot_cancer_gene_essentiality": EvaluateCancerGeneEssentiality(
         #     batch_size, transcriptome_model_type, text_model_type
         # ),
         "zshot_TabSap_celltype_lvl": SingleCellZeroshotValidationScoreCalculator(
+            sc_dataset=tabsap_sc_dataset,
             batch_size=batch_size,
             transcriptome_tokenizer_type=transcriptome_model_type,
             tokenizer_name=text_model_type,
-            celltypes=134,  # 134: The # of cell types with at least 100 cells in tabula sapiens
         ),
         "zshot_TabSapWellStudied_celltype_lvl": SingleCellZeroshotValidationScoreCalculator(
-            celltypes=TOP20_LUNG_LIVER_BLOOD_CELLTYPES,
+            sc_dataset=tabsap_wellstudied_sc_dataset,
             batch_size=batch_size,
             tokenizer_name=text_model_type,
             transcriptome_tokenizer_type=transcriptome_model_type,
         ),
         "zshot_TabSap_cell_lvl": SingleCellZeroshotValidationScoreCalculator(
+            sc_dataset=tabsap_sc_dataset,
             batch_size=batch_size,
             transcriptome_tokenizer_type=transcriptome_model_type,
             tokenizer_name=text_model_type,
-            celltypes=134,  # 134: The # of cell types with at least 100 cells in tabula sapiens
             average_mode=None,
         ),
         "zshot_TabSapWellStudied_cell_lvl": SingleCellZeroshotValidationScoreCalculator(
-            celltypes=TOP20_LUNG_LIVER_BLOOD_CELLTYPES,
+            sc_dataset=tabsap_wellstudied_sc_dataset,
             batch_size=batch_size,
             tokenizer_name=text_model_type,
             transcriptome_tokenizer_type=transcriptome_model_type,
             average_mode=None,
         ),
+
+        "integration_TabSapWellStudied": SingleCellIntegrationScoreCalculator(
+            sc_dataset=tabsap_wellstudied_sc_dataset,
+            tokenizer_name=text_model_type,
+            transcriptome_tokenizer_type=transcriptome_model_type
+        ),
+        # Could add integration_TabSap here, but it may take too long to calculate
+
     }
     if val_dataloader is not None:
         # TODO: For deduplication, would need to provide the dataset name, anndata, or annotations. See src/validation/zero_shot/deduplicate.py

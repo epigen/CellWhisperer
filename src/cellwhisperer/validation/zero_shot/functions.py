@@ -1,7 +1,3 @@
-import os
-
-from pathlib import Path
-import logging
 import numpy as np
 import pandas as pd
 import torch
@@ -11,11 +7,11 @@ from cellwhisperer.jointemb.geneformer_model import GeneformerTranscriptomeProce
 from cellwhisperer.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
 from transformers import AutoTokenizer
 import anndata
-import json
 from typing import Tuple, Union, List, Dict, Optional
 import torchmetrics
 from copy import copy
-
+from typing import Dict
+import numpy as np
 
 def get_performance_metrics_transcriptome_vs_text(
     model: TranscriptomeTextDualEncoderModel,

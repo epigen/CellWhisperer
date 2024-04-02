@@ -28,7 +28,6 @@ dependencies:
   - pip=23.3.1
   - scikit-misc=0.1.4
   - umap-learn=0.5.3
-  - leidenalg=0.10.1
   - datasets=2.12.0
   - typing-extensions=4.8.0
   - gxx=9.5.0
@@ -38,6 +37,8 @@ dependencies:
   - pynndescent=0.5.11
   - biopython=1.83
   - pip:
+    - igraph==0.11.4
+    - leidenalg=0.10.2
     - torchtext==0.16.1
     - gseapy==1.0.6
     - openai==1.14.2

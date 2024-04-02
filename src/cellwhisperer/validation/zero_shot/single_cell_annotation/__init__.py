@@ -6,8 +6,7 @@ from cellwhisperer.jointemb.processing import TranscriptomeTextDualEncoderProces
 from cellwhisperer.validation.zero_shot.functions import (
     get_performance_metrics_transcriptome_vs_text,
 )
-
-from transformers import AutoTokenizer
+from cellwhisperer.utils.processing import adata_to_embeds
 import anndata
 import numpy as np
 import pandas as pd
@@ -38,25 +37,21 @@ TOP20_LUNG_LIVER_BLOOD_CELLTYPES = [
 ]
 
 
-class SingleCellZeroshotValidationScoreCalculator:
+
+class SingleCellDataSetForValidationScoring:
     def __init__(
         self,
         celltypes: Union[int, Iterable[str], None] = 10,
         cell_number_threshold_per_celltype: int = 100,
         dataset: str = "tabula_sapiens_100_cells_per_type",
         celltype_obs_colname: str = "cell_ontology_class",
-        prefix_for_text_embeddings: str = "Sample of a ",
-        suffix_for_text_embeddings: str = "",
-        nproc_transcriptome_processor: int = 0,  # TODO link to CLI nproc argument
+        batch_obs_colname = "batch",
+        auto_create_batch_obs_colname: bool = True,
         logger: Optional[Any] = None,
-        tokenizer_name: str = "biogpt",
-        transcriptome_tokenizer_type: str = "geneformer",
-        transcriptome_processor_kwargs: Optional[Dict[str, Any]] = None,
-        batch_size: int = 32,
-        average_mode: Optional[str] = "embeddings",
+
     ):
         """
-        Class to calculate zero-shot validation scores for a single-cell dataset.
+        Class to process a single-cell dataset and prepare it for validation scoring.
         Args:
             celltypes: number of celltypes to process. \
                 If int: This many celltypes will be randomly sampled from the dataset.
@@ -66,28 +61,13 @@ class SingleCellZeroshotValidationScoreCalculator:
                 Only used if celltypes is an int.
             dataset: name of the dataset to process. Must be a key in the config file.
             celltype_obs_colname: name of the column in the adata.obs dataframe that contains the celltype labels.
-            prefix_for_text_embeddings: prefix to add to the celltype name to generate the text to embed.
-            suffix_for_text_embeddings: suffix to add to the celltype name to generate the text to embed.
-            nproc_transcriptome_processor: number of processes to use for the transcriptome processor.
+            batch_obs_colname: name of the column in the adata.obs dataframe that contains the batch labels.
+            auto_create_batch_obs_colname: If true, set adata.obs["batch"] = (adata.obs["donor"].astype(str) + "_" + adata.obs["method"].astype(str))
             logger: logger to use. If None, will use the logger for this module.
-            tokenizer_name: name of the tokenizer to use for the text. Must be a key in the config file.
-            transcriptome_tokenizer_type: type of tokenizer to use for the transcriptome. Must be one of "geneformer" or "scgpt".
-            transcriptome_processor_kwargs: kwargs to pass to the transcriptome processor. Default: None for geneformer, \
-                {"gene_col":"gene_name"} for scgpt.
-            batch_size: batch size to use for the forward pass through the model and for the score calculation.
-            average_mode: how to average the transcriptome embeddings. Must be one of "cells", "embeddings", or None.
+
         """
 
-        self.nproc_transcriptome_processor = (
-            nproc_transcriptome_processor  # TODO make use of it
-        )
         self.logger = logger or logging.getLogger(__name__)
-        self.batch_size = batch_size
-        self.average_mode = average_mode
-
-        tokenizer_path = model_path_from_name(tokenizer_name)
-        transcriptome_processor_kwargs = transcriptome_processor_kwargs or {}
-
         self.logger.info("Loading anndata...")
         self.adata = anndata.read_h5ad(
             get_path(["paths", "read_count_table"], dataset=dataset)
@@ -116,13 +96,67 @@ class SingleCellZeroshotValidationScoreCalculator:
         elif celltypes is None:
             self.celltypes_to_process = self.adata.obs[celltype_obs_colname].unique()
 
-        self.text_list = [
-            f"{prefix_for_text_embeddings}{x}{suffix_for_text_embeddings}"
-            for x in self.celltypes_to_process
-        ]
         self.adata = self.adata[
             self.adata.obs[celltype_obs_colname].isin(self.celltypes_to_process), :
         ].copy()  # subset the adata according to the celltypes to process
+
+        if auto_create_batch_obs_colname == True:
+            self.adata.obs["batch"] = (
+                self.adata.obs["donor"].astype(str)
+                + "_"
+                + self.adata.obs["method"].astype(str)
+            )
+
+        self.celltype_obs_colname=celltype_obs_colname
+        self.batch_obs_colname = batch_obs_colname
+
+
+class SingleCellZeroshotValidationScoreCalculator:
+    def __init__(
+        self,
+        sc_dataset: SingleCellDataSetForValidationScoring,
+        prefix_for_text_embeddings: str = "Sample of a ",
+        suffix_for_text_embeddings: str = "",
+        nproc_transcriptome_processor: int = 0,  # TODO link to CLI nproc argument
+        tokenizer_name: str = "biogpt",
+        transcriptome_tokenizer_type: str = "geneformer",
+        transcriptome_processor_kwargs: Optional[Dict[str, Any]] = None,
+        batch_size: int = 32,
+        average_mode: Optional[str] = "embeddings",
+    ):
+        """
+        Class to calculate zero-shot validation scores for a single-cell dataset.
+        Args:
+            sc_dataset: a SingleCellDataSetForValidationScoring object.
+            prefix_for_text_embeddings: prefix to add to the celltype name to generate the text to embed.
+            suffix_for_text_embeddings: suffix to add to the celltype name to generate the text to embed.
+            nproc_transcriptome_processor: number of processes to use for the transcriptome processor.
+            tokenizer_name: name of the tokenizer to use for the text. Must be a key in the config file.
+            transcriptome_tokenizer_type: type of tokenizer to use for the transcriptome. Must be one of "geneformer" or "scgpt".
+            transcriptome_processor_kwargs: kwargs to pass to the transcriptome processor. Default: None for geneformer, \
+                {"gene_col":"gene_name"} for scgpt.
+            batch_size: batch size to use for the forward pass through the model and for the score calculation.
+            average_mode: how to average the transcriptome embeddings. Must be one of "cells", "embeddings", or None.
+        """
+
+        self.nproc_transcriptome_processor = (
+            nproc_transcriptome_processor  # TODO make use of it
+        )
+        self.batch_size = batch_size
+        self.average_mode = average_mode
+
+        tokenizer_path = model_path_from_name(tokenizer_name)
+        transcriptome_processor_kwargs = transcriptome_processor_kwargs or {}
+
+        self.adata = sc_dataset.adata
+        celltype_obs_colname=sc_dataset.celltype_obs_colname
+        celltypes_to_process = sc_dataset.celltypes_to_process
+
+        self.text_list = [
+            f"{prefix_for_text_embeddings}{x}{suffix_for_text_embeddings}"
+            for x in celltypes_to_process
+        ]
+
         self.annotation = list(self.adata.obs[celltype_obs_colname].values)
 
         self.correct_text_idx_per_transcriptome = [
@@ -146,14 +180,22 @@ class SingleCellZeroshotValidationScoreCalculator:
             model: a trained model
         Returns:
             A tuple of: 
-            - A dictionary containing macro-averaged precision, recall (at k=1,5,10,50), accuracy, f1, and rocauc. \
+            - A dictionary containing macro-averaged precision, recall (at k=1,5,10,50), accuracy, f1, and rocauc, \
+                plus the scib integration metrics for batch and celltype.
             - A dataframe with cell type as rows and the above performance metrics for those cell types as columns.
         """
+
+        transcriptome_embeddings = adata_to_embeds(
+            self.adata,
+            model=model,
+            transcriptome_processor=self.processor.transcriptome_processor,
+        )
+
         (
             performance_metrics,
             performance_metrics_per_celltype_df,
         ) = get_performance_metrics_transcriptome_vs_text(
-            transcriptome_input=self.adata,
+            transcriptome_input=transcriptome_embeddings,
             model=model,
             text_tokenizer=self.processor.tokenizer,
             transcriptome_processor=self.processor.transcriptome_processor,
@@ -163,6 +205,7 @@ class SingleCellZeroshotValidationScoreCalculator:
             average_mode=self.average_mode,
             batch_size=self.batch_size,
         )
+
         return (
             performance_metrics,
             performance_metrics_per_celltype_df,

@@ -33,13 +33,13 @@ def plot_embeddings_with_scores(
             show=False,
         )
         try:
-            one_minus_asw_batch = round(
-                result_metrics_dict[(dataset_name, analysis_type)]["ASW_batch"], 2
+            batch_integration_score = round(
+                result_metrics_dict[(dataset_name, analysis_type)]["ASW_label__batch"], 2
             )
         except KeyError:
-            one_minus_asw_batch = "NA"
+            batch_integration_score = "NA"
         axes[i][0].set_title(
-            f"{analysis_type}: batch \n 1-ASW_batch= {one_minus_asw_batch}"
+            f"{analysis_type}: batch \n batch integration score= {batch_integration_score}"
         )
 
         sc.pl.embedding(

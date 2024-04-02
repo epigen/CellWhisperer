@@ -5,8 +5,11 @@ import torch
 from pathlib import Path
 from cellwhisperer.config import get_path
 from cellwhisperer.utils.inference import score_transcriptomes_vs_texts
-from cellwhisperer.validation.zero_shot.functions import get_performance_metrics_transcriptome_vs_text
-from utils import eval_scib_metrics, umap_on_embedding, count_keywords_in_dataset,TABSAP_WELLSTUDIED_COLORMAPPING, PANCREAS_ORDER
+from cellwhisperer.validation.integration.functions import eval_scib_metrics
+from cellwhisperer.validation.zero_shot.single_cell_annotation import (
+    get_performance_metrics_transcriptome_vs_text
+)
+from utils import umap_on_embedding, count_keywords_in_dataset,TABSAP_WELLSTUDIED_COLORMAPPING, PANCREAS_ORDER
 from embedding_generation import get_adata_with_embedding
 from dataset_preparation import load_and_preprocess_dataset
 from plotting import (
