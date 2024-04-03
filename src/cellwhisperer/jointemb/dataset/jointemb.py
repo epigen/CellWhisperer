@@ -126,7 +126,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         for dataset_name in self.dataset_names:
             self.prepare_data_single(dataset_name, force_prepare)
 
-    def prepare_data_single(self, dataset_name, force_prepare=False):
+    def prepare_data_single(self, dataset_name, force_prepare):
         processed_path = self._processed_path(dataset_name)
 
         # check whether data has already been prepared

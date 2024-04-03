@@ -215,7 +215,7 @@ class LoggerSaveConfigCallback(SaveConfigCallback):
             config = self.parser.dump(
                 self.config, skip_none=False
             )  # Required for proper reproducibility
-            trainer.logger.log_hyperparams({"config": config})
+            trainer.logger.log_hyperparams(self.config.as_dict())
 
 
 def cli_main(args: Optional[List] = None):

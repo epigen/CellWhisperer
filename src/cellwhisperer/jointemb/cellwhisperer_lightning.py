@@ -204,7 +204,6 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                 on_epoch=True,
                 prog_bar=True,
                 logger=True,
-                # sync_dist=True,  # NOTE: might lead to more synchronization overhead and requires loss_value to be on GPU
             )
 
         # After processing all loss functions, log the total combined loss.
@@ -215,12 +214,11 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             on_epoch=True,
             prog_bar=False,
             logger=True,
-            # sync_dist=True,  # NOTE: might lead to more synchronization overhead and requires loss_value to be on GPU
         )
         # NOTE: this is a hack to avoid NaNs in the loss. We should fix this properly.
         if torch.isnan(combined_loss):
             logger.warning("NaN loss detected. Setting loss to 0.0.")
-            return torch.tensor(0.0, device=self.device)
+            return torch.tensor(0.0, device=self.device, requires_grad=True)
 
         return combined_loss
 
