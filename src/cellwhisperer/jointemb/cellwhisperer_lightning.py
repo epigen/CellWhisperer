@@ -429,7 +429,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         ]:
             text_tokens = tokenizer(chunk, return_tensors="pt", padding=True)
             for k, v in text_tokens.items():
-                text_tokens[k] = v.to(self.model.device)
+                text_tokens[k] = v.to(self.device)
 
             # Compute text embeddings
             _, text_embeds = self.model.get_text_features(**text_tokens)

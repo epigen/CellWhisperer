@@ -56,17 +56,17 @@ def load_cellwhisperer_model(
             ),
         )
 
-    if eval:
-        pl_model.eval().to(device)
-    else:
-        pl_model.to(device)
+    # this is for freezing.
+    pl_model.freeze()
 
     if cache:
         # # This is just for allow caching based on `FrozenCachedModels`, you can omit it
         pl_model.model.freeze_models(force_freeze=True)
 
-    # this is for freezing.
-    pl_model.freeze()
+    if eval:
+        pl_model.eval().to(device)
+    else:
+        pl_model.to(device)
 
     # TODO transcriptome_processor_kwargs might be missing
     processor = TranscriptomeTextDualEncoderProcessor(

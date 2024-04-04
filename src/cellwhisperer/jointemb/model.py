@@ -150,14 +150,18 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             force_freeze (bool): Whether to force freezing the models even if the config does not indicate it.
         """
         # TODO need to make sure to modify the config according to the model. Idea: predict a unified input (all_zero, or all_one or so) and take the output as the hash
+        device = self.device
 
         if self.config.locking_mode[0] != "u" or force_freeze:
             if not isinstance(self.transcriptome_model, FrozenCachedModel):
-                transcriptome_model = FrozenCachedModel(self.transcriptome_model)
+                self.transcriptome_model = FrozenCachedModel(self.transcriptome_model)
 
         if self.config.locking_mode[1] != "u" or force_freeze:
             if not isinstance(self.text_model, FrozenCachedModel):
-                text_model = FrozenCachedModel(self.text_model)
+                self.text_model = FrozenCachedModel(self.text_model)
+
+        # need to restore .device parameter (it is to cpu() by this operation)
+        self.to(device)
 
     def unfreeze_U_towers(self):
         """
