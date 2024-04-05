@@ -74,8 +74,9 @@ services:
       - ./start.sh:/start.sh
       - ~/cellwhisperer:/opt/cellwhisperer
       - ~/cellwhisperer/results/tabula_sapiens/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+      - ./llava_logs/tabsap/:/logs/
     # TODO add --debug here if more debug info is needed
-    command: /bin/bash /start.sh cellxgene launch --debug -v -p 5005  --host 0.0.0.0 --max-category-items 500 --backed /dataset.h5ad  "http://cellwhisperer_clip:8910/api"
+    command: /bin/bash /start.sh cellxgene launch -v -p 5005  --host 0.0.0.0 --max-category-items 500 --backed /dataset.h5ad  "http://cellwhisperer_clip:8910/api"
     stdin_open: true
     tty: true
     restart: unless-stopped
@@ -85,6 +86,7 @@ services:
       CXG_OPTIONS: "--host 0.0.0.0 --max-category-items 500 --backed"
       CXG_SERVER_PORT: 5005
       DATASET: "/dataset.h5ad"
+      LOGDIR: "/logs/"
       MODEL: "http://cellwhisperer_clip:8910/api"
       JEST_ENV: "prod"
       RETRY_ATTEMPTS: 2
@@ -101,6 +103,7 @@ services:
       - ./start.sh:/start.sh
       - ~/cellwhisperer:/opt/cellwhisperer
       - ~/cellwhisperer/results/daniel/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+      - ./llava_logs/daniel/:/logs/
 
   cellxgene_daniel_dev:
     <<: *cellxgene-service
@@ -112,6 +115,7 @@ services:
       - ./dev_server.sh:/dev_server.sh
       - ~/cellwhisperer:/opt/cellwhisperer
       - ~/cellwhisperer/results/daniel/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+      - ./llava_logs/daniel_dev/:/logs/
     ports:
       - "3000:3000"
       - "5005:5005"
@@ -123,6 +127,7 @@ services:
       - ./start.sh:/start.sh
       - ~/cellwhisperer:/opt/cellwhisperer
       - ~/cellwhisperer/results/development4s_scvi/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+      - ./llava_logs/development_scvi/:/logs/
 
   cellxgene_development_raw:
     <<: *cellxgene-service
@@ -131,6 +136,7 @@ services:
       - ./start.sh:/start.sh
       - ~/cellwhisperer:/opt/cellwhisperer
       - ~/cellwhisperer/results/development4s_raw/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+      - ./llava_logs/development_raw/:/logs/
 
   cellxgene_geo:
     <<: *cellxgene-service
@@ -139,6 +145,7 @@ services:
       - ./start.sh:/start.sh
       - ~/cellwhisperer:/opt/cellwhisperer
       - ~/cellwhisperer/results/archs4_metasra/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+      - ./llava_logs/geo/:/logs/
 
   cellxgene_car_t:
     <<: *cellxgene-service
@@ -147,6 +154,7 @@ services:
       - ./start.sh:/start.sh
       - ~/cellwhisperer:/opt/cellwhisperer
       - ~/cellwhisperer/results/car_t/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+      - ./llava_logs/car_t/:/logs/
 
   cellxgene_hcaorganoids_cancer__organoid:
     <<: *cellxgene-service
@@ -155,6 +163,7 @@ services:
       - ./start.sh:/start.sh
       - ~/cellwhisperer:/opt/cellwhisperer
       - ~/cellwhisperer/results/hcaorganoids_cancer__organoid/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+      - ./llava_logs/hcaorganoids_cancer__organoid/:/logs/
   cellxgene_hcaorganoids_cancer__primary:
     <<: *cellxgene-service
     volumes:
@@ -162,6 +171,7 @@ services:
       - ./start.sh:/start.sh
       - ~/cellwhisperer:/opt/cellwhisperer
       - ~/cellwhisperer/results/hcaorganoids_cancer__primary/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+      - ./llava_logs/hcaorganoids_cancer__primary/:/logs/
 
   cellxgene_hcaorganoids_normal__primary:
     <<: *cellxgene-service
@@ -170,6 +180,7 @@ services:
       - ./start.sh:/start.sh
       - ~/cellwhisperer:/opt/cellwhisperer
       - ~/cellwhisperer/results/hcaorganoids_normal__primary/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+      - ./llava_logs/hcaorganoids_normal__primary/:/logs/
 
   cellxgene_hcaorganoids_normal__organoid:
     <<: *cellxgene-service
@@ -178,6 +189,7 @@ services:
       - ./start.sh:/start.sh
       - ~/cellwhisperer:/opt/cellwhisperer
       - ~/cellwhisperer/results/hcaorganoids_normal__organoid/03jujd8s/cellxgene.h5ad:/dataset.h5ad
+      - ./llava_logs/hcaorganoids_normal__organoid/:/logs/
 
   nginx:
     image: nginx:latest
