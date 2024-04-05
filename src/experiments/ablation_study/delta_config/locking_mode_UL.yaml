@@ -1,0 +1,5 @@
+
+model:
+  model_config:
+    locking_mode: UL
+batch_size: 16

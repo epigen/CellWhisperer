@@ -8,7 +8,7 @@ import os
 
 def _read_config(config_file: Optional[Union[str, Path]] = None) -> Dict:
     """
-    Read the config file (only called internally)
+    Read the config file. First try to read from the current directory, then from the project root, then fail
 
     Args:
         config_file: Optionally provide a filename for another config
@@ -17,15 +17,20 @@ def _read_config(config_file: Optional[Union[str, Path]] = None) -> Dict:
         Dict: Modified content of the config file
     """
 
-    project_root = (Path(__file__).parents[2]).resolve()
+    if config_file is not None:
+        config_file = Path(config_file).resolve()
+    elif Path("config.yaml").exists():
+        config_file = Path("config.yaml").resolve()
+    else:
+        config_file = (Path(__file__).parents[2] / "config.yaml").resolve()
 
-    if config_file is None:
-        config_file = project_root / "config.yaml"
+    assert config_file.exists(), f"Config file {config_file} not found"
+    logging.info(f"Reading config from {config_file}")
 
     with open(config_file, "r") as f:
         config = yaml.safe_load(f)
 
-    config["PROJECT_ROOT"] = project_root
+    config["PROJECT_ROOT"] = config_file.parent
     config["dtype"] = torch.float32
 
     return config

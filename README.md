@@ -31,7 +31,7 @@ Sun Mar 31 17:36:31 2024
   mamba env create -f envs/main.yaml  # this already includes `pip install -e .`
   conda activate cellwhisperer
   ```
-3. Install scgpt and flash-attn (they need pip installation flags to be installed properly)
+3. Optional: Install scgpt and flash-attn (they need pip installation flags to be installed properly)
    ```
    bash envs/install_scgpt_after_env_creation.sh
    ```
@@ -63,6 +63,7 @@ We rely on pytorch lightning, which significantly reduces boilerplate for a mult
 Before training, make sure to read the [LightningCLI documentation](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html) (the three Basics are enough). It's short and really helpful! E.g. to start a run do this:
 
 ```bash
+cd cellwhisperer  # go to the project directory to line up all paths correctly
 cellwhisperer fit --print_config > run_config.yaml
 # configure run_config.yaml
 cellwhisperer fit --config run_config.yaml

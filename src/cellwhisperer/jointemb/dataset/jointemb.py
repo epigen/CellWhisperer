@@ -84,6 +84,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         },  # see https://github.com/epigen/cellwhisperer/issues/193
         min_genes=100,
         train_fraction=0.95,
+        use_replicates: bool = True,
     ):
         """
 
@@ -96,6 +97,8 @@ class JointEmbedDataModule(pl.LightningDataModule):
             batch_size: batch size to use for training and validation
             nproc: number of processes to use for transcriptome processing
             min_genes: minimum number of genes to use for a sample. A larger value may increase the dataset quality. Choose a value > 0 to prevent NaNs, which can occur when the number of genes is 0
+            train_fraction: fraction of the data to use for training. The rest will be used for validation.
+            use_replicates: whether to use replicates for the transcriptome and annotation data.
         """
         super().__init__()
         self.batch_size = batch_size
@@ -107,6 +110,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.train_fraction = train_fraction
         self.transcriptome_processor_kwargs = transcriptome_processor_kwargs.copy()
         self.tokenizer_kwargs = tokenizer_kwargs.copy()
+        self.use_replicates = use_replicates
 
     def _processed_path(self, dataset_name):
         return get_path(
@@ -290,10 +294,10 @@ class JointEmbedDataModule(pl.LightningDataModule):
             )
 
     def train_dataloader(self):
-        # TODO balance the weights such that archs4_metasra has at least 50% total weights
         # Update the current epoch to sample the replicates
-        for dataset in self.train_datasets:
-            dataset.set_epoch(self.trainer.current_epoch)
+        if self.use_replicates:
+            for dataset in self.train_datasets:
+                dataset.set_epoch(self.trainer.current_epoch)
 
         return DataLoader(
             ConcatDataset(self.train_datasets),

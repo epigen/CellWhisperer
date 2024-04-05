@@ -1,0 +1,2 @@
+trainer:
+  max_epochs: 4
