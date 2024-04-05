@@ -89,6 +89,7 @@ rule compile_h5ad:
         processed_data=PROJECT_DIR / config["paths"]["model_processed_dataset"], # rules.process_full_dataset.output.model_outputs,
         enrichr_terms=PROJECT_DIR / config["paths"]["enrichr_terms_json"],
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
+        gene_log1p_normalizers=rules.compute_gene_normalizers.output.gene_mean_log1ps,
     output:
         adata=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "cellxgene.h5ad"
     params:
