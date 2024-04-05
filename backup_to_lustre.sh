@@ -5,6 +5,6 @@
 # Run this from Lustre:
 # NOTE we don't use the -a flag, because this would also copy the group which does not match on Lustre
 rsync -rtpvzh --progress mschae83@s0-l00.hpc.meduniwien.ac.at:cellwhisperer/results/ /nobackup/lab_bock/projects/cellwhisperer/results
-rsync -rtpvzh --progress mschae83@s0-l00.hpc.meduniwien.ac.at:cellwhisperer/resources/ /nobackup/lab_bock/projects/cellwhisperer/resources
+rsync -rtpvzh --progress --links mschae83@s0-l00.hpc.meduniwien.ac.at:cellwhisperer/resources/ /nobackup/lab_bock/projects/cellwhisperer/resources
 
 # Optional: also copy the repository itself (and exclude results, resources, data and metadata)
