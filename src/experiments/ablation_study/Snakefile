@@ -1,8 +1,8 @@
 from pathlib import Path
-LEARNING_RATES = [0.0001, 0.0005, 0.001]
+LEARNING_RATES = [0.0001, 0.0005, 0.001]  # tendency: use 0.00001 instead of 0.001.
 SEEDS = [0, 42, 123465789]
-CONFIGS = [p.stem for p in Path("delta_config").glob("*.yaml") if p.stem not in ["locking_mode_UU", "batch_size_16"]]
-# temporarily delete locking_mode_UU and batch_size_16 (because there are still 2 active runs over the WE)
+CONFIGS = [p.stem for p in Path("delta_config").glob("*.yaml") if p.stem not in ["locking_mode_UU"]]
+# temporarily delete locking_mode_UU and batch_size_16 (because there are still 2 active runs over the WE). UU is anyways cursed because of batch_size16 (learning rate should be reduced)
 
 
 rule all:
@@ -18,7 +18,7 @@ rule train:
     conda:
         "cellwhisperer_fixed"
     resources:
-        mem_mb=lambda wildcards: 500000 if wildcards.config == "scgpt" else 200000
+        mem_mb=lambda wildcards: 1000000 if wildcards.config == "scgpt" else 120000,
         slurm="cpus-per-task=20 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
     shell: """
         cellwhisperer fit --config {input.base_config} --config {input.delta_config} --seed_everything {wildcards.seed} --model.learning_rate {wildcards.lr} --last_model_path {output} --wandb {wildcards.config}_{wildcards.seed}_{wildcards.lr}

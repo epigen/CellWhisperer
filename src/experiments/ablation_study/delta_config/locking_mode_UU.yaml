@@ -1,4 +1,5 @@
-
+trainer:
+  max_epochs: 2
 model:
   model_config:
     locking_mode: UU

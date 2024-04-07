@@ -1,4 +1,5 @@
-
+trainer:
+  max_epochs: 4
 model:
   model_config:
     locking_mode: UL
