@@ -27,6 +27,7 @@ def get_performance_metrics_transcriptome_vs_text(
     batch_size: int = 128,
     score_norm_method: Optional[str] = "zscore",
     report_per_class_metrics: bool = True,
+    text_as_classes: bool = True,
 ) -> Tuple[Dict[str, torch.Tensor], pd.DataFrame]:
     """
     Score the model's ability to produce similar embeddings for the given matching texts and adata objects.
@@ -47,6 +48,9 @@ def get_performance_metrics_transcriptome_vs_text(
             (similarity to the transcriptome). "zscore" will zscore the logits across all terms. "softmax" will apply softmax to the logits.\
             "01norm" will normalize the logits to the range [0,1]. If None, don't normalize.
     :param report_per_class_metrics: bool. If True, report the performance metrics per class (i.e. per transcriptome). If False, only report the macro average.
+    : param text_as_classes: bool. If True, calculate the score using the text as classes (default). \
+        If False, calculate the score using the transcriptome as classes (can be useful for retrieval scoring). \
+        If False, average_mode must be None.
     Returns: 
         A tuple of: 
          -  A dictionary containing precision, recall (at k=1,5,10,50), accuracy, f1, and rocauc. \
@@ -82,42 +86,61 @@ def get_performance_metrics_transcriptome_vs_text(
                 "If grouping_keys is None, average_mode must be None as well"
             )
         else:
-            true_classe_indices = correct_text_idx_per_transcriptome
+            true_class_indices = correct_text_idx_per_transcriptome
+    elif not text_as_classes: 
+        # the correct transcriptome index for every text:
+        true_class_indices = [correct_text_idx_per_transcriptome.index(x) for x in range(len(correct_text_idx_per_transcriptome))]
     else:
         if average_mode is not None:
-            true_classe_indices = [
+            true_class_indices = [
                 correct_text_idx_per_transcriptome[full_grouping_keys.index(x)]
                 for x in grouping_keys
             ]  # If we are averaging, we need to subset the true classes to match the averaged transcriptomes
         else:
             # we can just use the annotations and true classes as they are
-            true_classe_indices = correct_text_idx_per_transcriptome
+            true_class_indices = correct_text_idx_per_transcriptome
+
+    
 
     # labels for the text
     if type(text_list_or_text_embeds) == torch.Tensor:
         text_annotations = [str(x) for x in range(scores.shape[0])]
     else:
         text_annotations = text_list_or_text_embeds
-    scores = (
-        scores.t()
-    )  # Here, it's better to have samples=transcriptomes, classes=texts, so we transpose
+
+    text_labels = [f"text: {x}" for x in text_annotations]
+    transcriptome_labels = [f"transcriptome: {x}" for x in grouping_keys]
+
+    if text_as_classes:
+        scores = (
+            scores.t()
+        )  # Here, it's better to have samples=transcriptomes, classes=texts, so we transpose
+        columns = text_labels
+        index = transcriptome_labels
+        num_classes = int(max(true_class_indices) + 1)
+
+    else:
+        if average_mode is not None:
+            raise ValueError(
+                "If text_as_classes is False, average_mode must be None as well"
+            )
+        columns = transcriptome_labels
+        index = text_labels
+        num_classes = len(grouping_keys)
 
     # Create a dataframe with the scores
     scores_df = pd.DataFrame(
         scores.cpu().numpy(),
-        columns=[f"text: {x}" for x in text_annotations],
-        index=[f"transcriptome: {x}" for x in grouping_keys],
+        columns=columns,
+        index=index,
     )
     if average_mode is not None and type(text_list_or_text_embeds) != torch.Tensor:
         scores_df = scores_df[sorted(scores_df.columns)]
 
-    num_classes = int(max(true_classe_indices) + 1)
-    preds = scores
-    target = torch.Tensor(true_classe_indices).long()
 
     torchmetric_kwargs = {
-        "preds": preds,
-        "target": target,
+        "preds": scores,
+        "target": torch.Tensor(true_class_indices).long(),
         "num_classes": num_classes,
         "average": "none",
         "top_k": 1,
@@ -172,7 +195,7 @@ def get_performance_metrics_transcriptome_vs_text(
         )
         per_class_df.index.name = "class"
         per_class_df["n_samples_in_class"] = [
-            true_classe_indices.count(class_idx)
+            true_class_indices.count(class_idx)
             for class_idx, _ in enumerate(text_annotations)
         ]
 

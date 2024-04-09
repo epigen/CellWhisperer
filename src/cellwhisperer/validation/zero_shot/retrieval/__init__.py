@@ -31,8 +31,9 @@ class RetrievalScoreCalculator:
             model: a trained model
         Returns:
             A tuple of: 
-            - A dictionary containing macro-averaged precision, recall (at k=1,5,10,50), accuracy, f1, and rocauc. \
-            - A dataframe with a running number for each transcriptome as rows and the above performance metrics for those transcriptomes as columns.
+            - A dictionary containing macro-averaged precision, recall (at k=1,5,10,50), accuracy, f1, and rocauc. These metrics are reported \
+                seperately for using text as classes (and therefore transcriptomes as samples) and for using transcriptomes as classes (and text as samples).
+            - None (reporting per-class metrics doesn't make much sense here without a consistent short label for each transcriptome)
         """
         text_embeds = []
         transcriptome_embeds = []
@@ -54,25 +55,32 @@ class RetrievalScoreCalculator:
         text_embeds = torch.cat(text_embeds)
         transcriptome_embeds = torch.cat(transcriptome_embeds)
 
-        (
-            performance_metrics,
-            performance_metrics_per_transcriptome_df,
-        ) = get_performance_metrics_transcriptome_vs_text(
-            transcriptome_input=transcriptome_embeds,
-            model=model,
-            text_tokenizer=None,
-            transcriptome_processor=None,
-            correct_text_idx_per_transcriptome=list(
-                range(text_embeds.shape[0])
-            ),  # the text embeds are in the same order as the transcriptome embeds
-            average_mode=None,  # We treat each transcriptome separately
-            text_list_or_text_embeds=text_embeds,
-            batch_size=self.batch_size,
-            grouping_keys=None,  # TODO if we had a consistent short label for each transcriptome, we could use it here, to get a nicer result_df
-            report_per_class_metrics=False,  # doesn't make much sense without a consistent short label for each transcriptome
-        )
+        performance_metrics_all = {}
+        for name, text_as_classes in zip(["transcriptomes_as_classes", "text_as_classes"], [False, True]):
+            (
+                performance_metrics,
+                _,
+            ) = get_performance_metrics_transcriptome_vs_text(
+                transcriptome_input=transcriptome_embeds,
+                model=model,
+                text_tokenizer=None,
+                transcriptome_processor=None,
+                correct_text_idx_per_transcriptome=list(
+                    range(text_embeds.shape[0])
+                ),  # the text embeds are in the same order as the transcriptome embeds
+                average_mode=None,  # We treat each transcriptome separately
+                text_list_or_text_embeds=text_embeds,
+                batch_size=self.batch_size,
+                grouping_keys=None,  # TODO if we had a consistent short label for each transcriptome, we could use it here, to get a nicer result_df
+                report_per_class_metrics=False,  # doesn't make much sense without a consistent short label for each transcriptome
+                text_as_classes = text_as_classes,
+            )
+
+            performance_metrics = {f"{name}_{k}": v for k, v in performance_metrics.items()}
+            performance_metrics_all.update(performance_metrics)
+
 
         return (
-            performance_metrics,
-            performance_metrics_per_transcriptome_df,
+            performance_metrics_all,
+            None, 
         )
