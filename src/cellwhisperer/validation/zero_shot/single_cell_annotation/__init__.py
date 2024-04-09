@@ -41,8 +41,8 @@ TOP20_LUNG_LIVER_BLOOD_CELLTYPES = [
 class SingleCellDataSetForValidationScoring:
     def __init__(
         self,
-        celltypes: Union[int, Iterable[str], None] = 10,
-        cell_number_threshold_per_celltype: int = 100,
+        celltypes: Optional[Union[int, Iterable[str]]] = None,
+        cell_number_threshold_per_celltype: Optional[int] = None,
         dataset: str = "tabula_sapiens_100_cells_per_type",
         celltype_obs_colname: str = "cell_ontology_class",
         batch_obs_colname = "batch",
@@ -56,9 +56,8 @@ class SingleCellDataSetForValidationScoring:
             celltypes: number of celltypes to process. \
                 If int: This many celltypes will be randomly sampled from the dataset.
                 If list: This list of celltypes will be processed.
-                If None: All celltypes in the dataset will be processed.
-            cell_number_threshold_per_celltype: only celltypes with at least this number of cells will be processed. \
-                Only used if celltypes is an int.
+                If None: All celltypes in the dataset will be processed (after applying cell_number_threshold_per_celltype, if set).
+            cell_number_threshold_per_celltype: only celltypes with at least this number of cells will be processed.
             dataset: name of the dataset to process. Must be a key in the config file.
             celltype_obs_colname: name of the column in the adata.obs dataframe that contains the celltype labels.
             batch_obs_colname: name of the column in the adata.obs dataframe that contains the batch labels.
@@ -77,7 +76,8 @@ class SingleCellDataSetForValidationScoring:
         if "raw_counts" in self.adata.layers:
             self.adata.X = self.adata.layers["raw_counts"]
 
-        if isinstance(celltypes, int):
+        # First, filter out celltypes with less than cell_number_threshold_per_celltype cells, if necessary
+        if cell_number_threshold_per_celltype is not None:
             self.counts_per_celltype = self.adata.obs.value_counts(celltype_obs_colname)
             self.celltypes_to_process = [
                 x
@@ -85,6 +85,10 @@ class SingleCellDataSetForValidationScoring:
                     self.counts_per_celltype >= cell_number_threshold_per_celltype
                 ].index.values
             ]
+        else:
+            self.celltypes_to_process = self.adata.obs[celltype_obs_colname].unique()
+
+        if isinstance(celltypes, int): # Randomly sample celltypes
             assert (
                 len(self.celltypes_to_process) >= celltypes
             ), f"Only {len(self.celltypes_to_process)} celltypes have at least {cell_number_threshold_per_celltype} cells, but {celltypes} celltypes were requested."
@@ -92,9 +96,15 @@ class SingleCellDataSetForValidationScoring:
             np.random.shuffle(self.celltypes_to_process)
             self.celltypes_to_process = self.celltypes_to_process[:celltypes]
         elif isinstance(celltypes, Iterable):
+            assert all(
+                [x in self.celltypes_to_process for x in celltypes]
+            ), "Not all celltypes in argument celltypes are present in the dataset after filtering via cell_number_threshold_per_celltype."
             self.celltypes_to_process = celltypes
         elif celltypes is None:
-            self.celltypes_to_process = self.adata.obs[celltype_obs_colname].unique()
+            pass
+        else:
+            raise ValueError("celltypes must be an int, a list of strings, or None.")
+
 
         self.adata = self.adata[
             self.adata.obs[celltype_obs_colname].isin(self.celltypes_to_process), :

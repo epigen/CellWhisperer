@@ -18,7 +18,7 @@ def initialize_validation_functions(
     text_model_type: str,
     val_dataloader: Optional[DataLoader] = None,
 ):
-    tabsap_sc_dataset = SingleCellDataSetForValidationScoring(celltypes=134) # 134: The # of cell types with at least 100 cells in tabula sapiens
+    tabsap_sc_dataset = SingleCellDataSetForValidationScoring(cell_number_threshold_per_celltype=100)
     tabsap_wellstudied_sc_dataset = SingleCellDataSetForValidationScoring(
         celltypes=TOP20_LUNG_LIVER_BLOOD_CELLTYPES
     )
@@ -59,7 +59,11 @@ def initialize_validation_functions(
             tokenizer_name=text_model_type,
             transcriptome_tokenizer_type=transcriptome_model_type
         ),
-        # Could add integration_TabSap here, but it may take too long to calculate
+        "integration_TabSap": SingleCellIntegrationScoreCalculator(
+            sc_dataset=tabsap_sc_dataset,
+            tokenizer_name=text_model_type,
+            transcriptome_tokenizer_type=transcriptome_model_type
+        ),
 
     }
     if val_dataloader is not None:
