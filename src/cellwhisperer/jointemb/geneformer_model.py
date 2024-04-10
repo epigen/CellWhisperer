@@ -34,7 +34,7 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
 
     def __init__(self, nproc, emb_label, *args, **kwargs):
         self.tokenizer = TranscriptomeTokenizer(
-            custom_attr_name_dict={k: k for k in emb_label},
+            custom_attr_name_dict={k: k for k in emb_label},  # refactor-delete
             nproc=nproc,
         )
         super().__init__(*args, **kwargs)
@@ -250,12 +250,12 @@ class GeneformerConfig(PretrainedConfig):
 
     def __init__(
         self,
-        num_classes=0,  # TODO
+        num_classes=0,  # refactor-delete
         emb_mode="cell",
         hidden_size=512,
-        max_ncells=200,  # TODO
+        max_ncells=200,  # refactor-delete
         emb_layer=-1,
-        emb_label=["sample_name", "cell type rough", "cell type"],  # TODO
+        emb_label=["sample_name", "cell type rough", "cell type"],  # refactor-delete
         forward_batch_size=-1,
         nproc=4,
         summary_stat=None,
