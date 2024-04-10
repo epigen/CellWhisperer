@@ -56,13 +56,13 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
     ):
         if transcriptome_processor == "geneformer":
             transcriptome_processor = GeneformerTranscriptomeProcessor(
-                nproc=0,
+                nproc=8,
                 emb_label="natural_language_annotation",  # config["anndata_label_name"]
                 **transcriptome_kwargs,
             )
         elif transcriptome_processor == "scgpt":
             transcriptome_processor = ScGPTTranscriptomeProcessor(
-                nproc=0,
+                nproc=8,
                 **transcriptome_kwargs,
             )
         else:

@@ -48,18 +48,17 @@ class JointEmbedDataset(Dataset):
         # get length of replicate dict elements
         try:
             num_replicates = len(next(iter(self.replicate_inputs.values())))
-            logging.debug(f"Found {num_replicates} replicates")
         except StopIteration:
-            logging.debug("No replicates found. Fall back to 0")
+            logging.info("No replicates found. Fall back to 0")
             num_replicates = 0
 
         # add 1 because of the original input
         replicate_i = epoch % (num_replicates + 1)
-        logging.debug(f"Selecting replicate #{replicate_i}")
 
         if replicate_i == 0:
             self.inputs = self.orig_inputs
         else:
+            logging.info(f"Selecting replicate #{replicate_i} of {num_replicates}")
             for key, feature_data in self.replicate_inputs.items():
                 self.inputs[key] = feature_data[replicate_i - 1]
 
@@ -192,8 +191,11 @@ class JointEmbedDataModule(pl.LightningDataModule):
             inputs = {key: val[n_genes_filter] for key, val in inputs.items()}
             inputs["orig_ids"] = adata.obs.index[n_genes_filter]
             if len(replicate_inputs) > 0:
-                for key, value in replicate_inputs.items():
-                    replicate_inputs[key] = [val[n_genes_filter] for val in value]
+                for key, rep_value in replicate_inputs.items():
+                    replicate_inputs[key] = [
+                        value[n_genes_filter] for value in rep_value
+                    ]
+                    assert len(rep_value) > 0
 
         # save the inputs dict to a file using torch
         processed_path.parent.mkdir(parents=True, exist_ok=True)
@@ -210,14 +212,17 @@ class JointEmbedDataModule(pl.LightningDataModule):
         Note that the first one is computed twice (redundantly)
 
         """
-        max_length = inputs["input_ids"].shape[
-            1
-        ]  # TODO this is actually redundant as we anyways force it to 128
 
         replicate_inputs = defaultdict(list)
 
         # Annotation replicates
-        if "natural_language_annotation_replicates" in adata.obsm:
+        if (
+            "natural_language_annotation_replicates" in adata.obsm
+            and adata.obsm["natural_language_annotation_replicates"].shape[1] > 0
+        ):
+            max_length = inputs["input_ids"].shape[
+                1
+            ]  # TODO this is actually redundant as we anyways force it to 128
             replicate_df = adata.obsm["natural_language_annotation_replicates"]
             logger.info(f"Loading {len(replicate_df.columns)} replicate annotations")
             for col_name in replicate_df:
@@ -279,6 +284,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                     replicate_inputs={
                         key: [value[i][train_ids] for i in range(len(value))]
                         for key, value in replicate_inputs.items()
+                        if len(value) > 0
                     },
                 )
             )

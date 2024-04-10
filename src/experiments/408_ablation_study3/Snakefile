@@ -1,0 +1,43 @@
+from pathlib import Path
+import itertools
+SEEDS = [0, 1, 2]  # , 3, 4]
+
+# CONFIGS = [p.stem for p in Path("delta_config").glob("*.yaml") if p.stem in ["locking_mode_UU"]]  # , "locking_mode_UL", "scgpt"]]
+# CONFIGS = ["full_model"]
+
+CONFIGS = [
+    "no_sample_weights",
+    "locking_mode_UU",
+    "grad_accumulation",
+    "locking_mode_UL",
+    "clip_lite",
+    "clip_mixed",
+    "data_augmentation",
+    "full_model",
+    "locking_mode_LL",
+    "low_batchsize_grad_accumulation",
+    "no_archs4_data",
+    "no_census_data",
+    "scgpt",
+]
+
+
+rule all:
+    input:
+        [f"results/{config}/seed_{seed}.ckpt" for seed in SEEDS for config in CONFIGS]
+
+rule train:
+    input:
+        delta_config="delta_config/{config}.yaml",
+        base_config=ancient("base_config.yaml")
+    output:
+        "results/{config}/seed_{seed}.ckpt"
+    conda:
+        "cellwhisperer_fixed"  # NOTE: not subject to automatic updates
+    resources:
+        mem_mb=lambda wildcards: 1000000 if wildcards.config == "scgpt" else 120000,
+        slurm="cpus-per-task=20 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
+    shell: """
+        cellwhisperer fit --config {input.base_config} --config {input.delta_config} --seed_everything {wildcards.seed} --last_model_path {output} --wandb {wildcards.config}_{wildcards.seed}
+    """
+

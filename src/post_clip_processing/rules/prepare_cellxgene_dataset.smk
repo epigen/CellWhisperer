@@ -15,13 +15,11 @@ rule leiden_umap_embeddings:
 
 rule llava_annotate_clusters:
     """
-
-    Generated CSV has two cols. (1) leiden cluster ID. (2) annotation
-    TODO need to change code to not produce the h5ad
+    Generate CSV has two cols. (1) leiden cluster ID. (2) annotation
     """
     input:
         adata=rules.leiden_umap_embeddings.output.adata,
-        llava_model=ancient(rules.finetune_llava.output.output_dir.format(base_model=LLAVA_BASE_MODEL, model="{model}")),
+        llava_model=ancient(config["paths"]["llava"]["finetuned_model_dir"].format(base_model=LLAVA_BASE_MODEL, model="{model}")),
     output:
         csv=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_annotated_clusters.csv"
     conda:

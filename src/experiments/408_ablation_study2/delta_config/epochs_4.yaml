@@ -1,0 +1,4 @@
+trainer:
+  max_epochs: 4
+model:
+  learning_rate: 0.00002

@@ -8,13 +8,8 @@ paths:
   structured_annotations: results/{dataset}/annotations.json
   processed_annotations: results/{dataset}/processed_annotations.json
   processed_multi_annotations: results/{dataset}/processed_multi_annotations.json
-  llava_pretrain_text_dataset: results/llava_pretrain_texts.json
-  llava_finetune_text_dataset: results/llava_finetune_conversations.json
-  llava_evaluation_text_dataset: results/llava_evaluation_conversations.json
   geneset_gmt: results/genesets/{library}.gmt
   model_processed_dataset: results/{dataset}/{model}/full_output.npz
-  llava_pretrained_model_dir: results/llava/pretrained/{base_model}__{model}/
-  llava_finetuned_model_dir: results/llava/finetuned/{base_model}__{model}/
   full_dataset: results/{dataset}/full_data.h5ad
   llm_embeddings: results/{dataset}/llm_embeddings.npz  # deprecated
   rna_embeddings: results/{dataset}/rna_embeddings.npz  # deprecated
@@ -34,6 +29,15 @@ paths:
     correlation: results/{dataset}/{model}/gsva_correlations.csv
     cw_transcriptome_term_scores: results/{dataset}/{model}/cw_transcriptome_term_scores.parquet
     plots: results/{dataset}/{model}/gsva_plots
+
+  llava:
+    root: results/llava/
+    pretrain_text_dataset: results/llava/pretrain_texts.json
+    finetune_text_dataset: results/llava/finetune_conversations.json
+    evaluation_text_dataset: results/llava/evaluation/{dataset}_conversations.json
+    pretrained_model_dir: results/llava/pretrained/{base_model}__{model}/
+    finetuned_model_dir: results/llava/finetuned/{base_model}__{model}/
+    evaluation_results:  results/llava/evaluation/{base_model}__{model}/{dataset}/
 
 
 datasets:
@@ -71,6 +75,28 @@ genesets:
   - "Cytopus_immune_identities"
   - "Cytopus_processes"
 
+# Created by running this on the full tabula sapiens dataset: list(adata.obs[adata.obs["organ_tissue"].isin(["Liver","Lung","Blood"])]["cell_ontology_class"].value_counts().iloc[:20].index)
+top20_lung_liver_blood_celltypes:
+  - "macrophage"
+  - "erythrocyte"
+  - "monocyte"
+  - "type ii pneumocyte"
+  - "classical monocyte"
+  - "neutrophil"
+  - "cd4-positive, alpha-beta t cell"
+  - "nk cell"
+  - "naive b cell"
+  - "basal cell"
+  - "cd8-positive, alpha-beta t cell"
+  - "hepatocyte"
+  - "cd8-positive, alpha-beta cytokine secreting effector t cell"
+  - "club cell"
+  - "non-classical monocyte"
+  - "capillary endothelial cell"
+  - "cd4-positive, alpha-beta memory t cell"
+  - "memory b cell"
+  - "respiratory goblet cell"
+  - "basophil"
 
 
 # Only used, if not dedicated hyperparameter config file is provided

@@ -1,0 +1,76 @@
+"""
+"""
+
+# snakemake remote HTTP object
+from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+import glob
+import pandas as pd
+
+
+PROJECT_DIR = Path(workflow.basedir).resolve().parents[1]
+configfile: PROJECT_DIR / "config.yaml"
+
+HTTP = HTTPRemoteProvider()
+
+
+CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
+PROJECTOR_TYPE = "mlp2x_8t_gelu"  # TODO fails if > 8 (12 and 16 both failed. either due to  dual-digit not being ok or because they become too large for some reason ). Here is the error evoked (can use pdb to trace (breakpoint before beaks)): /msc/home/mschae83/miniconda3/envs/llava2/lib/python3.10/site-packages/torch/nn/utils/clip_grad.py(55)
+
+
+# matching concise and extensive questions
+QUESTION_MAP = {
+    "What does the sample represent?": "Provide an extensive description of the sample",
+    "What does the transcriptome represent?": "What does the transcriptome represent? Respond comprehensively.",
+    "What do these cells represent?": "Provide a detailed description of these cells.",
+    "Give a brief description of the sample.": "Provide a detailed description of the sample.",
+    "Give a brief description of these cells.": "Provide a detailed description of these cells.",
+    "Present a compact description of the sample's key features.": "Present a detailed description of the sample's key features.",
+    "Summarize the state of these cells.": "Provide a detailed description of the state of these cells.",
+    "Provide a brief description of these cells.": "Provide a detailed description of these cells.",
+    "Provide a brief description of the given sample.": "Provide a detailed description of the given sample.",
+    "Describe the sample concisely.": "Describe the sample in detail.",
+    "Describe these cells concisely.": "Describe these cells in detail.",
+}
+
+QUESTIONS = list(QUESTION_MAP.keys())
+
+# random sample (n=100) of the GSVA datasets (which are already weight-corrected)
+TEST_IDS = pd.read_csv("./test_ids", header=None).iloc[:, 0].to_list()
+
+# For snakemake efficiency, extract the samples once and store them
+if not os.path.exists("./tmp_gsva_samples.csv"):
+    ARCHS4_GSVA_SAMPLES = pd.read_parquet(PROJECT_DIR / config["paths"]["gsva"]["result"].format(dataset="archs4_metasra")).set_index("Unnamed: 0").drop(columns=["library"]).columns
+    # store GSVA samples
+    with open("./tmp_gsva_samples.csv", "w") as f:
+        f.write("\n".join(ARCHS4_GSVA_SAMPLES.to_list()))
+else:
+    ARCHS4_GSVA_SAMPLES = pd.read_csv("./tmp_gsva_samples.csv", header=None).iloc[:, 0]
+
+# make sure they are not part of TEST_IDS or any other set (yet, they should be complementary to the other stage 2 sets. E.g. subsample 15.000 from the 50000 GSVA set)
+NUM_COMPLEX_SAMPLES = 5000
+NUM_DETAILED_SAMPLES = 10000
+CONVERSATION_START = NUM_COMPLEX_SAMPLES + NUM_DETAILED_SAMPLES
+COMPLEX_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[:NUM_COMPLEX_SAMPLES]  # 5000  # list comprehension preserves 'random' order
+DETAILED_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[NUM_COMPLEX_SAMPLES:CONVERSATION_START]
+scattergather:
+    split=128
+
+MODELS= [
+    "locking_mode_UU_0_0.0001_x5p78fy7",
+    "03jujd8s",
+    "full_model_0_0.0001_ttl4mf1l",
+    "no_archs4_data_42_0.0005_09cid8z6"
+]
+
+rule all:
+    input:
+        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "comparison.png",
+               dataset=["archs4_metasra", "tabula_sapiens"],
+               base_model=["Mistral-7B-Instruct-v0.2"],  # TODO test as well: "BioMistral-7B", "BioMistral-7B-DARE", 
+               model=MODELS
+               )
+
+include: "../shared/rules/dataset_processing.smk"
+include: "rules/dataset.smk"
+include: "rules/training.smk"
+include: "rules/evaluation.smk"

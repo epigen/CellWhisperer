@@ -1,3 +1,23 @@
+rule compute_gene_normalizers:
+    """
+    Compute the gene normalizers (in log scale) for each gene across all samples.
+
+    `np.log(gene + 1).mean()`
+
+    Requires a lot of RAM to be able to transpose the sparse matrix (required for efficient computation)
+    """
+    input:
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
+    output:
+        gene_mean_log1ps=PROJECT_DIR / "results" / "gene_normalizers" / "{dataset}.pickle"
+    resources:
+        mem_mb=500000,
+        slurm="cpus-per-task=2"
+    conda:
+        "cellwhisperer"
+    script:
+        "../scripts/compute_gene_normalizers.py"
+
 rule process_full_dataset:
     """
     Run CellWhisperer on the read_count_table (provided) dataset and store the outputs in an npz file.
@@ -17,24 +37,4 @@ rule process_full_dataset:
         "cellwhisperer"
     notebook:
         "../notebooks/process_full_dataset.py.ipynb"
-
-rule compute_gene_normalizers:
-    """
-    Compute the gene normalizers (in log scale) for each gene across all samples.
-
-    `np.log(gene + 1).mean()`
-
-    Requires a lot of RAM to be able to transpose the sparse matrix (required for efficient computation)
-    """
-    input:
-        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
-    output:
-        gene_mean_log1ps="tmp_output/gene_normalizers/{dataset}.pickle"
-    resources:
-        mem_mb=500000,
-        slurm="cpus-per-task=2"
-    conda:
-        "cellwhisperer"
-    script:
-        "../scripts/compute_gene_normalizers.py"
 

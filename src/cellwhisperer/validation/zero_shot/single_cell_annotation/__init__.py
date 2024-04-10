@@ -1,4 +1,5 @@
 from typing import Union, Iterable, Optional, Any
+from pathlib import Path
 import logging
 from cellwhisperer.jointemb.model import TranscriptomeTextDualEncoderModel
 from cellwhisperer.config import get_path, model_path_from_name
@@ -12,43 +13,17 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Tuple
 
-# Created by running this on the full tabula sapiens dataset: list(adata.obs[adata.obs["organ_tissue"].isin(["Liver","Lung","Blood"])]["cell_ontology_class"].value_counts().iloc[:20].index)
-TOP20_LUNG_LIVER_BLOOD_CELLTYPES = [
-    "macrophage",
-    "erythrocyte",
-    "monocyte",
-    "type ii pneumocyte",
-    "classical monocyte",
-    "neutrophil",
-    "cd4-positive, alpha-beta t cell",
-    "nk cell",
-    "naive b cell",
-    "basal cell",
-    "cd8-positive, alpha-beta t cell",
-    "hepatocyte",
-    "cd8-positive, alpha-beta cytokine secreting effector t cell",
-    "club cell",
-    "non-classical monocyte",
-    "capillary endothelial cell",
-    "cd4-positive, alpha-beta memory t cell",
-    "memory b cell",
-    "respiratory goblet cell",
-    "basophil",
-]
-
-
 
 class SingleCellDataSetForValidationScoring:
     def __init__(
         self,
         celltypes: Optional[Union[int, Iterable[str]]] = None,
         cell_number_threshold_per_celltype: Optional[int] = None,
-        dataset: str = "tabula_sapiens_100_cells_per_type",
+        dataset: Union[str, Path] = "tabula_sapiens_100_cells_per_type",
         celltype_obs_colname: str = "cell_ontology_class",
-        batch_obs_colname = "batch",
+        batch_obs_colname="batch",
         auto_create_batch_obs_colname: bool = True,
         logger: Optional[Any] = None,
-
     ):
         """
         Class to process a single-cell dataset and prepare it for validation scoring.
@@ -58,7 +33,7 @@ class SingleCellDataSetForValidationScoring:
                 If list: This list of celltypes will be processed.
                 If None: All celltypes in the dataset will be processed (after applying cell_number_threshold_per_celltype, if set).
             cell_number_threshold_per_celltype: only celltypes with at least this number of cells will be processed.
-            dataset: name of the dataset to process. Must be a key in the config file.
+            dataset: if `str` then name of the dataset to process (must be a key in the config file). If `Path` then path to the anndata file.
             celltype_obs_colname: name of the column in the adata.obs dataframe that contains the celltype labels.
             batch_obs_colname: name of the column in the adata.obs dataframe that contains the batch labels.
             auto_create_batch_obs_colname: If true, set adata.obs["batch"] = (adata.obs["donor"].astype(str) + "_" + adata.obs["method"].astype(str))
@@ -68,11 +43,15 @@ class SingleCellDataSetForValidationScoring:
 
         self.logger = logger or logging.getLogger(__name__)
         self.logger.info("Loading anndata...")
-        self.adata = anndata.read_h5ad(
-            get_path(["paths", "read_count_table"], dataset=dataset)
-        )
+        if isinstance(dataset, str):
+            dataset_path = get_path(["paths", "read_count_table"], dataset=dataset)
+        else:
+            dataset_path = dataset
+            assert isinstance(dataset, Path)
 
-        # TODO is this necessary?
+        self.adata = anndata.read_h5ad(dataset_path)
+
+        # TODO is this necessary? X should always be raw counts
         if "raw_counts" in self.adata.layers:
             self.adata.X = self.adata.layers["raw_counts"]
 
@@ -88,7 +67,7 @@ class SingleCellDataSetForValidationScoring:
         else:
             self.celltypes_to_process = self.adata.obs[celltype_obs_colname].unique()
 
-        if isinstance(celltypes, int): # Randomly sample celltypes
+        if isinstance(celltypes, int):  # Randomly sample celltypes
             assert (
                 len(self.celltypes_to_process) >= celltypes
             ), f"Only {len(self.celltypes_to_process)} celltypes have at least {cell_number_threshold_per_celltype} cells, but {celltypes} celltypes were requested."
@@ -105,7 +84,6 @@ class SingleCellDataSetForValidationScoring:
         else:
             raise ValueError("celltypes must be an int, a list of strings, or None.")
 
-
         self.adata = self.adata[
             self.adata.obs[celltype_obs_colname].isin(self.celltypes_to_process), :
         ].copy()  # subset the adata according to the celltypes to process
@@ -117,7 +95,7 @@ class SingleCellDataSetForValidationScoring:
                 + self.adata.obs["method"].astype(str)
             )
 
-        self.celltype_obs_colname=celltype_obs_colname
+        self.celltype_obs_colname = celltype_obs_colname
         self.batch_obs_colname = batch_obs_colname
 
 
@@ -159,7 +137,7 @@ class SingleCellZeroshotValidationScoreCalculator:
         transcriptome_processor_kwargs = transcriptome_processor_kwargs or {}
 
         self.adata = sc_dataset.adata
-        celltype_obs_colname=sc_dataset.celltype_obs_colname
+        celltype_obs_colname = sc_dataset.celltype_obs_colname
         celltypes_to_process = sc_dataset.celltypes_to_process
 
         self.text_list = [

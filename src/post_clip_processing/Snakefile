@@ -1,24 +1,19 @@
+"""
+Processing pipeline for generating cellxgene-ready datasets
+"""
+
 PROJECT_DIR = Path(workflow.basedir).resolve().parents[1]
 configfile: PROJECT_DIR / "config.yaml"
 
-TRAINING_DATASET = "archs4_metasra"  # Don't change this
 CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
+TARGET_DATASETS = ["daniel", "development4s_raw", "development4s_scvi"]  # config["datasets"] "tabula_sapiens", 
 LLAVA_BASE_MODEL = "Mistral-7B-Instruct-v0.2"
-TARGET_DATASETS = [] # ["daniel", "development4s_raw", "development4s_scvi"]  # config["datasets"] "tabula_sapiens", 
 
-include: "rules/dataset_processing.smk"
-include: "rules/llava.smk"
+include: "../shared/rules/dataset_processing.smk"
 include: "rules/prepare_cellxgene_dataset.smk"
-include: "rules/single_cell_finetune.smk"
-include: "rules/gsva_correlation.smk"
-
+include: "rules/gsva_correlation.smk"  # NOTE this is a bit of an outlier in this pipeline
 
 rule all:
     input:
-        # PROJECT_DIR / config["paths"]["llava_pretrain_text_dataset"].format(dataset=TRAINING_DATASET),
-        # PROJECT_DIR / config["paths"]["model_processed_dataset"].format(dataset=TRAINING_DATASET, model=CLIP_MODEL),
-        # PROJECT_DIR / config["paths"]["llava_finetuned_model_dir"].format(base_model=LLAVA_BASE_MODEL),
-        # expand(rules.plot_embeddings_with_llava_labels.output["png"], dataset=TARGET_DATASETS, model=CLIP_MODEL),
-        # expand(rules.compile_h5ad.output["adata"], dataset=TARGET_DATASETS, model=CLIP_MODEL),
-        rules.llava_evaluation_perplexity.output.log_perplexity_ratio,
+        expand(rules.compile_h5ad.output["adata"], dataset=TARGET_DATASETS, model=CLIP_MODEL)
 

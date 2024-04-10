@@ -55,7 +55,7 @@ for special_conversation_fn in snakemake.input.complex_conversations + snakemake
             "The first step should be contemplation for sample id {sample_id}"
         )
 
-    # assert sample_id not in all_conversations_dict  # TODO enable later
+    assert sample_id not in all_conversations_dict
     all_conversations_dict[sample_id] = complex_conversation
 if num_erroneous_jsons > snakemake.params.accept_num_erroneous_jsons:
     raise ValueError(f"Too many erroneous conversations ({num_erroneous_jsons})")

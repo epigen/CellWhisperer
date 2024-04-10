@@ -2,7 +2,6 @@ from .zero_shot.cancer_gene_essentiality import EvaluateCancerGeneEssentiality
 from .zero_shot.single_cell_annotation import (
     SingleCellDataSetForValidationScoring,
     SingleCellZeroshotValidationScoreCalculator,
-    TOP20_LUNG_LIVER_BLOOD_CELLTYPES,
 )
 from .integration import SingleCellIntegrationScoreCalculator
 from .zero_shot.retrieval import RetrievalScoreCalculator
@@ -18,9 +17,11 @@ def initialize_validation_functions(
     text_model_type: str,
     val_dataloader: Optional[DataLoader] = None,
 ):
-    tabsap_sc_dataset = SingleCellDataSetForValidationScoring(cell_number_threshold_per_celltype=100)
+    tabsap_sc_dataset = SingleCellDataSetForValidationScoring(
+        cell_number_threshold_per_celltype=100
+    )
     tabsap_wellstudied_sc_dataset = SingleCellDataSetForValidationScoring(
-        celltypes=TOP20_LUNG_LIVER_BLOOD_CELLTYPES
+        celltypes=config["top20_lung_liver_blood_celltypes"]
     )
 
     training_validation_functions = {
@@ -53,18 +54,16 @@ def initialize_validation_functions(
             transcriptome_tokenizer_type=transcriptome_model_type,
             average_mode=None,
         ),
-
         "integration_TabSapWellStudied": SingleCellIntegrationScoreCalculator(
             sc_dataset=tabsap_wellstudied_sc_dataset,
             tokenizer_name=text_model_type,
-            transcriptome_tokenizer_type=transcriptome_model_type
+            transcriptome_tokenizer_type=transcriptome_model_type,
         ),
         "integration_TabSap": SingleCellIntegrationScoreCalculator(
             sc_dataset=tabsap_sc_dataset,
             tokenizer_name=text_model_type,
-            transcriptome_tokenizer_type=transcriptome_model_type
+            transcriptome_tokenizer_type=transcriptome_model_type,
         ),
-
     }
     if val_dataloader is not None:
         # TODO: For deduplication, would need to provide the dataset name, anndata, or annotations. See src/validation/zero_shot/deduplicate.py

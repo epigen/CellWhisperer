@@ -21,9 +21,11 @@ rule annotation_representation:
     """
     Use BioBERT to calculate representation for the text data
 
+    NOTE: It would have been better to take the second replicate
+
     """
     input:
-        annotations=rules.aggregate_processed.output.single
+        annotations=ancient(rules.aggregate_processed.output.single)
     output:
         representation=RESULTS_DIR / "{dataset}" / "annotation_representation.npz"
     conda:
