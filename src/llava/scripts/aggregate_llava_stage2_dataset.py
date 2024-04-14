@@ -55,7 +55,9 @@ for special_conversation_fn in snakemake.input.complex_conversations + snakemake
             "The first step should be contemplation for sample id {sample_id}"
         )
 
-    assert sample_id not in all_conversations_dict
+    # NOTE Apparently we accidentally generated conversations for all 100k conversations. We overwrite them here with the complex ones
+    # if sample_id in all_conversations_dict:
+    #     logging.warning("Duplicate sample id found")
     all_conversations_dict[sample_id] = complex_conversation
 if num_erroneous_jsons > snakemake.params.accept_num_erroneous_jsons:
     raise ValueError(f"Too many erroneous conversations ({num_erroneous_jsons})")
@@ -77,23 +79,24 @@ stage1_candidates = list(
     (set(stage1_train_set.keys()) | set(stage1_test_set.keys()))
     - set(all_conversations_dict.keys())
 )
-
 # Load transcriptome and annotation weights and convert to dict
-transcriptome_weights = np.load(
-    snakemake.input.transcriptome_weights, allow_pickle=True  # type: ignore [reportUndefinedVariable]
-)
+transcriptome_weights = [
+    np.load(fn, allow_pickle=True)  # type: ignore [reportUndefinedVariable]
+    for fn in snakemake.input.transcriptome_weights
+]
 transcriptome_weights = {
     sample_id: weight
-    for sample_id, weight in zip(
-        transcriptome_weights["orig_ids"], transcriptome_weights["weight"]
-    )
+    for d in transcriptome_weights
+    for sample_id, weight in zip(d["orig_ids"], d["weight"])
 }
-annotation_weights = np.load(snakemake.input.annotation_weights, allow_pickle=True)  # type: ignore [reportUndefinedVariable]
+annotation_weights = [
+    np.load(fn, allow_pickle=True)  # type: ignore [reportUndefinedVariable]
+    for fn in snakemake.input.annotation_weights
+]
 annotation_weights = {
     sample_id: weight
-    for sample_id, weight in zip(
-        annotation_weights["orig_ids"], annotation_weights["weight"]
-    )
+    for d in annotation_weights
+    for sample_id, weight in zip(d["orig_ids"], d["weight"])
 }
 
 # Filter the weights to only include the stage1 candidates
@@ -124,6 +127,10 @@ training_list = []
 test_list = []
 
 for key, conversations in all_conversations_dict.items():
+    if (
+        len(conversations) == 0
+    ):  # Mistral-based generation seems to have produced empty conversations
+        continue
     try:
         renamed_conv = [
             {

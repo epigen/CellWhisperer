@@ -1,3 +1,20 @@
+# matching concise and extensive questions
+QUESTION_MAP = {
+    "What does the sample represent?": "Provide an extensive description of the sample",
+    "What does the transcriptome represent?": "What does the transcriptome represent? Respond comprehensively.",
+    "What do these cells represent?": "Provide a detailed description of these cells.",
+    "Give a brief description of the sample.": "Provide a detailed description of the sample.",
+    "Give a brief description of these cells.": "Provide a detailed description of these cells.",
+    "Present a compact description of the sample's key features.": "Present a detailed description of the sample's key features.",
+    "Summarize the state of these cells.": "Provide a detailed description of the state of these cells.",
+    "Provide a brief description of these cells.": "Provide a detailed description of these cells.",
+    "Provide a brief description of the given sample.": "Provide a detailed description of the given sample.",
+    "Describe the sample concisely.": "Describe the sample in detail.",
+    "Describe these cells concisely.": "Describe these cells in detail.",
+}
+
+QUESTIONS = list(QUESTION_MAP.keys())
+
 rule compute_top_genes:
     """
     Compute the top genes for each sample based on the gene normalizers.
@@ -57,7 +74,6 @@ rule prepare_llava_stage2_requests:
     - GSVA
     - Top-most expressed genes
 
-    TODO: should I force using the 2nd annotation replicate (for archs4_metasra?). I think currently it takes both?? check the output files how it looks
     TODO 2: after generating cellxgene_census samples, run a couple of them through mixtral and convert them to nicer few shot samples
 
     Few shot input format: JSON (top_gene_sets: list(ranked, avoid scores or ), top_genes: list(ranked), annotation:string, sample_id: string)
@@ -67,14 +83,15 @@ rule prepare_llava_stage2_requests:
         gsva=PROJECT_DIR / config["paths"]["gsva"]["result"],
         top_genes=rules.compute_top_genes.output.top_genes,
         request_template=ancient("prompts/llava_stage2_request_template.txt"),
-        few_shot_prompts=ancient(expand("prompts/llava_stage2_few_shot_samples/{i}_request.json", i=range(3))),
-        few_shot_responses=ancient(expand("prompts/llava_stage2_few_shot_samples/{i}_response.json", i=range(3))),
+        few_shot_prompts=ancient(expand("prompts/llava_stage2_few_shot_samples/{i}_request.json", i=range(5))),
+        few_shot_responses=ancient(expand("prompts/llava_stage2_few_shot_samples/{i}_response.json", i=range(5))),
     output:
         request_splits=scatter.split(PROJECT_DIR / "results/llava/requests/{{dataset,[^/]+}}/{scatteritem}.json"),
         few_shot_block="prompts/few_shot_messages_{dataset}.json",
     params:
-        top_n_genes=50,
-        top_n_gene_sets=50,
+        annotation_replicate=-1,  # -1 means the last one (which is the more sophisticated one for archs4_metasra)
+        top_n_genes=20,  # use fewer here to not overwhelm the model
+        top_n_gene_sets=20,
         start_from_num=CONVERSATION_START,
     conda:
         "cellwhisperer"
@@ -100,11 +117,11 @@ rule generate_llava_stage2_conversations:
     output:
         generated_conversations = protected(PROJECT_DIR / "results" / "llava" / "processed" / "{dataset,[^/]+}" / "{scatteritem}.json"),  # I marked this as protected as it might be costly to produce
     params:
-        temperature=0.0,
+        temperature=0.5,
+        prompt_reminder= "\nMake sure to ignore any patient- or donor-specific information, like in your last responses."
     resources:
         mem_mb=100000,
-        slurm="cpus-per-task=25 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
-        # slurm="cpus-per-task=25 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
+        slurm=f"cpus-per-task=25 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
     conda: "textgen"  # "../envs/llamacpp.yaml" fails to install :/
     notebook: "../notebooks/llava_stage2_dataset.py.ipynb"
 
@@ -118,7 +135,7 @@ rule generate_llava_complex:
     input:
         processed_annotations=PROJECT_DIR / config["paths"]["processed_multi_annotations"],
         gsva=PROJECT_DIR / config["paths"]["gsva"]["result"],
-        top_genes=rules.compute_top_genes.output.top_genes,
+        top_genes=ancient(rules.compute_top_genes.output.top_genes),
         system_message=ancient("prompts/llava_stage2_complex_few_shot.txt"),
         request_template=ancient("prompts/llava_stage2_request_template.txt"),
         few_shot_prompts=ancient(expand("prompts/llava_stage2_complex_few_shot_samples/{i}_request.json", i=[2, 3, 5])),
@@ -151,7 +168,7 @@ rule generate_llava_detailed:
     input:
         processed_annotations=PROJECT_DIR / config["paths"]["processed_multi_annotations"],
         gsva=PROJECT_DIR / config["paths"]["gsva"]["result"],
-        top_genes=rules.compute_top_genes.output.top_genes,
+        top_genes=ancient(rules.compute_top_genes.output.top_genes),
         system_message=ancient("prompts/llava_stage2_detailed.txt"),
         request_template=ancient("prompts/llava_stage2_request_template.txt"),
     output:
@@ -179,23 +196,24 @@ rule aggregate_llava_stage2_dataset:
 
     NOTE consider oversampling complex items (e.g. use them twice, as they are fewer)
 
+    # TODO use the last 10000 samples (of the 50000) for very naive attribute conversations (requires metadata. whitelist parameter fields, such as organ, cell type etc.)
     """
     input:
-        json_splits = glob.glob("/msc/home/mschae83/cellwhisperer/results/llava/processed/archs4_metasra/second/*-of-128.json"),  # , i=[1, 103, 118, 20, 35, 48, 61, 7, 89, 1, 104, 120, 23, 36, 5, 62, 74, 9, 102, 107, 122, 33, 37, 50, 65, 79, 93])
-
-        # json_splits=[split.format(dataset=dataset)
-        #              for dataset in ["archs4_metasra", "cellxgene_census"]
-        #              for split in gather.split(PROJECT_DIR / "results" / "llava" / "processed" / "{{dataset}}" / "{scatteritem}.json")
-        #              ],
+        # json_splits = glob.glob("/msc/home/mschae83/cellwhisperer/results/llava/processed/archs4_metasra/second/*-of-128.json"),  # , i=[1, 103, 118, 20, 35, 48, 61, 7, 89, 1, 104, 120, 23, 36, 5, 62, 74, 9, 102, 107, 122, 33, 37, 50, 65, 79, 93])
+        json_splits=[split.format(dataset=dataset)
+                     for dataset in ["archs4_metasra", "cellxgene_census"]
+                     for split in gather.split(PROJECT_DIR / "results" / "llava" / "processed" / "{{dataset}}" / "{scatteritem}.json")
+                     # for split in [(PROJECT_DIR / "results" / "llava" / "processed" / "{dataset}" / f"1-of-128.json").as_posix()]
+                     ],
         stage1_train_set = rules.llava_stage1_dataset.output.train_set,
         stage1_test_set = rules.llava_stage1_dataset.output.test_set,
         complex_conversations=ancient(expand(rules.generate_llava_complex.output.processed_annotation, sample_id=COMPLEX_SAMPLES, dataset="archs4_metasra")),
         detailed_conversations=ancient(expand(rules.generate_llava_detailed.output.processed_annotation, sample_id=DETAILED_SAMPLES, dataset="archs4_metasra")),
-        transcriptome_weights=PROJECT_DIR / "results/pre_training_processing/archs4_metasra/transcriptome_weights.npz",
-        annotation_weights=PROJECT_DIR / "results/pre_training_processing/archs4_metasra/annotation_weights.npz",
+        transcriptome_weights=expand(PROJECT_DIR / "results/pre_training_processing/{dataset}/transcriptome_weights.npz", dataset=["archs4_metasra", "cellxgene_census"]),
+        annotation_weights=expand(PROJECT_DIR / "results/pre_training_processing/{dataset}/annotation_weights.npz", dataset=["archs4_metasra", "cellxgene_census"])
     params:
         test_ids=TEST_IDS,
-        num_stage1_samples=20000,  # maybe only use 10000. or train with them only in the beginning?
+        num_stage1_samples=10000,  # maybe only use 10000. or train with them only in the beginning?
         seed=42,
         transcriptome_tag="<image>",  # we stick to <image> because of the llava code base
         accept_num_erroneous_jsons=200,
@@ -203,6 +221,9 @@ rule aggregate_llava_stage2_dataset:
         "logs/aggregate_llava_stage2_dataset.log"
     resources:
         mem_mb=100000,
+    conda:
+        # PROJECT_DIR / "envs" / "main.yaml"
+        "cellwhisperer"
     output:
         llava_stage2_dataset=PROJECT_DIR / config["paths"]["llava"]["finetune_text_dataset"],
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="archs4_metasra")

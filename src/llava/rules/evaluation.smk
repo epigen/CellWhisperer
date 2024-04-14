@@ -1,10 +1,17 @@
+"""
+still relatively limited. next better evaluations would include
+
+- how many of the top 100 genes can it recover?
+- how well does it reproduce pathways?
+"""
+
 rule tabsap_celltype_evaluation_dataset:
     input:
         dataset=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="tabula_sapiens"),
     output:
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="tabula_sapiens"),
-    params: 
-        celltypes=config["top20_lung_liver_blood_celltypes"],
+    params:
+        celltypes=config["top20_lung_liver_blood_celltypes"],  # TODO use all?
         num_cells_per_celltype=20,
         question="Which cell type is this cell?"
     conda:

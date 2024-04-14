@@ -5,15 +5,15 @@
   },
   {
     "from": "ai",
-    "value": "Certainly. The selection seems to correspond to cultured cells derived from human diffuse large B-cell lymphoma (DLBCL), probably from the OCI-LY1 cell line. The cells exhibit a signature of siRNA treatement against BCL6 (siBCL6) for a period of around 48 hours. Such a treatment is usually aimed at silencing the BCL6 gene, which can play a significant role in the development and progression of DLBCL."
+    "value": "Certainly. The selection seems to correspond to cultured cells derived from human diffuse large B-cell lymphoma (DLBCL), probably from the OCI-LY1 cell line."
   },
   {
     "from": "researcher",
-    "value": "What diseases or conditions are associated with this sample?"
+    "value": "Are there any diseases or conditions associated with this sample?"
   },
   {
     "from": "ai",
-    "value": "The primary condition associated with this sample is diffuse large B-cell lymphoma (DLBCL), which is a type of non-Hodgkin's lymphoma. It is categorized under lymphatic system diseases, immune system diseases, neoplasms of mature B-cells, and more broadly, cancer and diseases of cellular proliferation. Such associations imply that DLBCL is a significant area of research in understanding and treating lymphoid neoplasms, particularly those affecting the B-cells in the immune system."
+    "value": "The cells exhibit a signature of BCL6 gene silening, potentially induced by siRNA treatment (siBCL6). BCL6 can play a significant role in the development and progression of DLBCL."
   },
   {
     "from": "researcher",

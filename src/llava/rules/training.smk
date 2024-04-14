@@ -9,7 +9,10 @@ rule combine_processed_data:
         cellxgene_census=rules.process_full_dataset.output.model_outputs.format(dataset="cellxgene_census", model="{model}"),
     output:
         combined=PROJECT_DIR / config["paths"]["llava"]["root"] / "combined_processed_data" / "{model}.npz"
+    resources:
+        mem_mb=100000,
     run:
+        import numpy as np
         datas = [dict(np.load(dataset_fn, allow_pickle=True)) for dataset_fn in input]
 
         combined = {k: np.concatenate([d[k] for d in datas]) for k in datas[0].keys()}
@@ -101,7 +104,7 @@ rule finetune_llava:
 
     """
     input:
-        data_path=ancient(rules.aggregate_llava_stage2_dataset.output["llava_stage2_dataset"]),
+        data_path=rules.aggregate_llava_stage2_dataset.output["llava_stage2_dataset"],
         image_data=rules.combine_processed_data.output.combined,
         pretrained_projector=rules.pretrain_llava.output.projector
     conda:

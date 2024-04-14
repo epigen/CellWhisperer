@@ -29,7 +29,7 @@ rule process_full_dataset:
         model_outputs=protected(PROJECT_DIR / config["paths"]["model_processed_dataset"]),
     resources:
         mem_mb=600000,  # could be made more efficient...
-        slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
+        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
     log:
         notebook="../logs/notebooks/process_full_dataset_{dataset}_{model}.py.ipynb",
         log_file="../logs/process_full_dataset_{dataset}_{model}.log"

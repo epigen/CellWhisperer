@@ -6,7 +6,7 @@ rule leiden_umap_embeddings:
     conda:
         "cellwhisperer"
     resources:
-        mem_mb=24000,
+        mem_mb=240000,
         slurm="cpus-per-task=5 qos=cpu partition=cpu"
     log:
         notebook="../log/leiden_umap_embeddings_{dataset}_{model}.py.ipynb"
@@ -25,17 +25,37 @@ rule llava_annotate_clusters:
     conda:
         "llava2"
     params:
-        request="Provide a concise and short description of the sample:",  # TODO try keyword
+        request="Provide a brief description of these cells.",
         num_beams=10
     resources:
         mem_mb=40000,
-        slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
+        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
     log:
         notebook="../log/llava_annotate_clusters_{dataset}_{model}.py.ipynb"
     notebook:
         "../notebooks/llava_annotate_clusters.py.ipynb"
 
-rule cellwhisperer_annotate_clusters:
+rule gpt4_curate_llava_annotations:
+    """
+    Output is protected to prevent high GPT-4 cost. Script also fails with more than 200 clusters
+    TODO: my key is stored in here. needs to be provided as environment variable
+
+    TODO: optionally generate multiple annotations (with llava, different seeds, temperature=0.3) and merge them into one common one
+    """
+    input:
+        cellwhisperer_labels=rules.llava_annotate_clusters.output.csv
+    output:
+        curated_labels=protected(PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_curated_annotated_clusters.csv")
+    params:
+        request="I will provide you with a comprehensive abstract that describes a cluster of cells. Your task is to provide a very short description of the cells in the cluster based on the term. If possible, describe biological concepts beyond just cell type names. Reply with less than six words!",
+        max_num_clusters=200  # to prevent high GPT-4 cost
+    conda:
+        "cellwhisperer"
+    notebook:
+        "../notebooks/gpt4_curate_llava_annotations.py.ipynb"  # TODO recopy from /msc/home/mschae83/cellwhisperer/src/post_clip_processing/notebooks/gpt4_curate_cluster_keywords.py.ipynb
+
+
+rule cellwhisperer_cluster_keywords:
     """
     Needs a 5GB GPU
 
@@ -49,11 +69,12 @@ rule cellwhisperer_annotate_clusters:
         "cellwhisperer"
     resources:
         mem_mb=40000,
-        slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
+        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
     log:
         notebook="../log/cellwhisperer_annotate_clusters_{dataset}_{model}.py.ipynb"
     notebook:
         "../notebooks/cellwhisperer_annotate_clusters.py.ipynb"
+
 
 rule gpt4_curate_cluster_keywords:
     """
@@ -61,7 +82,7 @@ rule gpt4_curate_cluster_keywords:
     TODO: my key is stored in here. needs to be provided as environment variable
     """
     input:
-        cellwhisperer_labels=rules.cellwhisperer_annotate_clusters.output.csv,
+        cellwhisperer_labels=rules.cellwhisperer_cluster_keywords.output.csv,
     output:
         curated_labels=protected(PROJECT_DIR / "results" / "{dataset}" / "{model}" / "cellwhisperer_curated_annotated_clusters.csv")
     params:
@@ -82,7 +103,8 @@ rule compile_h5ad:
     input:
         # llava_labels=rules.llava_annotate_clusters.output.csv,  # NOTE: include this once the llava-approach becomes powerful enough
         umap_embedding=rules.leiden_umap_embeddings.output.adata,
-        # cellwhisperer_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels,
+        cellwhisperer_keyword_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels,
+        # cellwhisperer_llava_labels=rules.gpt4_curate_llava_annotations.output.curated_labels,
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         processed_data=PROJECT_DIR / config["paths"]["model_processed_dataset"], # rules.process_full_dataset.output.model_outputs,
         enrichr_terms=PROJECT_DIR / config["paths"]["enrichr_terms_json"],
@@ -92,33 +114,12 @@ rule compile_h5ad:
         adata=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "cellxgene.h5ad"
     params:
         max_categories_filter=500
+    resources:
+        mem_mb=1000000,
+        slurm="cpus-per-task=2"
     conda:
         "cellwhisperer"
     log:
         notebook="../log/compile_h5ad_{dataset}_{model}.py.ipynb"
     notebook:
         "../notebooks/compile_h5ad.py.ipynb"
-
-
-# rule plot_embeddings_with_llava_labels:
-#     """
-#     Plot the embeddings with the llava labels
-#     TODO this is potentially broken because it was implemented for another adata
-#     TODO code is here https://github.com/epigen/cellwhisperer/issues/234#issuecomment-1919533112 (adopted from [[id:8d3f5470-f4d2-4c1b-9572-40305bd62073][24. Fig 1b: Color the embeddings by interesting metrics · Issue #234 · epigen/cellwhisperer]])
-#     """
-#     input:
-#         adata=rules.compile_h5ad.output.adata,
-#     output:
-#         **{
-#             ext: PROJECT_DIR / "results" / "plots" / "plot_dataset_embeddings" / f"{{dataset}}_{{model}}.{ext}"
-#             for ext in ["png", "pdf", "svg"]
-#         },
-#     resources:
-#         mem_mb=24000,
-#         slurm="cpus-per-task=5 qos=cpu partition=cpu"
-#     conda:
-#         "cellwhisperer"
-#     log:
-#         notebook="../log/plot_embeddings_{dataset}_{model}.py.ipynb"
-#     notebook:
-#         "../notebooks/plot_embeddings.py.ipynb"

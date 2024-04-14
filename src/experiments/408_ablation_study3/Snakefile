@@ -1,11 +1,17 @@
 from pathlib import Path
+import subprocess
 import itertools
 SEEDS = [0, 1, 2]  # , 3, 4]
+
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+
+configfile: PROJECT_DIR / "config.yaml"
 
 # CONFIGS = [p.stem for p in Path("delta_config").glob("*.yaml") if p.stem in ["locking_mode_UU"]]  # , "locking_mode_UL", "scgpt"]]
 # CONFIGS = ["full_model"]
 
-CONFIGS = [
+RUN_CONFIGS = [
     "no_sample_weights",
     "locking_mode_UU",
     "grad_accumulation",
@@ -24,20 +30,43 @@ CONFIGS = [
 
 rule all:
     input:
-        [f"results/{config}/seed_{seed}.ckpt" for seed in SEEDS for config in CONFIGS]
+        [PROJECT_DIR / config["paths"]["ablations"]["models"] / run_config / f"seed_{seed}.ckpt" for seed in SEEDS for run_config in RUN_CONFIGS]
 
 rule train:
     input:
-        delta_config="delta_config/{config}.yaml",
+        delta_config="delta_config/{run_config}.yaml",
         base_config=ancient("base_config.yaml")
     output:
-        "results/{config}/seed_{seed}.ckpt"
+        PROJECT_DIR / config["paths"]["ablations"]["models"] / "{run_config}" / "seed_{seed}.ckpt"
     conda:
         "cellwhisperer_fixed"  # NOTE: not subject to automatic updates
     resources:
-        mem_mb=lambda wildcards: 1000000 if wildcards.config == "scgpt" else 120000,
+        mem_mb=lambda wildcards: 1000000 if wildcards.run_config == "scgpt" else 120000,
         slurm="cpus-per-task=20 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
     shell: """
-        cellwhisperer fit --config {input.base_config} --config {input.delta_config} --seed_everything {wildcards.seed} --last_model_path {output} --wandb {wildcards.config}_{wildcards.seed}
+        cellwhisperer fit --config {input.base_config} --config {input.delta_config} --seed_everything {wildcards.seed} --last_model_path {output} --wandb {wildcards.run_config}_{wildcards.seed}
     """
 
+
+rule plot_results:
+    """
+    CSV obtained from wandb
+
+    TODO the notebook is only on the server and it is actually broken in a tab
+    """
+    input:
+        csv="wandb_export.csv"
+    output:
+        top_models_metrics_details=PROJECT_DIR / config["paths"]["ablations"]["plots"] / "top_models_metrics_details.pdf",
+        all_models_comparison=PROJECT_DIR / config["paths"]["ablations"]["plots"] / "all_models_comparison.pdf",
+    params:
+        metrics = [
+            "valfn_integration_TabSap/avg_bio",
+            "valfn_integration_TabSap/ASW_label__batch",
+            "valfn_daniel_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/recall_at_5_macroAvg",
+            "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
+            "valfn_zshot_TabSap_celltype_lvl/f1_macroAvg"]
+    conda:
+        "cellwhisperer"
+    notebook:
+        "notebooks/plot_results.py.ipynb"

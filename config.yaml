@@ -28,7 +28,7 @@ paths:
     result: results/{dataset}/gsva.parquet
     correlation: results/{dataset}/{model}/gsva_correlations.csv
     cw_transcriptome_term_scores: results/{dataset}/{model}/cw_transcriptome_term_scores.parquet
-    plots: results/{dataset}/{model}/gsva_plots
+    plots: results/plots/gsva_correlation/{dataset}/{model}
 
   llava:
     root: results/llava/
@@ -37,8 +37,10 @@ paths:
     evaluation_text_dataset: results/llava/evaluation/{dataset}_conversations.json
     pretrained_model_dir: results/llava/pretrained/{base_model}__{model}/
     finetuned_model_dir: results/llava/finetuned/{base_model}__{model}/
-    evaluation_results:  results/llava/evaluation/{base_model}__{model}/{dataset}/
+    evaluation_results:  results/plots/llava/{dataset}/{base_model}__{model}/
+  geo_umap: results/plots/geo_umap/{model}/
 
+plot_style: "src/plot_style/main.style"
 
 datasets:
   - immgen

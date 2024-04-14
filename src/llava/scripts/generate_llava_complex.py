@@ -110,9 +110,7 @@ request.append(
 logging.info("Full request:")
 logging.info(json.dumps(request, indent=2))
 
-client = OpenAI(
-    api_key="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",  # load_openai_api(),
-)
+client = OpenAI()
 
 chat_completion = client.chat.completions.create(
     messages=request,
