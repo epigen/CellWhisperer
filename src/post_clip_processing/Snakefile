@@ -6,11 +6,10 @@ PROJECT_DIR = Path(workflow.basedir).resolve().parents[1]
 configfile: PROJECT_DIR / "config.yaml"
 
 CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
-TARGET_DATASETS = ["daniel", "archs4_metasra"]  # "daniel", "development4s_raw", "development4s_scvi"]  # config["datasets"] "tabula_sapiens", 
+TARGET_DATASETS = config["datasets"]  # config["datasets"] "tabula_sapiens", 
 LLAVA_BASE_MODEL = "Mistral-7B-Instruct-v0.2"
 
-
-GPU_TYPE = "a100-sxm4-80gb"
+GPU_TYPE = "a100"
 
 include: "../shared/rules/dataset_processing.smk"
 include: "rules/prepare_cellxgene_dataset.smk"
