@@ -30,9 +30,9 @@ from collections import defaultdict
 for ckpt_file_name in [
     #"h4wbhcag_tabsap_finetune_epoch33.ckpt",
     #"0s1ydf4c_finetune.ckpt",
-     "03jujd8s_epoch5_maxval.ckpt",
-    #"03jujd8s_epoch12_maxtabsap.ckpt",
-    #"03jujd8s_last.ckpt",   
+     "cellwhisperer_clip_v1_epoch5_maxval.ckpt",
+    #"cellwhisperer_clip_v1_epoch12_maxtabsap.ckpt",
+    #"cellwhisperer_clip_v1_last.ckpt",   
     ]: 
 
     #### Parameters ####

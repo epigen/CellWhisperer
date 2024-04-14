@@ -62,9 +62,7 @@ model_name_path_map:
   biogpt: microsoft/biogpt
   bert: dmis-lab/biobert-v1.1
   scgpt: resources/scGPT_human
-  cellwhisperer: 03jujd8s
-    # poor choice with scgpt: 609rcmt4
-
+  cellwhisperer: cellwhisperer_clip_v1  # this is t9kkor63
 
 genesets:
   - "Azimuth_2023"

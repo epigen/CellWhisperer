@@ -73,10 +73,6 @@ cellwhisperer fit --config run_config.yaml
 
 To run sweeps, refer to [this README](./src/experiments/sweeps/README.md). You can run sweeps with the `single_cell_sweeping` tool
 
-### Broken parameters
-
-- Only AdamW optimizer works at the moment (because using it dynamically fails with --config <file>)
-
 ### Important parameters
 
 `wandb`: Whether to log to wandb and if so which run_name to use
@@ -117,4 +113,4 @@ We use `blacken` for automated code formatting.
 ## Processing of new (single cell) datasets
 - Make sure your dataset adheres to the prerequisites described in the [wiki](https://github.com/epigen/cellwhisperer/wiki/Datasets)
 - Place the dataset into a folder `cellxgene/resources/<dataset_name>/read_count_table.h5ad`
-- Go to `cellwhisperer/src/post_clip_processing` and run `/msc/home/mschae83/cellwhisperer/results/<dataset_name>/03jujd8s/cellxgene.h5ad` (replace 03jujd8s with the CellWhisperer model name)
+- Go to `cellwhisperer/src/post_clip_processing` and run `/msc/home/mschae83/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad` (use the correct model name)

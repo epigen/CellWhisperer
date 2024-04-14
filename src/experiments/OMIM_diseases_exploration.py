@@ -76,7 +76,7 @@ def plot_term_score_umaps(adata, term, scores_this_term, df_stack, outdir):
 ### PARAMETERS ###
 library="OMIM_Expanded"
 BASEDIR="/home/peter/peter_on_isilon/cellwhisperer/single-cellm/results/"
-ckpt_file_name="03jujd8s_epoch5_maxval.ckpt"
+ckpt_file_name="cellwhisperer_clip_v1_epoch5_maxval.ckpt"
 max_terms_per_cluster=3
 max_terms_total = 20
 compare_top_vs_clusternumber = 2 # note: 0-indexed

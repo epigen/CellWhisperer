@@ -43,7 +43,7 @@ scattergather:
 
 MODELS= [
     # "locking_mode_UU_0_0.0001_x5p78fy7",  # is 'UU' better? # TODO loading fails, because the 'UU' is not properly recognized and the transcriptome part is 'locked away', leading to 'Unexpected key(s) in state_dict: "model.transcriptome_model.geneformer_model.bert.encoder.layer.6.attention.self.query.weight",....'
-    "03jujd8s",  # old, as baseline
+    "cellwhisperer_clip_v1",  # old, as baseline # functions as 'no-cellxgene'
     config["model_name_path_map"]["cellwhisperer"],
     "no_archs4_data_42_0.0005_09cid8z6"  # does GEO data improve conversation ability? (I guess we would need a disease-centric validation set for this...)
 ]

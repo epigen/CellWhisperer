@@ -4,7 +4,7 @@ import pandas as pd
 
 # Define the pattern to search for CSV files
 os.chdir("/home/peter/peter_on_isilon/cellwhisperer/single-cellm")
-pattern = 'results/MS_zero_shot_scfoundation_replication_v2_pancreas_renamed/03jujd8s_*/*/performance_metrics_cellwhisperer.celltype_as_label.macrovag.csv'
+pattern = 'results/MS_zero_shot_scfoundation_replication_v2_pancreas_renamed/cellwhisperer_clip_v1_*/*/performance_metrics_cellwhisperer.celltype_as_label.macrovag.csv'
 pattern2 = 'results/MS_zero_shot_scfoundation_replication_v2_pancreas_renamed/f6fjywkb.ckpt/*/performance_metrics_cellwhisperer.celltype_as_label.macrovag.csv'
 pattern3 = 'results/MS_zero_shot_scfoundation_replication_v2/f6fjywkb.ckpt/*/performance_metrics_cellwhisperer.celltype_as_label.macrovag.csv'
 
