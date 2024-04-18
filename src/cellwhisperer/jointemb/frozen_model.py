@@ -15,7 +15,6 @@ from pathlib import Path
 import torch
 import hashlib
 import logging
-from cellwhisperer.jointemb.scgpt_model import ScGPTConfig
 from cellwhisperer.config import get_cache_dir
 
 logger = logging.getLogger(__name__)
@@ -31,12 +30,9 @@ def hash_object(obj):
             str({k: hash_object(v) for k, v in obj.items()}).encode()
         ).hexdigest()
     elif isinstance(
-        obj, ScGPTConfig
+        obj, PretrainedConfig
     ):  # need to convert unhashable Path for ScGPTConfig
         obj_to_dict = obj.to_dict()
-        obj_to_dict["vocab_path"] = str(
-            obj_to_dict["vocab_path"]
-        )  # POSIX path objects are not hashable
         return hashlib.sha256(
             str({k: hash_object(v) for k, v in obj_to_dict.items()}).encode()
         ).hexdigest()

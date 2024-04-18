@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# TODO this could be split into two commands: one to install miniconda and another to start cellxgene
+# Needs to be run once if mounting conda as volume (instead of as part of the docker image)
 
-
-# Define the Miniconda version and installer filename
 MINICONDA_VERSION=latest
 PYTHON_VERSION=3.9
 
@@ -24,15 +22,3 @@ if [ ! -f "$INSTALL_DIR/bin/conda" ]; then
 else
     echo "Miniconda is already installed in $INSTALL_DIR."
 fi
-
-source $INSTALL_DIR/etc/profile.d/conda.sh
-source activate ${CONDA_ENV}
-# Activate the conda environment of your choice
-# source $INSTALL_DIR/bin/activate $CONDA_ENV
-
-# Run the provided command
-$@
-
-
-# If cellxgene fails, start a shell in the conda environment
-# exec /bin/bash --rcfile <(echo "source activate $CONDA_ENV")

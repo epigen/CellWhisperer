@@ -1,0 +1,11 @@
+name: llava
+channels:
+  - conda-forge
+  - nvidia
+  - defaults
+dependencies:
+  - python=3.10
+  - cuda-nvcc=12.3
+  - pip=24.0
+  - pip:
+    - -e ../modules/LLaVA/[train]

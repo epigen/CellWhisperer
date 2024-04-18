@@ -15,12 +15,14 @@ from transformers.configuration_utils import PretrainedConfig
 from transformers.processing_utils import ProcessorMixin
 from pathlib import Path
 
-from scgpt.tokenizer import GeneVocab
-import scgpt as scg
-from scgpt.data_collator import DataCollator
-from scgpt.model import TransformerModel
-from scgpt import logger
-from scgpt.utils import load_pretrained
+try:
+    from scgpt.tokenizer import GeneVocab
+    from scgpt.data_collator import DataCollator
+    from scgpt.model import TransformerModel
+    from scgpt import logger
+    from scgpt.utils import load_pretrained
+except ModuleNotFoundError:
+    logging.warning("scGPT not installed (only required if you want to use it).")
 
 from torch.utils.data import DataLoader, SequentialSampler
 from tqdm import tqdm

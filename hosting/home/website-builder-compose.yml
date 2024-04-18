@@ -1,7 +1,9 @@
 version: '3.8'
 services:
   website_builder:
-    build: .
+    build:
+      context: ../..
+    image: cellwhisperer
     volumes:
       - ~/cellwhisperer:/opt/cellwhisperer
       - ./docker_conda:/opt/miniconda3

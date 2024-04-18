@@ -44,5 +44,22 @@ ENV PATH=$INSTALL_DIR/bin:$PATH
 # Initialize Miniconda
 RUN conda init bash
 
+# Set channel_priority to flexible
+RUN conda config --set channel_priority flexible
+
+# Clone the repository (git@github.com:epigen/cellwhisperer.git --recurse-submodules) (or copy it in this case
+# RUN git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules /opt/cellwhisperer
+COPY . /opt/cellwhisperer
+
+# Change the working directory
+WORKDIR /opt/cellwhisperer
+
+# Install the dependencies
+RUN conda env create -f envs/main.yaml
+
+# Activate the environment
+COPY entrypoint.sh /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+
 # Set the default command to run when creating a new container
 CMD [ "/bin/bash" ]

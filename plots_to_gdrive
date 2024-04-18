@@ -1,0 +1,10 @@
+#!/bin/bash
+# this is run on muwhpc by a cronjob
+# set -e
+
+echo "starting sync" >> $HOME/plots_to_gdrive.log
+
+# check whether the gdrive is mounted
+/msc/home/mschae83/miniconda3/bin/rclone -v sync /msc/home/mschae83/cellwhisperer/results/plots gdrive:CellWhisperer/manuscript/server_plots/ 2>&1  >> $HOME/plots_to_gdrive.log
+
+echo "successfully updated" >> $HOME/plots_to_gdrive.log

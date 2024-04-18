@@ -1,0 +1,7 @@
+results/
+resources/
+data/
+metadata/
+.git/
+hosting/
+modules/cellxgene/client/node_modules/
