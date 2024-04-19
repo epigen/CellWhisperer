@@ -17,6 +17,8 @@ import hashlib
 import logging
 from cellwhisperer.config import get_cache_dir
 
+from transformers.configuration_utils import PretrainedConfig
+
 logger = logging.getLogger(__name__)
 
 
