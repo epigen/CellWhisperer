@@ -27,14 +27,9 @@ RUN_CONFIGS = [
     "scgpt",
 ]
 
-
-rule all:
-    input:
-        [PROJECT_DIR / config["paths"]["ablations"]["models"] / run_config / f"seed_{seed}.ckpt" for seed in SEEDS for run_config in RUN_CONFIGS]
-
 rule train:
     input:
-        delta_config="delta_config/{run_config}.yaml",
+        delta_config=ancient("delta_config/{run_config}.yaml"),
         base_config=ancient("base_config.yaml")
     output:
         PROJECT_DIR / config["paths"]["ablations"]["models"] / "{run_config}" / "seed_{seed}.ckpt"
@@ -52,7 +47,6 @@ rule plot_results:
     """
     CSV obtained from wandb
 
-    TODO the notebook is only on the server and it is actually broken in a tab
     """
     input:
         csv="wandb_export.csv"
@@ -62,11 +56,19 @@ rule plot_results:
     params:
         metrics = [
             "valfn_integration_TabSap/avg_bio",
-            "valfn_integration_TabSap/ASW_label__batch",
+            "valfn_integration_TabSap/ASW_label__batch",  # very narrow result range (0.83 - 0.86)
             "valfn_daniel_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/recall_at_5_macroAvg",
             "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
-            "valfn_zshot_TabSap_celltype_lvl/f1_macroAvg"]
+            "valfn_zshot_TabSap_celltype_lvl/f1_macroAvg"],
+        top_models = ["full_model", "no_archs4_data", "no_census_data"]  # , "scgpt"] <- daniel did not work...
     conda:
         "cellwhisperer"
     notebook:
         "notebooks/plot_results.py.ipynb"
+
+
+rule all:
+    input:
+        # [PROJECT_DIR / config["paths"]["ablations"]["models"] / run_config / f"seed_{seed}.ckpt" for seed in SEEDS for run_config in RUN_CONFIGS],
+        rules.plot_results.output.all_models_comparison
+    default_target: True

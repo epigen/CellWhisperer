@@ -24,7 +24,7 @@ trainer:
       entity: single-cellm
       reinit: null
       tags: null
-      group: ablation_study3
+      group: 
       notes: null
       magic: null
       config_exclude_keys: null

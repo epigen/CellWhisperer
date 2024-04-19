@@ -45,7 +45,8 @@ dependencies:
     - openai==1.14.2
     - loompy==3.0.7
     - tdigest==0.5.2.2
-    - plotly==5.3.1
+    - plotly==5.20.0
+    - kaleido==0.2.1
     - networkx==2.6.3
     - wandb==0.15.12
     - jsonargparse[signatures]==4.27.0

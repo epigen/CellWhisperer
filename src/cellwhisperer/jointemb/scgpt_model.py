@@ -55,10 +55,15 @@ class ScGPTDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         row = self.count_matrix[idx]
-        nonzero_idx = np.nonzero(row)[0]
+        nonzero_idx = np.nonzero(row)[
+            0
+        ]  # this is fishy somehow. <row> can be a float with values such as 0.3. they are nonzero, but become 0 when casted to int
         values = row[nonzero_idx].astype(
             np.int64
         )  # uint row matrixes cannot represent pad_token (-2)
+        if values.max() == 0:
+            values = np.ceil(row[nonzero_idx]).astype(np.int64)
+
         genes = self.gene_ids[nonzero_idx]
         # append <cls> token at the beginning
         genes = np.insert(genes, 0, self.vocab["<cls>"])
@@ -127,7 +132,7 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
         self.vocab_path = vocab_path
         self.pad_token = pad_token
         self.gene_col = gene_col
-        self.nproc = nproc
+        self.nproc = 0
 
         self.vocab = load_vocab(self.pad_token, self.vocab_path)
 
@@ -276,6 +281,11 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
                 subset=True,
                 flavor=self.adata_hvg_flavor,
             )
+
+        # make sure that there are no nans
+        adata.var[self.gene_col] = np.where(
+            adata.var[self.gene_col].isna(), adata.var.index, adata.var[self.gene_col]
+        )
         return adata
 
     def __call__(self, adata, *args, **kwargs) -> dict:
