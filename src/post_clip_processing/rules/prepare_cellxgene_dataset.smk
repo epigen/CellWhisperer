@@ -16,17 +16,16 @@ rule leiden_umap_embeddings:
 rule llava_annotate_clusters:
     """
     Generate CSV has two cols. (1) leiden cluster ID. (2) annotation
-    TODO
     """
     input:
         adata=rules.leiden_umap_embeddings.output.adata,
-        llava_model=ancient(config["paths"]["llava"]["finetuned_model_dir"].format(base_model=LLAVA_BASE_MODEL, model="{model}")),
+        llava_model=ancient(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"].format(base_model=LLAVA_BASE_MODEL, model="{model}")),
     output:
         csv=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_annotated_clusters.csv"
     conda:
         "llava2"
     params:
-        request="Provide a brief description of these cells.",
+        request="<s>[INST] Help me analyzing this sample of cells. Always respond in proper english sentences and in a tone of uncertainty. [/INST] Sure thing. What do you want to know? </s> [INST] Describe the biological state of these cells\n<image> [/INST]",
         num_beams=10
     resources:
         mem_mb=40000,
@@ -48,12 +47,12 @@ rule gpt4_curate_llava_annotations:
     output:
         curated_labels=protected(PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_curated_annotated_clusters.csv")
     params:
-        request="I will provide you with a comprehensive abstract that describes a cluster of cells. Your task is to provide a very short description of the cells in the cluster based on the term. If possible, describe biological concepts beyond just cell type names. Reply with less than six words!",
+        request="Condense this information into a short title of maximum 8 words. Focus on the biological state, rather than the source or any specific perturbations of the sample",
         max_num_clusters=200  # to prevent high GPT-4 cost
     conda:
         "cellwhisperer"
     notebook:
-        "../notebooks/gpt4_curate_llava_annotations.py.ipynb"  # TODO recopy from /msc/home/mschae83/cellwhisperer/src/post_clip_processing/notebooks/gpt4_curate_cluster_keywords.py.ipynb
+        "../notebooks/gpt4_curate_llava_annotations.py.ipynb"
 
 
 rule cellwhisperer_cluster_keywords:
@@ -105,7 +104,7 @@ rule compile_h5ad:
         # llava_labels=rules.llava_annotate_clusters.output.csv,  # NOTE: include this once the llava-approach becomes powerful enough
         umap_embedding=rules.leiden_umap_embeddings.output.adata,
         cellwhisperer_keyword_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels,
-        # cellwhisperer_llava_labels=rules.gpt4_curate_llava_annotations.output.curated_labels,
+        cellwhisperer_llava_labels=rules.gpt4_curate_llava_annotations.output.curated_labels,
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         processed_data=PROJECT_DIR / config["paths"]["model_processed_dataset"], # rules.process_full_dataset.output.model_outputs,
         enrichr_terms=PROJECT_DIR / config["paths"]["enrichr_terms_json"],
