@@ -112,19 +112,19 @@ services:
       - ~/cellwhisperer:/opt/cellwhisperer
       - ./docker_conda:/opt/miniconda3
 
-  cellxgene_daniel_dev:
-    <<: *cellxgene-service
-    command:
-      /bin/bash /start.sh source /dev_server.sh
-    volumes:
-      - ./dev_server.sh:/dev_server.sh
-      - ~/cellwhisperer/results/daniel/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ./llava_logs/daniel_dev/:/logs/
-      - ~/cellwhisperer:/opt/cellwhisperer
-      - ./docker_conda:/opt/miniconda3
-    ports:
-      - "3000:3000"
-      - "5005:5005"
+  # cellxgene_daniel_dev:
+  #   <<: *cellxgene-service
+  #   command:
+  #     /bin/bash /start.sh source /dev_server.sh
+  #   volumes:
+  #     - ./dev_server.sh:/dev_server.sh
+  #     - ~/cellwhisperer/results/daniel/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+  #     - ./llava_logs/daniel_dev/:/logs/
+  #     - ~/cellwhisperer:/opt/cellwhisperer
+  #     - ./docker_conda:/opt/miniconda3
+  #   ports:
+  #     - "3000:3000"
+  #     - "5005:5005"
 
   cellxgene_development_scvi:
     <<: *cellxgene-service
@@ -158,36 +158,44 @@ services:
       - ~/cellwhisperer:/opt/cellwhisperer
       - ./docker_conda:/opt/miniconda3
 
-  cellxgene_hcaorganoids_cancer__organoid:
+  cellxgene_bowel_disease:
     <<: *cellxgene-service
     volumes:
-      - ~/cellwhisperer/results/hcaorganoids_cancer__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ./llava_logs/hcaorganoids_cancer__organoid/:/logs/
-      - ~/cellwhisperer:/opt/cellwhisperer
-      - ./docker_conda:/opt/miniconda3
-  cellxgene_hcaorganoids_cancer__primary:
-    <<: *cellxgene-service
-    volumes:
-      - ~/cellwhisperer/results/hcaorganoids_cancer__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ./llava_logs/hcaorganoids_cancer__primary/:/logs/
+      - ~/cellwhisperer/results/bowel_disease/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./llava_logs/bowel_idisease/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
       - ./docker_conda:/opt/miniconda3
 
-  cellxgene_hcaorganoids_normal__primary:
-    <<: *cellxgene-service
-    volumes:
-      - ~/cellwhisperer/results/hcaorganoids_normal__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ./llava_logs/hcaorganoids_normal__primary/:/logs/
-      - ~/cellwhisperer:/opt/cellwhisperer
-      - ./docker_conda:/opt/miniconda3
+  # cellxgene_hcaorganoids_cancer__organoid:
+  #   <<: *cellxgene-service
+  #   volumes:
+  #     - ~/cellwhisperer/results/hcaorganoids_cancer__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+  #     - ./llava_logs/hcaorganoids_cancer__organoid/:/logs/
+  #     - ~/cellwhisperer:/opt/cellwhisperer
+  #     - ./docker_conda:/opt/miniconda3
+  # cellxgene_hcaorganoids_cancer__primary:
+  #   <<: *cellxgene-service
+  #   volumes:
+  #     - ~/cellwhisperer/results/hcaorganoids_cancer__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+  #     - ./llava_logs/hcaorganoids_cancer__primary/:/logs/
+  #     - ~/cellwhisperer:/opt/cellwhisperer
+  #     - ./docker_conda:/opt/miniconda3
 
-  cellxgene_hcaorganoids_normal__organoid:
-    <<: *cellxgene-service
-    volumes:
-      - ~/cellwhisperer/results/hcaorganoids_normal__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ./llava_logs/hcaorganoids_normal__organoid/:/logs/
-      - ~/cellwhisperer:/opt/cellwhisperer
-      - ./docker_conda:/opt/miniconda3
+  # cellxgene_hcaorganoids_normal__primary:
+  #   <<: *cellxgene-service
+  #   volumes:
+  #     - ~/cellwhisperer/results/hcaorganoids_normal__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+  #     - ./llava_logs/hcaorganoids_normal__primary/:/logs/
+  #     - ~/cellwhisperer:/opt/cellwhisperer
+  #     - ./docker_conda:/opt/miniconda3
+
+  # cellxgene_hcaorganoids_normal__organoid:
+  #   <<: *cellxgene-service
+  #   volumes:
+  #     - ~/cellwhisperer/results/hcaorganoids_normal__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+  #     - ./llava_logs/hcaorganoids_normal__organoid/:/logs/
+  #     - ~/cellwhisperer:/opt/cellwhisperer
+  #     - ./docker_conda:/opt/miniconda3
 
   # certificate renewal is run through my nixos configuration
   nginx:
@@ -216,18 +224,6 @@ services:
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    depends_on:
-      - nginx
-
-
-  certbot_nginx_manager:
-    image: docker:latest
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./scripts:/scripts
-    entrypoint: /bin/sh -c
-    command: >
-      "/scripts/renew-and-reload.sh"
     depends_on:
       - nginx
 
