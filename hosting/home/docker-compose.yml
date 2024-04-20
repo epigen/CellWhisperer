@@ -2,6 +2,8 @@
 # - ./docker_conda:/opt/miniconda3
 # - ~/cellwhisperer:/opt/cellwhisperer
 
+
+
 version: '3.8'
 services:
   cellwhisperer_clip:
@@ -14,6 +16,7 @@ services:
       - ~/cellwhisperer/results/models/jointemb/cellwhisperer_clip_v1.ckpt:/model.ckpt
       - cache:/cache/
       - ~/cellwhisperer:/opt/cellwhisperer
+      - ./docker_conda:/opt/miniconda3
     command: python src/model_server/main.py
     stdin_open: true
     tty: true
@@ -42,6 +45,8 @@ services:
     build:
       context: ../..
     image: cellwhisperer
+    volumes:
+      - ./docker_conda:/opt/miniconda3
     command: python -m llava.serve.controller --host 0.0.0.0 --port 10000
 
   cellwhisperer_llava_model:
@@ -54,8 +59,9 @@ services:
             - capabilities: [gpu]
               driver: nvidia
     volumes:
-      - ~/cellwhisperer/results/llava/finetuned/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1:/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1  # the name is important
+      - ~/cellwhisperer/results/llava/finetuned/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1:/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1:ro  # the name is important
       - cache:/cache/
+      - ./docker_conda:/opt/miniconda3
     environment:
       NVIDIA_VISIBLE_DEVICES: GPU-c38cbc2d-129a-dddf-9ed4-8a0e06763d33
       CONDA_ENV: llava
@@ -74,6 +80,7 @@ services:
       - ~/cellwhisperer/results/tabula_sapiens/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./llava_logs/tabsap/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
+      - ./docker_conda:/opt/miniconda3
     # TODO add --debug here if more debug info is needed
     command: cellxgene launch -v -p 5005  --host 0.0.0.0 --max-category-items 500 --backed /dataset.h5ad  "http://cellwhisperer_clip:8910/api"
     stdin_open: true
@@ -103,6 +110,7 @@ services:
       - ~/cellwhisperer/results/daniel/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./llava_logs/daniel/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
+      - ./docker_conda:/opt/miniconda3
 
   cellxgene_daniel_dev:
     <<: *cellxgene-service
@@ -113,6 +121,7 @@ services:
       - ~/cellwhisperer/results/daniel/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./llava_logs/daniel_dev/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
+      - ./docker_conda:/opt/miniconda3
     ports:
       - "3000:3000"
       - "5005:5005"
@@ -123,6 +132,7 @@ services:
       - ~/cellwhisperer/results/development4s_scvi/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./llava_logs/development_scvi/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
+      - ./docker_conda:/opt/miniconda3
 
   cellxgene_development_raw:
     <<: *cellxgene-service
@@ -130,6 +140,7 @@ services:
       - ~/cellwhisperer/results/development4s_raw/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./llava_logs/development_raw/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
+      - ./docker_conda:/opt/miniconda3
 
   cellxgene_geo:
     <<: *cellxgene-service
@@ -137,6 +148,7 @@ services:
       - ~/cellwhisperer/results/archs4_metasra/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./llava_logs/geo/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
+      - ./docker_conda:/opt/miniconda3
 
   cellxgene_car_t:
     <<: *cellxgene-service
@@ -144,6 +156,7 @@ services:
       - ~/cellwhisperer/results/car_t/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./llava_logs/car_t/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
+      - ./docker_conda:/opt/miniconda3
 
   cellxgene_hcaorganoids_cancer__organoid:
     <<: *cellxgene-service
@@ -151,12 +164,14 @@ services:
       - ~/cellwhisperer/results/hcaorganoids_cancer__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./llava_logs/hcaorganoids_cancer__organoid/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
+      - ./docker_conda:/opt/miniconda3
   cellxgene_hcaorganoids_cancer__primary:
     <<: *cellxgene-service
     volumes:
       - ~/cellwhisperer/results/hcaorganoids_cancer__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./llava_logs/hcaorganoids_cancer__primary/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
+      - ./docker_conda:/opt/miniconda3
 
   cellxgene_hcaorganoids_normal__primary:
     <<: *cellxgene-service
@@ -164,6 +179,7 @@ services:
       - ~/cellwhisperer/results/hcaorganoids_normal__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./llava_logs/hcaorganoids_normal__primary/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
+      - ./docker_conda:/opt/miniconda3
 
   cellxgene_hcaorganoids_normal__organoid:
     <<: *cellxgene-service
@@ -171,6 +187,7 @@ services:
       - ~/cellwhisperer/results/hcaorganoids_normal__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./llava_logs/hcaorganoids_normal__organoid/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
+      - ./docker_conda:/opt/miniconda3
 
   # certificate renewal is run through my nixos configuration
   nginx:
