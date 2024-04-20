@@ -56,6 +56,7 @@ WORKDIR /opt/cellwhisperer
 
 # Install the dependencies
 RUN conda env create -f envs/main.yaml
+RUN conda env create -f envs/llava.yaml
 
 # Activate the environment
 COPY entrypoint.sh /entrypoint.sh

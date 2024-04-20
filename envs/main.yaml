@@ -15,6 +15,7 @@ dependencies:
   - pytorch=2.1.0
   - lightning=2.1.0
   - scanpy=1.9.5
+  - scipy=1.12.0  # 1.13 fails with "Dataset.astype() got an unexpected keyword argument 'copy'" in `scipy/sparse/_compressed.py`, line 762, in `_minor_index_fancy`
   - torchvision=0.16.0
   - torchaudio=2.1.0
   - bioconda::pybiomart=0.2.0
