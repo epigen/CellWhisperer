@@ -82,7 +82,7 @@ services:
       - ~/cellwhisperer:/opt/cellwhisperer
       - ./docker_conda:/opt/miniconda3
     # TODO add --debug here if more debug info is needed
-    command: cellxgene launch -v -p 5005  --host 0.0.0.0 --max-category-items 500 --backed /dataset.h5ad  "http://cellwhisperer_clip:8910/api"
+    command: cellxgene launch -v -p 5005  --host 0.0.0.0 --max-category-items 500 --var-names gene_name --backed /dataset.h5ad  "http://cellwhisperer_clip:8910/api"
     stdin_open: true
     tty: true
     restart: unless-stopped
