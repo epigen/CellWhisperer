@@ -142,13 +142,13 @@ services:
       - ~/cellwhisperer:/opt/cellwhisperer
       - ./docker_conda:/opt/miniconda3
 
-  cellxgene_geo:
-    <<: *cellxgene-service
-    volumes:
-      - ~/cellwhisperer/results/archs4_metasra/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ./llava_logs/geo/:/logs/
-      - ~/cellwhisperer:/opt/cellwhisperer
-      - ./docker_conda:/opt/miniconda3
+  # cellxgene_geo:
+  #   <<: *cellxgene-service
+  #   volumes:
+  #     - ~/cellwhisperer/results/archs4_metasra/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+  #     - ./llava_logs/geo/:/logs/
+  #     - ~/cellwhisperer:/opt/cellwhisperer
+  #     - ./docker_conda:/opt/miniconda3
 
   cellxgene_car_t:
     <<: *cellxgene-service
@@ -211,7 +211,7 @@ services:
       - "443:443"
     depends_on:
       - cellxgene_tabsap
-      - cellxgene_geo
+      # - cellxgene_geo
       - cellxgene_development_raw
       - cellxgene_development_scvi
       - cellxgene_daniel
