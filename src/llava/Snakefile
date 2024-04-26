@@ -20,6 +20,7 @@ PROJECTOR_TYPE = "mlp2x_8t_gelu"  # TODO fails if > 8 (12 and 16 both failed. ei
 
 
 # random sample (n=100) of the GSVA datasets (which are already weight-corrected)
+# TODO: weight correction for archs4 only used the transcriptome- not the annotation-embeddings. Due to this however, there are some single cells in here, which can count as data leakage. Solution: Take single_cell_probability > 0.2 and eliminate these samples in TEST_IDS.
 TEST_IDS = pd.read_csv("./test_ids", header=None).iloc[:, 0].to_list()
 
 # For snakemake efficiency, extract the samples once and store them
@@ -48,13 +49,20 @@ MODELS= [
     "no_archs4_data_42_0.0005_09cid8z6"  # does GEO data improve conversation ability? (I guess we would need a disease-centric validation set for this...)
 ]
 
+# TODO archs4_metasra is actually a combination of archs4 and tabsap. I should rename it here (and everywhere)!
 rule all:
     input:
-        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "comparison.png",
-               dataset=["archs4_metasra", "tabula_sapiens"],  # evaluation-dataset!
+        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "comparison.svg",
+               dataset=["archs4_metasra", "tabula_sapiens"],  # these are evaluation-datasets here!
                base_model=["Mistral-7B-Instruct-v0.2"],  # TODO test as well: "BioMistral-7B", "BioMistral-7B-DARE",
                model=MODELS
-               )
+               ),
+        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4_review_summary.svg",
+               dataset=["archs4_metasra"],  # these are evaluation-datasets here!  # TODO evaluation of tabula_sapiens dataset only makes sense if I provide another judgement prompt
+               base_model=["Mistral-7B-Instruct-v0.2"],  # TODO test as well: "BioMistral-7B", "BioMistral-7B-DARE",
+               model=MODELS
+               ),
+
     default_target: True
 
 include: "../shared/rules/dataset_processing.smk"
