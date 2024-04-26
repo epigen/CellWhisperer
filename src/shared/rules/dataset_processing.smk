@@ -38,3 +38,27 @@ rule process_full_dataset:
     notebook:
         "../notebooks/process_full_dataset.py.ipynb"
 
+rule compute_top_genes:
+    """
+    Compute the top genes for each sample based on the gene normalizers.
+
+    All genes are considered such that also genes may come up that are not reflected Geneformer's vocabulary. This may be fine, since these non-represented genes are likely impacting other, represented, genes.
+
+    Requires a lot of RAM to be able to transpose the sparse matrix (required for efficient computation)
+    """
+
+    input:
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
+        gene_normalizers=rules.compute_gene_normalizers.output.gene_mean_log1ps,
+        # HTTP.remote("https://huggingface.co/ctheodoris/Geneformer/resolve/main/geneformer/gene_median_dictionary.pkl", keep_local=True)[0],
+    output:
+        top_genes=PROJECT_DIR / "results" / "{dataset}" / "top_genes.parquet"
+    params:
+        top_n_genes=100,
+    resources:
+        mem_mb=500000,
+        slurm="cpus-per-task=2"
+    conda:
+        "cellwhisperer"
+    notebook:
+        "../notebooks/compute_top_genes.py.ipynb"

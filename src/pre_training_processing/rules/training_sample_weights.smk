@@ -1,6 +1,6 @@
 rule transcriptome_representation:
     """
-    Simply normalize the data an bring it into the expected npz format
+    Simply normalize the data and bring it into the expected npz format
 
     """
     input:

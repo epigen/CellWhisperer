@@ -101,7 +101,6 @@ rule compile_h5ad:
     """
 
     input:
-        # llava_labels=rules.llava_annotate_clusters.output.csv,  # NOTE: include this once the llava-approach becomes powerful enough
         umap_embedding=rules.leiden_umap_embeddings.output.adata,
         cellwhisperer_keyword_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels,
         cellwhisperer_llava_labels=rules.gpt4_curate_llava_annotations.output.curated_labels,
@@ -109,7 +108,8 @@ rule compile_h5ad:
         processed_data=PROJECT_DIR / config["paths"]["model_processed_dataset"], # rules.process_full_dataset.output.model_outputs,
         enrichr_terms=PROJECT_DIR / config["paths"]["enrichr_terms_json"],
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
-        gene_log1p_normalizers=rules.compute_gene_normalizers.output.gene_mean_log1ps,
+        gene_log1p_normalizers=rules.compute_gene_normalizers.output.gene_mean_log1ps,  # NOTE not required anymore actually
+        top_genes=rules.compute_top_genes.output.top_genes,
     output:
         adata=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "cellxgene.h5ad"
     params:
