@@ -1,6 +1,5 @@
 #!/bin/bash
 # this is run on muwhpc by a cronjob
-# set -e
 
 echo "starting sync" >> $HOME/plots_to_gdrive.log
 

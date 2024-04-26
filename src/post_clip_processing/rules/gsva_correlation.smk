@@ -45,13 +45,15 @@ rule plot_gsva_correlations:
         term_level_correlations=PROJECT_DIR / config["paths"]["gsva"]["plots"] / "gsva_term_level_correlations.svg",
         omim_correlations=PROJECT_DIR / config["paths"]["gsva"]["plots"] / "gsva_omim_correlations.svg",
         cw_binarized_gsva_scores=PROJECT_DIR / config["paths"]["gsva"]["plots"] / "cw_binarized_gsva_scores.svg",
+        library_ks_statistics=PROJECT_DIR / config["paths"]["gsva"]["plots"] / "gsva_library_ks_statistics.svg",  # also binarized
+        cherry_picked_examples=PROJECT_DIR / config["paths"]["gsva"]["plots"] / "gsva_cherry_picked_examples.svg",
     params:
         selected_top_term="Pluripotent Stem Cells"
     conda:
         "cellwhisperer"
     resources:
-        mem_mb=40000,
-        slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
+        mem_mb=200000,
+        slurm="cpus-per-task=2"
     log:
         notebook="../logs/plot_gsva_correlation_{dataset}_{model}.ipynb"
     notebook:
