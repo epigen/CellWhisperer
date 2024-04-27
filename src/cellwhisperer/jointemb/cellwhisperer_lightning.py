@@ -317,6 +317,9 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
     def test_step(self, batch, batch_idx):
         return self.process_step(batch, batch_idx, "test")
+    
+    def on_test_epoch_end(self):
+        self.on_validation_epoch_end()
 
     def configure_optimizers(self):
         """

@@ -128,9 +128,18 @@ class CellWhispererCLI(LightningCLI):
         # )
 
     def before_instantiate_classes(self) -> None:
-        logging.basicConfig(level=self.config["fit.log_level"])
 
-        if self.config["fit.dap_debug"]:
+        if "fit.log_level" in self.config:
+            log_level = self.config["fit.log_level"]
+        elif "test.log_level" in self.config:
+            log_level = self.config["test.log_level"]
+        else:
+            raise ValueError("No log level found")
+        logging.basicConfig(level=log_level.upper())
+
+        if "fit.dap_debug" in self.config and self.config["fit.dap_debug"]:
+            start_debugger(wait_for_client=True)
+        if "test.dap_debug" in self.config and self.config["test.dap_debug"]:
             start_debugger(wait_for_client=True)
 
     def before_fit(self) -> None:
@@ -183,6 +192,16 @@ class CellWhispererCLI(LightningCLI):
 
         # disabled for sweeps  # TODO could check for trainer.logger.run.sweep_id or so?
         # self.trainer.logger.watch(self.model, log="gradients")
+    
+    def before_test(self) -> None:
+        if not self.config["test.model_ckpt"]:
+            raise ValueError("No checkpoint path found. Please provide a checkpoint path via --model_ckpt.")
+
+        elif self.config["test.model_ckpt"]:  # model loading needs to be done implicitly
+            logger.warning("Loading model from checkpoint. All other args are ignored")
+            self.model = TranscriptomeTextDualEncoderLightning.load_from_checkpoint(
+                self.config["test.model_ckpt"]
+            )
 
     def after_fit(self) -> None:
         if self.config["fit.best_model_path"] is not None:

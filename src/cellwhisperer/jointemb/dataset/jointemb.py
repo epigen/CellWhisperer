@@ -315,7 +315,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
     def val_dataloader(self):
         """
-        In principle, we could also return a list of DataLoaders, but it is currently incompatibl with RetrievalScoreCalculator
+        In principle, we could also return a list of DataLoaders, but it is currently incompatible with RetrievalScoreCalculator
         """
         return DataLoader(
             ConcatDataset(self.val_datasets),
@@ -324,3 +324,8 @@ class JointEmbedDataModule(pl.LightningDataModule):
             drop_last=False,
             shuffle=False,
         )
+    
+    def test_dataloader(self):
+        # Return the validation dataloader for testing
+        return self.val_dataloader()
+

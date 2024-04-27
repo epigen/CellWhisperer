@@ -42,25 +42,52 @@ rule train:
         cellwhisperer fit --config {input.base_config} --config {input.delta_config} --seed_everything {wildcards.seed} --last_model_path {output} --wandb {wildcards.run_config}_{wildcards.seed}
     """
 
+rule test:
+    input:
+        delta_config=ancient("delta_config/{run_config}.yaml"),
+        base_config=ancient("base_config.yaml"),
+        model_path=rules.train.output
+    output:
+        PROJECT_DIR / config["paths"]["ablations"]["plots"] / "test_results" / "{run_config}" / "seed_{seed}.log"
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=lambda wildcards: 1000000 if wildcards.run_config == "scgpt" else 400000,
+        slurm="cpus-per-task=20 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
+    shell: """
+        cellwhisperer test --config {input.base_config} --config {input.delta_config} --model_ckpt {input.model_path} --wandb {wildcards.run_config}_{wildcards.seed} --trainer.logger.init_args.group ablation_study3_test --seed_everything {wildcards.seed} > {output}
+    """
+
+rule wandb_export:
+    input:
+        expand(rules.test.output, seed=SEEDS, run_config=RUN_CONFIGS),
+    output:
+        "wandb_export.csv"
+    shell: """
+    echo "Go to wandb and export the scores. You've got 2 minutes ;)"
+    sleep 2
+    """
+
 
 rule plot_results:
     """
     CSV obtained from wandb
-
     """
     input:
-        csv="wandb_export.csv"
+        csv=rules.wandb_export.output[0]
     output:
         top_models_metrics_details=PROJECT_DIR / config["paths"]["ablations"]["plots"] / "top_models_metrics_details.pdf",
         all_models_comparison=PROJECT_DIR / config["paths"]["ablations"]["plots"] / "all_models_comparison.pdf",
     params:
         metrics = [
             "valfn_integration_TabSap/avg_bio",
-            "valfn_integration_TabSap/ASW_label__batch",  # very narrow result range (0.83 - 0.86)
-            "valfn_daniel_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/recall_at_5_macroAvg",
+            "valfn_integration_TabSap/ASW_label__batch",  # relatively narrow result range (0.83 - 0.86)
+            "valfn_daniel_dedup/recall_at_5_macroAvg",  # Note: this is the average of the two below
+            # "valfn_daniel_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/transcriptomes_as_classes_recall_at_5_macroAvg",
+            # "valfn_daniel_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_recall_at_5_macroAvg",
             "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
             "valfn_zshot_TabSap_celltype_lvl/f1_macroAvg"],
-        top_models = ["full_model", "no_archs4_data", "no_census_data"]  # , "scgpt"] <- daniel did not work...
+        top_models = ["full_model", "no_archs4_data", "no_census_data", "scgpt"]
     conda:
         "cellwhisperer"
     notebook:
