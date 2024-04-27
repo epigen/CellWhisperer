@@ -5,15 +5,16 @@ rule combine_processed_data:
     Since we use `orig_ids` to match the data, we can't simply concatenate the arrays.
     """
     input:
-        archs4_metasra=rules.process_full_dataset.output.model_outputs.format(dataset="archs4_metasra", model="{model}"),
-        cellxgene_census=rules.process_full_dataset.output.model_outputs.format(dataset="cellxgene_census", model="{model}"),
+        expand(rules.process_full_dataset.output.model_outputs, dataset=["archs4_metasra", "tabula_sapiens", "cellxgene_census", "daniel"], model="{model}"),
     output:
         combined=PROJECT_DIR / config["paths"]["llava"]["root"] / "combined_processed_data" / "{model}.npz"
     resources:
-        mem_mb=100000,
+        mem_mb=100000
     run:
         import numpy as np
         datas = [dict(np.load(dataset_fn, allow_pickle=True)) for dataset_fn in input]
+
+        assert len(set.union(*[set(d["orig_ids"]) for d in datas])) == sum(len(d["orig_ids"]) for d in datas), "No duplicate ids allowed"
 
         combined = {k: np.concatenate([d[k] for d in datas]) for k in datas[0].keys()}
         np.savez(output.combined, **combined)

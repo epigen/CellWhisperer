@@ -201,6 +201,16 @@ rule aggregate_llava_stage2_dataset:
         "cellwhisperer"
     output:
         llava_stage2_dataset=PROJECT_DIR / config["paths"]["llava"]["finetune_text_dataset"],
-        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="archs4_metasra")
+        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="main_uncurated")
     script:
         "../scripts/aggregate_llava_stage2_dataset.py"
+
+rule curate_evaluation_dataset:
+    input:
+        rules.aggregate_llava_stage2_dataset.output.evaluation_dataset,
+    output:
+        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="main")
+    shell: """
+        echo "Please copy the evaluation dataset to the correct location and curate it manually. /home/moritz/Projects/cellwhisperer/src/experiments/422_curate_llava_testset/README.md"
+        cp /home/moritz/Projects/cellwhisperer/src/experiments/422_curate_llava_testset/curated.json {output.evaluation_dataset}
+    """
