@@ -27,6 +27,8 @@ rule download_data:
         adata = anndata.AnnData(X=df.T, var=df.index.to_frame(), obs=df.columns.to_frame())
         adata.obs.index.name = "sample_name"
         adata.obs.columns = ["sample_name"]
+        adata.var.columns = ["gene_name"]
+        adata.index.name = "gene_name"
 
         adata.write_h5ad(output.read_count_table)
 

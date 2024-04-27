@@ -48,7 +48,7 @@ rule plot_gsva_correlations:
         library_ks_statistics=PROJECT_DIR / config["paths"]["gsva"]["plots"] / "gsva_library_ks_statistics.svg",  # also binarized
         cherry_picked_examples=PROJECT_DIR / config["paths"]["gsva"]["plots"] / "gsva_cherry_picked_examples.svg",
     params:
-        selected_top_term="Pluripotent Stem Cells"
+        selected_top_term="Pluripotent Stem Cells"  # not the one we want..
     conda:
         "cellwhisperer"
     resources:
