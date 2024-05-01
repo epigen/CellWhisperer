@@ -88,10 +88,6 @@ services:
     restart: unless-stopped
     environment:
       NVIDIA_VISIBLE_DEVICES: GPU-c38cbc2d-129a-dddf-9ed4-8a0e06763d33
-      # CXG_CLIENT_PORT: 3000
-      CXG_OPTIONS: "--host 0.0.0.0 --max-category-items 500 --backed"
-      CXG_SERVER_PORT: 5005
-      DATASET: "/dataset.h5ad"
       LOGDIR: "/logs/"
       MODEL: "http://cellwhisperer_clip:8910/api"
       JEST_ENV: "prod"
@@ -103,6 +99,8 @@ services:
           memory: 16G
     depends_on:
       - cellwhisperer_clip
+      - cellwhisperer_llava_model
+      - cellwhisperer_llava_controller
 
   cellxgene_daniel:
     <<: *cellxgene-service
@@ -142,13 +140,17 @@ services:
       - ~/cellwhisperer:/opt/cellwhisperer
       - ./docker_conda:/opt/miniconda3
 
-  # cellxgene_geo:
-  #   <<: *cellxgene-service
-  #   volumes:
-  #     - ~/cellwhisperer/results/archs4_metasra/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-  #     - ./llava_logs/geo/:/logs/
-  #     - ~/cellwhisperer:/opt/cellwhisperer
-  #     - ./docker_conda:/opt/miniconda3
+  cellxgene_geo:
+    <<: *cellxgene-service
+    volumes:
+      - ~/cellwhisperer/results/archs4_metasra/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./llava_logs/geo/:/logs/
+      - ~/cellwhisperer:/opt/cellwhisperer
+      - ./docker_conda:/opt/miniconda3
+    deploy:
+      resources:
+        limits:
+          memory: 20G
 
   cellxgene_car_t:
     <<: *cellxgene-service

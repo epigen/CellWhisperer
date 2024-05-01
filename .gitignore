@@ -6,6 +6,7 @@ resources/
 data/
 metadata/
 results/
+figures
 
 cellwhisperer_env/
 
