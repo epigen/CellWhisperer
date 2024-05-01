@@ -56,6 +56,7 @@ datasets:
   - development4s_scvi
   - car_t
   - bowel_disease
+  - gut_cell_atlas
   # TODO hca organoids
 
 retrieval_validation_sets:

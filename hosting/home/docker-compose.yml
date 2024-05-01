@@ -199,6 +199,14 @@ services:
   #     - ~/cellwhisperer:/opt/cellwhisperer
   #     - ./docker_conda:/opt/miniconda3
 
+  cellxgene_gut_cell_atlas:
+    <<: *cellxgene-service
+    volumes:
+      - ~/cellwhisperer/results/gut_cell_atlas/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./llava_logs/gut_cell_atlas/:/logs/
+      - ~/cellwhisperer:/opt/cellwhisperer
+      - ./docker_conda:/opt/miniconda3
+
   # certificate renewal is run through my nixos configuration
   nginx:
     image: nginx:latest
@@ -213,11 +221,13 @@ services:
       - "443:443"
     depends_on:
       - cellxgene_tabsap
-      # - cellxgene_geo
+      - cellxgene_geo
       - cellxgene_development_raw
       - cellxgene_development_scvi
       - cellxgene_daniel
       - cellxgene_car_t
+      - cellxgene_bowel_disease
+      - cellxgene_gut_cell_atlas
       # ...
     restart: unless-stopped
 
