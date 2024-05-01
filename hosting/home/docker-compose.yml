@@ -229,26 +229,5 @@ services:
     depends_on:
       - nginx
 
-  # Note: Can be deleted
-  ngrok:
-    image: ngrok/ngrok:latest
-    restart: unless-stopped
-    command:
-      # - "start"  # tried to start with config but did not work
-      # - "--all"
-      - "http"
-      - "nginx:80"
-      - "--basic-auth"
-      - "review:iclr2024-mlgenx"
-      - "--domain"
-      - "upright-communal-panda.ngrok-free.app"
-      - "--config"
-      - "/etc/ngrok.yml" # ,/ngrok.yml"
-    volumes:
-      - ~/.config/ngrok/ngrok.yml:/etc/ngrok.yml
-      # - ./ngrok.yml:/ngrok.yml
-    ports:
-      - 4040:4040
-
 volumes:
   cache:
