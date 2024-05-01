@@ -9,7 +9,8 @@ CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
 TARGET_DATASETS = config["datasets"]  # config["datasets"] "tabula_sapiens",
 LLAVA_BASE_MODEL = "Mistral-7B-Instruct-v0.2"
 
-GPU_TYPE = "a100"
+# GPU_TYPE = "a100"
+GPU_TYPE = "a100-sxm4-80gb"
 
 include: "../shared/rules/dataset_processing.smk"
 include: "rules/prepare_cellxgene_dataset.smk"
