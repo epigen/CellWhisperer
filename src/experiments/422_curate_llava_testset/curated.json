@@ -2040,7 +2040,7 @@
     "conversations": [
            {
         "from": "human",
-        "value": "What can you tell me about the cell types in this sample?"
+        "value": "What can you tell me about the cell types in this sample?\n<image>"
       },
       {
         "from": "gpt",
@@ -2150,7 +2150,7 @@
     "conversations": [
       {
         "from": "human",
-        "value": "From what type of cells isthis RNA-Seq analysis?\n<image>"
+        "value": "From what type of cells is this RNA-Seq analysis?\n<image>"
       },
       {
         "from": "gpt",

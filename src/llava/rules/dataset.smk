@@ -214,3 +214,18 @@ rule curate_evaluation_dataset:
         echo "Please copy the evaluation dataset to the correct location and curate it manually. /home/moritz/Projects/cellwhisperer/src/experiments/422_curate_llava_testset/README.md"
         cp /home/moritz/Projects/cellwhisperer/src/experiments/422_curate_llava_testset/curated.json {output.evaluation_dataset}
     """
+
+
+rule tabsap_celltype_evaluation_dataset:
+    input:
+        dataset=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="tabula_sapiens"),
+    output:
+        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="tabula_sapiens"),
+    params:
+        celltypes=config["top20_lung_liver_blood_celltypes"],  # TODO use all?
+        num_cells_per_celltype=20,
+        question="Which cell type is this cell?"
+    conda:
+        "cellwhisperer"
+    notebook:
+        "../notebooks/tabsap_celltype_evaluation_dataset.py.ipynb"

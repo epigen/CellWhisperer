@@ -40,7 +40,17 @@ DETAILED_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[NUM_COMPLEX_SAMPLES:CONVERSATIO
 scattergather:
     split=128
 
+INSTRUCTION_PROMPT = "Help me analyzing this sample of cells. Respond in proper english in a tone of uncertainty and focus on the biology of the sample rather than any potential donor or patient information (e.g. do not mention age and sex). Start by listing the top genes and, optionally, gene sets in this sample."
+INSTRUCTION_RESPONSE = "Sure. The top normalized genes are {top_genes}. Note that are strongly expressed genes beyond the ones I just listed."
+INSTRUCTION_RESPONSE_GENE_SETS_EXTENSION=" The top gene sets are {top_gene_sets}. Also here, note that there are strongly active gene sets beyond the ones I just listed."
+INSTRUCTION_PROMPT_TEXT_ONLY =  """Respond to my request regarding a sample of cells characterized by their top-expressed genes and gene sets. Respond directly and concisely without much contemplation and in less than 3 sentences with a tone of uncertainty and a focus on the biology of the sample.
 
+Top genes: {top_genes}
+
+Top gene sets: {top_gene_sets}
+
+Request: {question}
+"""
 
 MODELS= [
     # "locking_mode_UU_0_0.0001_x5p78fy7",  # is 'UU' better? # TODO loading fails, because the 'UU' is not properly recognized and the transcriptome part is 'locked away', leading to 'Unexpected key(s) in state_dict: "model.transcriptome_model.geneformer_model.bert.encoder.layer.6.attention.self.query.weight",....'
@@ -52,16 +62,16 @@ MODELS= [
 # TODO archs4_metasra is actually a combination of archs4 and tabsap. I should rename it here (and everywhere)!
 rule all:
     input:
-        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "comparison.svg",
-               dataset=["main", "tabula_sapiens"],  # these are evaluation-datasets here!
-               base_model=["Mistral-7B-Instruct-v0.2"],  # TODO test as well: "BioMistral-7B", "BioMistral-7B-DARE",
-               model=MODELS
-               ),
-        # expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4_review_summary.svg",
-        #        dataset=["main"],  # these are evaluation-datasets here!  # TODO evaluation of tabula_sapiens dataset only makes sense if I provide another judgement prompt
+        # expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "comparison.svg",
+        #        dataset=["main", "tabula_sapiens"],  # these are evaluation-datasets here!
         #        base_model=["Mistral-7B-Instruct-v0.2"],  # TODO test as well: "BioMistral-7B", "BioMistral-7B-DARE",
         #        model=MODELS
-        #        ),
+        #        ),  # broken -.- (sometimes OOMs out of nowhere)
+        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4_review_summary.svg",
+               dataset=["main"],  # these are evaluation-datasets here!  # TODO evaluation of tabula_sapiens dataset only makes sense if I provide another judgement prompt
+               base_model=["Mistral-7B-Instruct-v0.2"],  # TODO test as well: "BioMistral-7B", "BioMistral-7B-DARE",
+               model=MODELS
+               )
 
     default_target: True
 
@@ -69,3 +79,4 @@ include: "../shared/rules/dataset_processing.smk"
 include: "rules/dataset.smk"
 include: "rules/training.smk"
 include: "rules/evaluation.smk"
+include: "rules/benchmark.smk"
