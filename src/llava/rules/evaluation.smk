@@ -16,12 +16,13 @@ rule llava_evaluation_perplexity:
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
         # image_data=rules.process_full_dataset.output.model_outputs.format(dataset="{dataset}", model=config["model_name_path_map"]["cellwhisperer"]),
         image_data=rules.combine_processed_data.output.combined.format(model=config["model_name_path_map"]["cellwhisperer"]),
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     conda:
         "llava2"
     output:
         log_perplexity_ratio=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "log_mean_perplexity.ratio",  # smaller is better log(ppl_real/ppl_neg_control)
         all_perplexities=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "all_perplexities.csv",
-        comparison_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "comparison.svg"
+        comparison_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "perplexity_quantile.svg"
     params:
         num_projector_tokens=int(PROJECTOR_TYPE.split("_")[1].strip("t")),
         background_shuffle=lambda wildcards: "transcriptome" if wildcards.dataset == "archs4_metasra" else "llm-response",

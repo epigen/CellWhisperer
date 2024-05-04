@@ -50,7 +50,7 @@ rule llava_eval_gpt4_review_summarize:
     input:
         evaluation=rules.llava_eval_gpt4_review.output.evaluation,
         archs4_data=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="archs4_metasra"),
-        mpl_style=PROJECT_DIR / config["plot_style"]
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
         overview_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4_review_summary.svg"
     conda:

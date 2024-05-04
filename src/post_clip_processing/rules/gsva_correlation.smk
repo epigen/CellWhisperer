@@ -38,6 +38,7 @@ rule plot_gsva_correlations:
     input:
         cw_transcriptome_term_scores=rules.cw_transcriptome_term_scores.output.cw_transcriptome_term_scores,
         gsva_results=PROJECT_DIR / config["paths"]["gsva"]["result"],
+        mpl_style=PROJECT_DIR / config["plot_style"]
     output:
         gsva_correlation_results=PROJECT_DIR / config["paths"]["gsva"]["correlation"],
         top_term_correlation=PROJECT_DIR / config["paths"]["gsva"]["plots"] / "gsva_top_term_correlation.svg",

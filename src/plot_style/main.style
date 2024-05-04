@@ -35,7 +35,6 @@ axes.titlelocation: center
 axes.titlepad: 6.0
 axes.titlesize: 8.0
 axes.titleweight: normal
-axes.titley: None
 axes.unicode_minus: True
 axes.xmargin: 0.05
 axes.ymargin: 0.05
@@ -44,7 +43,6 @@ axes3d.grid: True
 axes3d.xaxis.panecolor: (0.95, 0.95, 0.95, 0.5)
 axes3d.yaxis.panecolor: (0.9, 0.9, 0.9, 0.5)
 axes3d.zaxis.panecolor: (0.925, 0.925, 0.925, 0.5)
-boxplot.bootstrap: None
 boxplot.boxprops.color: black
 boxplot.boxprops.linestyle: -
 boxplot.boxprops.linewidth: 1.0
@@ -83,7 +81,6 @@ boxplot.whiskerprops.linewidth: 1.0
 boxplot.whiskers: 1.5
 contour.algorithm: mpl2014
 contour.corner_mask: True
-contour.linewidth: None
 contour.negative_linestyle: dashed
 date.autoformatter.day: %Y-%m-%d
 date.autoformatter.hour: %m-%d %H
@@ -166,14 +163,13 @@ legend.frameon: True
 legend.handleheight: 0.7
 legend.handlelength: 2.0
 legend.handletextpad: 0.8
-legend.labelcolor: None
 legend.labelspacing: 0.5
 legend.loc: upper right
 legend.markerscale: 1.0
 legend.numpoints: 1
 legend.scatterpoints: 1
 legend.shadow: False
-legend.title_fontsize: None
+legend.title_fontsize: 6.0
 lines.antialiased: True
 lines.color: C0
 lines.dash_capstyle: butt
@@ -183,7 +179,6 @@ lines.dashed_pattern: 3.7, 1.6
 lines.dotted_pattern: 1.0, 1.65
 lines.linestyle: -
 lines.linewidth: 2.0
-lines.marker: None
 lines.markeredgecolor: auto
 lines.markeredgewidth: 1.0
 lines.markerfacecolor: auto
@@ -210,7 +205,6 @@ patch.force_edgecolor: False
 patch.linewidth: 1.0
 path.simplify: True
 path.simplify_threshold: 0.111111111111
-path.sketch: None
 path.snap: True
 pcolor.shading: auto
 pcolormesh.snap: True
@@ -226,7 +220,6 @@ ps.distiller.res: 6000
 ps.fonttype: 3
 ps.papersize: letter
 ps.useafm: False
-ps.usedistiller: None
 savefig.bbox: tight
 savefig.dpi: figure
 savefig.edgecolor: auto
@@ -237,8 +230,7 @@ savefig.pad_inches: 0.1
 savefig.transparent: False
 scatter.edgecolors: face
 scatter.marker: o
-svg.fonttype: path
-svg.hashsalt: None
+svg.fonttype: none
 svg.image_inline: True
 text.antialiased: True
 text.color: black

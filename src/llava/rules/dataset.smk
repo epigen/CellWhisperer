@@ -224,7 +224,8 @@ rule tabsap_celltype_evaluation_dataset:
     params:
         celltypes=config["top20_lung_liver_blood_celltypes"],  # TODO use all?
         num_cells_per_celltype=20,
-        question="Which cell type is this cell?"
+        question="Which cell type is this cell?",
+        response_prefix="This cell is a " ,
     conda:
         "cellwhisperer"
     notebook:
