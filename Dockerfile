@@ -47,7 +47,7 @@ RUN conda init bash
 # Set channel_priority to flexible
 RUN conda config --set channel_priority flexible
 
-# Clone the repository (git@github.com:epigen/cellwhisperer.git --recurse-submodules) (or copy it in this case
+# Clone the repository (git@github.com:epigen/cellwhisperer.git --recurse-submodules) (or copy it in this case)
 # RUN git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules /opt/cellwhisperer
 COPY . /opt/cellwhisperer
 
@@ -61,6 +61,13 @@ RUN conda env create -f envs/llava.yaml
 # Activate the environment
 COPY entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
+
+# Build the web app
+RUN git config --global --add safe.directory /opt/cellwhisperer/modules/cellxgene
+RUN cd modules/cellxgene && CONDA_ENV=cellwhisperer /entrypoint.sh make build-for-server-dev
+
+# [Optional] Install scgpt
+# RUN CONDA_ENV=cellwhisperer /entrypoint.sh bash envs/install_scgpt_after_env_creation.sh
 
 # Set the default command to run when creating a new container
 CMD [ "/bin/bash" ]
