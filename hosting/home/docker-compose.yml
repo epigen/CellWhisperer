@@ -75,6 +75,7 @@ services:
       - ~/cellwhisperer/results/tabula_sapiens/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ~/cellwhisperer/hosting/home/cellxgene_config.yaml:/cellxgene_config.yaml:ro
       - ./llava_logs/tabsap/:/logs/
+      - ~/cellwhisperer:/opt/cellwhisperer
     command: gunicorn --worker-class gevent --bind 0.0.0.0:5005 server.app.wsgi:application --timeout 60
     stdin_open: true
     tty: true
@@ -110,7 +111,7 @@ services:
   cellxgene_development_scvi:
     <<: *cellxgene-service
     volumes:
-      - ~/cellwhisperer/results/development4s_scvi/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ~/cellwhisperer/results/development_merged5000/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ~/cellwhisperer/hosting/home/cellxgene_config.yaml:/cellxgene_config.yaml:ro
       - ./llava_logs/development_scvi/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer

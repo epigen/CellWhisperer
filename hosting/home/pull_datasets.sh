@@ -9,6 +9,7 @@ MODEL="cellwhisperer_clip_v1"
 datasets=$(python -c "import yaml; print(' '.join(yaml.safe_load(open('../../config.yaml'))['datasets']))")
 
 for dataset in $datasets; do
+    echo $dataset
     mkdir -p /home/moritz/cellwhisperer/results/$dataset/$MODEL
     rsync -avz --partial --progress  $HOST:/msc/home/mschae83/cellwhisperer/results/$dataset/$MODEL/cellxgene.h5ad /home/moritz/cellwhisperer/results/$dataset/$MODEL/cellxgene.h5ad
 done
