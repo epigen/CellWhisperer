@@ -1,3 +1,9 @@
+# About the Snakefile
+The Snakefile is a central resource of the code executed to arrive at the final output (the archs4 dataset). However, I never executed it using Snakemake but rather did it via the provided notebooks. Thus, the Snakefile is a condensed and ordered collection of code necessary for producing the output but might not work because I don't know how to build pipelines in Snakemake
+
+More information below.
+
+
 # Generate a MetaSRA annotated dataset from ARCHS4
 This part of the repository is dedicated to the generation of a MetaSRA annotated dataset of RNA-seq samples pulled from the ARCHS4. In brief, the pipeline does the following:
 
@@ -30,5 +36,3 @@ The original MetaSRA pipeline is unusable as is so I forked it and added the fix
 please see `test_data/test_in.json` or [MetaSRA](https://github.com/dmalzl/metasra/tree/master) for more infos on the format of `sra_metadata.json`.
 Since the mapping is quite slow (an estimated 48h for 10k samples) we run it in parallel using SLURM, which can easily be reproduced with the `convert_biosample_metadata_to_json.ipynb` notebook and then running `run_batched_metasra.sh`
 
-# About the Snakefile
-I added the Snakefile for a central resource of the code executed to arrive at the desired output. However, I never executed it using SnakeMake but rather did it via the provided notebooks. Thus, the Snakefile is a condensed and ordered collection of code necessary for producing the output but might not work because I don't know how to build pipelines in SnakeMake
