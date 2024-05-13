@@ -211,6 +211,8 @@ services:
       # ...
     restart: unless-stopped
 
+
+  # was running once: `docker-compose run --rm certbot certonly --webroot --webroot-path=/var/www/certbot -d cellwhisperer.bocklab.org --email mail@moritzs.de --agree-tos --no-eff-email`
   certbot:
     image: certbot/certbot
     volumes:
