@@ -62,7 +62,8 @@ MODELS= [
 # TODO archs4_metasra is actually a combination of archs4 and tabsap. I should rename it here (and everywhere)!
 rule all:
     input:
-        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "perplexity_quantile.svg",
+        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
+               plot_name=["detailed", "perplexity_quantile"],
                dataset=["main", "tabula_sapiens"],  # these are evaluation-datasets here!
                base_model=["Mistral-7B-Instruct-v0.2"],  # TODO test as well: "BioMistral-7B", "BioMistral-7B-DARE",
                model=MODELS

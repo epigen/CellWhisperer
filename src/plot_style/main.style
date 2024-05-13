@@ -23,7 +23,7 @@ axes.grid.axis: both
 axes.grid.which: major
 axes.labelcolor: black
 axes.labelpad: 4.0
-axes.labelsize: 8.0
+axes.labelsize: 6.0
 axes.labelweight: normal
 axes.linewidth: 0.5
 axes.spines.bottom: True
