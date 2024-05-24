@@ -19,6 +19,7 @@ MEM_MAX_GB = 100
 max_memory_bytes = MEM_MAX_GB * 1024 * 1024 * 1024
 resource.setrlimit(resource.RLIMIT_AS, (max_memory_bytes, resource.RLIM_INFINITY))
 
+MIN_GENES_PER_CELL = 100
 N_SINGLE_CELLS = 5
 MAX_UNIQUE_VALUES_PER_OBS_COLUMN = 500
 IGNORE_COLS = ["soma_joinid","donor_id","leiden"] # Those provide no annotation information
@@ -111,7 +112,8 @@ rule process_dataset:
         n_single_cells = N_SINGLE_CELLS,
         ignore_cols = IGNORE_COLS,
         always_use_cols = ALWAYS_USE_COLS,
-        census_version = CENSUS_VERSION
+        census_version = CENSUS_VERSION,
+        min_genes_per_cell = MIN_GENES_PER_CELL
     script: "scripts/process_dataset.py"
 
 rule write_census_datasets_info_csv:

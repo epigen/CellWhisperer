@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import json
 from scipy import sparse
+import scanpy as sc
 import os
 import logging
 from utils import get_abstract
@@ -11,7 +12,6 @@ import gc
 
 
 def is_count_matrix(matrix, threshold=1e-6, max_entries=10000):
-
     # Limit the number of entries to check
     data_to_check = matrix.data[:max_entries]
 
@@ -23,42 +23,63 @@ def is_count_matrix(matrix, threshold=1e-6, max_entries=10000):
     else:
         return False
 
+
 # Prepare anndata
-adata = anndata.read_h5ad(str(snakemake.input.adata))	
+adata = anndata.read_h5ad(str(snakemake.input.adata))
 
 if adata.raw is not None:
     adata.X = adata.raw.X
     adata.raw = None
 else:
     if not np.issubdtype(adata.X.dtype, np.integer):
-        assert is_count_matrix(adata.X), f"adata object dtype must be integer or pass is_count_matrix test, but is {adata.X.dtype}. X: {adata.X[:50,:50]}"
+        assert is_count_matrix(
+            adata.X
+        ), f"adata object dtype must be integer or pass is_count_matrix test, but is {adata.X.dtype}. X: {adata.X[:50,:50]}"
 
 assert adata.obs.is_primary_data.dtype == "bool"
-adata = adata[adata.obs.is_primary_data]#.copy()
-gc.collect() # call this everywhere to prevent apparent memory leaks
-adata.obs["is_primary_data"] = "True" # neeeds to be a string for write_h5ad
+adata = adata[adata.obs.is_primary_data]  # .copy()
+sc.pp.filter_cells(adata, min_genes=snakemake.params.min_genes_per_cell)
+gc.collect()  # call this everywhere to prevent apparent memory leaks
+adata.obs["is_primary_data"] = "True"  # neeeds to be a string for write_h5ad
 
 # Filter out columns with too many distinct values
 n_unique_vals_per_obs_col = adata.obs.nunique()
-relevant_obs_cols = n_unique_vals_per_obs_col[(n_unique_vals_per_obs_col<snakemake.params.max_unique_values_per_obs_columns) & (n_unique_vals_per_obs_col<adata.obs.shape[0])].index.to_list()
-relevant_obs_cols = [col for col in relevant_obs_cols if col not in snakemake.params.ignore_cols]
-relevant_obs_cols = sorted(list(set(relevant_obs_cols+snakemake.params.always_use_cols)))
-unique_obs_combinations_df = adata.obs[relevant_obs_cols].drop_duplicates().reset_index(drop=True)
+relevant_obs_cols = n_unique_vals_per_obs_col[
+    (n_unique_vals_per_obs_col < snakemake.params.max_unique_values_per_obs_columns)
+    & (n_unique_vals_per_obs_col < adata.obs.shape[0])
+].index.to_list()
+relevant_obs_cols = [
+    col for col in relevant_obs_cols if col not in snakemake.params.ignore_cols
+]
+relevant_obs_cols = sorted(
+    list(set(relevant_obs_cols + snakemake.params.always_use_cols))
+)
+unique_obs_combinations_df = (
+    adata.obs[relevant_obs_cols].drop_duplicates().reset_index(drop=True)
+)
 
 
 # Prepare dataset metadata
-census_dataset = pd.read_csv(str(snakemake.input.census_datasets_csv), index_col=0).loc[snakemake.wildcards.dataset_id]
+census_dataset = pd.read_csv(str(snakemake.input.census_datasets_csv), index_col=0).loc[
+    snakemake.wildcards.dataset_id
+]
 
 adatas_processed = []
-for i,row in unique_obs_combinations_df.iterrows():
-
+for i, row in unique_obs_combinations_df.iterrows():
     # need to take care of nan values, because np.nan!=np.nan
-    conditions = [(adata.obs[col] == row[col]) if row[col]==row[col] else adata.obs[col]!=adata.obs[col] for col in relevant_obs_cols]
-    mask = pd.concat(conditions,axis=1).all(axis=1)
-    adata_this_condition=adata[mask]#.copy()
+    conditions = [
+        (adata.obs[col] == row[col])
+        if row[col] == row[col]
+        else adata.obs[col] != adata.obs[col]
+        for col in relevant_obs_cols
+    ]
+    mask = pd.concat(conditions, axis=1).all(axis=1)
+    adata_this_condition = adata[mask]  # .copy()
 
     if adata_this_condition.obs.shape[0] < 1:
-        logging.error(f"No cells found in anndata: {adata_this_condition}, row: {row}, counts: {n_unique_vals_per_obs_col}")
+        logging.error(
+            f"No cells found in anndata: {adata_this_condition}, row: {row}, counts: {n_unique_vals_per_obs_col}"
+        )
         raise ValueError
 
     # Gene length normalization - skipped for now at least
