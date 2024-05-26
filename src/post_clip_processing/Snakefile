@@ -18,6 +18,7 @@ include: "rules/prepare_cellxgene_dataset.smk"
 # Manuscript plots (consider moving this to a dedicated pipeline)
 include: "rules/umap_plots.smk"
 include: "rules/gsva_correlation.smk"
+include: "rules/bowel_disease.smk"
 include: "rules/retrieval_scores.smk"
 
 rule all:
@@ -28,5 +29,6 @@ rule all:
         rules.geo_umap_plots.output.cluster_labeled.format(model=config["model_name_path_map"]["cellwhisperer"]),
         expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"],dataset=["archs4_metasra", "daniel", "tabula_sapiens"], model=CLIP_MODEL),
         rules.final_model_retrieval_scores.output.plot,
+        rules.bowel_disease_stem_cell_contribution.output.plot
     default_target: True
 
