@@ -152,32 +152,37 @@ services:
       - ./llava_logs/bowel_idisease/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
 
-  # cellxgene_hcaorganoids_cancer__organoid:
-  #   <<: *cellxgene-service
-  #   volumes:
-  #     - ~/cellwhisperer/results/hcaorganoids_cancer__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-  #     - ./llava_logs/hcaorganoids_cancer__organoid/:/logs/
-  #     - ~/cellwhisperer:/opt/cellwhisperer
-  # cellxgene_hcaorganoids_cancer__primary:
-  #   <<: *cellxgene-service
-  #   volumes:
-  #     - ~/cellwhisperer/results/hcaorganoids_cancer__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-  #     - ./llava_logs/hcaorganoids_cancer__primary/:/logs/
-  #     - ~/cellwhisperer:/opt/cellwhisperer
+  cellxgene_hcaorganoids_cancer__organoid:
+    <<: *cellxgene-service
+    volumes:
+      - ~/cellwhisperer/results/hcaorganoids_cancer__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ~/cellwhisperer/hosting/home/cellxgene_config.yaml:/cellxgene_config.yaml:ro
+      - ./llava_logs/hcaorganoids_cancer__organoid/:/logs/
+      - ~/cellwhisperer:/opt/cellwhisperer
 
-  # cellxgene_hcaorganoids_normal__primary:
-  #   <<: *cellxgene-service
-  #   volumes:
-  #     - ~/cellwhisperer/results/hcaorganoids_normal__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-  #     - ./llava_logs/hcaorganoids_normal__primary/:/logs/
-  #     - ~/cellwhisperer:/opt/cellwhisperer
+  cellxgene_hcaorganoids_cancer__primary:
+    <<: *cellxgene-service
+    volumes:
+      - ~/cellwhisperer/results/hcaorganoids_cancer__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ~/cellwhisperer/hosting/home/cellxgene_config.yaml:/cellxgene_config.yaml:ro
+      - ./llava_logs/hcaorganoids_cancer__primary/:/logs/
+      - ~/cellwhisperer:/opt/cellwhisperer
 
-  # cellxgene_hcaorganoids_normal__organoid:
-  #   <<: *cellxgene-service
-  #   volumes:
-  #     - ~/cellwhisperer/results/hcaorganoids_normal__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-  #     - ./llava_logs/hcaorganoids_normal__organoid/:/logs/
-  #     - ~/cellwhisperer:/opt/cellwhisperer
+  cellxgene_hcaorganoids_normal__primary:
+    <<: *cellxgene-service
+    volumes:
+      - ~/cellwhisperer/results/hcaorganoids_normal__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ~/cellwhisperer/hosting/home/cellxgene_config.yaml:/cellxgene_config.yaml:ro
+      - ./llava_logs/hcaorganoids_normal__primary/:/logs/
+      - ~/cellwhisperer:/opt/cellwhisperer
+
+  cellxgene_hcaorganoids_normal__organoid:
+    <<: *cellxgene-service
+    volumes:
+      - ~/cellwhisperer/results/hcaorganoids_normal__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ~/cellwhisperer/hosting/home/cellxgene_config.yaml:/cellxgene_config.yaml:ro
+      - ./llava_logs/hcaorganoids_normal__organoid/:/logs/
+      - ~/cellwhisperer:/opt/cellwhisperer
 
   cellxgene_gut_cell_atlas:
     <<: *cellxgene-service

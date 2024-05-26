@@ -57,7 +57,10 @@ datasets:
   - car_t
   - bowel_disease
   - gut_cell_atlas
-  # TODO hca organoids
+  - hcaorganoids_normal__primary
+  - hcaorganoids_normal__organoid
+  - hcaorganoids_cancer__primary
+  - hcaorganoids_cancer__organoid
 
 retrieval_validation_sets:
   - immgen_deduplicated
