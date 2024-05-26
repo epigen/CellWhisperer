@@ -21,7 +21,6 @@ from geneformer.emb_extractor import get_embs
 import anndata
 import scanpy as sc
 
-
 logger = logging.getLogger(__name__)
 
 # Set as constants here, so they are available in the TranscriptomeProcessor
@@ -37,6 +36,26 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
             custom_attr_name_dict={k: k for k in emb_label},  # refactor-delete
             nproc=nproc,
         )
+        # Download
+        if get_path(["paths", "ensembl_gene_symbol_map"]).exists():
+            self.annot = pd.read_csv(
+                get_path(["paths", "ensembl_gene_symbol_map"]), index_col=0
+            )
+        else:
+            # Assuming gene symbol names. Use biomart to get ensembl_ids
+            # use_cache=False to avoid the error sqlite3.OperationalError: database is locked
+            annot = sc.queries.biomart_annotations(
+                "hsapiens", ["ensembl_gene_id", "external_gene_name"], use_cache=False
+            ).set_index("external_gene_name")
+
+            annot_drop_dups = annot.reset_index().drop_duplicates(
+                subset="external_gene_name"
+            )
+            annot_drop_dups = annot_drop_dups.set_index("external_gene_name")
+
+            annot_drop_dups.to_csv(get_path(["paths", "ensembl_gene_symbol_map"]))
+            self.annot = annot_drop_dups
+
         super().__init__(*args, **kwargs)
 
     def _prepare_features(self, adata):
@@ -48,7 +67,6 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
         # adata.obs["cell type rough"] = [
         #     x.split(".")[0] for x in adata.obs["cell type"].values
         # ]
-        annot = pd.read_csv(get_path(["paths", "ensembl_gene_symbol_map"]), index_col=0)
         adata_var = pd.DataFrame(adata.var)
         # no need to re-gather ensembl_id if they are already present
         if adata.var.index[0].startswith("ENSG0") or "ensembl_id" in adata.var.columns:
@@ -95,7 +113,7 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
             ), "adata.var.index should contain a gene symbols but none are found"
 
             adata_var["ensembl_id"] = [
-                annot["ensembl_gene_id"].get(gene_name, "")
+                self.annot["ensembl_gene_id"].get(gene_name, "")
                 for gene_name in adata_var.index.values
             ]
 

@@ -1,3 +1,11 @@
+"""
+CellWhisperer embedding model server
+====================================
+
+Used as micro-service to prevent model loading for each dataset-specific servers
+"""
+
+
 from cellwhisperer.utils.inference import score_transcriptomes_vs_texts
 from cellwhisperer.utils.model_io import load_cellwhisperer_model
 from cellwhisperer.config import get_path, config

@@ -31,13 +31,19 @@ Sun Mar 31 17:36:31 2024
   mamba env create -f envs/main.yaml  # this already includes `pip install -e .`
   conda activate cellwhisperer
   ```
-3. Optional: Install scgpt and flash-attn (they need pip installation flags to be installed properly)
-   ```
-   bash envs/install_scgpt_after_env_creation.sh
-   ```
-4. Develop :)
+3. Develop :)
 
-### Installing cellxgene
+### Optional: Installing scGPT
+
+If you want to use scGPT instead of Geneformer (default), install `scgpt` and `flash-attn` (they need pip installation flags to be installed properly) via this script.
+```
+bash envs/install_scgpt_after_env_creation.sh
+```
+
+Then manually download the scGPT model, as indicated in the shell script.
+
+
+### Optional: Installing CELLxGENE
 
 See [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md). In short:
 
@@ -46,11 +52,6 @@ See [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md)
 - Build the client and put static files in place: `make build-for-server-dev`
 - Install from local files: `make install-dev`
 - Install prereqs for client: `make dev-env`
-
-### Sane git defaults
-
-1. `git config --global pull.rebase true`
-   Rebasing retains a better history
 
 ## Run/Train with Pytorch Lightning
 
