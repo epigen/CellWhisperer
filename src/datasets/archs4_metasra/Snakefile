@@ -13,7 +13,7 @@ rule all:
 
 rule filter_final_file:
     """
-    filters the final file to only contain samples that are not in the daniel dataset and have a sample_type_confidence > 0.5
+    filters the final file to only contain samples that are not in the daniel dataset.
     """
     input:
         archs4_metadata_unfiltered=PROJECT_DIR / "results" / "archs4_metasra_unfiltered.h5ad"  # TODO improve path and realize generation of this path

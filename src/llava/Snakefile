@@ -20,7 +20,7 @@ PROJECTOR_TYPE = "mlp2x_8t_gelu"  # TODO fails if > 8 (12 and 16 both failed. ei
 
 
 # random sample (n=100) of the GSVA datasets (which are already weight-corrected)
-# TODO: weight correction for archs4 only used the transcriptome- not the annotation-embeddings. Due to this however, there are some single cells in here, which can count as data leakage. Solution: Take single_cell_probability > 0.2 and eliminate these samples in TEST_IDS.
+# Note: Weight correction for archs4 only used the transcriptome- not the annotation-embeddings. Due to this however, there are some single cells in here, which could count as data leakage. We used single_cell_probability > 0.2 and eliminated these samples in TEST_IDS and didn't observe any changes in the final scores.
 TEST_IDS = pd.read_csv("./test_ids", header=None).iloc[:, 0].to_list()
 
 # For snakemake efficiency, extract the samples once and store them

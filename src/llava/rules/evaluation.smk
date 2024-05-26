@@ -36,8 +36,6 @@ rule llava_evaluation_perplexity:
 
 rule llava_evaluation_perplexity_plots:
     """
-    # TODO need to aggregate like this (more or less)
-
     """
 
     input:
