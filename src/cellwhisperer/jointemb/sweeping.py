@@ -136,7 +136,7 @@ def main():
             logging.info(
                 "Using sweep config from config.yaml (field SWEEP_HYPERPARAMETERS)"
             )
-            sweep_configuration = config["SWEEP_HYPERPARAMETERS"]
+            raise ValueError("Please define sweep_config")
         else:
             with open(args.sweep_config / "sweep_config.yaml", "r") as f:
                 sweep_configuration = yaml.safe_load(f)
