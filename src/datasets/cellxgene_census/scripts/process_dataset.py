@@ -91,8 +91,10 @@ for i, row in unique_obs_combinations_df.iterrows():
     # else:
     #     assert adata.obs[adata.obs["assay"].str.lower().str.contains("smart")].shape[0]==0
 
-    if not i%10:
-        print(f"Processing sub-batch {i}  of {len(unique_obs_combinations_df)} ({adata_this_condition.obs.shape[0]} cells)")
+    if not i % 10:
+        print(
+            f"Processing sub-batch {i}  of {len(unique_obs_combinations_df)} ({adata_this_condition.obs.shape[0]} cells)"
+        )
     # list all objects and their memory usage:
     # print([(name, sys.getsizeof(value)) for name, value in locals().items()])
     # import psutil
@@ -100,11 +102,15 @@ for i, row in unique_obs_combinations_df.iterrows():
 
     # Pseudobulk
 
-    pseudobulk_X=sparse.csc_matrix(np.mean(adata_this_condition.X, axis=0).reshape(1, -1))
-    pseudobulk_adata = anndata.AnnData(X=pseudobulk_X,
-                                    obs=pd.DataFrame(adata_this_condition.obs.copy().iloc[0]).T[relevant_obs_cols],
-                                    var = adata_this_condition.var.copy())
-    pseudobulk_adata.obs.index=[f"census_{snakemake.wildcards.dataset_id}_pseudobulk"]
+    pseudobulk_X = sparse.csc_matrix(
+        np.mean(adata_this_condition.X, axis=0).reshape(1, -1)
+    )
+    pseudobulk_adata = anndata.AnnData(
+        X=pseudobulk_X,
+        obs=pd.DataFrame(adata_this_condition.obs.copy().iloc[0]).T[relevant_obs_cols],
+        var=adata_this_condition.var.copy(),
+    )
+    pseudobulk_adata.obs.index = [f"census_{snakemake.wildcards.dataset_id}_pseudobulk"]
     pseudobulk_adata.obs["is_pseudobulk"] = "True"
     pseudobulk_adata.obs["replicate"] = "pseudobulk"
     pseudobulk_adata.obs["based_on_n_cells"] = adata_this_condition.shape[0]
@@ -112,14 +118,21 @@ for i, row in unique_obs_combinations_df.iterrows():
 
     # Random subsets of cells
     np.random.seed(42)
-    cell_indices=adata_this_condition.obs.index
+    cell_indices = adata_this_condition.obs.index
     subsampled_indices = np.random.choice(
-            cell_indices, size=min(snakemake.params.n_single_cells, len(cell_indices)), replace=False
-        )
-    subsampled_adata = adata_this_condition[subsampled_indices]#.copy()
-    subsampled_adata.obs.index=[f"census_{snakemake.wildcards.dataset_id}_{i}_randomCell{x}" for x in range(subsampled_adata.obs.shape[0])]
+        cell_indices,
+        size=min(snakemake.params.n_single_cells, len(cell_indices)),
+        replace=False,
+    )
+    subsampled_adata = adata_this_condition[subsampled_indices]  # .copy()
+    subsampled_adata.obs.index = [
+        f"census_{snakemake.wildcards.dataset_id}_{i}_randomCell{x}"
+        for x in range(subsampled_adata.obs.shape[0])
+    ]
     subsampled_adata.obs["is_pseudobulk"] = "False"
-    subsampled_adata.obs["replicate"] = [str(x) for x in range(subsampled_adata.obs.shape[0])]
+    subsampled_adata.obs["replicate"] = [
+        str(x) for x in range(subsampled_adata.obs.shape[0])
+    ]
     subsampled_adata.obs["based_on_n_cells"] = 1
     adatas_processed.append(subsampled_adata)
 
@@ -135,24 +148,36 @@ gc.collect()
 adata_processed = anndata.concat(adatas_processed)
 dataset_info_dict = {}
 
-adata_processed.uns["dataset_title"]=census_dataset["dataset_title"]
-adata_processed.uns["dataset_id"]=snakemake.wildcards.dataset_id
-adata_processed.uns["collection_name"]=census_dataset["collection_name"]
-adata_processed.uns["collection_doi"]=census_dataset["collection_doi"]
-adata_processed.uns["abstract"]=get_abstract(census_dataset["collection_doi"])
-adata_processed.uns["census_version"]=snakemake.params.census_version
-adata_processed.uns["n_primary_cells_in_complete_dataset"]=int(adata_n_cells)
-adata_processed.uns["obs_columns_used_for_splitting"]=relevant_obs_cols # and this to find out why groups are too small
-adata_processed.obs=adata_processed.obs.infer_objects() # Otherwise sometimes we get an error "Can't implicitly convert non-string objects to strings"
+adata_processed.uns["dataset_title"] = census_dataset["dataset_title"]
+adata_processed.uns["dataset_id"] = snakemake.wildcards.dataset_id
+adata_processed.uns["collection_name"] = census_dataset["collection_name"]
+adata_processed.uns["collection_doi"] = census_dataset["collection_doi"]
+adata_processed.uns["abstract"] = get_abstract(census_dataset["collection_doi"])
+adata_processed.uns["census_version"] = snakemake.params.census_version
+adata_processed.uns["n_primary_cells_in_complete_dataset"] = int(adata_n_cells)
+adata_processed.uns[
+    "obs_columns_used_for_splitting"
+] = relevant_obs_cols  # and this to find out why groups are too small
+adata_processed.obs = (
+    adata_processed.obs.infer_objects()
+)  # Otherwise sometimes we get an error "Can't implicitly convert non-string objects to strings"
 adata_processed.write_h5ad(snakemake.output[0])
 
 dataset_info_dict = adata_processed.uns.copy()
-dataset_info_dict["adata_file_name"]=os.path.basename(snakemake.output[0])
-dataset_info_dict["n_transcriptomes"]=adata_processed.obs.shape[0]
-dataset_info_dict["n_pseudobulks"]=int(adata_processed.obs["is_pseudobulk"].value_counts()["True"])
-dataset_info_dict["n_random_cell_samples"]=int(adata_processed.obs["is_pseudobulk"].value_counts()["False"])
-dataset_info_dict["n_cells_per_group"]=adata_processed.obs[adata_processed.obs["is_pseudobulk"]=="True"]["based_on_n_cells"].values.tolist() # this may be useful to spot datasets were the groups are too small
-dataset_info_dict["obs_columns_all"]=adata_processed.obs.columns.to_list()
+dataset_info_dict["adata_file_name"] = os.path.basename(snakemake.output[0])
+dataset_info_dict["n_transcriptomes"] = adata_processed.obs.shape[0]
+dataset_info_dict["n_pseudobulks"] = int(
+    adata_processed.obs["is_pseudobulk"].value_counts()["True"]
+)
+dataset_info_dict["n_random_cell_samples"] = int(
+    adata_processed.obs["is_pseudobulk"].value_counts()["False"]
+)
+dataset_info_dict["n_cells_per_group"] = adata_processed.obs[
+    adata_processed.obs["is_pseudobulk"] == "True"
+][
+    "based_on_n_cells"
+].values.tolist()  # this may be useful to spot datasets were the groups are too small
+dataset_info_dict["obs_columns_all"] = adata_processed.obs.columns.to_list()
 
 with open(snakemake.output[1], "w") as f:
     json.dump(dataset_info_dict, f)
