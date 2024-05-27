@@ -6,18 +6,22 @@ import seaborn as sns
 import os
 import warnings
 import matplotlib
+from collections import defaultdict
 
-sc.set_figure_params(vector_friendly=True, dpi_save=300)  # Makes PDFs of scatter plots much smaller in size but still high-quality
+sc.set_figure_params(vector_friendly=True, dpi_save=500)  # Makes PDFs of scatter plots much smaller in size but still high-quality
 
 def plot_embeddings_with_scores(
-    adata, analysis_types, result_metrics_dict, dataset_name, result_dir
+    adata, analysis_types, result_metrics_dict, dataset_name, result_dir,
+    celltype_plot_palette=None
 ):
     """
-    Plot the embeddings colored by batch and celltype, and add the scib scores to the title.
+    Plot the embeddings colored by batch and celltype, and add the integration scores to the title.
     """
     fig, axes = plt.subplots(
         len(analysis_types), 2, figsize=(15, len(analysis_types) * 5)
     )
+    if len(analysis_types) == 1:
+        axes = [axes]
     for i, analysis_type in enumerate(analysis_types):
         sc.pl.embedding(
             adata,
@@ -54,6 +58,7 @@ def plot_embeddings_with_scores(
             legend_fontoutline=2,
             ax=axes[i][1],
             show=False,
+            palette=celltype_plot_palette,
         )
         asw_label = round(
             result_metrics_dict[(dataset_name, analysis_type)]["ASW_label"], 2
@@ -64,6 +69,8 @@ def plot_embeddings_with_scores(
         axes[i][1].set_title(
             f"{analysis_type}: celltype\n ASW_label= {asw_label}\n avg_bio= {avg_bio}"
         )
+        if adata.obs.celltype.nunique() > 50:
+            axes[i][1].get_legend().remove()
     plt.tight_layout()
     plt.suptitle(dataset_name)
     os.makedirs(os.path.dirname(f"{result_dir}/{dataset_name}/"), exist_ok=True)
@@ -79,8 +86,9 @@ def plot_cellwhisperer_predictions_on_umap(
     dataset_name: str,
     label_col="celltype",
     color_mapping=None,
+    background_adata=None,
 ) -> None:
-    """Plot the single-cellm predicted labels in 2 versions: On the HVG-based umap and on the single-ceLLM based UMAP."""
+    """Plot the single-cellm predicted labels on the UMAP."""
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -89,9 +97,7 @@ def plot_cellwhisperer_predictions_on_umap(
 
         embedding_basis = [
             "X_umap_on_neighbors_cellwhisperer",
-        #    "X_umap_on_neighbors_hvg_without_PCA",
         ]
-
 
         if color_mapping is None:
             if f"{label_col}_colors" in adata.uns.keys():
@@ -114,8 +120,24 @@ def plot_cellwhisperer_predictions_on_umap(
                     "batch",
 
             ]:
+                ax=plt.gca()
+                if background_adata is not None:
+                    # Plot the background in grey
+                    sc.pl.embedding(
+                        background_adata,
+                        basis=basis,
+                        frameon=False,
+                        s=10,
+                        alpha=0.3,
+                        legend_fontsize=6,
+                        show=False,
+                        # palette=color_mapping,
+                        ncols=1,
+                        ax=ax
+                    )
+
                 sc.pl.embedding(
-                    adata,
+                    adata[adata.obs[label_col].isin(list(color_mapping.keys()))],
                     basis=basis,
                     color=color,
                     frameon=False,
@@ -124,7 +146,8 @@ def plot_cellwhisperer_predictions_on_umap(
                     legend_fontsize=6,
                     show=False,
                     palette=color_mapping,
-                    ncols=1
+                    ncols=1,
+                    ax=ax
                 )
                 os.makedirs(os.path.dirname(f"{result_dir}/{dataset_name}/"), exist_ok=True)
                 plt.gcf().set_size_inches(10, 5)
@@ -173,6 +196,7 @@ def plot_confusion_matrix(
             [x + 0.5 for x in range(len(confusion_matrix.columns))],
             confusion_matrix.columns,
             rotation=45,
+            ha="right",
         )
         plt.xlabel("Best-matching keyword")
         plt.ylabel("True class")
@@ -203,99 +227,6 @@ def plot_confusion_matrix(
         plt.close()
 
 
-def plot_keyword_occurance_vs_performance(
-    performance_metrics_per_label_df: pd.DataFrame,
-    keyword_occurance_dict: dict,
-    result_dir: str,
-    dataset_name: str,
-    label_col="celltype",
-) -> None:
-    """Plot a scatterplot of the number of times a keyword appears in the dataset vs. the performance of the model on that keyword."""
-
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=DeprecationWarning)
-
-        for score in ["f1", "rocauc", "recall_at_1", "recall_at_10"]:
-            if performance_metrics_per_label_df[score].isna().all():
-                continue
-            for logx in [True, False]:
-                plt.figure(figsize=(10, 10))
-                sns.scatterplot(
-                    x=list(keyword_occurance_dict.values()),
-                    y=performance_metrics_per_label_df[score],
-                    size=5,
-                )
-                # dont show legend:
-                plt.gca().get_legend().remove()
-                # label the points:
-                for i, txt in enumerate(keyword_occurance_dict.keys()):
-                    plt.annotate(
-                        txt,
-                        (
-                            list(keyword_occurance_dict.values())[i],
-                            performance_metrics_per_label_df[score].values[i],
-                        ),
-                        fontsize=6,
-                    )
-                # add a regression line and show pearson r and kendall tau:
-                sns.regplot(
-                    x=list(keyword_occurance_dict.values()),
-                    y=performance_metrics_per_label_df[score],
-                    scatter=False,
-                )
-                pearson_r = performance_metrics_per_label_df[score].corr(
-                    pd.Series(keyword_occurance_dict)
-                )
-                kendall_tau = performance_metrics_per_label_df[score].corr(
-                    pd.Series(keyword_occurance_dict), method="kendall"
-                )
-                plt.title(
-                    f"{score} vs. keyword occurance in the dataset\n Pearson r= {pearson_r}\n Kendall tau= {kendall_tau}"
-                )
-                plt.xlabel("Number of times the keyword appears in the dataset")
-                plt.ylabel(score)
-                plt.title(f"{score} vs. keyword occurance in the dataset")
-                if logx:
-                    plt.xscale("log")
-                plt.gcf().set_size_inches(
-                    max(5,len(keyword_occurance_dict.keys()) // 3),
-                    max(5,len(keyword_occurance_dict.keys()) // 3),
-                )
-                plt.ylim(-0.05, 1.05)
-                os.makedirs(
-                    os.path.dirname(f"{result_dir}/{dataset_name}/"), exist_ok=True
-                )
-                plt.savefig(
-                    f"{result_dir}/{dataset_name}/{score}_vs_keyword_occurance.{label_col}_as_label.logx_{logx}.png"
-                )
-                plt.show()
-                plt.close()
-
-def plot_best_worst_and_all_celltype_performances(performance_metrics_per_label_df, performance_metrics, metric, result_dir, dataset_name, label_col):
-    """
-    Plot a barplot of the 20 best and 20 worst-performing celltypes, and a barplot of all celltypes.
-    """
-    for show_all in [True, False]:
-        n_types=performance_metrics_per_label_df.shape[0]
-        if n_types>40 and show_all==False:
-            plot_df=performance_metrics_per_label_df.sort_values(by=metric,ascending=False).iloc[list(range(0,20))+list(range(n_types-20,n_types))]
-        else:
-            plot_df=performance_metrics_per_label_df.sort_values(by=metric,ascending=False)
-        plot_df=plot_df[[metric]]
-        sns.barplot(data=plot_df.reset_index(),y=metric,
-                    x="class", color="darkgrey")
-        plt.axhline(float(performance_metrics[f"{metric}_macroAvg"]),
-                                                            color="black", linestyle="--")
-        if not show_all:
-            plt.xticks(rotation=90)
-        else:
-            plt.xticks([])
-        plt.tight_layout()
-        if show_all and n_types>40:
-            plt.gcf().set_size_inches(20,20)
-        plt.savefig(f"{result_dir}/{dataset_name}/performance_metrics_cellwhisperer.{label_col}_as_label.best_and_worst_performing.showall{show_all}.metric_{metric}.png")
-        plt.close()
-
 def plot_term_search_result(term, celltype, adata, result_dir, dataset_name, prefix, suffix):
     """
     Plot the ground truth celltype and the keyword search results on the UMAP.
@@ -315,19 +246,213 @@ def plot_term_search_result(term, celltype, adata, result_dir, dataset_name, pre
     plt.show()
     plt.close()
 
-    vmax=adata.obs[f"score_for_{term}"].max()
-    sc.pl.embedding(adata, 
-    basis="X_umap_on_neighbors_cellwhisperer" ,#if not "X_umap_original" in adata.obsm.keys() else "X_umap_original",
-    color=[f"score_for_{term}"],
-    cmap="RdBu_r", vmin=-vmax, vmax=vmax,show=False)
-    plt.title("Keyword search results")
-    # label the colorbar
-    plt.gcf().axes[1].set_ylabel(f"Score for: '{prefix}{term}{suffix}'", fontsize=7)
-    plt.gcf().axes[0].set_facecolor("white")
+    for make_colorscale_symmetrical in [True,False]:
+        vmax=adata.obs[f"score_for_{term}"].max()
+        sc.pl.embedding(adata, 
+        basis="X_umap_on_neighbors_cellwhisperer" ,#if not "X_umap_original" in adata.obsm.keys() else "X_umap_original",
+        color=[f"score_for_{term}"],
+        cmap="RdBu_r", vmin=-vmax if make_colorscale_symmetrical else None, vmax=vmax if make_colorscale_symmetrical else None,show=False)
+        plt.title("Keyword search results")
+        # label the colorbar
+        plt.gcf().axes[1].set_ylabel(f"Score for: '{prefix}{term}{suffix}'", fontsize=7)
+        plt.gcf().axes[0].set_facecolor("white")
 
 
-    for file_suffix in ["png","pdf"]:
-        plt.savefig(f"{result_dir}/{dataset_name}/umap_on_neighbors_cellwhisperer.keyword_{term}.{file_suffix}")
+        for file_suffix in ["png","pdf"]:
+            plt.savefig(f"{result_dir}/{dataset_name}/umap_on_neighbors_cellwhisperer.keyword_{term}.{'symmetrical_cmap' if make_colorscale_symmetrical else 'asymmetrical_cmap'}.{file_suffix}")
+        plt.tight_layout()
+        plt.show()
+        plt.close()
+
+
+def plot_confidence_distributions(adata, result_dir, dataset_name, text_list,
+                                  label_col="celltype"):
+    """Plot a number of histograms and KDEplots for the cellwhisperer score across different values for label_col"""
+    
+
+    hist_dfs_all_terms={"unnormed":[],"normed":[]}
+    try: # can lead to errors if the number of unique labels is too high
+        if len(adata.obs[label_col].unique()) < 1000:
+            fig, ax = plt.subplots(len(adata.obs[label_col].unique()),1, sharex=True,sharey=False,figsize=(8,2*len(adata.obs[label_col].unique())))
+            for i, term in enumerate(text_list):
+                matching_label=adata.obs[label_col].unique().tolist()[i]
+                adata.obs["label_matches_term"]=adata.obs[label_col]==matching_label
+                sns.histplot(data=adata.obs,
+                            x=f"score_for_{term}",
+                            hue="label_matches_term",
+                            ax=ax[i],bins=20,
+                            stat="density",
+                            common_norm=False,
+                            palette={True:"coral",False:"silver"},
+                            legend=False)
+                hist_df=adata.obs[[f"score_for_{term}","label_matches_term"]]
+                hist_df.columns=["score","label_matches_term"]
+                hist_dfs_all_terms["unnormed"].append(hist_df.copy())
+
+
+                plt.sca(ax[i])
+                plt.legend(title=f"Cell type",labels=[matching_label,"other"],loc="lower right",
+                        ncol=1)
+
+                # z-normalize vs the label_matches_term = False
+                hist_score_normed=hist_df.copy()
+                mean=hist_score_normed[hist_score_normed["label_matches_term"]==False]["score"].mean()
+                std=hist_score_normed[hist_score_normed["label_matches_term"]==False]["score"].std()
+                hist_score_normed["score"]=(hist_score_normed["score"]-mean)/std
+                hist_dfs_all_terms["normed"].append(hist_score_normed.copy())
+
+            plt.xlabel("Cellwhisperer score for the label")
+            plt.savefig(f"{result_dir}/{dataset_name}/confidence_distribution_{label_col}_per_label.pdf")
+            plt.show()
+            plt.close()
+        
+        for norm in ["unnormed","normed"]:
+            hist_df_all_terms=pd.concat(hist_dfs_all_terms[norm])
+            sns.histplot(data=hist_df_all_terms,
+                                x=f"score",
+                                hue="label_matches_term",
+                                bins=20,
+                                stat="density",
+                                common_norm=False,
+                                palette={True:"coral",False:"silver"},
+                                legend=True)
+            plt.xlabel(f"{'Normalized c' if norm=='normed' else 'C'}ellwhisperer score for the label")
+            plt.ylabel("Density")
+            plt.gca().get_legend().set_title("Cell type equals label")
+            plt.savefig(f"{result_dir}/{dataset_name}/confidence_distribution_{label_col}_all_labels.{norm}.pdf")
+            plt.show()
+            plt.close()
+
+        # Some specific examples
+        if "tabula_sapiens" in dataset_name:
+            fig, ax = plt.subplots(3,1, sharex=True,sharey=False,figsize=(8,2*3))
+            for i, term in enumerate(["cardiac muscle cell","alveolar fibroblast","thymocyte", "erythrocyte"]):
+                matching_label=adata.obs[label_col].unique().tolist()[i]
+                adata.obs["label_matches_term"]=adata.obs[label_col]==matching_label
+                sns.histplot(data=adata.obs,
+                            x=f"score_for_{term}",
+                            hue="label_matches_term",
+                            ax=ax[i],bins=20,
+                            stat="density",
+                            common_norm=False,
+                            palette={True:"coral",False:"silver"},
+                            legend=False)
+                hist_df=adata.obs[[f"score_for_{term}","label_matches_term"]]
+                hist_df.columns=["score","label_matches_term"]
+                hist_dfs_all_terms["unnormed"].append(hist_df.copy())
+                plt.sca(ax[i])
+            plt.legend(title=f"Cell type",labels=[matching_label,"other"],loc="lower right",
+                        ncol=1)
+            plt.xlabel("Cellwhisperer score for the label")
+            plt.savefig(f"{result_dir}/{dataset_name}/confidence_distribution_{label_col}_per_label.SELECTED_TERMS.pdf")
+            plt.show()
+            plt.close()
+            
+    except Exception as e:
+        print(f"Got the following error during plotting of confidence distributions (continueing): {e}")
+        
+
+    # Plot the distribution of confidence scores - seperately for cases where the prediction is correct vs incorrect
+    sns.kdeplot(
+        data=adata.obs,
+        x="confidence_cellwhisperer",
+        hue="correct_prediction",
+        common_norm=False,
+    )
+    plt.savefig(f"{result_dir}/{dataset_name}/confidence_distribution_{label_col}.pdf")
+    plt.close()
+
+    sns.histplot(
+        data=adata.obs,
+        x="confidence_cellwhisperer",
+        hue="correct_prediction",
+        common_norm=False,
+    )
+    plt.savefig(f"{result_dir}/{dataset_name}/confidence_distribution_{label_col}_hist.pdf")
+    plt.close()
+
+
+def plot_integration_metrics(integration_scores_df, result_dir, dataset_name):
+    """Bar plots of integration metrics for each method."""
+
+    sns.barplot(
+        data=integration_scores_df,
+        x="metric",
+        y="value",
+        hue="Method",
+        palette="Greys",
+    )
+    for i, row in integration_scores_df.iterrows():
+        plt.text(x=i/2-0.25,y=row["value"]+0.01,s=f"{round(row['value'],2)}",ha="center",fontsize=10)
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.gcf().set_size_inches(5, 4)
+    plt.ylim(0,1)
+    plt.xlabel("")
+    plt.ylabel("Score")
+
+    plt.savefig(f"{result_dir}/{dataset_name}/integration_scores.pdf")
+    plt.close()
+
+
+def plot_performance_metrics_example_classes(result_dir, label_cols, datasets, selected_sample_lists, suffix_prefix_dict):
+    """Barplots for AUROC and accuracy for the selected examples."""
+    fig, axes = plt.subplots(1, len(datasets), figsize=(2*len(datasets), 2), sharey=True)
+    for i, label_col, dataset, selected_samples in zip(range(len(label_cols)), label_cols, datasets, selected_sample_lists):
+        df_path = f"{result_dir}/{dataset}/performance_metrics_cellwhisperer.{label_col}_as_label.per_{label_col}.csv"
+        prefix, suffix = suffix_prefix_dict[label_col]
+
+        plt.sca(axes[i])     
+        df = pd.read_csv(df_path)
+        df["class"] = df["class"].str.replace(prefix,"").str.replace(suffix,"")
+        plot_df = df[df["class"].isin(selected_samples)][["class","rocauc","accuracy"]].copy()
+        plot_df = plot_df.rename(columns={"rocauc":"ROC-AUC","accuracy":"Accuracy"})
+        plot_df = pd.melt(plot_df, id_vars="class", value_vars=["ROC-AUC","Accuracy"], var_name="metric", value_name="value")
+        sns.barplot(data=plot_df, x="class", y="value", hue="metric", width=0.6)
+        plt.axhline(y=1/len(df["class"].unique()), color=sns.color_palette()[1], linestyle="--", label="Accuracy (random baseline)")
+        plt.axhline(y=0.5, color=sns.color_palette()[0], linestyle="--", label="AUROC (random baseline)")
+        plt.title(dataset)
+        plt.ylim(0,1)
+        plt.legend()
+        plt.xlabel("")
+        plt.ylabel("Score")
+
+    plt.savefig(f"{result_dir}/performance_metrics_cellwhisperer.selected_classes_and_datasets.pdf")
     plt.tight_layout()
     plt.show()
-    plt.close()
+
+
+def plot_performance_metrics_macro_avg(result_dir, label_cols, datasets):
+    """Barplots for AUROC and accuracy for the selected datasets/label_cols."""
+    scores = defaultdict(list)
+    for i, label_col, dataset in zip(range(len(label_cols)),label_cols, datasets):
+        df_path=f"{result_dir}/{dataset}/performance_metrics_cellwhisperer.{label_col}_as_label.macrovag.csv"
+        df=pd.read_csv(df_path, index_col=0)
+        per_class_path=f"{result_dir}/{dataset}/performance_metrics_cellwhisperer.{label_col}_as_label.per_{label_col}.csv"
+        df_per_class=pd.read_csv(per_class_path)
+        n_classes=len(df_per_class)
+
+        scores["AUROC"].append(float(df.loc["rocauc_macroAvg"].item().replace("tensor(","").replace(")","")))
+        scores["AUROC (random baseline)"].append(0.5)
+        scores["Accuracy"].append(float(df.loc["accuracy_macroAvg"].item().replace("tensor(","").replace(")","")))
+        scores["Accuracy (random baseline)"].append(1/n_classes)
+
+    fig, axes = plt.subplots(1, 2, figsize=(8, 4), sharey=True)
+
+    plt.sca(axes[0])
+    plt.bar(range(len(scores["AUROC"])), scores["AUROC"],label="AUROC", color="#4d4d4dff")
+    for i in range (len(scores["Accuracy (random baseline)"])):
+        plt.plot([i-0.4,i+0.4],[scores["AUROC (random baseline)"][i]]*2, color="#1a1a1aff", linestyle="--",label="AUROC (random baseline)")
+    for i, score in enumerate(scores["AUROC"]):
+        plt.text(i,score+0.01,f"{round(score,2)}",ha="center", rotation=90)
+    plt.xticks([])
+    
+    plt.sca(axes[1])
+    plt.bar(range(len(scores["Accuracy"])), scores["Accuracy"],label="Accuracy", color="#4d4d4dff")
+    for i in range (len(scores["Accuracy (random baseline)"])):
+        plt.plot([i-0.4,i+0.4],[scores["Accuracy (random baseline)"][i]]*2, color="#1a1a1aff", linestyle="--",label="Accuracy (random baseline)")
+    for i, score in enumerate(scores["Accuracy"]):
+        plt.text(i,score+0.01,f"{round(score,2)}",ha="center", rotation=90)
+    plt.xticks([])
+
+    plt.savefig(f"{result_dir}/performance_metrics_cellwhisperer.selected_datasets.rocauc.pdf")

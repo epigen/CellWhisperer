@@ -1,9 +1,6 @@
 from anndata import AnnData
-from typing import Dict
 import scanpy as sc
-import json
-import re
-from cellwhisperer.config import get_path
+import pandas as pd
 
 TABSAP_WELLSTUDIED_COLORMAPPING = {
                 'erythrocyte': (0.5, 0, 0), 
@@ -12,19 +9,19 @@ TABSAP_WELLSTUDIED_COLORMAPPING = {
                 'non-classical monocyte': 'teal',
                 'classical monocyte': 'steelblue',
                 'neutrophil': 'red',
-                'basophil': 'grey',
-                'nk cell': 'orange',
-                'cd8-positive, alpha-beta t cell': 'darkgreen',
-                'cd4-positive, alpha-beta memory t cell': 'olive',
-                'cd4-positive, alpha-beta t cell': 'lightgreen',
-                'cd8-positive, alpha-beta cytokine secreting effector t cell': 'forestgreen',
-                'naive b cell': 'violet',
-                'memory b cell': 'darkviolet',
+                'basophil': 'black',
+                'NK cell': 'orange',
+                'CD8-positive, alpha-beta T cell': 'darkgreen',
+                'CD4-positive, alpha-beta memory T cell': 'olive',
+                'CD4-positive, alpha-beta T cell': 'lightgreen',
+                'CD8-positive, alpha-beta cytokine secreting effector T cell': 'forestgreen',
+                'naive B cell': 'violet',
+                'memory B cell': 'darkviolet',
                 'capillary endothelial cell': 'pink',
-                'type ii pneumocyte': 'tan',
+                'type II pneumocyte': 'tan',
                 'respiratory goblet cell': 'sandybrown',
                 'club cell': 'aquamarine',
-                'basal cell': 'lightgray',
+                'basal cell': 'tomato',
                 'hepatocyte': 'goldenrod',
             }
 PANCREAS_ORDER = ["alpha","beta","gamma","delta","epsilon",
@@ -47,39 +44,27 @@ def umap_on_embedding(adata,
     :return: adata with UMAP embedding stored in adata.obsm[umap_key].
     """
     sc.pp.neighbors(adata, use_rep=embedding_key,key_added=neighbors_key)
-    adata.obsm[umap_key]=sc.tl.umap(adata, neighbors_key=neighbors_key, min_dist = 0.3,copy=True).obsm["X_umap"]
+    adata.obsm[umap_key]=sc.tl.umap(adata, neighbors_key=neighbors_key, copy=True).obsm["X_umap"]
     return adata
 
 
-def count_keywords_in_dataset(keywords,dataset="archs4_metasra"):
+def prepare_integration_df(result_metrics_dict:dict) -> pd.DataFrame:
     """
-    Count the number of samples in the dataset in which each keyword appears at least once.
-    :param dataset: the dataset to count the keywords in.
-    :param keywords: the keywords to count.
-    
-    :return: a dictionary with the keywords as keys and the number of samples in which they appear as values.
+    Restructure the result_metrics_dict to a pandas DataFrame for easier plotting.
+    :param result_metrics_dict: Dictionary containing the integration scores.
+    :return: pandas DataFrame containing the integration scores.
     """
+    integration_scores_df = pd.DataFrame(result_metrics_dict).T
+    integration_scores_df = integration_scores_df.reset_index()
+    integration_scores_df=integration_scores_df.rename(columns={"level_0":"dataset_name",
+                                                                "level_1":"Method"})
+    integration_scores_df["Method"]=integration_scores_df["Method"].str.capitalize()
+    integration_scores_df=integration_scores_df.rename(columns={"ASW_label__batch":"Batch\nintegration\nscore",
+                                                                "avg_bio":"Cell type\nintegration score\n(avg)",
+                                                                "ASW_label":"Cell type\nintegration score\n(ASW)"})
+    integration_scores_df=integration_scores_df[["dataset_name","Method","Batch\nintegration\nscore","Cell type\nintegration score\n(avg)", "Cell type\nintegration score\n(ASW)"]]
+    integration_scores_df=pd.melt(integration_scores_df,id_vars=["dataset_name","Method"],value_vars=["Batch\nintegration\nscore","Cell type\nintegration score\n(avg)", "Cell type\nintegration score\n(ASW)"],var_name="metric",value_name="value")
+    return integration_scores_df
 
-    with open(get_path(["paths","structured_annotations"],dataset=dataset)) as f:
-        structured_annotations = json.load(f)
 
-    keywords_counts = {term:0 for term in keywords}
-    for keyword in keywords_counts.keys():
 
-        # generate all replacements:
-        keywords_and_alternatives = set([keyword.lower()])
-        for replace_from_char in ["-", "_"," "]:
-            for replace_to_char in ["-", "_"," "]:
-                if replace_from_char != replace_to_char:
-                    keywords_and_alternatives.add(keyword.lower().replace(replace_from_char, replace_to_char))
-
-        for sample_id, sample_dict in structured_annotations.items():
-            for value in sample_dict.values():
-                if value is not None:
-                    # look if any of the keywords is in the value:
-                    found = re.findall("|".join(keywords_and_alternatives), value.lower())
-                    if len(found) > 0:
-                        keywords_counts[keyword] += 1
-                        break
-
-    return keywords_counts

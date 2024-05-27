@@ -1,8 +1,10 @@
 import scanpy as sc
 import anndata
-from cellwhisperer.config import get_path, config
-from typing import Tuple
+from cellwhisperer.config import get_path
 import numpy as np
+import glob
+import pandas as pd
+from utils import TABSAP_WELLSTUDIED_COLORMAPPING
 
 
 def load_dataset(dataset_name: str) -> anndata.AnnData:
@@ -22,31 +24,15 @@ def load_dataset(dataset_name: str) -> anndata.AnnData:
 
 def preprocess_immgen(adata: anndata.AnnData) -> anndata.AnnData:
     """Preprocess the immgen dataset."""
-    translation_dict = {
-        "Activated regulatory T cells from human blood": "T Cells",
-        "Effector memory CD4 T cells that express CD3, CD4, but not CD45RA or CD62L from human blood": "T Cells",
-        "Effector memory CD8 T cells that express CD3, CD8, but not CD45RA or CD62L from human blood": "T Cells",
-        "Immature natural killer cells from the innate lymphoid cell group with high expression of CD56 but not CD16 from human blood": "Natural Killer Cells",
-        "MAIT cells that express CD4 from human blood": "T Cells",
-        "MAIT cells that express CD8 from human blood": "T Cells",
-        "Mature natural killer cells from the innate lymphoid cell group with low expression of CD56, high expression of CD16, and no expression of CD57 from human blood": "Natural Killer Cells",
-        "Memory B cells that do not express IgD but do express CD27 and not CD38 from human blood": "B Cells",
-        "Memory natural killer cells from the innate lymphoid cell group with low expression of CD56, high expression of CD16, and high expression of CD57 from human blood": "Natural Killer Cells",
-        "Monocytes that express CD14 from human blood": "Monocytes",
-        "Monocytes that express CD16 from human blood": "Monocytes",
-        "Naive B cells that express IgD but not CD27 from human blood": "B Cells",
-        "Naive CD4 T cells that express CD3, CD4, CD45RA, and CD62L from human blood": "T Cells",
-        "Naive CD8 T cells that express CD3, CD8, CD45RA, and CD62L from human blood": "T Cells",
-        "NKT cells that express Va24 from human blood": "Natural Killer T Cells",
-        "Resting regulatory T cells from human blood": "T Cells",
-        "Transitional B cells that express both IgD and CD27 from human blood": "B Cells",
-        "Type 1 dendritic cells that express CD141 from human blood": "Dendritic Cells",
-        "Type 5 dendritic cells that express AXL and SIGLEC6 from human blood": "Dendritic Cells",
-        "Type 6 dendritic cells that express CD123 from human blood": "Dendritic Cells",
-    }
+
+    translation_dict={'B':"B cells",
+                     'DC':'Dendritic cells',
+                     'ILC':'Natural Killer cells',
+                     'Mo':'Monocytes',
+                     'T':'T cells'}
 
     adata.obs["celltype"] = [
-        translation_dict[x] for x in adata.obs["natural_language_annotation"]
+        translation_dict[x.split(".")[0]] for x in adata.obs_names #["natural_language_annotation"]
     ]
     adata.obs["celltype"] = adata.obs["celltype"].astype("category")
     adata.obs["batch"] = "1"
@@ -59,15 +45,48 @@ def preprocess_tabula_sapiens(
 ) -> anndata.AnnData:
     """Preprocess the tabula_sapiens_100_cells_per_type or the full tabula_sapiens dataset."""
     adata.obs["celltype"] = adata.obs["cell_ontology_class"]
+
+    # replace the following labels with properly capitalized ones:
+
+    # format: old substring, new substring, old full strings
+    capitalization_list = [
+        ("cd", "CD", ['cd8-positive, alpha-beta t cell', 'cd4-positive, alpha-beta t cell', 'cd4-positive, alpha-beta memory t cell',
+                       'cd8-positive, alpha-beta cytokine secreting effector t cell', 'cd141-positive myeloid dendritic cell',
+                         'naive thymus-derived cd4-positive, alpha-beta t cell', 'cd8-positive alpha-beta t cell',
+                           'cd4-positive alpha-beta t cell', 'cd1c-positive myeloid dendritic cell', 'cd4-positive helper t cell',
+                             'cd8-positive, alpha-beta memory t cell', 'naive thymus-derived cd8-positive, alpha-beta t cell',
+                               'cd8-positive, alpha-beta cytotoxic t cell', 'cd24 neutrophil', 'cd8b-positive nk t cell']),
+        ("nk t cell","NKT cell", ['type i nk t cell', 'CD8b-positive nk t cell', 'mature nk t cell']),
+        ("nkt cell","NKT cell",['nkt cell']),
+        ("nk cell","NK cell", ["nk cell"]),
+        ("t cell","T cell", ['t cell', 'CD8-positive, alpha-beta t cell', 'CD4-positive, alpha-beta t cell',
+                              'CD4-positive, alpha-beta memory t cell', 'CD8-positive, alpha-beta cytokine secreting effector t cell',
+                              'naive thymus-derived CD4-positive, alpha-beta t cell', 'CD8-positive alpha-beta t cell', 'CD4-positive alpha-beta t cell', 
+                              'regulatory t cell', 'CD4-positive helper t cell', 'CD8-positive, alpha-beta memory t cell', 
+                              'naive thymus-derived CD8-positive, alpha-beta t cell', 'CD8-positive, alpha-beta cytotoxic t cell',
+                              'naive regulatory t cell', 'dn1 thymic pro-t cell']),
+        ("b cell", "B cell", ['b cell', 'naive b cell', 'memory b cell']),
+        ("dn4","DN4",['dn4 thymocyte']),
+        ("dn3","DN3",['dn3 thymocyte']),
+        ("dn1","DN1",['dn1 thymic pro-T cell']),
+        ("type ii","type II",['type ii pneumocyte']),
+        ("type i","type I",['type i NKT cell', 'type i pneumocyte']),
+        ('pancreatic pp cell','Pancreatic PP cell',['pancreatic pp cell']),
+    ]
+    for old_substring, new_substring, old_full_strings in capitalization_list:
+        adata.obs["celltype"] = [x.replace(old_substring, new_substring) if x in old_full_strings else x for x in adata.obs["celltype"]]
+
+    adata.obs["celltype"] = adata.obs["celltype"].astype("category")
+
     adata.obs["batch"] = (
         adata.obs["donor"].astype(str) + "_" + adata.obs["method"].astype(str)
     )
-    adata.X = adata.layers[
-        "raw_counts"
-    ]  # TODO remove later once we're sure we store raw counts in X by default already
+    if "raw_counts" in adata.layers.keys():
+        adata.X = adata.layers["raw_counts"].copy()
+        #raise ValueError("Raw counts should be in adata.X, not in adata.layers['raw_counts']")
     if well_studied_only:
         adata = adata[
-            adata.obs["celltype"].isin(config["top20_lung_liver_blood_celltypes"]), :
+            adata.obs["celltype"].isin(list(TABSAP_WELLSTUDIED_COLORMAPPING.keys())), :
         ]
     if min_100:
         value_counts_per_celltype = adata.obs["celltype"].value_counts()
@@ -83,9 +102,7 @@ def preprocess_tabula_sapiens(
 
 def preprocess_pancreas(adata: anndata.AnnData) -> anndata.AnnData:
     """Preprocess the pancreas dataset."""
-    # NOTE data does not seem to be raw counts - even the "counts" layer.
-    # I checked but getting the raw counts would be quite tricky, since the
-    # dataset consists of results from multiple techniques, some of which require normalization etc.
+    # NOTE data does not actually contain raw counts.
     adata.obs["batch"] = adata.obs["tech"]
     adata.X = adata.layers["counts"]
     adata.var["gene_name"] = adata.var.index
@@ -102,6 +119,62 @@ def preprocess_covid(adata: anndata.AnnData) -> anndata.AnnData:
     adata.obs["smoking"] = adata.obs["smoking"].replace("smoking status: nan", np.nan)
     adata.obs["celltype"] = adata.obs["celltype"].astype("category")
     return adata.copy()
+
+def load_and_process_liao_covid() -> anndata.AnnData:
+    """Preprocess the liao_covid dataset."""
+
+    # TODO
+    file_path = '/msc/home/q56ppene/cellwhisperer/cellwhisperer/resources/liao_covid/*_filtered_feature_bc_matrix.h5'
+
+    adatas={}
+    for file in glob.glob(file_path):
+        samplename=file.split('/')[-1].split('_')[1]
+        adatas[samplename]=sc.read_10x_h5(file)
+        adatas[samplename].var_names_make_unique()
+        adatas[samplename].obs['sample']=samplename
+        adatas[samplename].obs['batch']=samplename
+        adatas[samplename].obs.index=[x.replace("1",samplename) for x in adatas[samplename].obs.index]
+    adata=anndata.concat(adatas.values())
+
+    # read the all.cell.annotation.meta.txt
+    df=pd.read_csv('/msc/home/q56ppene/cellwhisperer/cellwhisperer/resources/liao_covid/all.cell.annotation.meta.txt',sep='\t')
+    df=df.set_index('ID')
+    df.index=[f'{x.split("_")[0]}-{samplename}' for x, samplename in zip(df.index,df['sample'])]
+    df=df.loc[[x for x in df.index if x in adata.obs.index]]
+    adata=adata[df.index]
+    adata.obs['celltype']=df['celltype']
+    adata.obs['sample_new']=df['sample_new']
+
+    # TODO improve classification of the cytokine levels?
+    # Plot 3: Il-6, Il-8 and IL-1beta
+    # 0: Nothing in plot  3
+    # 1: Low in plot 3
+    # 2: high (around 5000 or more) in plot 3
+    cytokine_levels_dict={
+        "M1": 0,
+        "M2": 0,
+        "M3": 0,
+        "S1": 1,
+        "S7": 1,
+        "S6-1": 2,
+        "S6-2": 1,
+        "S3": 1,
+        "S4": 2,
+        "S5": 1,
+        "S10": 2,
+        "S2-1":2,
+        "S2-2":2,
+        "S2-3":2,
+        "S8-1":1,
+        "S8-2":2,
+        "S8-3":2,
+        "S9-1":2,
+        "S9-2":2,
+    }
+    adata.obs['cytokine_level']=[cytokine_levels_dict[x] for x in adata.obs['sample_new']]
+
+    return adata
+
 
 
 def preprocess_immune_330k(adata: anndata.AnnData) -> anndata.AnnData:
@@ -138,8 +211,8 @@ def preprocess_immune_330k(adata: anndata.AnnData) -> anndata.AnnData:
 
 def preprocess_daniel(adata: anndata.AnnData) -> anndata.AnnData:
     """Preprocess the daniel dataset."""
-    daniel_dedup_colname = "cluster_assignment_daniel_normally_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling"
-    adata.obs["celltype"] = adata.obs[daniel_dedup_colname]
+    
+    adata.obs["celltype"] = adata.obs["Disease_subtype"]
     adata.obs["celltype"] = adata.obs["celltype"].astype("str").astype("category")
     adata.obs[
         "batch"
@@ -156,29 +229,32 @@ def preprocess_daniel(adata: anndata.AnnData) -> anndata.AnnData:
 def load_and_preprocess_dataset(dataset_name: str) -> anndata.AnnData:
     """Preprocess the dataset based on the provided dataset name."""
 
-    adata = load_dataset(
-        dataset_name.replace("_well_studied_celltypes", "").replace("_min_100", "")
-    )
-
-    if "tabula_sapiens" in dataset_name:
-        adata = preprocess_tabula_sapiens(adata)
-        well_studied_only = "well_studied_celltypes" in dataset_name
-        min_100 = "min_100" in dataset_name
-        adata = preprocess_tabula_sapiens(
-            adata, well_studied_only=well_studied_only, min_100=min_100
-        )
-    elif dataset_name == "pancreas":
-        adata = preprocess_pancreas(adata)
-    elif "immune_330k" in dataset_name:
-        adata = preprocess_immune_330k(adata)
-    elif dataset_name == "daniel":
-        adata = preprocess_daniel(adata)
-    elif "covid" in dataset_name:
-        adata = preprocess_covid(adata)
-    elif dataset_name == "immgen":
-        adata = preprocess_immgen(adata)
+    if dataset_name == "liao_covid":
+        adata = load_and_process_liao_covid()
     else:
-        raise ValueError(f"Unknown dataset name: {dataset_name}")
+        adata = load_dataset(
+            dataset_name.replace("_well_studied_celltypes", "").replace("_min_100", "")
+        )
+
+        if "tabula_sapiens" in dataset_name:
+            adata = preprocess_tabula_sapiens(adata)
+            well_studied_only = "well_studied_celltypes" in dataset_name
+            min_100 = "min_100" in dataset_name
+            adata = preprocess_tabula_sapiens(
+                adata, well_studied_only=well_studied_only, min_100=min_100
+            )
+        elif dataset_name == "pancreas":
+            adata = preprocess_pancreas(adata)
+        elif "immune_330k" in dataset_name:
+            adata = preprocess_immune_330k(adata)
+        elif dataset_name == "daniel":
+            adata = preprocess_daniel(adata)
+        elif "covid" in dataset_name:
+            adata = preprocess_covid(adata)
+        elif dataset_name == "immgen":
+            adata = preprocess_immgen(adata)
+        else:
+            raise ValueError(f"Unknown dataset name: {dataset_name}")
 
     # Very basic QC (as in zero-shot paper)
     sc.pp.filter_cells(adata, min_genes=10)

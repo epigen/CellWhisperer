@@ -3,7 +3,7 @@ import scanpy as sc
 import anndata
 from cellwhisperer.utils.processing import adata_to_embeds
 from scipy import sparse
-import scvi
+#import scvi
 from cellwhisperer.jointemb.model import TranscriptomeTextDualEncoderModel
 from cellwhisperer.jointemb.processing import (
     GeneformerTranscriptomeProcessor,
@@ -33,7 +33,6 @@ def adata_to_transcriptome_features(
         adata, return_tensors="pt", padding=True
     )
     # make sure transcriptome_tokens are on GPU
-    # TODO: Prepare for the case when the transcriptome is too large to fit on the GPU
     for k, v in transcriptome_processor_result.items():
         transcriptome_processor_result[k] = v.to(model.device)
 
@@ -148,6 +147,7 @@ def process_all_genes(adata: anndata.AnnData) -> None:
 def process_scvi(adata: anndata.AnnData) -> None:
     """Return an adata object with scvi embeddings added as adata.obsm["X_scvi"]."""
     # As in the zero shot paper notebook
+    import scvi
     adata_for_scvi = adata.copy()
     adata_for_scvi.layers["counts"] = adata_for_scvi.X
     scvi.model.SCVI.setup_anndata(adata_for_scvi, layer="counts", batch_key="batch")
