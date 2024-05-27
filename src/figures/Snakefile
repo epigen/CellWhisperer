@@ -9,6 +9,10 @@ LLAVA_BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
 GPU_TYPE = "a100-sxm4-80gb"
 
 include: "rules/fig1_method_landscape.smk"
+include: "rules/fig2_embedding_validations.smk"
+include: "rules/fig3_interactive_usecase.smk"
+include: "rules/fig4_colonic_epithelium.smk"
+include: "rules/figs1_model_training.smk"
 
 rule all:
     input:
@@ -23,4 +27,4 @@ rule all:
 
         # Supp. Figure 1
         rules.final_model_retrieval_scores.output.plot
-
+    default_target: True

@@ -1,0 +1,53 @@
+"""
+This root Snakefile downloads the models and all evaluation datasets and then runs all analyses leading to the final figure plots.
+"""
+
+from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+from pathlib import Path
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+CLIP_MODEL_FN = config["model_name_path_map"]["cellwhisperer"] + ".ckpt"
+HTTP = HTTPRemoteProvider()
+
+module datasets:
+    snakefile: "datasets/Snakefile"
+    config: config
+
+module figures:
+    snakefile: "figures/Snakefile"
+    config: config
+
+use rule * from datasets as datasets_*
+use rule * from figures as figures_*
+
+rule download_cellwhisperer_embedding_model:
+    input:
+        HTTP.remote(f"https://medical-epigenomics.org/papers/schaefer2024/data/models/{CLIP_MODEL_FN}")[0]
+    output:
+        PROJECT_DIR / config["paths"]["jointemb_models"] / CLIP_MODEL_FN
+    shell: """
+        cp {input} {output}
+        """
+
+
+rule download_cellwhisperer_llm:
+    """
+    TODO still need to upload/zip into public_html
+    """
+    input:
+        HTTP.remote("https://medical-epigenomics.org/papers/schaefer2024/data/models/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1.tar.gz")
+    output:
+        directory(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"])
+    shell: """
+        mkdir {output}
+        tar -xzvf {input} -C {output}
+    """
+
+rule all:
+    input:
+        rules.dataset_all.input,
+        rules.figures_all.input,
+        rules.download_cellwhisperer_embedding_model.output,
+        rules.download_cellwhisperer_llm.output,

@@ -56,15 +56,19 @@ See [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md)
 - Install prereqs for client: `make dev-env`
 
 ## Run
+
+### Reproduce analyses and plots
+
 ### Process your own datasets for CellWhisperer+CELLxGENE Explorer
 
 Refer to `src/cellxgene_preprocessing/README.md` for details.
 
 ### Preparation of training data for CellWhisperer training
 
-This is a resource-intensive endeavor and not fully automated. We provide the processed datasets for your convenience (TODO link).
+This is a resource-intensive endeavor and not fully automated. We provide the full processed datasets for your convenience (https://medical-epigenomics.org/papers/schaefer2024/data/datasets/archs4_metasra_full_data.h5ad and https://medical-epigenomics.org/papers/schaefer2024/data/datasets/cellxgene_census_full_data.h5ad).
 
-First you need to download the GEO/SRA/ARCHS4 and the CELLxGENE Census datasets:
+
+If you want to generate these datasets yourself, first you need to download the GEO/SRA/ARCHS4 and the CELLxGENE Census datasets:
 
 ```
 cd src/datasets/archs4_metasra
@@ -76,7 +80,7 @@ cd src/datasets/cellxgene_census
 snakemake
 ```
 
-Then, the whole process of generating annotations and preparing the datasets for training is captured in a dedicated pipeline:
+Then, the whole process of generating annotations and preparing the datasets for training is captured in a dedicated pipeline (requires a large number of GPU hours):
 
 ```
 cd src/pre_training_processing

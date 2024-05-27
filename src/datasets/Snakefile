@@ -3,9 +3,11 @@ Downloading all test/validation data sets.
 
 This is just a combination pipeline for all datasets
 
-Downloading/Preparing GEO/SRA/ARCHS4 and the CELLxGENE Census is a resource intensive endeavor and therefore not automated here
+Downloading/Preparing GEO/SRA/ARCHS4 and the CELLxGENE Census is a resource intensive endeavor. The original code is therefore not included here. Instead it is being downloaded directly
 """
 
+from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+HTTP = HTTPRemoteProvider()
 import subprocess
 PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
 configfile: PROJECT_DIR / "config.yaml"
@@ -35,10 +37,36 @@ use rule * from bowel_disease as bowel_disease_*
 use rule * from daniel as daniel_*
 
 
+rule archs4_metasra:
+    """
+    This "full_data.h5ad" file is a "superset" of read_count_table.h5ad, additionally containing the LLM-curated natural language captions (which are ignored in this context)
+    """
+    input:
+        full_data=HTTP.remote(f"https://medical-epigenomics.org/papers/schaefer2024/data/datasets/archs4_metasra_full_data.h5ad")[0]
+    output:
+        PROJECT_DIR / config["paths"]["read_count_table"].format("archs4_metasra")
+    shell: """
+        cp {input.full_data} {output}
+    """
+
+rule cellxgene_census:
+    """
+    This "full_data.h5ad" file is a "superset" of read_count_table.h5ad, additionally containing the LLM-curated natural language captions (which are ignored in this context)
+    """
+    input:
+        full_data=HTTP.remote(f"https://medical-epigenomics.org/papers/schaefer2024/data/datasets/cellxgene_census_full_data.h5ad")[0]
+    output:
+        PROJECT_DIR / config["paths"]["read_count_table"].format("cellxgene_census")
+    shell: """
+        cp {input.full_data} {output}
+    """
+
 rule all:
     input:
         rules.tabula_sapiens_all.input,
         rules.immgen_all.input,
         rules.bowel_disease_all.input,
         rules.daniel_all.input,
+        rules.archs4_metasra.output,
+        rules.cellxgene_census.output
     default_target: True
