@@ -1,0 +1,26 @@
+PROJECT_DIR = Path(workflow.basedir).resolve().parents[1]
+configfile: PROJECT_DIR / "config.yaml"
+
+CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
+TARGET_DATASETS = config["datasets"]  # config["datasets"] "tabula_sapiens",
+LLAVA_BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
+
+# GPU_TYPE = "a100"
+GPU_TYPE = "a100-sxm4-80gb"
+
+include: "rules/fig1_method_landscape.smk"
+
+rule all:
+    input:
+        # Figure 1
+        rules.geo_umap_plots.output.cluster_labeled.format(model=config["model_name_path_map"]["cellwhisperer"])
+        # Figure 2
+
+        # Figure 2 (exended)
+        expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["archs4_metasra", "daniel", "tabula_sapiens"], model=CLIP_MODEL),
+        # Figure 4
+        rules.bowel_disease_stem_cell_contribution.output.plot
+
+        # Supp. Figure 1
+        rules.final_model_retrieval_scores.output.plot
+

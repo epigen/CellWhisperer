@@ -6,7 +6,7 @@ PROJECT_DIR = Path(workflow.basedir).resolve().parents[1]
 configfile: PROJECT_DIR / "config.yaml"
 
 DATASETS = config["datasets"]
-DATASETS = ["cellxgene_census"]  # , "archs4_metasra"
+DATASETS = ["cellxgene_census", "archs4_metasra"]
 RESULTS_DIR = PROJECT_DIR / "results" / "pre_training_processing"
 REPLICATES = list(range(config["num_replicates"]))
 REPLICATES = [0]  # archs4_metasra uses [0, 1]

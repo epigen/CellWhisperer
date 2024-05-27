@@ -1,11 +1,13 @@
-# cellwhisperer
+# Cellwhisperer
 CellWhisperer project
 
 For more information on project management, follow
 https://github.com/epigen/cellwhisperer/wiki
 
 
-## Installation instructions
+## Install
+
+TODO: declare how to run with docker. also indicate how to install llava
 
 1. Run `git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules`
   If you already cloned, but did not add the `--recurse-submodules` run the following:
@@ -53,7 +55,35 @@ See [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md)
 - Install from local files: `make install-dev`
 - Install prereqs for client: `make dev-env`
 
-## Run/Train with Pytorch Lightning
+## Run
+### Process your own datasets for CellWhisperer+CELLxGENE Explorer
+
+Refer to `src/cellxgene_preprocessing/README.md` for details.
+
+### Preparation of training data for CellWhisperer training
+
+This is a resource-intensive endeavor and not fully automated. We provide the processed datasets for your convenience (TODO link).
+
+First you need to download the GEO/SRA/ARCHS4 and the CELLxGENE Census datasets:
+
+```
+cd src/datasets/archs4_metasra
+snakemake  # Note that this pipeline source code is not thoroughly tested and was only executed in an interactive (non-pipeline) fashion
+```
+and
+```
+cd src/datasets/cellxgene_census
+snakemake
+```
+
+Then, the whole process of generating annotations and preparing the datasets for training is captured in a dedicated pipeline:
+
+```
+cd src/pre_training_processing
+snakemake
+```
+
+### Train CellWhisperer embedding model
 
 We rely on pytorch lightning, which significantly reduces boilerplate for a multitude of aspects, including
 - logging
@@ -70,19 +100,21 @@ cellwhisperer fit --print_config > run_config.yaml
 cellwhisperer fit --config run_config.yaml
 ```
 
-### Sweeps
-
-To run sweeps, refer to [this README](./src/experiments/sweeps/README.md). You can run sweeps with the `single_cell_sweeping` tool
-
-### Important parameters
+#### Important parameters
 
 `wandb`: Whether to log to wandb and if so which run_name to use
 `trainer.logger.log_model`: Upload model to WandB?
 `trainer.fast_dev_run`: Name is self-explanatory. Super useful for debugging
 `ckpt_path`: a path (to load a model, e.g. for resuming)
 
-### Run
-Use `CELLWHISPERER_CACHE=/cache/cellwhisperer` to define a different cache folder
+#### TODO Sweeps
+
+To run sweeps, refer to [this README](./src/experiments/sweeps/README.md). You can run sweeps with the `single_cell_sweeping` tool
+
+### TODO Train CellWhisperer LLM
+
+### TODO Model Analyses and plots
+
 
 ## Folder structure
 
@@ -92,24 +124,25 @@ Use `CELLWHISPERER_CACHE=/cache/cellwhisperer` to define a different cache folde
 - resources: External, references, datasets and tools that are project inherent and can be reproduced or downloaded with your scripts and pipelines
 - src (and all other directories needed to run the source code)
 
+### src/
+
+Consists of the `cellwhisperer` package and a series of 
+
+- `cellwhisperer`:
+- `pre_training_processing`:
+- `post_clip_processing`:  # TODO split
+- `llava`:
+- `ablation`:
+- `figures`:
+
 ### Code style
 
 We use `blacken` for automated code formatting.
 
-## How to install a new library (i.e. extend the environment)?
-
-1. Load the environment, defined by envs/main.yaml with conda (`conda activate cellwhisperer`)
-2. Install the package of interest (`conda install <your_package>`)
-3. If everything works pin the package you installed in main.yaml with its version.
-4. Before commiting do one of the two
-4.1 Update your env conda env: `conda env update --file environment.yml`
-4.2 create a fresh environment for testing from the new main.yaml (`conda env create -f envs/main.yml -n test_tmp_env`)
-
-
 ## Deploy
 - `cd` to `hosting/home`
     - To deploy, run `docker compose up -d`
-    - To rebuild the website, run `docker compose -f website-builder-compose.yml up`
+    - To rebuild the website, run `docker compose -f website-builder-compose.yml up`  # TODO make this part of the docker file and remove here
 
 ## Processing of new (single cell) datasets
 - Make sure your dataset adheres to the prerequisites described in the [wiki](https://github.com/epigen/cellwhisperer/wiki/Datasets)

@@ -1,0 +1,44 @@
+"""
+Downloading all test/validation data sets.
+
+This is just a combination pipeline for all datasets
+
+Downloading/Preparing GEO/SRA/ARCHS4 and the CELLxGENE Census is a resource intensive endeavor and therefore not automated here
+"""
+
+import subprocess
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+module tabula_sapiens:
+    snakefile: "tabula_sapiens/Snakefile"
+    config: config
+
+module immgen:
+    snakefile: "immgen/Snakefile"
+    config: config
+
+module bowel_disease:
+    snakefile: "bowel_disease/Snakefile"
+    config: config
+
+module daniel:
+    snakefile: "daniel/Snakefile"
+    config: config
+
+
+# TODO development4s?
+
+use rule * from tabula_sapiens as tabula_sapiens_*
+use rule * from immgen as immgen_*
+use rule * from bowel_disease as bowel_disease_*
+use rule * from daniel as daniel_*
+
+
+rule all:
+    input:
+        rules.tabula_sapiens_all.input,
+        rules.immgen_all.input,
+        rules.bowel_disease_all.input,
+        rules.daniel_all.input,
+    default_target: True

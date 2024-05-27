@@ -1,11 +1,6 @@
-"""
-Details: https://github.com/epigen/cellwhisperer/issues/385
-"""
-import subprocess
-from pathlib import Path
-PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+# Extended fig 2
 
-# configfile: PROJECT_DIR / "config.yaml"
+# TODO test whether this can be computed on a CPU in reasonable time
 
 rule cw_transcriptome_term_scores:
     """
@@ -29,14 +24,12 @@ rule cw_transcriptome_term_scores:
     notebook:
         "../notebooks/cw_transcriptome_term_scores.py.ipynb"
 
+
 rule plot_gsva_correlations:
     """
-    - Plot the correlation between the top term and the cells
-    - Plot the correlation between the libraries
-    - Correlate (for each (pseudo)cell, sample)
     """
     input:
-        cw_transcriptome_term_scores=rules.cw_transcriptome_term_scores.output.cw_transcriptome_term_scores,
+        cw_transcriptome_term_scores=config["paths"]["gsva"]["cw_transcriptome_term_scores"],
         gsva_results=PROJECT_DIR / config["paths"]["gsva"]["result"],
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
