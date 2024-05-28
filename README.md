@@ -1,9 +1,8 @@
 # Cellwhisperer
 CellWhisperer project
 
-For more information on project management, follow
+For more information on project management, follow <- TODO delete in publication
 https://github.com/epigen/cellwhisperer/wiki
-
 
 ## Install
 

@@ -61,6 +61,24 @@ rule cellxgene_census:
         cp {input.full_data} {output}
     """
 
+
+rule download_conversation_datasets:
+    """
+    Files required to train CellWhisperer LLM from scratch
+    """
+    input:
+        downloads=[HTTP.remote(f"{BASE_URL}/datasets/cellwhisperer_llava_conversations/{fn}")[0] for fn in ["pretrain_texts.json", "finetune_conversations.json", "main_conversations.json", "tabula_sapiens_conversations.json"]]
+    output:
+        llava_stage1_dataset=PROJECT_DIR / config["paths"]["llava"]["pretrain_text_dataset"],
+        llava_stage2_dataset=PROJECT_DIR / config["paths"]["llava"]["finetune_text_dataset"],
+        evaluation_dataset_main=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="main"),
+        evaluation_dataset_tabula_sapiens=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="tabula_sapiens"),
+    run:
+        import shutil
+        for in_file, out_file in zip(input, output):
+            shutil.copy(in_file, out_file)
+
+
 rule all:
     input:
         rules.tabula_sapiens_all.input,
@@ -68,5 +86,6 @@ rule all:
         rules.bowel_disease_all.input,
         rules.daniel_all.input,
         rules.archs4_metasra.output,
-        rules.cellxgene_census.output
+        rules.cellxgene_census.output,
+        rules.download_conversation_datasets.output,
     default_target: True
