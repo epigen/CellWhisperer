@@ -58,6 +58,7 @@ rule gpt4_curate_llava_annotations:
 rule cellwhisperer_cluster_keywords:
     """
     Needs a 5GB GPU
+    TODO drop
 
     """
     input:
@@ -80,6 +81,7 @@ rule gpt4_curate_cluster_keywords:
     """
     Output is protected to prevent high GPT-4 cost. Script also fails with more than 200 clusters
     TODO: my key is stored in here. needs to be provided as environment variable
+    TODO drop
     """
     input:
         cellwhisperer_labels=rules.cellwhisperer_cluster_keywords.output.csv,
