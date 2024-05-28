@@ -17,7 +17,7 @@ rule llava_evaluation_perplexity:
         # image_data=rules.process_full_dataset.output.model_outputs.format(dataset="{dataset}", model=config["model_name_path_map"]["cellwhisperer"]),
         image_data=rules.combine_processed_data.output.combined.format(model=config["model_name_path_map"]["cellwhisperer"]),
     conda:
-        "llava2"
+        "llava"
     output:
         all_perplexities=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "all_perplexities.csv",
     params:
@@ -71,7 +71,7 @@ rule llava_evaluation_generation_preparation:
         instruction_response_gene_sets_extension=lambda wildcards: INSTRUCTION_RESPONSE_GENE_SETS_EXTENSION,
         instruction_prompt_text_only=lambda wildcards: INSTRUCTION_PROMPT_TEXT_ONLY,
     conda:
-        "llava2"
+        "llava"
     notebook:
         "../notebooks/llava_evaluation_generation_preparation.py.ipynb"
 
@@ -88,7 +88,7 @@ rule llava_evaluation_generation:
     output:
         llava_responses=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_llava_responses{input_features,[^/]*}.jsonl"
     conda:
-        "llava2"
+        "llava"
     params:
         script=lambda wildcards: PROJECT_DIR / "modules/LLaVA/llava/eval" / ("model_qa.py" if wildcards.input_features == "_text_only" else "model_vqa.py"),
     resources:

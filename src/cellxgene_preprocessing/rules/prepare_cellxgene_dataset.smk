@@ -23,7 +23,7 @@ rule llava_annotate_clusters:
     output:
         csv=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_annotated_clusters.csv"
     conda:
-        "llava2"
+        "llava"
     params:
         request="<s>[INST] Help me analyzing this sample of cells. Always respond in proper english sentences and in a tone of uncertainty. [/INST] Sure thing. What do you want to know? </s> [INST] Describe the biological state of these cells\n<image> [/INST]",
         num_beams=10

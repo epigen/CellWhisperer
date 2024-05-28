@@ -12,7 +12,7 @@ rule gpt4transcriptome_baseline:
     output:
         protected(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4transcriptome_responses.jsonl")
     conda:
-        "llava2"
+        "llava"
     notebook:
         "../notebooks/gpt4transcriptome_baseline.ipynb"
 
@@ -35,7 +35,7 @@ rule llava_eval_gpt4_review:
     output:
         evaluation=protected(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4_review.jsonl")
     conda:
-        "llava2"
+        "llava"
     params:
         script=PROJECT_DIR / "modules/LLaVA/llava/eval/eval_gpt_review.py",
     shell: """
@@ -54,7 +54,7 @@ rule llava_eval_gpt4_review_summarize:
     output:
         overview_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4_review_summary.svg"
     conda:
-        "llava2"
+        "llava"
     params:
         complex_samples=COMPLEX_SAMPLES,  # for grouping
         detailed_samples=DETAILED_SAMPLES,  # for grouping

@@ -27,9 +27,11 @@ Sun Mar 31 17:36:31 2024
 ...
 ```
 
-2. Install the environment
+2. Install the environments
   ```
-  mamba env create -f envs/main.yaml  # this already includes `pip install -e .`
+  mamba env create -f envs/main.yaml  # name: cellwhisperer   this already includes `pip install -e .`
+  mamba env create -f envs/llava.yaml  # name: llava    this already includes `pip install -e ../modules/LLaVA/[train]`
+
   conda activate cellwhisperer
   ```
 3. Develop :)

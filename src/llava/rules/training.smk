@@ -35,7 +35,7 @@ rule pretrain_llava:
         data_path=rules.llava_stage1_dataset.output["train_set"],
         image_data=rules.combine_processed_data.output.combined,
     conda:
-        "llava2"
+        "llava"
     params:
         deepspeed=True,  # debug if False
         projector_type=PROJECTOR_TYPE,
@@ -109,7 +109,7 @@ rule finetune_llava:
         image_data=rules.combine_processed_data.output.combined,
         pretrained_projector=rules.pretrain_llava.output.projector
     conda:
-        "llava2"
+        "llava"
     params:
         deepspeed=True,
         projector_type=PROJECTOR_TYPE,

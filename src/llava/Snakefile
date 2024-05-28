@@ -16,7 +16,7 @@ HTTP = HTTPRemoteProvider()
 GPU_TYPE = "a100"
 # GPU_TYPE = "a100-sxm4-80gb"  # used for the data_processing and conversation generation rules
 CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
-PROJECTOR_TYPE = "mlp2x_8t_gelu"  # TODO fails if > 8 (12 and 16 both failed. either due to  dual-digit not being ok or because they become too large for some reason ). Here is the error evoked (can use pdb to trace (breakpoint before beaks)): /msc/home/mschae83/miniconda3/envs/llava2/lib/python3.10/site-packages/torch/nn/utils/clip_grad.py(55)
+PROJECTOR_TYPE = "mlp2x_8t_gelu"  # TODO fails if > 8 (12 and 16 both failed. either due to  dual-digit not being ok or because they become too large for some reason ). Here is the error evoked (can use pdb to trace (breakpoint before beaks)): /msc/home/mschae83/miniconda3/envs/llava/lib/python3.10/site-packages/torch/nn/utils/clip_grad.py(55)
 
 
 # random sample (n=100) of the GSVA datasets (which are already weight-corrected)
