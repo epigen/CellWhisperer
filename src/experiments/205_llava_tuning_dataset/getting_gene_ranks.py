@@ -25,26 +25,26 @@ print("batch = " + str(batch) + "\n")
 data_dir = "/scratch/ahakobyan/single_cellm_data/"
 project_dir = '/users/anna.hakobyan/projects/single-cellm/'
 
-output_dir = data_dir + "archs4_metasra/gene_ranks/"
+output_dir = data_dir + "archs4_geo/gene_ranks/"
 
 os.chdir(project_dir)
 
 ### loading the data
 # start = time.time()
-# exps = sc.read_h5ad(data_dir + "archs4_metasra/full_data_zipped-001.h5ad")
+# exps = sc.read_h5ad(data_dir + "archs4_geo/full_data_zipped-001.h5ad")
 # end = time.time()
 
 # print (end - start) ~10 mins 
 
 ### loading the geneformer normalization factors
-with open(data_dir + "archs4_metasra/geneformer_gene_median_dictionary.pkl", 'rb') as fp:
+with open(data_dir + "archs4_geo/geneformer_gene_median_dictionary.pkl", 'rb') as fp:
      geneformer_gene_medians = pickle.load(fp)
 
 
 ###
 # batch = 1
 
-exps = sc.read_h5ad(data_dir + "archs4_metasra/full_data_zipped-001.h5ad")
+exps = sc.read_h5ad(data_dir + "archs4_geo/full_data_zipped-001.h5ad")
 
 print("exps have been imported.\n")
 
@@ -88,7 +88,7 @@ exps_subset.write(output_dir + 'exps_gene_ranks_batch_' + str(batch) +'.h5ad')
 # data_dir = "/scratch/ahakobyan/single_cellm_data/"
 # project_dir = '/users/anna.hakobyan/projects/single-cellm/'
 
-# output_dir = data_dir + "archs4_metasra/gene_ranks/"
+# output_dir = data_dir + "archs4_geo/gene_ranks/"
 
 # os.chdir(project_dir)
 

@@ -8,7 +8,7 @@
 	path = modules/clip_lite
 	url = git@github.com:epigen/CLIP-Lite.git
 [submodule "src/datasets/archs4/metasra"]
-	path = src/datasets/archs4_metasra/metasra
+	path = src/datasets/archs4_geo/metasra
 	url = https://github.com/dmalzl/metasra
 	
 [submodule "modules/LLaVA"]

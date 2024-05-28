@@ -25,7 +25,7 @@ TEST_IDS = pd.read_csv("./test_ids", header=None).iloc[:, 0].to_list()
 
 # For snakemake efficiency, extract the samples once and store them
 if not os.path.exists("./tmp_gsva_samples.csv"):
-    ARCHS4_GSVA_SAMPLES = pd.read_parquet(PROJECT_DIR / config["paths"]["gsva"]["result"].format(dataset="archs4_metasra")).set_index("Unnamed: 0").drop(columns=["library"]).columns
+    ARCHS4_GSVA_SAMPLES = pd.read_parquet(PROJECT_DIR / config["paths"]["gsva"]["result"].format(dataset="archs4_geo")).set_index("Unnamed: 0").drop(columns=["library"]).columns
     # store GSVA samples
     with open("./tmp_gsva_samples.csv", "w") as f:
         f.write("\n".join(ARCHS4_GSVA_SAMPLES.to_list()))
@@ -59,7 +59,7 @@ MODELS= [
     # "no_archs4_data_42_0.0005_09cid8z6"  # does GEO data improve conversation ability? (I guess we would need a disease-centric validation set for this...)
 ]
 
-# TODO archs4_metasra is actually a combination of archs4 and tabsap. I should rename it here (and everywhere)!
+# TODO archs4_geo is actually a combination of archs4 and tabsap. I should rename it here (and everywhere)!
 rule all:
     input:
         expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",

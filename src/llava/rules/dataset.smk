@@ -23,7 +23,7 @@ rule llava_stage1_dataset:
     In a nutshell, take the questions (above) and use the previously generated sample annotations as answers
     """
     input:
-        annotations_archs4_metasra=ancient(PROJECT_DIR / config["paths"]["processed_multi_annotations"].format(dataset="archs4_metasra")),
+        annotations_archs4_geo=ancient(PROJECT_DIR / config["paths"]["processed_multi_annotations"].format(dataset="archs4_geo")),
         annotations_cellxgene_census=PROJECT_DIR / config["paths"]["processed_annotations"].format(dataset="cellxgene_census"),
     output:
         train_set=PROJECT_DIR / config["paths"]["llava"]["pretrain_text_dataset"],
@@ -64,7 +64,7 @@ rule prepare_llava_stage2_requests:
         request_splits=scatter.split(PROJECT_DIR / "results/llava/requests/{{dataset,[^/]+}}/{scatteritem}.json"),
         few_shot_block="prompts/few_shot_messages_{dataset}.json",
     params:
-        annotation_replicate=-1,  # -1 means the last one (which is the more sophisticated one for archs4_metasra)
+        annotation_replicate=-1,  # -1 means the last one (which is the more sophisticated one for archs4_geo)
         top_n_genes=20,  # use fewer here to not overwhelm the model
         top_n_gene_sets=20,
         start_from_num=CONVERSATION_START,
@@ -174,18 +174,18 @@ rule aggregate_llava_stage2_dataset:
     # TODO use the last 10000 samples (of the 50000) for very naive attribute conversations (requires metadata. whitelist parameter fields, such as organ, cell type etc.)
     """
     input:
-        # json_splits = glob.glob("/msc/home/mschae83/cellwhisperer/results/llava/processed/archs4_metasra/second/*-of-128.json"),  # , i=[1, 103, 118, 20, 35, 48, 61, 7, 89, 1, 104, 120, 23, 36, 5, 62, 74, 9, 102, 107, 122, 33, 37, 50, 65, 79, 93])
+        # json_splits = glob.glob("/msc/home/mschae83/cellwhisperer/results/llava/processed/archs4_geo/second/*-of-128.json"),  # , i=[1, 103, 118, 20, 35, 48, 61, 7, 89, 1, 104, 120, 23, 36, 5, 62, 74, 9, 102, 107, 122, 33, 37, 50, 65, 79, 93])
         json_splits=[split.format(dataset=dataset)
-                     for dataset in ["archs4_metasra", "cellxgene_census"]
+                     for dataset in ["archs4_geo", "cellxgene_census"]
                      for split in gather.split(PROJECT_DIR / "results" / "llava" / "processed" / "{{dataset}}" / "{scatteritem}.json")
                      # for split in [(PROJECT_DIR / "results" / "llava" / "processed" / "{dataset}" / f"1-of-128.json").as_posix()]
                      ],
         stage1_train_set = rules.llava_stage1_dataset.output.train_set,
         stage1_test_set = rules.llava_stage1_dataset.output.test_set,
-        complex_conversations=ancient(expand(rules.generate_llava_complex.output.processed_annotation, sample_id=COMPLEX_SAMPLES, dataset="archs4_metasra")),
-        detailed_conversations=ancient(expand(rules.generate_llava_detailed.output.processed_annotation, sample_id=DETAILED_SAMPLES, dataset="archs4_metasra")),
-        transcriptome_weights=expand(PROJECT_DIR / "results/pre_training_processing/{dataset}/transcriptome_weights.npz", dataset=["archs4_metasra", "cellxgene_census"]),
-        annotation_weights=expand(PROJECT_DIR / "results/pre_training_processing/{dataset}/annotation_weights.npz", dataset=["archs4_metasra", "cellxgene_census"])
+        complex_conversations=ancient(expand(rules.generate_llava_complex.output.processed_annotation, sample_id=COMPLEX_SAMPLES, dataset="archs4_geo")),
+        detailed_conversations=ancient(expand(rules.generate_llava_detailed.output.processed_annotation, sample_id=DETAILED_SAMPLES, dataset="archs4_geo")),
+        transcriptome_weights=expand(PROJECT_DIR / "results/pre_training_processing/{dataset}/transcriptome_weights.npz", dataset=["archs4_geo", "cellxgene_census"]),
+        annotation_weights=expand(PROJECT_DIR / "results/pre_training_processing/{dataset}/annotation_weights.npz", dataset=["archs4_geo", "cellxgene_census"])
     params:
         test_ids=TEST_IDS,
         num_stage1_samples=10000,  # maybe only use 10000. or train with them only in the beginning?

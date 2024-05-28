@@ -21,7 +21,7 @@ rule prepare_gsva_dataset:
         colnames=PROJECT_DIR / "results" / "{dataset}" / "tmp" / "gsva_prepared.columns",
         rownames=PROJECT_DIR / "results" / "{dataset}" / "tmp" / "gsva_prepared.rows"
     params:
-        filter_protein_coding=lambda wildcards: wildcards.dataset == "archs4_metasra",
+        filter_protein_coding=lambda wildcards: wildcards.dataset == "archs4_geo",
         seed=42,
         num_samples=50000
     conda:

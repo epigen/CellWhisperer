@@ -93,7 +93,7 @@ model:
   lr_warmup: 0.03
   frozen_warmup: 0.03
 data:
-  dataset_names: archs4_metasra,cellxgene_census
+  dataset_names: archs4_geo,cellxgene_census
   nproc: 8
   transcriptome_processor_kwargs: {}
   tokenizer_kwargs:

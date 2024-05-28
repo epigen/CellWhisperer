@@ -37,14 +37,14 @@ use rule * from bowel_disease as bowel_disease_*
 use rule * from human_disease as human_disease_*
 
 
-rule archs4_metasra:
+rule archs4_geo:
     """
     This "full_data.h5ad" file is a "superset" of read_count_table.h5ad, additionally containing the LLM-curated natural language captions (which are ignored in this context)
     """
     input:
-        full_data=HTTP.remote(f"https://medical-epigenomics.org/papers/schaefer2024/data/datasets/archs4_metasra_full_data.h5ad")[0]
+        full_data=HTTP.remote(f"https://medical-epigenomics.org/papers/schaefer2024/data/datasets/archs4_geo_full_data.h5ad")[0]
     output:
-        PROJECT_DIR / config["paths"]["read_count_table"].format("archs4_metasra")
+        PROJECT_DIR / config["paths"]["read_count_table"].format("archs4_geo")
     shell: """
         cp {input.full_data} {output}
     """
@@ -85,7 +85,7 @@ rule all:
         rules.immgen_all.input,
         rules.bowel_disease_all.input,
         rules.human_disease_all.input,
-        rules.archs4_metasra.output,
+        rules.archs4_geo.output,
         rules.cellxgene_census.output,
         rules.download_conversation_datasets.output,
     default_target: True

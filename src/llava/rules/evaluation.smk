@@ -22,7 +22,7 @@ rule llava_evaluation_perplexity:
         all_perplexities=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "all_perplexities.csv",
     params:
         num_projector_tokens=int(PROJECTOR_TYPE.split("_")[1].strip("t")),
-        background_shuffle=lambda wildcards: "transcriptome" if wildcards.dataset == "archs4_metasra" else "llm-response",
+        background_shuffle=lambda wildcards: "transcriptome" if wildcards.dataset == "archs4_geo" else "llm-response",
         num_negatives=30
     resources:
         mem_mb=300000,
@@ -57,7 +57,7 @@ rule llava_evaluation_generation_preparation:
 
     input:
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
-        archs4_request_splits=gather.split(PROJECT_DIR / "results/llava/requests/archs4_metasra/{scatteritem}.json"),
+        archs4_request_splits=gather.split(PROJECT_DIR / "results/llava/requests/archs4_geo/{scatteritem}.json"),
         cellxgene_request_splits=gather.split(PROJECT_DIR / "results/llava/requests/cellxgene_census/{scatteritem}.json"),
     output:
         formatted_questions=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_formatted_questions.jsonl",

@@ -100,7 +100,7 @@ model:
   learning_rate: 0.0001
   lr_warmup_steps: 50
 data:
-  dataset_name: archs4_metasra
+  dataset_name: archs4_geo
   nproc: 8
   transcriptome_processor_kwargs: {}
   min_genes: 200

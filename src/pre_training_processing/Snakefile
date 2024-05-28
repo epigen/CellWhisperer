@@ -6,10 +6,10 @@ PROJECT_DIR = Path(workflow.basedir).resolve().parents[1]
 configfile: PROJECT_DIR / "config.yaml"
 
 DATASETS = config["datasets"]
-DATASETS = ["cellxgene_census", "archs4_metasra"]
+DATASETS = ["cellxgene_census", "archs4_geo"]
 RESULTS_DIR = PROJECT_DIR / "results" / "pre_training_processing"
 REPLICATES = list(range(config["num_replicates"]))
-REPLICATES = [0]  # archs4_metasra uses [0, 1]
+REPLICATES = [0]  # archs4_geo uses [0, 1]
 
 include: "rules/annotation_processing.smk"
 include: "rules/training_sample_weights.smk"

@@ -88,7 +88,7 @@ df=pd.read_csv(f"{BASEDIR}/1b/cellwhisperer_annotated_clusters.csv")
 adata=anndata.read_h5ad(f"{BASEDIR}/1b/llava_annotated_clusters.h5ad")
 language_labels=pd.read_csv(f"{BASEDIR}/1b/gpt4_labels.csv", index_col=0)["GPT4_generated_labels"]
 npz=np.load(f"{BASEDIR}/1b/full_output.npz")
-annotations_per_transcriptome=json.load(open(f"{BASEDIR}/archs4_metasra/processed_annotations.json","r"))
+annotations_per_transcriptome=json.load(open(f"{BASEDIR}/archs4_geo/processed_annotations.json","r"))
 outdir=Path(f"{BASEDIR}/1b/figures")
 outdir.mkdir(exist_ok=True)
 repaired_path = get_path(["paths", "jointemb_models"]) / ckpt_file_name.replace(".ckpt", "_repaired.ckpt")

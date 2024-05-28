@@ -3,7 +3,7 @@ rule geo_umap_plots:
     """
     """
     input:
-        rules.compile_h5ad.output.adata.format(dataset="archs4_metasra", model="{model}"),
+        rules.compile_h5ad.output.adata.format(dataset="archs4_geo", model="{model}"),
     output:
         cluster_labeled=PROJECT_DIR / config["paths"]["geo_umap"] / "cluster_labeled.svg",
         submission_date_labeled=PROJECT_DIR / config["paths"]["geo_umap"] / "submission_date_labeled.svg",

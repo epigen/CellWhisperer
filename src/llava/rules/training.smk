@@ -5,7 +5,7 @@ rule combine_processed_data:
     Since we use `orig_ids` to match the data, we can't simply concatenate the arrays.
     """
     input:
-        expand(rules.process_full_dataset.output.model_outputs, dataset=["archs4_metasra", "tabula_sapiens", "cellxgene_census", "human_disease"], model="{model}"),
+        expand(rules.process_full_dataset.output.model_outputs, dataset=["archs4_geo", "tabula_sapiens", "cellxgene_census", "human_disease"], model="{model}"),
     output:
         combined=PROJECT_DIR / config["paths"]["llava"]["root"] / "combined_processed_data" / "{model}.npz"
     resources:
