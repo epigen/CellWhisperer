@@ -2,7 +2,7 @@ method: random
 name: workshop_geneformer
 metric:
   goal: maximize
-  name: valfn_daniel_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/recall_at_10_macroAvg
+  name: valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/recall_at_10_macroAvg
 parameters:
   model.lr_warmup_steps:
     values:

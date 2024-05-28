@@ -288,7 +288,7 @@ model:
 
     model_type: transcriptome-text-dual-encoder
 data:
-  dataset_name: daniel
+  dataset_name: human_disease
   batch_size: 32
 best_model_path: null
 log_level: WARNING

@@ -9,7 +9,7 @@ trainer:
   logger:
     class_path: lightning.pytorch.loggers.WandbLogger
     init_args:
-      name: train_both_daniel
+      name: train_both_human_disease
       version: null
       offline: false
       dir: null
@@ -285,7 +285,7 @@ model:
     projection_dim: 128
     model_type: transcriptome-text-dual-encoder
 data:
-  dataset_name: daniel
+  dataset_name: human_disease
   batch_size: 32
 best_model_path: null
 log_level: WARNING

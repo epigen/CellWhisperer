@@ -8,7 +8,7 @@
 #SBATCH --mail-type=ALL
 #SBATCH --qos=medium
 #SBATCH --time=01-12:00:00
-#SBATCH --mail-user=daniel.malzl@imp.ac.at
+#SBATCH --mail-user=human_disease.malzl@imp.ac.at
 
 input_json=metadata/raw_biosample_metadata_${SLURM_ARRAY_TASK_ID}.json
 output_json=metadata/normalized_biosample_metadata_${SLURM_ARRAY_TASK_ID}.json

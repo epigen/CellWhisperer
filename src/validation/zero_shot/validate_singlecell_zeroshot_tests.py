@@ -89,7 +89,7 @@ if True:
     dm = JointEmbedDataModule(
         tokenizer="biogpt",
         transcriptome_processor="geneformer",
-        dataset_name="daniel",
+        dataset_name="human_disease",
         batch_size=32,
         train_fraction=0.0,
     )

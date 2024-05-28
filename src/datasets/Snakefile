@@ -24,8 +24,8 @@ module bowel_disease:
     snakefile: "bowel_disease/Snakefile"
     config: config
 
-module daniel:
-    snakefile: "daniel/Snakefile"
+module human_disease:
+    snakefile: "human_disease/Snakefile"
     config: config
 
 
@@ -34,7 +34,7 @@ module daniel:
 use rule * from tabula_sapiens as tabula_sapiens_*
 use rule * from immgen as immgen_*
 use rule * from bowel_disease as bowel_disease_*
-use rule * from daniel as daniel_*
+use rule * from human_disease as human_disease_*
 
 
 rule archs4_metasra:
@@ -84,7 +84,7 @@ rule all:
         rules.tabula_sapiens_all.input,
         rules.immgen_all.input,
         rules.bowel_disease_all.input,
-        rules.daniel_all.input,
+        rules.human_disease_all.input,
         rules.archs4_metasra.output,
         rules.cellxgene_census.output,
         rules.download_conversation_datasets.output,

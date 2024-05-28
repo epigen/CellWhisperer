@@ -42,7 +42,7 @@ for ckpt_file_name in [
     norm_and_log1p = False # NOTE: Activate this for scGPT models (if appropriate)
 
     result_dir = os.path.dirname(
-        os.path.dirname(get_path(["paths", "full_dataset"], dataset="daniel"))
+        os.path.dirname(get_path(["paths", "full_dataset"], dataset="human_disease"))
     )  # Not the most elegant
 
     result_dir = Path(result_dir) / "MS_zero_shot_scfoundation_replication_v5" / ckpt_file_name
@@ -62,7 +62,7 @@ for ckpt_file_name in [
         "tabula_sapiens",
         "pancreas",
         "immgen",
-        "daniel",
+        "human_disease",
 #  "tabula_sapiens_100_cells_per_type",
 # #    "tabula_sapiens_100_cells_per_type_well_studied_celltypes",
 # #   "tabula_sapiens_100_cells_per_type_min_100",
@@ -81,7 +81,7 @@ for ckpt_file_name in [
         if "tabula_sapiens" in dataset:
             label_cols_per_dataset_dict[dataset] += ["organ_tissue","compartment","gender"]
 
-    label_cols_per_dataset_dict["daniel"] += [
+    label_cols_per_dataset_dict["human_disease"] += [
         "Tissue",
         "Tissue_subtype",
         "Disease",
@@ -419,7 +419,7 @@ for ckpt_file_name in [
         datasets=[
             "tabula_sapiens",
             "tabula_sapiens",
-            "daniel",],
+            "human_disease",],
         selected_sample_lists=[
                         ["kidney epithelial cell", "erythrocyte","plasma cell"],
                         ["Kidney", "Lung", "Tongue"],
@@ -443,7 +443,7 @@ for ckpt_file_name in [
             "tabula_sapiens_well_studied_celltypes",
             "pancreas",
             "immgen",
-            "daniel",
+            "human_disease",
             "tabula_sapiens",
-            "daniel"]
+            "human_disease"]
     )

@@ -48,7 +48,7 @@ plot_style: "src/plot_style/main.style"
 
 datasets:
   - immgen
-  - daniel
+  - human_disease
   - tabula_sapiens
   - tabula_sapiens_100_cells_per_type
   - archs4_metasra
@@ -64,7 +64,7 @@ datasets:
 
 retrieval_validation_sets:
   - immgen_deduplicated
-  - daniel_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
+  - human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
 
 
 model_name_path_map:

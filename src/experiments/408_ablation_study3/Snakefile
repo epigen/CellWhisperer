@@ -82,9 +82,9 @@ rule plot_results:
         metrics = [
             "valfn_integration_TabSap/avg_bio",
             "valfn_integration_TabSap/ASW_label__batch",  # relatively narrow result range (0.83 - 0.86)
-            "valfn_daniel_dedup/recall_at_5_macroAvg",  # Note: this is the average of the two below
-            # "valfn_daniel_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/transcriptomes_as_classes_recall_at_5_macroAvg",
-            # "valfn_daniel_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_recall_at_5_macroAvg",
+            "valfn_human_disease_dedup/recall_at_5_macroAvg",  # Note: this is the average of the two below
+            # "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/transcriptomes_as_classes_recall_at_5_macroAvg",
+            # "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_recall_at_5_macroAvg",
             "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
             "valfn_zshot_TabSap_celltype_lvl/f1_macroAvg"],
         top_models = ["full_model", "no_archs4_data", "no_census_data", "scgpt"]

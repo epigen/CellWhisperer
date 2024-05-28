@@ -74,7 +74,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self,
         tokenizer="biogpt",
         transcriptome_processor="geneformer",
-        dataset_names="daniel",
+        dataset_names="human_disease",
         batch_size=32,
         nproc=8,
         transcriptome_processor_kwargs={},

@@ -97,12 +97,12 @@ services:
       - cellwhisperer_llava_model
       - cellwhisperer_llava_controller
 
-  cellxgene_daniel:
+  cellxgene_human_disease:
     <<: *cellxgene-service
     volumes:
       - ~/cellwhisperer/hosting/home/cellxgene_config.yaml:/cellxgene_config.yaml:ro
-      - ~/cellwhisperer/results/daniel/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ./llava_logs/daniel/:/logs/
+      - ~/cellwhisperer/results/human_disease/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./llava_logs/human_disease/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
     # ports:
       # - "5005:5005"  # for testing without nginx
@@ -209,7 +209,7 @@ services:
       - cellxgene_geo
       - cellxgene_development_raw
       - cellxgene_development_scvi
-      - cellxgene_daniel
+      - cellxgene_human_disease
       - cellxgene_car_t
       - cellxgene_bowel_disease
       - cellxgene_gut_cell_atlas

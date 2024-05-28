@@ -144,7 +144,7 @@ def _cluster(
 
 
 def deduplicate_dataset(
-    dataset: str = "daniel",
+    dataset: str = "human_disease",
     annotations: Dict[str, str] = None,
     n_clusters_list: list = [100, 300, 1000],
     model_name: str = "dmis-lab/biobert-v1.1",
@@ -242,12 +242,12 @@ if __name__ == "__main__":
         ]:
             for pooling_mode_cls_token in [False, True]:
                 deduplicate_dataset(
-                    dataset="daniel",
+                    dataset="human_disease",
                     model_name=model,
                     pooling_mode_cls_token=pooling_mode_cls_token,
                 )
     else:
-        deduplicate_dataset(dataset="daniel", pooling_mode_cls_token=True)
+        deduplicate_dataset(dataset="human_disease", pooling_mode_cls_token=True)
 
     # deduplicate the immgen dataset
     adata = anndata.read_h5ad(get_path(["paths", "full_dataset"], dataset="immgen"))

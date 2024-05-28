@@ -266,7 +266,7 @@ def cli_main(args: Optional[List] = None):
         config["PROJECT_ROOT"] / "results" / "model_training", os.getcwd()
     )
 
-    val_metric = "valfn_daniel_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_recall_at_10_macroAvg"
+    val_metric = "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_recall_at_10_macroAvg"
 
     # early_stop = EarlyStopping(
     #     monitor=val_metric, min_delta=1e-4, patience=10, verbose=False, mode="max"
@@ -277,7 +277,7 @@ def cli_main(args: Optional[List] = None):
         mode="max",
         save_top_k=1,
         save_last=True,
-        filename="{epoch}-valfn_daniel_recall10={%s:.2f}" % (val_metric,),
+        filename="{epoch}-valfn_human_disease_recall10={%s:.2f}" % (val_metric,),
     )
 
     CellWhispererCLI(

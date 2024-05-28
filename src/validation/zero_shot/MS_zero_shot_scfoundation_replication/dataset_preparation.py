@@ -14,7 +14,7 @@ def load_dataset(dataset_name: str) -> anndata.AnnData:
             [
                 "paths",
                 "read_count_table"
-                if not dataset_name in ["daniel", "immgen"]
+                if not dataset_name in ["human_disease", "immgen"]
                 else "full_dataset",
             ],
             dataset=dataset_name,
@@ -209,8 +209,8 @@ def preprocess_immune_330k(adata: anndata.AnnData) -> anndata.AnnData:
     return adata.copy()
 
 
-def preprocess_daniel(adata: anndata.AnnData) -> anndata.AnnData:
-    """Preprocess the daniel dataset."""
+def preprocess_human_disease(adata: anndata.AnnData) -> anndata.AnnData:
+    """Preprocess the human_disease dataset."""
     
     adata.obs["celltype"] = adata.obs["Disease_subtype"]
     adata.obs["celltype"] = adata.obs["celltype"].astype("str").astype("category")
@@ -247,8 +247,8 @@ def load_and_preprocess_dataset(dataset_name: str) -> anndata.AnnData:
             adata = preprocess_pancreas(adata)
         elif "immune_330k" in dataset_name:
             adata = preprocess_immune_330k(adata)
-        elif dataset_name == "daniel":
-            adata = preprocess_daniel(adata)
+        elif dataset_name == "human_disease":
+            adata = preprocess_human_disease(adata)
         elif "covid" in dataset_name:
             adata = preprocess_covid(adata)
         elif dataset_name == "immgen":

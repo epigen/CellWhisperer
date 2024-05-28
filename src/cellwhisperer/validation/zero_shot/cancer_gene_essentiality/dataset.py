@@ -61,7 +61,7 @@ class CancerGeneEssentialityDataModule(LightningDataModule):
 
         if dataset_name != "ccle":
             logging.warning(
-                f"Dataset {dataset_name} might not be supported for CancerGeneEssentialityDataModule. Make sure its `var` object contains the `gene_name` field. e.g. `daniel` should work"
+                f"Dataset {dataset_name} might not be supported for CancerGeneEssentialityDataModule. Make sure its `var` object contains the `gene_name` field. e.g. `human_disease` should work"
             )
 
         self.tokenizer = model_path_from_name(tokenizer)
@@ -128,7 +128,7 @@ class CancerGeneEssentialityDataModule(LightningDataModule):
             # Create the var DataFrame with gene information (e.g. Description and ens)
             var = ccle_df.index.to_frame().set_index("gene_name", drop=False)
 
-        else:  # e.g. self.dataset_name == "daniel" NOTE: this is deprecated. use ccle
+        else:  # e.g. self.dataset_name == "human_disease" NOTE: this is deprecated. use ccle
             # read out the first transcriptome from our dataset
             adata = anndata.read_h5ad(
                 (get_path(["paths", "full_dataset"], dataset=self.dataset_name))

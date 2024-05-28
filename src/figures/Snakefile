@@ -21,7 +21,7 @@ rule all:
         # Figure 2
 
         # Figure 2 (exended)
-        expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["archs4_metasra", "daniel", "tabula_sapiens"], model=CLIP_MODEL),
+        expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["archs4_metasra", "human_disease", "tabula_sapiens"], model=CLIP_MODEL),
         # Figure 4
         rules.bowel_disease_stem_cell_contribution.output.plot
 

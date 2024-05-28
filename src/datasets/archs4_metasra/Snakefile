@@ -13,11 +13,11 @@ rule all:
 
 rule filter_final_file:
     """
-    filters the final file to only contain samples that are not in the daniel dataset.
+    filters the final file to only contain samples that are not in the human_disease dataset.
     """
     input:
         archs4_metadata_unfiltered=PROJECT_DIR / "results" / "archs4_metasra_unfiltered.h5ad"  # TODO improve path and realize generation of this path
-        daniel=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="daniel")
+        human_disease=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="human_disease")
     output:
         PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="archs4_metasra")
     run:
@@ -33,8 +33,8 @@ rule filter_final_file:
         archs4.var.set_index("ensembl_gene_id", drop=True, inplace=True)
 
         # filtering
-        daniel = anndata.read_h5ad(input["daniel"], backed="r")
-        archs4_filtered = archs4[(~archs4.obs.index.isin(daniel.obs.index))]
+        human_disease = anndata.read_h5ad(input["human_disease"], backed="r")
+        archs4_filtered = archs4[(~archs4.obs.index.isin(human_disease.obs.index))]
 
         # compression is 5x slower and 5x smaller
         archs4_filtered.write_h5ad(output[0])
