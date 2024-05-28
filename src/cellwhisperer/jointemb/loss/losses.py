@@ -2,7 +2,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from clip_lite.loss import JSDInfoMaxLoss
+from .jsd_info_max import JSDInfoMaxLoss
 from typing import Optional
 
 
@@ -10,7 +10,7 @@ class JSDInfoMaxLossCellWhisperer(JSDInfoMaxLoss):
     """
     JSDInfoMaxLoss is defined by the CLIP-Lite paper
     Arxiv paper for CLIP-Lite: https://arxiv.org/abs/2112.07133
-    Repo where JSDInfoMaxLoss it is defined: https://github.com/4m4n5/CLIP-Lite/blob/a6825d0258f3876104002fdd9328b8eda0a18746/loss.py#L110C7-L110C21
+    Repo where JSDInfoMaxLoss is defined: https://github.com/4m4n5/CLIP-Lite/blob/a6825d0258f3876104002fdd9328b8eda0a18746/loss.py#L110C7-L110C21
     """
 
     def __init__(self, *args, **kwargs):

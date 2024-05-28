@@ -10,7 +10,7 @@ from cellwhisperer.jointemb.frozen_model import FrozenCachedModel
 import torch
 from .geneformer_model import GeneformerConfig, GeneformerModel
 from .scgpt_model import ScGPTConfig, ScGPTModel
-from clip_lite.loss import GlobalDiscriminatorDot
+from .loss.discriminator import GlobalDiscriminatorDot
 
 from transformers.modeling_utils import PreTrainedModel
 from transformers.modeling_outputs import BaseModelOutputWithPooling
