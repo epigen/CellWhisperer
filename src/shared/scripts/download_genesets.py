@@ -1,9 +1,5 @@
-from typing import List
 import gseapy as gp
-import pandas as pd
-from pathlib import Path
 import cytopus as cp
-import numpy as np
 
 
 def load_enrichr_terms(

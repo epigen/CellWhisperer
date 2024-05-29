@@ -1,14 +1,3 @@
-rule download_genesets:
-    """
-    cytopus from https://www.nature.com/articles/s41587-023-01940-3
-    """
-    output:
-        geneset_gmt=PROJECT_DIR / config["paths"]["geneset_gmt"],
-    conda:
-        "../envs/download_genesets.yaml"
-    script:
-        "../scripts/download_genesets.py"
-
 rule prepare_gsva_dataset:
     """
 
