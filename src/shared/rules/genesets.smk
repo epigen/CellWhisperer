@@ -18,18 +18,13 @@ rule geneset_terms:
     output:
         PROJECT_DIR / config["paths"]["enrichr_terms_json"]
     run:
-        # TODO ask peter whether it's ok like this (i.e. we don't have the tabsap fields anymore (e.g. organ etc.))
-        import pdb; pdb.set_trace()
+        from pathlib import Path
+        import json
+        enrichr_terms = {}
 
-# TODO
-# logging.info("Preparing EnrichR terms...")
-# enrichr_terms = {lib: list(sets.keys()) for lib, sets in load_enrichr_terms().items()}
+        for fn in input:
+            enrichr_terms[Path(fn).stem] = [l.strip().split("\t")[0] for l in open(fn)]
 
-# # load terms from tabsap as well
+        with open(output[0], "w") as f:
+            json.dump(enrichr_terms, f)
 
-# tabsap_terms = load_tabsap_terms()
-
-# terms_json_path = PROJECT_DIR / config["paths"]["enrichr_terms_json"]
-# Path(terms_json_path).parent.mkdir(parents=True, exist_ok=True)
-# with open(terms_json_path, "w") as f:
-#     json.dump({**tabsap_terms, **enrichr_terms}, f)
