@@ -4,6 +4,7 @@ This root Snakefile downloads the models and all evaluation datasets and then ru
 
 from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
 from pathlib import Path
+import subprocess
 
 PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
 configfile: PROJECT_DIR / "config.yaml"
@@ -47,7 +48,7 @@ rule download_cellwhisperer_llm:
 
 rule all:
     input:
-        rules.dataset_all.input,
+        rules.datasets_all.input,
         rules.figures_all.input,
         rules.download_cellwhisperer_embedding_model.output,
         rules.download_cellwhisperer_llm.output,

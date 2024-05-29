@@ -1,6 +1,7 @@
 # This snakefile is meant for the batch-effect-corrected version of human_disease's data
 from pathlib import Path
 from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+import subprocess
 
 HTTP = HTTPRemoteProvider()
 

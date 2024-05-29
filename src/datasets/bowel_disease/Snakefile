@@ -1,9 +1,10 @@
 from pathlib import Path
 from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+import subprocess
 
 HTTP = HTTPRemoteProvider()
 
-PROJECT_DIR = Path(workflow.basedir).resolve().parents[2]
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
 configfile: PROJECT_DIR / "config.yaml"
 
 rule all:

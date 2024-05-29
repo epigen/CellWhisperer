@@ -1,6 +1,5 @@
 # Extended fig 2
 
-# TODO test whether this can be computed on a CPU in reasonable time
 
 rule cw_transcriptome_term_scores:
     """

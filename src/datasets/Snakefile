@@ -7,8 +7,8 @@ Downloading/Preparing GEO/SRA/ARCHS4 and the CELLxGENE Census is a resource inte
 """
 
 from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
-HTTP = HTTPRemoteProvider()
 import subprocess
+HTTP = HTTPRemoteProvider()
 PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
 configfile: PROJECT_DIR / "config.yaml"
 
@@ -37,14 +37,16 @@ use rule * from bowel_disease as bowel_disease_*
 use rule * from human_disease as human_disease_*
 
 
+BASE_URL = "https://medical-epigenomics.org/papers/schaefer2024/data"
+
 rule archs4_geo:
     """
     This "full_data.h5ad" file is a "superset" of read_count_table.h5ad, additionally containing the LLM-curated natural language captions (which are ignored in this context)
     """
     input:
-        full_data=HTTP.remote(f"https://medical-epigenomics.org/papers/schaefer2024/data/datasets/archs4_geo_full_data.h5ad")[0]
+        full_data=HTTP.remote(f"{BASE_URL}/datasets/archs4_geo_full_data.h5ad")[0]
     output:
-        PROJECT_DIR / config["paths"]["read_count_table"].format("archs4_geo")
+        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="archs4_geo")
     shell: """
         cp {input.full_data} {output}
     """
@@ -54,9 +56,9 @@ rule cellxgene_census:
     This "full_data.h5ad" file is a "superset" of read_count_table.h5ad, additionally containing the LLM-curated natural language captions (which are ignored in this context)
     """
     input:
-        full_data=HTTP.remote(f"https://medical-epigenomics.org/papers/schaefer2024/data/datasets/cellxgene_census_full_data.h5ad")[0]
+        full_data=HTTP.remote(f"{BASE_URL}/datasets/cellxgene_census_full_data.h5ad")[0]
     output:
-        PROJECT_DIR / config["paths"]["read_count_table"].format("cellxgene_census")
+        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="cellxgene_census")
     shell: """
         cp {input.full_data} {output}
     """
