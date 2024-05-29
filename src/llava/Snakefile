@@ -78,6 +78,8 @@ rule all:
     default_target: True
 
 include: "../shared/rules/dataset_processing.smk"
+include: "../shared/rules/training_sample_weights.smk"
+include: "../shared/rules/gsva.smk"
 include: "rules/dataset.smk"
 include: "rules/training.smk"
 include: "rules/evaluation.smk"

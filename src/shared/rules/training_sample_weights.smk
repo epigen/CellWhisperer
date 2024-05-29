@@ -1,3 +1,5 @@
+RESULTS_DIR = PROJECT_DIR / "results" / "pre_training_processing"
+
 rule transcriptome_representation:
     """
     Simply normalize the data and bring it into the expected npz format
@@ -25,7 +27,7 @@ rule annotation_representation:
 
     """
     input:
-        annotations=ancient(rules.aggregate_processed.output.single)
+        annotations=PROJECT_DIR / config["paths"]["processed_annotations"],
     output:
         representation=RESULTS_DIR / "{dataset}" / "annotation_representation.npz"
     conda:

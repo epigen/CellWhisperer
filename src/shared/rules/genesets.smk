@@ -18,6 +18,7 @@ rule geneset_terms:
     output:
         PROJECT_DIR / config["paths"]["enrichr_terms_json"]
     run:
+        # TODO ask peter whether it's ok like this (i.e. we don't have the tabsap fields anymore (e.g. organ etc.))
         import pdb; pdb.set_trace()
 
 # TODO

@@ -8,19 +8,16 @@ configfile: PROJECT_DIR / "config.yaml"
 
 DATASETS = config["datasets"]
 DATASETS = ["cellxgene_census", "archs4_geo"]
-RESULTS_DIR = PROJECT_DIR / "results" / "pre_training_processing"
 REPLICATES = list(range(config["num_replicates"]))
 REPLICATES = [0]  # archs4_geo uses [0, 1]
 
 include: "../shared/rules/genesets.smk"
 include: "rules/annotation_processing.smk"
-include: "rules/training_sample_weights.smk"
-include: "rules/gsva.smk"
+include: "../shared/rules/training_sample_weights.smk"
 
 rule all:
     input:
         expand(PROJECT_DIR / config["paths"]["full_dataset"], dataset=DATASETS),
-        expand(PROJECT_DIR / config["paths"]["gsva"]["result"], dataset=DATASETS),
 
 rule integrate_dataset:
     input:

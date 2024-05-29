@@ -1,5 +1,7 @@
 # Extended fig 2
 
+include: "../../shared/rules/training_sample_weights.smk"
+include: "../../shared/rules/gsva.smk"  # NOTE: very slow
 
 rule cw_transcriptome_term_scores:
     """
@@ -28,7 +30,7 @@ rule plot_gsva_correlations:
     """
     """
     input:
-        cw_transcriptome_term_scores=config["paths"]["gsva"]["cw_transcriptome_term_scores"],
+        cw_transcriptome_term_scores=PROJECT_DIR / config["paths"]["gsva"]["cw_transcriptome_term_scores"],
         gsva_results=PROJECT_DIR / config["paths"]["gsva"]["result"],
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
