@@ -13,6 +13,7 @@ from copy import copy
 from typing import Dict
 import numpy as np
 
+
 def get_performance_metrics_transcriptome_vs_text(
     model: TranscriptomeTextDualEncoderModel,
     transcriptome_input: Union[anndata.AnnData, torch.Tensor],
@@ -84,9 +85,12 @@ def get_performance_metrics_transcriptome_vs_text(
             )
         else:
             true_class_indices = correct_text_idx_per_transcriptome
-    elif not text_as_classes: 
+    elif not text_as_classes:
         # the correct transcriptome index for every text:
-        true_class_indices = [correct_text_idx_per_transcriptome.index(x) for x in range(len(correct_text_idx_per_transcriptome))]
+        true_class_indices = [
+            correct_text_idx_per_transcriptome.index(x)
+            for x in range(len(correct_text_idx_per_transcriptome))
+        ]
     else:
         if average_mode is not None:
             true_class_indices = [
@@ -96,8 +100,6 @@ def get_performance_metrics_transcriptome_vs_text(
         else:
             # we can just use the annotations and true classes as they are
             true_class_indices = correct_text_idx_per_transcriptome
-
-    
 
     # labels for the text
     if type(text_list_or_text_embeds) == torch.Tensor:
@@ -133,7 +135,6 @@ def get_performance_metrics_transcriptome_vs_text(
     )
     if average_mode is not None and type(text_list_or_text_embeds) != torch.Tensor:
         scores_df = scores_df[sorted(scores_df.columns)]
-
 
     torchmetric_kwargs = {
         "preds": scores,

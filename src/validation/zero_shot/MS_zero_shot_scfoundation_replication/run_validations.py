@@ -12,11 +12,16 @@ from cellwhisperer.config import get_path
 from cellwhisperer.utils.inference import score_transcriptomes_vs_texts
 from cellwhisperer.validation.integration.functions import eval_scib_metrics
 from cellwhisperer.validation.zero_shot.single_cell_annotation import (
-    get_performance_metrics_transcriptome_vs_text
+    get_performance_metrics_transcriptome_vs_text,
 )
 from cellwhisperer.utils.model_io import load_cellwhisperer_model
-from server.common.colors import CSS4_NAMED_COLORS 
-from utils import umap_on_embedding, prepare_integration_df,TABSAP_WELLSTUDIED_COLORMAPPING, PANCREAS_ORDER
+from server.common.colors import CSS4_NAMED_COLORS
+from utils import (
+    umap_on_embedding,
+    prepare_integration_df,
+    TABSAP_WELLSTUDIED_COLORMAPPING,
+    PANCREAS_ORDER,
+)
 from embedding_generation import get_adata_with_embedding
 from dataset_preparation import load_and_preprocess_dataset
 from plotting import (
@@ -27,35 +32,34 @@ from plotting import (
     plot_confidence_distributions,
     plot_integration_metrics,
     plot_performance_metrics_macro_avg,
-    plot_performance_metrics_example_classes
+    plot_performance_metrics_example_classes,
 )
 
 matplotlib.style.use(get_path(["plot_style"]))
 
-for ckpt_file_name in [
-    "cellwhisperer_clip_v1.ckpt"
-    ]: 
-
+for ckpt_file_name in ["cellwhisperer_clip_v1.ckpt"]:
     #### Parameters ####
 
     # Whether or not to normalize and log1p in the cellwhisperer model
-    norm_and_log1p = False # NOTE: Activate this for scGPT models (if appropriate)
+    norm_and_log1p = False  # NOTE: Activate this for scGPT models (if appropriate)
 
     result_dir = os.path.dirname(
         os.path.dirname(get_path(["paths", "full_dataset"], dataset="human_disease"))
     )  # Not the most elegant
 
-    result_dir = Path(result_dir) / "MS_zero_shot_scfoundation_replication_v5" / ckpt_file_name
+    result_dir = (
+        Path(result_dir) / "MS_zero_shot_scfoundation_replication_v5" / ckpt_file_name
+    )
 
     ## Choose the datasets and analysis types to run
     analysis_types = [
         "cellwhisperer",
         "geneformer",
-    #    "scgpt",
-    #    "hvg_with_PCA",
-    #    "hvg_without_PCA",
-    #    "all_genes",
-    #   "scvi",
+        #    "scgpt",
+        #    "hvg_with_PCA",
+        #    "hvg_without_PCA",
+        #    "all_genes",
+        #   "scvi",
     ]
     dataset_names = [
         "tabula_sapiens_well_studied_celltypes",
@@ -63,23 +67,29 @@ for ckpt_file_name in [
         "pancreas",
         "immgen",
         "human_disease",
-#  "tabula_sapiens_100_cells_per_type",
-# #    "tabula_sapiens_100_cells_per_type_well_studied_celltypes",
-# #   "tabula_sapiens_100_cells_per_type_min_100",
-# #    "tabula_sapiens_100_cells_per_type",
-#        "liao_covid"
-#   "immune_330k_500_cells_per_type",
-#   "immune_330k",
-#   "covid_trainingset",
-    ]  
+        #  "tabula_sapiens_100_cells_per_type",
+        # #    "tabula_sapiens_100_cells_per_type_well_studied_celltypes",
+        # #   "tabula_sapiens_100_cells_per_type_min_100",
+        # #    "tabula_sapiens_100_cells_per_type",
+        #        "liao_covid"
+        #   "immune_330k_500_cells_per_type",
+        #   "immune_330k",
+        #   "covid_trainingset",
+    ]
 
-    ## Select which columns to predict against. 
+    ## Select which columns to predict against.
     label_cols_per_dataset_dict = defaultdict(list)
-    label_cols_per_dataset_dict.update({x: ["celltype"] for x in dataset_names}) # always predict celltype
+    label_cols_per_dataset_dict.update(
+        {x: ["celltype"] for x in dataset_names}
+    )  # always predict celltype
 
     for dataset in dataset_names:
         if "tabula_sapiens" in dataset:
-            label_cols_per_dataset_dict[dataset] += ["organ_tissue","compartment","gender"]
+            label_cols_per_dataset_dict[dataset] += [
+                "organ_tissue",
+                "compartment",
+                "gender",
+            ]
 
     label_cols_per_dataset_dict["human_disease"] += [
         "Tissue",
@@ -97,14 +107,20 @@ for ckpt_file_name in [
     suffix_prefix_dict = {}
     suffix_prefix_dict["celltype"] = ("A sample of ", " from a healthy individual")
     suffix_prefix_dict["organ_tissue"] = ("A sample of ", " from a healthy individual")
-    suffix_prefix_dict["compartment"] = ("A sample oOrg subtypef the ", " compartment from a healthy individual")
-    suffix_prefix_dict["gender"] = ("A sample of a healthy, "," individual")
-    suffix_prefix_dict["sex"] = ("A sample of a healthy, "," individual")
-    suffix_prefix_dict["organ_full_name"] = ("A sample of ", " from a healthy individual")
-    suffix_prefix_dict["Disease"] = ("A sample from an individual with ","")
-    suffix_prefix_dict["Disease_subtype"] = ("A sample from an individual with ","")
-    suffix_prefix_dict["Tissue"] = ("A "," sample")
-    suffix_prefix_dict["Tissue_subtype"] = ("A "," sample")
+    suffix_prefix_dict["compartment"] = (
+        "A sample oOrg subtypef the ",
+        " compartment from a healthy individual",
+    )
+    suffix_prefix_dict["gender"] = ("A sample of a healthy, ", " individual")
+    suffix_prefix_dict["sex"] = ("A sample of a healthy, ", " individual")
+    suffix_prefix_dict["organ_full_name"] = (
+        "A sample of ",
+        " from a healthy individual",
+    )
+    suffix_prefix_dict["Disease"] = ("A sample from an individual with ", "")
+    suffix_prefix_dict["Disease_subtype"] = ("A sample from an individual with ", "")
+    suffix_prefix_dict["Tissue"] = ("A ", " sample")
+    suffix_prefix_dict["Tissue_subtype"] = ("A ", " sample")
     suffix_prefix_dict["Treated"] = ("A sample of a ", " individual")
 
     use_prefix_suffix_version = True
@@ -125,8 +141,8 @@ for ckpt_file_name in [
         transcriptome_processor_cellwhisperer,
     )
     if norm_and_log1p:
-        transcriptome_processor_cellwhisperer.adata_do_normalize_total=True
-        transcriptome_processor_cellwhisperer.adata_do_log1p=True
+        transcriptome_processor_cellwhisperer.adata_do_normalize_total = True
+        transcriptome_processor_cellwhisperer.adata_do_log1p = True
 
     # Load a model with a pretrained Geneformer transcriptome model backbone
     (
@@ -152,7 +168,6 @@ for ckpt_file_name in [
         model_w_scgpt.model,
         transcriptome_processor_scgpt,
     )
-
 
     #### Iterate over datasets
     for dataset_name in dataset_names:
@@ -194,11 +209,18 @@ for ckpt_file_name in [
 
             logging.info(f"Finished with {analysis_type}")
 
-        celltype_palette = {celltype:list(CSS4_NAMED_COLORS.values())[i if i<len(CSS4_NAMED_COLORS.values()) else i-len(CSS4_NAMED_COLORS.values())] for i,celltype in enumerate(adata.obs.celltype.unique())}
+        celltype_palette = {
+            celltype: list(CSS4_NAMED_COLORS.values())[
+                i
+                if i < len(CSS4_NAMED_COLORS.values())
+                else i - len(CSS4_NAMED_COLORS.values())
+            ]
+            for i, celltype in enumerate(adata.obs.celltype.unique())
+        }
         if "tabula_sapiens" in dataset_name:
             # update the celltype palette with the well-studied cell types
             celltype_palette.update(TABSAP_WELLSTUDIED_COLORMAPPING)
-        
+
         # Plot the embeddings generated by the different methods, colored by celltype and batch
         plot_embeddings_with_scores(
             adata=adata,
@@ -210,16 +232,22 @@ for ckpt_file_name in [
         )
 
         if adata.obs.batch.nunique() > 1:
-            integration_scores_df=prepare_integration_df(result_metrics_dict)
+            integration_scores_df = prepare_integration_df(result_metrics_dict)
             #### Plot and Save integration metrics
-            integration_scores_df.to_csv(f"{result_dir}/{dataset_name}/metrics_MS_zero_shot.csv")
+            integration_scores_df.to_csv(
+                f"{result_dir}/{dataset_name}/metrics_MS_zero_shot.csv"
+            )
             plot_integration_metrics(integration_scores_df, result_dir, dataset_name)
 
         if "tabula_sapiens" in dataset_name:
             color_mapping = copy.copy(TABSAP_WELLSTUDIED_COLORMAPPING)
         else:
-            color_mapping = dict(zip(adata.obs["celltype"].cat.categories, adata.uns[f"celltype_colors"]))
-        color_mapping.update(dict(zip(adata.obs["batch"].cat.categories, adata.uns[f"batch_colors"])))
+            color_mapping = dict(
+                zip(adata.obs["celltype"].cat.categories, adata.uns[f"celltype_colors"])
+            )
+        color_mapping.update(
+            dict(zip(adata.obs["batch"].cat.categories, adata.uns[f"batch_colors"]))
+        )
 
         #### Predict the labels using cellwhisperer
 
@@ -390,20 +418,26 @@ for ckpt_file_name in [
                 )
 
             ## Plot the confusion matrix
-            if dataset_name =="pancreas":
-                order=PANCREAS_ORDER
-            elif "well_studied_celltypes" in dataset_name and label_col=="celltype":
+            if dataset_name == "pancreas":
+                order = PANCREAS_ORDER
+            elif "well_studied_celltypes" in dataset_name and label_col == "celltype":
                 order = list(TABSAP_WELLSTUDIED_COLORMAPPING.keys())
-            else :
-                order=None
+            else:
+                order = None
 
-            performance_metrics_per_label_df_wo_prefix_suffix = performance_metrics_per_label_df.copy()
+            performance_metrics_per_label_df_wo_prefix_suffix = (
+                performance_metrics_per_label_df.copy()
+            )
             performance_metrics_per_label_df_wo_prefix_suffix.index = [
-                x.replace("Sample of a ", "").replace("A sample of ","").replace(" from a healthy individual","")
+                x.replace("Sample of a ", "")
+                .replace("A sample of ", "")
+                .replace(" from a healthy individual", "")
                 for x in performance_metrics_per_label_df.index.values
             ]
             performance_metrics_per_label_df_wo_prefix_suffix.columns = [
-                x.replace("Sample of a ", "").replace("A sample of ","").replace(" from a healthy individual","")
+                x.replace("Sample of a ", "")
+                .replace("A sample of ", "")
+                .replace(" from a healthy individual", "")
                 for x in performance_metrics_per_label_df.columns.values
             ]
             try:
@@ -506,5 +540,6 @@ for ckpt_file_name in [
             "immgen",
             "human_disease",
             "tabula_sapiens",
-            "human_disease"]
+            "human_disease",
+        ],
     )

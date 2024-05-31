@@ -72,16 +72,17 @@ class RetrievalScoreCalculator:
                 average_mode=None,  # We treat each transcriptome separately
                 text_list_or_text_embeds=text_embeds,
                 batch_size=self.batch_size,
-                grouping_keys=None,  # TODO if we had a consistent short label for each transcriptome, we could use it here, to get a nicer result_df
+                grouping_keys=None,
                 report_per_class_metrics=False,  # doesn't make much sense without a consistent short label for each transcriptome
-                text_as_classes = text_as_classes,
+                text_as_classes=text_as_classes,
             )
 
-            performance_metrics = {f"{name}_{k}": v for k, v in performance_metrics.items()}
+            performance_metrics = {
+                f"{name}_{k}": v for k, v in performance_metrics.items()
+            }
             performance_metrics_all.update(performance_metrics)
-
 
         return (
             performance_metrics_all,
-            None, 
+            None,
         )
