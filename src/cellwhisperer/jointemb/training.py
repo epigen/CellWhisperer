@@ -26,6 +26,7 @@ from lightning import Trainer, LightningModule
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import Logger, WandbLogger
 from jsonargparse import lazy_instance
+import argparse
 
 from cellwhisperer.jointemb.model import TranscriptomeTextDualEncoderConfig
 from cellwhisperer.jointemb.loss.config import LossConfig
@@ -61,8 +62,13 @@ class CellWhispererCLI(LightningCLI):
         parser.add_argument("--log_level", default="INFO")
         parser.add_argument("--dap_debug", action="store_true")
         parser.add_argument(
-            "--batch_size", default=32, type=int
-        )  # TODO assert batch_size > 1 (because of failing batch norm)
+            "--batch_size",
+            default=32,
+            type=lambda x: int(x)
+            if int(x) > 1
+            else argparse.ArgumentTypeError("Batch size must be greater than 1"),
+            help="Batch size for training and evaluation.",
+        )
         parser.add_argument(
             "--wandb",
             default="",
@@ -120,7 +126,7 @@ class CellWhispererCLI(LightningCLI):
             compute_fn=batch_size_fn,
         )
 
-        # TODO enable at some point (right now disabled, as it crashed with large batch sizes)
+        # NOTE: crashed with large batch sizes
         # parser.link_arguments(
         #     ["trainer.fast_dev_run", "batch_size"],
         #     "model.val_batch_size",
@@ -128,7 +134,6 @@ class CellWhispererCLI(LightningCLI):
         # )
 
     def before_instantiate_classes(self) -> None:
-
         if "fit.log_level" in self.config:
             log_level = self.config["fit.log_level"]
         elif "test.log_level" in self.config:
@@ -190,14 +195,18 @@ class CellWhispererCLI(LightningCLI):
                 self.config["fit.model_ckpt"]
             )
 
-        # disabled for sweeps  # TODO could check for trainer.logger.run.sweep_id or so?
+        # Optional: Log gradients
         # self.trainer.logger.watch(self.model, log="gradients")
-    
+
     def before_test(self) -> None:
         if not self.config["test.model_ckpt"]:
-            raise ValueError("No checkpoint path found. Please provide a checkpoint path via --model_ckpt.")
+            raise ValueError(
+                "No checkpoint path found. Please provide a checkpoint path via --model_ckpt."
+            )
 
-        elif self.config["test.model_ckpt"]:  # model loading needs to be done implicitly
+        elif self.config[
+            "test.model_ckpt"
+        ]:  # model loading needs to be done implicitly
             logger.warning("Loading model from checkpoint. All other args are ignored")
             self.model = TranscriptomeTextDualEncoderLightning.load_from_checkpoint(
                 self.config["test.model_ckpt"]
@@ -286,10 +295,11 @@ def cli_main(args: Optional[List] = None):
         trainer_defaults=dict(
             default_root_dir=LOG_DIR,
             precision="bf16-mixed",
+            # NOTE: Activation checkpointing may reduce memory consumption. But it did not help much in the end
             # strategy={
             #     "class_path": "lightning.pytorch.strategies.FSDPStrategy",
             #     "init_args": {
-            #         "activation_checkpointing_policy": {  # TODO need to add the relevant layers for the transcriptome models as well, if we want to fine-tune them ever
+            #         "activation_checkpointing_policy": {
             #             BioGptDecoderLayer,
             #             BertLayer,
             #             TransformerEncoderLayer,  # scGPT

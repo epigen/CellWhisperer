@@ -16,6 +16,8 @@ def adata_to_embeds(
     batch_size: int = 32,
 ) -> torch.Tensor:
     """
+    NOTE: this should become part of model API (like `embed_texts`)
+
     Compute the transcriptome embeddings for each cell in the adata object.
     :param adata: anndata.AnnData instance.
     :param model: TranscriptomeTextDualEncoderModel instance. Used to compute the transcriptome embeddings.

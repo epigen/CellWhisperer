@@ -26,7 +26,6 @@ embeddings = model.encode(
 )
 
 # Normalize embeddings
-# TODO ask peter about the benefits ("hey peter. was there a particular reason why you normalized the text embeddings during cluster-based denormalization?")
 embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
 
 np.savez(

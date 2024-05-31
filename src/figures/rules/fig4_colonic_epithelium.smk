@@ -8,7 +8,7 @@ rule bowel_disease_stem_cell_contribution:
     conda:
         "cellwhisperer"
     resources:
-        mem_mb=20000,
+        mem_mb=100000,
         slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
     params:
         search_term="stem cell",

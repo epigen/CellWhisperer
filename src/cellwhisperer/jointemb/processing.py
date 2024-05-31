@@ -103,7 +103,7 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
                 tensor. In case of a NumPy array/PyTorch tensor, each transcriptome should be of shape (C, H, W), where C is a
                 number of channels, H and W are transcriptome height and width.
 
-            text_truncation: Whether to truncate text if the sequence is longer than the maximum length of the model. TODO Currently this *enforces* the length to be 100 (parameter provided in `dataset/jointemb.py`). Better would be to truncate to the maximum length within the batch (if smaller than 100)
+            text_truncation: Whether to truncate text if the sequence is longer than the maximum length of the model. NOTE: This currently *enforces* the length to be 100 (parameter provided in `dataset/jointemb.py`). Better might be to truncate to the maximum length within the batch (if smaller than 100)
 
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors of a particular framework. Acceptable values are:

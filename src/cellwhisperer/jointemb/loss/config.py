@@ -17,11 +17,9 @@ class LossConfig:
 
     clip_lambda: float = 1.0
     clip_lite_lambda: float = 0.0
-    clip_lite_type: str = "dot"  # TODO we don't support others at the moment
+    clip_lite_type: str = "dot"  # NOTE we don't support others at the moment
     clip_lite_prior_weight: float = 0.1
-    clip_lite_transcriptome_prior: bool = (
-        False  # TODO requires image_dim (no big deal to add)
-    )
+    clip_lite_transcriptome_prior: bool = False  # NOTE would require adding `image_dim`
     clip_lite_text_prior: bool = False
     sample_weighting: bool = True
 

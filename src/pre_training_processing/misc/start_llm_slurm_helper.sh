@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# TODO maybe this script is unnecessary
+# TODO delete in phase 2
 
 source /msc/home/mschae83/miniconda3/etc/profile.d/conda.sh
 source activate textgen

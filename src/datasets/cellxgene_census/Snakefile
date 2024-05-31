@@ -95,7 +95,7 @@ rule retrieve_census_datasets_csv:
     script: "scripts/retrieve_census_datasets_csv.py"
 
 rule download_census_data:
-    output: OUTDIR/"{dataset_id,.+(?<!_processed)}.h5ad" # TODO: make this temporary once tweaking is done
+    output: temporary(OUTDIR / "{dataset_id,.+(?<!_processed)}.h5ad")
     conda: "envs/cellxgene_census.yaml"
     script: "scripts/download_census_data.py"
 

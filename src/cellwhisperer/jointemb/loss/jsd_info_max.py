@@ -139,7 +139,7 @@ class JSDInfoMaxLoss(nn.Module):
         self.image_prior = image_prior
         self.text_prior = text_prior
 
-        type = "dot"  # TODO we don't support others at the moment
+        type = "dot"  # NOTE: we don't support others at the moment
         self.global_d = discriminator
         if type == "concat":
             if visual_self_supervised:
@@ -209,7 +209,7 @@ class JSDInfoMaxLoss(nn.Module):
         if neg_text_features is None:
             # Positive pairs
             Ej = -F.softplus(
-                -self.global_d(  # TODO here we could optimize by passing the result of this computation
+                -self.global_d(  # NOTE here we could optimize by passing the result of this computation
                     features1=image_features,
                     features2=text_features,
                 )[
@@ -222,7 +222,7 @@ class JSDInfoMaxLoss(nn.Module):
                 (text_features[1:], text_features[0].unsqueeze(0)), dim=0
             )
             Em = F.softplus(
-                self.global_d(  # TODO if we compute negative pairs within our model.py, we could get rid of global_d in this loss class altogether
+                self.global_d(  # NOTE if we compute negative pairs within our model.py, we could get rid of global_d in this loss class altogether
                     features1=image_features,
                     features2=text_features_prime,
                 )[
@@ -236,7 +236,7 @@ class JSDInfoMaxLoss(nn.Module):
             image_features_all = torch.cat((image_features, neg_image_features), dim=0)
             text_features_all = torch.cat((text_features, neg_text_features), dim=0)
             Ej = -F.softplus(
-                -self.global_d(  # TODO here we could optimize by passing the result of this computation
+                -self.global_d(  # NOTE here we could optimize by passing the result of this computation
                     features1=image_features_all,
                     features2=text_features_all,
                 )[

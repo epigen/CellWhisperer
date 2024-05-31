@@ -11,6 +11,8 @@ rule gpt4transcriptome_baseline:
         transcriptome_text_features=rules.llava_evaluation_generation_preparation.output.formatted_questions_text_only,
     output:
         protected(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4transcriptome_responses.jsonl")
+    params:
+        openai_api_key=os.getenv("OPENAI_API_KEY")
     conda:
         "llava"
     notebook:
@@ -20,14 +22,12 @@ rule llava_eval_gpt4_review:
     """
     Cost to run this (for 200 samples): ~3 USD
 
-    The rule file is derived, but heavily adjusted from `LLaVA/llava/eval/table/rule.json`.
-
-    TODO are `formatted_questions` the real formatted questions? I thought they are only the contexts DEBUG
+    The rule file is derived, but heavily adjusted, from `LLaVA/llava/eval/table/rule.json`.
 
     NOTE: don't run this on the tabula_sapiens evaluation dataset, as that one just contains the cell type names. (would require a different prompt)
     """
     input:
-        questions=rules.llava_evaluation_generation_preparation.output.formatted_questions,
+        questions=rules.llava_evaluation_generation_preparation.output.formatted_questions,  # Contains 'reference' data (top genes, gene sets, caption), the question ('text') and the transcriptome ID ('image')
         reference_responses=rules.llava_evaluation_generation_preparation.output.reference_responses,
         llava_responses=expand(rules.llava_evaluation_generation.output.llava_responses, input_features=["", "_with_top_genes", "_with_top_genes_gene_sets", "_text_only"], allow_missing=True),
         gpt4transcriptome_baseline_responses=rules.gpt4transcriptome_baseline.output,

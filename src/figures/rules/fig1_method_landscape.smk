@@ -1,7 +1,5 @@
-
 rule geo_umap_plots:
     """
-    TODO this one requires the prepared cellxgene file still at the moment
     """
     input:
         rules.pretraining_processing_compile_h5ad.output.adata.format(dataset="archs4_geo", model="{model}"),

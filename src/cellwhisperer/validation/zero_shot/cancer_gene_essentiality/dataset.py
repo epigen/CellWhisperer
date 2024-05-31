@@ -169,7 +169,7 @@ class CancerGeneEssentialityDataModule(LightningDataModule):
         """
         if self.processed_path.exists():
             logging.info("data already prepared...")
-            # return  # TODO enable (e.g. during sweep)
+            return
         essential = pd.read_csv(
             get_path(["paths", "cancer_gene_essentiality", "essential_genes"])
         )

@@ -51,7 +51,7 @@ class SingleCellDataSetForValidationScoring:
 
         self.adata = anndata.read_h5ad(dataset_path)
 
-        # TODO is this necessary? X should always be raw counts
+        # NOTE: X should anyways be raw counts
         if "raw_counts" in self.adata.layers:
             self.adata.X = self.adata.layers["raw_counts"]
 

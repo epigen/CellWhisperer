@@ -136,9 +136,9 @@ rule generate_llava_detailed:
     """
     Stage 2 detailed data generation (GPT-4)
 
-    # TODO check how many failed. go through logs and filter the ones that failed (can we fix them easily?)
+    # NOTE: some of the generated conversations failed (usually JSON generation errors)
 
-    Currently *without* gene names, forcing the model to focus on the provided transcriptome.
+    Gene names are only provided in the instructions (not in the user-part of the conversation), forcing the model to focus on the provided transcriptome embedding.
     """
     input:
         processed_annotations=PROJECT_DIR / config["paths"]["processed_multi_annotations"],
@@ -147,7 +147,7 @@ rule generate_llava_detailed:
         system_message=ancient("prompts/llava_stage2_detailed.txt"),
         request_template=ancient("prompts/llava_stage2_request_template.txt"),
     output:
-        processed_annotation = protected(PROJECT_DIR / "results" / "llava" / "processed_detailed" / "{dataset}" / "{sample_id}.json"),  # I marked this as protected as it might be costly to produce  # TODO add protected
+        processed_annotation = protected(PROJECT_DIR / "results" / "llava" / "processed_detailed" / "{dataset}" / "{sample_id}.json"),  # I marked this as protected as it might be costly to produce
     log:
         "logs/generate_llava_detailed_{dataset}_{sample_id}.log"
     params:
@@ -222,7 +222,7 @@ rule tabsap_celltype_evaluation_dataset:
     output:
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="tabula_sapiens"),
     params:
-        celltypes=config["top20_lung_liver_blood_celltypes"],  # TODO use all?
+        celltypes=config["top20_lung_liver_blood_celltypes"],
         num_cells_per_celltype=20,
         question="Which cell type is this cell?",
         response_prefix="This cell is a " ,

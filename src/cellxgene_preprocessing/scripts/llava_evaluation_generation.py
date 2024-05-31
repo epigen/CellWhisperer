@@ -43,8 +43,7 @@ else:
 # prompt = prompt.replace(DEFAULT_IMAGE_TOKEN, replace_token)
 
 
-# TODO use the 'num-token' information in `mm_projector_type`
-
+# NOTE: It might be more elegant to use the 'num-token' information in `mm_projector_type`
 num_tokens = int(
     re.match(r"^mlp(\d+)x_(\d+)t_gelu$", model.config.mm_projector_type).group(2)
 )

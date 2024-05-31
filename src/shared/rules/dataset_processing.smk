@@ -25,6 +25,7 @@ rule process_full_dataset:
     input:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         model=ancient(PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt"),
+        geneformer_model=ancient(PROJECT_DIR / "resources" / "geneformer-12L-30M" / "pytorch_model.bin")  # making sure that geneformer is downloaded
     output:
         model_outputs=protected(PROJECT_DIR / config["paths"]["model_processed_dataset"]),
     resources:

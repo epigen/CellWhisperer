@@ -79,7 +79,6 @@ def load_tabsap_terms(
 
 
 # Prepare the enrichr terms:
-# TODO get team feedback on which libraries to include by default - list of all available libraries with 'gp.get_library_name()'
 logging.info("Preparing EnrichR terms...")
 enrichr_terms = {lib: list(sets.keys()) for lib, sets in load_enrichr_terms().items()}
 

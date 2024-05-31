@@ -1,5 +1,8 @@
 """
 Deduplication of datasets through clustering on the level (BERT) language model embeddings
+
+
+NOTE: Currently we're using the subsetted adatas. We could have used full adatas and simple add a column that indicates the cluster center. (This is also already prepared for in the deduplicate_dataset function. The obs column is always called "is_in_{deduplicated_dataset_name}")
 """
 from cellwhisperer.config import get_path, config
 import json
@@ -216,7 +219,6 @@ def deduplicate_dataset(
             save_jsons=True,
             verbose=True,
         )
-        # TODO make use of these annotations instead of using seperate dataset files
         adata.obs[f"cluster_assignment_{dedup_dataset_name}"] = cluster_assignment
         adata.obs[f"is_in_{dedup_dataset_name}"] = [
             x in sample_ids_to_keep for x in adata.obs.index
@@ -258,8 +260,5 @@ if __name__ == "__main__":
     os.makedirs(outpath.parent, exist_ok=True)
     adata_subset.write_h5ad(outpath)
 
-    # TODO: Currently we're using the subsetted adatas, but we could use the full adatas and subset them later based on the obs column
-    # https://github.com/epigen/cellwhisperer/pull/186#discussion_r1427978801
-    # This is also already prepared for in the deduplicate_dataset function. The obs column is always called "is_in_{deduplicated_dataset_name}"
     # adata.obs["is_in_immgen_deduplicated"] = [x in keep_idx for x in range(len(adata))]
     # adata.write_h5ad(get_path(["paths", f"full_dataset"], dataset="immgen"))

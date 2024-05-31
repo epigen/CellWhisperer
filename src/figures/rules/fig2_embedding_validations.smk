@@ -1,7 +1,6 @@
 # Extended fig 2
 
 include: "../../shared/rules/training_sample_weights.smk"
-include: "../../shared/rules/gsva.smk"  # NOTE: very slow
 
 rule cw_transcriptome_term_scores:
     """

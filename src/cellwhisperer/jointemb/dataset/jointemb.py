@@ -87,7 +87,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
     ):
         """
 
-        Note: This is also used after training in `post_clip_processing` (val_dataloader)
+        Note: This is also used after training in `cellxgene_preprocessing` (val_dataloader)
 
         Args:
             tokenizer: name of the tokenizer to use. Must be a valid name for the AutoTokenizer.from_pretrained() function.
@@ -222,7 +222,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         ):
             max_length = inputs["input_ids"].shape[
                 1
-            ]  # TODO this is actually redundant as we anyways force it to 128
+            ]  # NOTE this is actually redundant as we anyways force it to 128
             replicate_df = adata.obsm["natural_language_annotation_replicates"]
             logger.info(f"Loading {len(replicate_df.columns)} replicate annotations")
             for col_name in replicate_df:
@@ -324,8 +324,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             drop_last=False,
             shuffle=False,
         )
-    
+
     def test_dataloader(self):
         # Return the validation dataloader for testing
         return self.val_dataloader()
-

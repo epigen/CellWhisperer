@@ -17,5 +17,6 @@ rule read_count_table_from_tsv:
         # PROJECT_DIR / "resources" / "bowel_disease" / "GSE116222_Expression_matrix.txt.gz",
     output:
         PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="bowel_disease")
+    conda: "cellwhisperer"
     notebook:
         "notebooks/read_count_table_from_tsv.py.ipynb"

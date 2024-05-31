@@ -1,4 +1,3 @@
-# TODO trash this class in favor of the one in clip_lite.loss
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -80,7 +79,6 @@ class ClipLoss(nn.Module):
         Note:
             The function internally calls `ContrastiveLoss` twice, once with the similarity matrix (logits_per_text) as is, and once with its transpose (logits_per_transcriptome), to calculate the losses for both modalities (text and transcriptome).
         """
-        # TODO ensure that this is not flipped!
         text_loss = contrastive_loss(logits_per_text, weight=annotation_weights)
         transcriptome_loss = contrastive_loss(
             logits_per_text.t(), weight=transcriptome_weights

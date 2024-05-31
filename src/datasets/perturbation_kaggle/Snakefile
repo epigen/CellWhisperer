@@ -1,7 +1,9 @@
+# TODO: delete in phase 2
+
 # requires you to set up kaggle API (https://github.com/Kaggle/kaggle-api?tab=readme-ov-file)
 
 sys.path.insert(0, Path(workflow.basedir).parents[1].as_posix())
-from cellwhisperer.config import get_path, config  # TODO could replace this with configfile:
+from cellwhisperer.config import get_path, config  # NOTE could replace this with configfile:
 
 DATASET_NAME = "perturbation_kaggle"
 RESOURCE_PATH = config["PROJECT_ROOT"] / "resources" / DATASET_NAME

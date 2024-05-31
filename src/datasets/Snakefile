@@ -28,9 +28,6 @@ module human_disease:
     snakefile: "human_disease/Snakefile"
     config: config
 
-
-# TODO development4s?
-
 use rule * from tabula_sapiens as tabula_sapiens_*
 use rule * from immgen as immgen_*
 use rule * from bowel_disease as bowel_disease_*

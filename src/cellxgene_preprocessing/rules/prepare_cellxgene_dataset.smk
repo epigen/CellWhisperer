@@ -1,3 +1,5 @@
+import os
+
 rule leiden_umap_embeddings:
     input:
         processed_data=rules.process_full_dataset.output.model_outputs,
@@ -38,9 +40,8 @@ rule llava_annotate_clusters:
 rule gpt4_curate_llava_annotations:
     """
     Output is protected to prevent high GPT-4 cost. Script also fails with more than 200 clusters
-    TODO: my key is stored in here. needs to be provided as environment variable
 
-    TODO: optionally generate multiple annotations (with llava, different seeds, temperature=0.3) and merge them into one common one
+    NOTE: requires OpenAI API key
     """
     input:
         cellwhisperer_labels=rules.llava_annotate_clusters.output.csv
@@ -48,7 +49,8 @@ rule gpt4_curate_llava_annotations:
         curated_labels=protected(PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_curated_annotated_clusters.csv")
     params:
         request="Condense this information into a short title of maximum 8 words. Focus on the biological state, rather than the source or any specific perturbations of the sample",
-        max_num_clusters=200  # to prevent high GPT-4 cost
+        max_num_clusters=200,  # to prevent high GPT-4 cost
+        openai_api_key=os.getenv("OPENAI_API_KEY")
     conda:
         "cellwhisperer"
     notebook:

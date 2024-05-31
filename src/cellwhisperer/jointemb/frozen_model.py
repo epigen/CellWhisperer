@@ -1,7 +1,7 @@
 """
-This model emulates a real model actually just retrieves cached processed model outputs whenever possible.
-
+This frozen-model emulates a real model, but actually just retrieves cached processed model outputs whenever possible (for efficiency).
 NOTE: This might be more elegantly implemented within model.py (e.g. via a decorator on the get_text_features and get_transcriptome_features methods)
+NOTE: https://docs.python.org/3/library/shelve.html would be more efficient than dict-pickle (would still require file-locking though)
 """
 
 import fcntl
@@ -52,7 +52,6 @@ class FrozenCachedModel(nn.Module):
     - Use python `property`s to mimic the interface of the model
     - Use hashes and a python dict to store the cached model outputs
 
-    TODO use https://docs.python.org/3/library/shelve.html instead of a dict-pickle (not that this also requires file locking upon saving!)
     """
 
     def __init__(self, model):

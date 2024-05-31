@@ -81,8 +81,6 @@ class ScGPTDataset(torch.utils.data.Dataset):
 
 
 class ScGPTTranscriptomeProcessor(ProcessorMixin):
-    # TODO: Instead of using gene names, use gene IDs. There is a scGPT issue that gives a gene id vocab
-
     attributes = []
 
     def __init__(
@@ -203,7 +201,7 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
             collate_fn=collator,
             drop_last=False,
             num_workers=min(self.nproc, batch_size),
-            pin_memory=True,  # TODO?
+            pin_memory=True,
         )
 
         output = {
@@ -336,7 +334,7 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
             max_length=1200,
             batch_size=64,
             pad_token=self.pad_token,
-            pad_value=-2,  # TODO hardcoded here, but flexible elsewhere in this file
+            pad_value=-2,  # NOTE hardcoded here, but flexible elsewhere in this file
             gene_ids=gene_ids,
             use_batch_labels=False,
         )
@@ -378,7 +376,7 @@ class ScGPTConfig(PretrainedConfig):
         cell_emb_style="cls",
         mvc_decoder_style="inner product",
         ecs_threshold=0.3,
-        normalize_features=False,  # TODO: Keep an eye on this. In the cell embedding task, they do normalize the features, but I couldn't find an example of where they normalize during training.
+        normalize_features=False,  # NOTE: In the cell embedding task, they do normalize the features, but it seems they didn't normalize during training.
         **kwargs,
     ):
         """
@@ -448,7 +446,9 @@ class ScGPTModel(PreTrainedModel):
         config_class = ScGPTConfig
         base_model_prefix = "scgpt_model"
         is_parallelizable = False  # not sure actually
-        # main_input_name = "adata" # TODO not sure what to put here
+        main_input_name = (
+            "expression_gene"  # there are actually three main inputs, but good enough
+        )
 
         # LOAD VOCAB
         self.vocab = load_vocab(self.config.pad_token, self.config.vocab_path)
@@ -459,7 +459,7 @@ class ScGPTModel(PreTrainedModel):
             k: v for k, v in config.to_dict().items() if k in allowed_args
         }
 
-        # TODO: review all of these settings. They are adapted from the scGPT embeddings example.
+        # NOTE: These settings are adapted from the scGPT embeddings example.
         self.scgpt_model = TransformerModel(
             ntoken=len(self.vocab),
             d_model=self.config.embsize,

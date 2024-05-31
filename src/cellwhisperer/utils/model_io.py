@@ -68,7 +68,6 @@ def load_cellwhisperer_model(
     else:
         pl_model.to(device)
 
-    # TODO transcriptome_processor_kwargs might be missing
     processor = TranscriptomeTextDualEncoderProcessor(
         pl_model.model.transcriptome_model.config.model_type,
         model_path_from_name(pl_model.model.text_model.config.model_type),

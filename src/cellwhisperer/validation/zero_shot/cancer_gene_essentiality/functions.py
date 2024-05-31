@@ -28,7 +28,6 @@ def _per_cell_line_mannwhineyu(
     """
     stat_dim: The dimension to perform the statistical test over. One of {gene_ko, cell_line}.
 
-    # TODO we might want to z-score normalize before mean-aggregating
     """
     assert stat_dim in ["gene_ko", "cell_line"]
 
