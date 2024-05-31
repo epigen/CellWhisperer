@@ -20,7 +20,6 @@ def get_performance_metrics_transcriptome_vs_text(
     correct_text_idx_per_transcriptome: List[int],
     average_mode: Optional[str] = "embeddings",
     grouping_keys: Optional[List[str]] = None,
-    text_tokenizer: Optional[AutoTokenizer] = None,
     transcriptome_processor: Optional[
         Union[GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor]
     ] = None,
@@ -37,14 +36,13 @@ def get_performance_metrics_transcriptome_vs_text(
     :param text_list_or_text_embeds: List[str] or torch.tensor (n_celltype * embedding_size). If List[str], compute the text embeddings for each text. \
         If torch.tensor, use the provided text embeddings.
     :param correct_text_idx_per_transcriptome: A list with the index in text_list_or_text_embeds of the correct text for each transcriptome in transcriptome_input.
-    :param average_mode: "cells" or "embeddings" or None. If "cells", first average the transcriptome data across all cells of same celltype, then tokenize and embed. \
-        If "embeddings", first tokenize and embed each cell, then average the embeddings. If None, don't average, report results at the single-transcriptome level. TODO "cells" does not work yet.
+    :param average_mode: "embeddings" or None. \
+        If "embeddings", first tokenize and embed each cell, then average the embeddings. If None, don't average, report results at the single-transcriptome level. NOTE "cells" is not implemented at the moment but would work by first averaging the transcriptome data across all cells of same celltype, then tokenize and embed. \
     :param grouping_keys: A list with group indicators (one for each transcriptome in transcriptome_input). If average_mode is not None, this must be provided and will be used to split the transciptome_input into groups that will be averaged separately.
-          Will also be used to label the rows in the result dataframe. If None, just use numbers. 
-    :param text_tokenizer: AutoTokenizer instance. Used to tokenize the text. Can be None if text_list_or_text_embeds is a torch.tensor.
+          Will also be used to label the rows in the result dataframe. If None, just use numbers.
     :param transcriptome_processor: GeneformerTranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to prepare/tokenize the transcriptome. Can be None if transcriptome_input is a torch.tensor.
     :param batch_size: int. Model processing in batches (to avoid OOM)
-    :param score_norm_method: "zscore", "softmax", "01norm" or None. TODO - unclear what is best. How to normalize the logits \
+    :param score_norm_method: "zscore", "softmax", "01norm" or None. How to normalize the logits \
             (similarity to the transcriptome). "zscore" will zscore the logits across all terms. "softmax" will apply softmax to the logits.\
             "01norm" will normalize the logits to the range [0,1]. If None, don't normalize.
     :param report_per_class_metrics: bool. If True, report the performance metrics per class (i.e. per transcriptome). If False, only report the macro average.
@@ -72,7 +70,6 @@ def get_performance_metrics_transcriptome_vs_text(
         average_mode=average_mode,
         grouping_keys=grouping_keys,
         transcriptome_processor=transcriptome_processor,
-        text_tokenizer=text_tokenizer,
         batch_size=batch_size,
         score_norm_method=score_norm_method,
     )  # scores is a tensor of shape n_text * n_cells (if average_mode is None), or n_text * n_celltypes (otherwise).

@@ -230,23 +230,31 @@ for ckpt_file_name in [
 
             if use_prefix_suffix_version and label_col in suffix_prefix_dict:
                 prefix, suffix = suffix_prefix_dict[label_col]
-                text_list=[f"{prefix}{x}{suffix}" for x in adata_no_nans.obs[label_col].unique().tolist()]
+                text_list = [
+                    f"{prefix}{x}{suffix}"
+                    for x in adata_no_nans.obs[label_col].unique().tolist()
+                ]
             elif label_col not in suffix_prefix_dict:
-                logging.warning(f"Label column {label_col} not found in suffix_prefix_dict, continuing without prefix/suffix")
+                logging.warning(
+                    f"Label column {label_col} not found in suffix_prefix_dict, continuing without prefix/suffix"
+                )
                 text_list = adata_no_nans.obs[label_col].unique().tolist()
 
             scores, _ = score_transcriptomes_vs_texts(
                 model=models_and_processors_dict["cellwhisperer"][0],
-                logit_scale=models_and_processors_dict["cellwhisperer"][0].discriminator.temperature.exp(),
-                transcriptome_input=torch.tensor(adata_no_nans.obsm["X_cellwhisperer"],
-                                                  device=models_and_processors_dict["cellwhisperer"][0].device),
+                logit_scale=models_and_processors_dict["cellwhisperer"][
+                    0
+                ].discriminator.temperature.exp(),
+                transcriptome_input=torch.tensor(
+                    adata_no_nans.obsm["X_cellwhisperer"],
+                    device=models_and_processors_dict["cellwhisperer"][0].device,
+                ),
                 text_list_or_text_embeds=text_list,
                 average_mode=None,
                 grouping_keys=None,
                 transcriptome_processor=models_and_processors_dict["cellwhisperer"][1],
-                text_tokenizer=text_processor_cellwhisperer,
                 batch_size=32,
-                score_norm_method=None,  
+                score_norm_method=None,
             )
             scores = scores.T  # n_cells * n_text
             predicted_labels = [
@@ -254,85 +262,125 @@ for ckpt_file_name in [
                 for x in scores.argmax(axis=1)
             ]
             for term in text_list:
-                adata_no_nans.obs[f"score_for_{term}"] = scores[:, text_list.index(term)].tolist()
+                adata_no_nans.obs[f"score_for_{term}"] = scores[
+                    :, text_list.index(term)
+                ].tolist()
             adata_no_nans.obs["predicted_labels_cellwhisperer"] = predicted_labels
             adata_no_nans.obs["confidence_cellwhisperer"] = scores.max(axis=1).values
-            adata_no_nans.obs["correct_prediction"] = adata_no_nans.obs["predicted_labels_cellwhisperer"] == adata_no_nans.obs[label_col]
+            adata_no_nans.obs["correct_prediction"] = (
+                adata_no_nans.obs["predicted_labels_cellwhisperer"]
+                == adata_no_nans.obs[label_col]
+            )
 
             #### Plot the confidence distributions
-            plot_confidence_distributions(adata_no_nans, result_dir, dataset_name, text_list,
-                                  label_col=label_col)
+            plot_confidence_distributions(
+                adata_no_nans, result_dir, dataset_name, text_list, label_col=label_col
+            )
 
             #### Plot the cellwhisperer predicted labels
             # Put them in correct order
-            if "well_studied_celltypes" in dataset_name and label_col=="celltype":
+            if "well_studied_celltypes" in dataset_name and label_col == "celltype":
                 adata_no_nans.obs["celltype"] = pd.Categorical(
                     values=adata_no_nans.obs["celltype"],
                     categories=list(TABSAP_WELLSTUDIED_COLORMAPPING.keys()),
-                    ordered=True)
+                    ordered=True,
+                )
                 adata_no_nans.obs["predicted_labels_cellwhisperer"] = pd.Categorical(
                     values=adata_no_nans.obs["predicted_labels_cellwhisperer"],
-                    categories=adata_no_nans.obs["celltype"].cat.categories)
+                    categories=adata_no_nans.obs["celltype"].cat.categories,
+                )
 
-
-            if "tabula_sapiens" in dataset_name and label_col == "celltype" and not "well_studied_celltypes" in dataset_name:
+            if (
+                "tabula_sapiens" in dataset_name
+                and label_col == "celltype"
+                and not "well_studied_celltypes" in dataset_name
+            ):
                 # extra predictions for the TabSap dataset: Only predict for the well-studied cell types
                 # This allows plotting them on the same UMAP as the full dataset
                 adata_wellstudied = adata_no_nans[
-                    adata_no_nans.obs["celltype"].isin(TABSAP_WELLSTUDIED_COLORMAPPING.keys())
+                    adata_no_nans.obs["celltype"].isin(
+                        TABSAP_WELLSTUDIED_COLORMAPPING.keys()
+                    )
                 ].copy()
                 if use_prefix_suffix_version and label_col in suffix_prefix_dict:
-                    wellstudied_texts = [f"{prefix}{x}{suffix}" for x in TABSAP_WELLSTUDIED_COLORMAPPING.keys()]
+                    wellstudied_texts = [
+                        f"{prefix}{x}{suffix}"
+                        for x in TABSAP_WELLSTUDIED_COLORMAPPING.keys()
+                    ]
                 else:
                     wellstudied_texts = list(TABSAP_WELLSTUDIED_COLORMAPPING.keys())
 
-                textlist_idx_wellstudied=[text_list.index(x) for x in text_list if x in wellstudied_texts]
+                textlist_idx_wellstudied = [
+                    text_list.index(x) for x in text_list if x in wellstudied_texts
+                ]
                 textlist_wellstudied = [text_list[x] for x in textlist_idx_wellstudied]
-                scores_wellstudied = scores[adata_no_nans.obs["celltype"].isin(TABSAP_WELLSTUDIED_COLORMAPPING.keys()), :]
-                scores_wellstudied =   scores_wellstudied[:,textlist_idx_wellstudied]
-                predicted_labels_wellstudied = [textlist_wellstudied[x].replace(suffix,"").replace(prefix,"") for x in scores_wellstudied.argmax(axis=1)]
-                adata_wellstudied.obs["predicted_labels_cellwhisperer"] = predicted_labels_wellstudied
+                scores_wellstudied = scores[
+                    adata_no_nans.obs["celltype"].isin(
+                        TABSAP_WELLSTUDIED_COLORMAPPING.keys()
+                    ),
+                    :,
+                ]
+                scores_wellstudied = scores_wellstudied[:, textlist_idx_wellstudied]
+                predicted_labels_wellstudied = [
+                    textlist_wellstudied[x].replace(suffix, "").replace(prefix, "")
+                    for x in scores_wellstudied.argmax(axis=1)
+                ]
+                adata_wellstudied.obs[
+                    "predicted_labels_cellwhisperer"
+                ] = predicted_labels_wellstudied
                 plot_cellwhisperer_predictions_on_umap(
                     adata=adata_wellstudied,
                     result_dir=result_dir,
                     dataset_name=dataset_name,
                     label_col=label_col,
                     color_mapping=color_mapping if label_col == "celltype" else None,
-                    background_adata=adata_no_nans[~adata_no_nans.obs["celltype"].isin(TABSAP_WELLSTUDIED_COLORMAPPING.keys())]
-                ) 
+                    background_adata=adata_no_nans[
+                        ~adata_no_nans.obs["celltype"].isin(
+                            TABSAP_WELLSTUDIED_COLORMAPPING.keys()
+                        )
+                    ],
+                )
             else:
                 plot_cellwhisperer_predictions_on_umap(
-                adata=adata_no_nans,
-                result_dir=result_dir,
-                dataset_name=dataset_name,
-                label_col=label_col,
-                color_mapping=color_mapping if label_col == "celltype" else None,
-            )                       
+                    adata=adata_no_nans,
+                    result_dir=result_dir,
+                    dataset_name=dataset_name,
+                    label_col=label_col,
+                    color_mapping=color_mapping if label_col == "celltype" else None,
+                )
 
             #### Get classification performance metrics for cellwhisperer
-                
-            correct_text_idx_per_transcriptome=[
-                    adata_no_nans.obs[label_col].unique().tolist().index(x)
-                    for x in adata_no_nans.obs[label_col].values
-                ]
-            shuffled_text_idx_per_transcriptome=copy.copy(correct_text_idx_per_transcriptome)
+
+            correct_text_idx_per_transcriptome = [
+                adata_no_nans.obs[label_col].unique().tolist().index(x)
+                for x in adata_no_nans.obs[label_col].values
+            ]
+            shuffled_text_idx_per_transcriptome = copy.copy(
+                correct_text_idx_per_transcriptome
+            )
             np.random.shuffle(shuffled_text_idx_per_transcriptome)
-                
+
             for shuffle in [False, True]:
                 (
                     performance_metrics,
                     performance_metrics_per_label_df,
                 ) = get_performance_metrics_transcriptome_vs_text(
                     model=models_and_processors_dict["cellwhisperer"][0],
-                    transcriptome_input=torch.tensor(adata_no_nans.obsm["X_cellwhisperer"], device=models_and_processors_dict["cellwhisperer"][0].device),
-                    text_list_or_text_embeds=text_list,#adata_no_nans.obs[label_col].unique().tolist(),
+                    transcriptome_input=torch.tensor(
+                        adata_no_nans.obsm["X_cellwhisperer"],
+                        device=models_and_processors_dict["cellwhisperer"][0].device,
+                    ),
+                    text_list_or_text_embeds=text_list,  # adata_no_nans.obs[label_col].unique().tolist(),
                     average_mode=None,
                     grouping_keys=None,
-                    transcriptome_processor=models_and_processors_dict["cellwhisperer"][1],
-                    text_tokenizer=text_processor_cellwhisperer,
+                    transcriptome_processor=models_and_processors_dict["cellwhisperer"][
+                        1
+                    ],
                     batch_size=32,
                     score_norm_method=None,
-                    correct_text_idx_per_transcriptome=correct_text_idx_per_transcriptome if not shuffle else shuffled_text_idx_per_transcriptome,
+                    correct_text_idx_per_transcriptome=correct_text_idx_per_transcriptome
+                    if not shuffle
+                    else shuffled_text_idx_per_transcriptome,
                 )
                 pd.Series(performance_metrics).to_csv(
                     f"{result_dir}/{dataset_name}/performance_metrics_cellwhisperer.{label_col}_as_label.macrovag.{'RANDOM' if shuffle else ''}.csv"
@@ -366,78 +414,91 @@ for ckpt_file_name in [
                     dataset_name=dataset_name,
                     label_col=label_col,
                     order=order,
-                    title=title
+                    title=title,
                 )
             except ValueError as e:
-                print(f"Got the following error during plotting of confusion matrix (continueing): {e}")
+                print(
+                    f"Got the following error during plotting of confusion matrix (continueing): {e}"
+                )
 
             del adata_no_nans
 
-
         ## Term search in tabula sapiens
-        if "tabula_sapiens" in dataset_name and not "well_studied_celltypes" in dataset_name:
-
+        if (
+            "tabula_sapiens" in dataset_name
+            and not "well_studied_celltypes" in dataset_name
+        ):
             prefix, suffix = suffix_prefix_dict["celltype"]
 
-            terms_celltype_dict={
+            terms_celltype_dict = {
                 "red blood cells": "erythrocyte",
                 "erythrocyte": "erythrocyte",
-                "Natural killer cells":"nk cell",
-                "T cells":"t cell",
-                "B cells":"b cell",
-                "blood platelets":"platelet",
+                "Natural killer cells": "nk cell",
+                "T cells": "t cell",
+                "B cells": "b cell",
+                "blood platelets": "platelet",
             }
-            for term,celltype in terms_celltype_dict.items():
-
+            for term, celltype in terms_celltype_dict.items():
                 scores, _ = score_transcriptomes_vs_texts(
-                model=models_and_processors_dict["cellwhisperer"][0],
-                logit_scale=models_and_processors_dict["cellwhisperer"][0].discriminator.temperature.exp(),
-                transcriptome_input=torch.tensor(adata.obsm["X_cellwhisperer"], device=models_and_processors_dict["cellwhisperer"][0].device),
-                text_list_or_text_embeds=[f"{prefix}{term}{suffix}"],
-                average_mode=None,
-                grouping_keys=None,
-                transcriptome_processor=models_and_processors_dict["cellwhisperer"][1],
-                text_tokenizer=text_processor_cellwhisperer,
-                batch_size=32,
-                score_norm_method=None,
+                    model=models_and_processors_dict["cellwhisperer"][0],
+                    logit_scale=models_and_processors_dict["cellwhisperer"][
+                        0
+                    ].discriminator.temperature.exp(),
+                    transcriptome_input=torch.tensor(
+                        adata.obsm["X_cellwhisperer"],
+                        device=models_and_processors_dict["cellwhisperer"][0].device,
+                    ),
+                    text_list_or_text_embeds=[f"{prefix}{term}{suffix}"],
+                    average_mode=None,
+                    grouping_keys=None,
+                    transcriptome_processor=models_and_processors_dict["cellwhisperer"][
+                        1
+                    ],
+                    batch_size=32,
+                    score_norm_method=None,
                 )
                 scores = scores.T  # n_cells * n_text
                 adata.obs[f"score_for_{term}"] = scores.squeeze().tolist()
-                adata.obs[f"label contains '{celltype}'"] = adata.obs["celltype"].str.contains(celltype).astype(int)
+                adata.obs[f"label contains '{celltype}'"] = (
+                    adata.obs["celltype"].str.contains(celltype).astype(int)
+                )
 
-                plot_term_search_result(term, celltype, adata, result_dir, dataset_name, prefix, suffix)
-
+                plot_term_search_result(
+                    term, celltype, adata, result_dir, dataset_name, prefix, suffix
+                )
 
     # Performance on some examples for various tasks:
     plot_performance_metrics_example_classes(
-        result_dir=result_dir,          
+        result_dir=result_dir,
         label_cols=[
             "celltype",
             "organ_tissue",
             "Disease_subtype",
-                    ],
+        ],
         datasets=[
             "tabula_sapiens",
             "tabula_sapiens",
-            "human_disease",],
-        selected_sample_lists=[
-                        ["kidney epithelial cell", "erythrocyte","plasma cell"],
-                        ["Kidney", "Lung", "Tongue"],
-                        ["Dilated cardiomyopathy","Melanoma","Hepatocellular carcinoma"],
+            "human_disease",
         ],
-        suffix_prefix_dict=suffix_prefix_dict
+        selected_sample_lists=[
+            ["kidney epithelial cell", "erythrocyte", "plasma cell"],
+            ["Kidney", "Lung", "Tongue"],
+            ["Dilated cardiomyopathy", "Melanoma", "Hepatocellular carcinoma"],
+        ],
+        suffix_prefix_dict=suffix_prefix_dict,
     )
 
     plot_performance_metrics_macro_avg(
         result_dir=result_dir,
         label_cols=[
-            "celltype",#"Tissue",
+            "celltype",  # "Tissue",
             "celltype",
             "celltype",
             "celltype",
             "Disease_subtype",
             "organ_tissue",
-            "Tissue",],
+            "Tissue",
+        ],
         datasets=[
             "tabula_sapiens",
             "tabula_sapiens_well_studied_celltypes",

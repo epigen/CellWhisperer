@@ -185,7 +185,6 @@ class SingleCellZeroshotValidationScoreCalculator:
         ) = get_performance_metrics_transcriptome_vs_text(
             transcriptome_input=transcriptome_embeddings,
             model=model,
-            text_tokenizer=self.processor.tokenizer,
             transcriptome_processor=self.processor.transcriptome_processor,
             correct_text_idx_per_transcriptome=self.correct_text_idx_per_transcriptome,
             text_list_or_text_embeds=self.text_list,

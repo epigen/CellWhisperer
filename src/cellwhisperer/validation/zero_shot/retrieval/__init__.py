@@ -56,14 +56,15 @@ class RetrievalScoreCalculator:
         transcriptome_embeds = torch.cat(transcriptome_embeds)
 
         performance_metrics_all = {}
-        for name, text_as_classes in zip(["transcriptomes_as_classes", "text_as_classes"], [False, True]):
+        for name, text_as_classes in zip(
+            ["transcriptomes_as_classes", "text_as_classes"], [False, True]
+        ):
             (
                 performance_metrics,
                 _,
             ) = get_performance_metrics_transcriptome_vs_text(
                 transcriptome_input=transcriptome_embeds,
                 model=model,
-                text_tokenizer=None,
                 transcriptome_processor=None,
                 correct_text_idx_per_transcriptome=list(
                     range(text_embeds.shape[0])

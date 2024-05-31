@@ -1,10 +1,10 @@
 # from /home/moritz/Projects/transformers/src/transformers/models/vision_text_dual_encoder/modeling_vision_text_dual_encoder.py
 """ PyTorch TranscriptomeTextDualEncoder model."""
 
-import anndata
 from typing import Optional, Tuple, Union, Any, List
-from cellwhisperer.config import get_path
+from cellwhisperer.config import model_path_from_name
 from cellwhisperer.jointemb.frozen_model import FrozenCachedModel
+from cellwhisperer.jointemb.processing import TranscriptomeTextDualEncoderProcessor
 
 
 import torch
@@ -119,8 +119,6 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             text_model (PreTrainedModel): The text model to be used.
             force_freeze (bool): Whether to force freezing the models even if the config does not indicate it.
         """
-        # TODO need to make sure to modify the config according to the model. Idea: predict a unified input (all_zero, or all_one or so) and take the output as the hash
-
         if self.config.locking_mode[0] == "L" or force_freeze:
             if not isinstance(transcriptome_model, FrozenCachedModel):
                 transcriptome_model = FrozenCachedModel(transcriptome_model)
@@ -149,7 +147,6 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             text_model (PreTrainedModel): The text model to be used.
             force_freeze (bool): Whether to force freezing the models even if the config does not indicate it.
         """
-        # TODO need to make sure to modify the config according to the model. Idea: predict a unified input (all_zero, or all_one or so) and take the output as the hash
         device = self.device
 
         if self.config.locking_mode[0] != "u" or force_freeze:
@@ -462,3 +459,31 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         )
 
         return model
+
+    # inference API
+    def embed_texts(self, texts: List[str], chunk_size=64):
+        """
+        Embed the given texts into the LLM space
+        """
+
+        processor = TranscriptomeTextDualEncoderProcessor(
+            self.transcriptome_model.config.model_type,
+            model_path_from_name(self.text_model.config.model_type),
+        )
+
+        tokenizer = processor.tokenizer
+
+        ret_list = []
+        for chunk in [
+            texts[i : i + chunk_size] for i in range(0, len(texts), chunk_size)
+        ]:
+            text_tokens = tokenizer(chunk, return_tensors="pt", padding=True)
+            for k, v in text_tokens.items():
+                text_tokens[k] = v.to(self.device)
+
+            # Compute text embeddings
+            _, text_embeds = self.get_text_features(**text_tokens)
+            text_embeds = text_embeds / text_embeds.norm(dim=-1, keepdim=True)
+            ret_list.append(text_embeds)
+
+        return torch.cat(ret_list, dim=0)

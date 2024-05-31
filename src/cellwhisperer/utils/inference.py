@@ -22,7 +22,6 @@ def score_transcriptomes_vs_texts(
     model: Optional[TranscriptomeTextDualEncoderModel] = None,
     average_mode: Optional[str] = "embeddings",
     grouping_keys: Optional[List[str]] = None,
-    text_tokenizer: Optional[AutoTokenizer] = None,
     transcriptome_processor: Optional[
         Union[GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor]
     ] = None,
@@ -38,13 +37,12 @@ def score_transcriptomes_vs_texts(
         If torch.tensor, use the provided text embeddings.
     :param logit_scale: float. Scale the logits (similarity to the transcriptome) by this factor. Learned CLIP parameter.
     :param model: TranscriptomeTextDualEncoderModel instance. Used to compute the similarity between text and transcriptome.
-    :param average_mode: "cells" or "embeddings" or None. If "cells", first average the transcriptome data across all cells of same celltype, then tokenize and embed. \
-        If "embeddings", first tokenize and embed each cell, then average the embeddings. If None, don't average, report scores at the single-transcriptome level. TODO "cells" does not work yet.
+    :param average_mode: "embeddings" or None. \
+        If "embeddings", first tokenize and embed each cell, then average the embeddings. If None, don't average, report results at the single-transcriptome level. NOTE "cells" is not implemented at the moment but would work by first averaging the transcriptome data across all cells of same celltype, then tokenize and embed. \
     :param grouping_keys: A list with group indicators (one for each transcriptome in transcriptome_input). If this is None, while average_mode is not None, all transcriptomes are treated as a single group.
-    :param text_tokenizer: AutoTokenizer instance. Used to tokenize the text. Can be None if text_list_or_text_embeds is a torch.tensor.
     :param transcriptome_processor: GeneformerTranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to prepare/tokenize the transcriptome. Can be None if transcriptome_input is a torch.tensor.
     :param batch_size: int. Model processing in batches (to avoid OOM)
-    :param score_norm_method: "zscore", "softmax", "01norm" or None. TODO - unclear what is best. How to normalize the logits \
+    :param score_norm_method: "zscore", "softmax", "01norm" or None. How to normalize the logits \
             (similarity to the transcriptome). "zscore" will zscore the logits across all terms. "softmax" will apply softmax to the logits.\
             "01norm" will normalize the logits to the range [0,1]. If None, don't normalize.
     : return: A tuple of two objects: \
@@ -89,35 +87,22 @@ def score_transcriptomes_vs_texts(
         )  # n_celltypes * 512
         grouping_keys = sorted_unique_annotations
 
-    #### Chunk the text to avoid out-of-memory errors ### TODO use pl_model.embed_text here
-    logits_per_text_list = []
-    text_chunks = [
-        text_list_or_text_embeds[i : i + batch_size]
-        for i in range(0, len(text_list_or_text_embeds), batch_size)
-    ]
-    for chunk in text_chunks:
-        if type(text_list_or_text_embeds) == torch.Tensor:
-            text_embeds = chunk
-        else:
-            text_embeds = text_list_to_embeds(
-                chunk, model, text_tokenizer
-            )  # batch_size * 512
+    if type(text_list_or_text_embeds) == torch.Tensor:
+        text_embeds = text_list_or_text_embeds
+    else:
+        assert (
+            model is not None
+        ), "If text is provided as string, we need the model (is None)"
+        text_embeds = model.embed_texts(text_list_or_text_embeds, chunk_size=batch_size)
 
-        # Compute logits (similarity to expression embedding) for the current chunk and append to the list
-        if isinstance(logit_scale, torch.Tensor):
-            logging.debug("Converting logit_scale to float.")
-            logit_scale = logit_scale.item()
+    if isinstance(logit_scale, torch.Tensor):
+        logging.debug("Converting logit_scale to float.")
+        logit_scale = logit_scale.item()
 
-        logits_per_text = (
-            torch.matmul(text_embeds.cpu(), transcriptome_embeds.t().cpu())
-            * logit_scale
-        )  # n_text * n_adatas
-        logits_per_text_list.append(logits_per_text.cpu().detach())
+    logits_per_text = (
+        torch.matmul(text_embeds.cpu(), transcriptome_embeds.t().cpu()) * logit_scale
+    ).detach()  # n_text * n_adatas
 
-    # Concatenate the results to get the final text_embeds
-    logits_per_text = torch.cat(logits_per_text_list, dim=0)
-
-    # TODO: What is the best normalization here? Softmax, zscore, [0,1]? Something else?
     if score_norm_method == "softmax":
         logits_per_text = torch.softmax(logits_per_text, dim=0)
     elif score_norm_method == "01norm":

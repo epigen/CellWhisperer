@@ -31,7 +31,7 @@ def text_api_endpoint():
     Takes a (json) list of strings and returns their embeddings as np array
     """
     data = request.get_json()
-    text_embeds = pl_model.embed_texts(data)
+    text_embeds = pl_model.model.embed_texts(data)
 
     # Serialize the result
     return Response(
@@ -62,7 +62,6 @@ def scoring_api_endpoint():
         pl_model.model,
         average_mode,
         transcriptome_annotations,
-        tokenizer,
         transcriptome_processor,  # unused
         BATCH_SIZE,
         score_norm_method,

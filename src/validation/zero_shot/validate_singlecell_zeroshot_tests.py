@@ -40,7 +40,6 @@ model = TranscriptomeTextDualEncoderModel.from_transcriptome_text_pretrained(
     text_config=config_text,
 )
 model.to(device)
-text_tokenizer = AutoTokenizer.from_pretrained("microsoft/biogpt")
 transcriptome_processor = GeneformerTranscriptomeProcessor(
     nproc=1, emb_label=model.transcriptome_model.config.emb_label
 )
@@ -116,7 +115,6 @@ if True:
     ) = get_performance_metrics_transcriptome_vs_text(
         transcriptome_input=random_tensor,
         model=model,
-        text_tokenizer=text_tokenizer,
         transcriptome_processor=transcriptome_processor,
         text_list_or_text_embeds=random_tensor,
         correct_text_idx_per_transcriptome=list(range(random_tensor.shape[0])),
@@ -148,7 +146,6 @@ if True:
     ) = get_performance_metrics_transcriptome_vs_text(
         transcriptome_input=transcriptome_tensor,
         model=model,
-        text_tokenizer=text_tokenizer,
         transcriptome_processor=transcriptome_processor,
         text_list_or_text_embeds=text_tensor,
         correct_text_idx_per_transcriptome=transcriptome_annotations,
