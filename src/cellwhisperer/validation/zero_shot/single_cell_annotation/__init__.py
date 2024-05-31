@@ -105,7 +105,7 @@ class SingleCellZeroshotValidationScoreCalculator:
         sc_dataset: SingleCellDataSetForValidationScoring,
         prefix_for_text_embeddings: str = "Sample of a ",
         suffix_for_text_embeddings: str = "",
-        nproc_transcriptome_processor: int = 0,  # TODO link to CLI nproc argument
+        nproc_transcriptome_processor: int = 0,
         tokenizer_name: str = "biogpt",
         transcriptome_tokenizer_type: str = "geneformer",
         transcriptome_processor_kwargs: Optional[Dict[str, Any]] = None,
@@ -127,9 +127,6 @@ class SingleCellZeroshotValidationScoreCalculator:
             average_mode: how to average the transcriptome embeddings. Must be one of "cells", "embeddings", or None.
         """
 
-        self.nproc_transcriptome_processor = (
-            nproc_transcriptome_processor  # TODO make use of it
-        )
         self.batch_size = batch_size
         self.average_mode = average_mode
 
@@ -157,6 +154,7 @@ class SingleCellZeroshotValidationScoreCalculator:
         self.processor = TranscriptomeTextDualEncoderProcessor(
             transcriptome_tokenizer_type,
             tokenizer_path,
+            nproc=nproc_transcriptome_processor,
             **transcriptome_processor_kwargs,
         )
 

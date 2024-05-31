@@ -52,17 +52,18 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
         self,
         transcriptome_processor: Union[str, Any] = None,
         tokenizer: Union[str, Any] = None,
-        **transcriptome_kwargs
+        nproc: int = 8,
+        **transcriptome_kwargs,
     ):
         if transcriptome_processor == "geneformer":
             transcriptome_processor = GeneformerTranscriptomeProcessor(
-                nproc=8,
+                nproc=nproc,
                 emb_label="natural_language_annotation",  # config["anndata_label_name"]
                 **transcriptome_kwargs,
             )
         elif transcriptome_processor == "scgpt":
             transcriptome_processor = ScGPTTranscriptomeProcessor(
-                nproc=8,
+                nproc=nproc,
                 **transcriptome_kwargs,
             )
         else:
@@ -84,7 +85,7 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
         transcriptomes=None,
         text_truncation=True,
         return_tensors=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Main method to prepare for the model one or several sequences(s) and transcriptome(s). This method forwards the `text`
