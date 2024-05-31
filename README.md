@@ -70,7 +70,22 @@ See [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md)
 
 ## Run
 
-### Reproduce analyses and plots
+### Reproduce manuscript analyses and plots
+
+We provide all our validations and analyses in a single pipeline, (re)producing all (*) plots in our paper.
+
+Note that due to the high computational cost, this pipeline relies on some precomputed files, which are downloaded from our server as part of the pipeline. Nevertheless computing all the analyses will require a considerable amount of storage (~1TB), RAM (~1TB), CPU (~100 cores), GPU and time (2 days) resources.
+
+To run the pipeline, execute
+
+```bash
+cd src
+snakemake
+```
+
+(*) Some interactive analyses/screenshots were performed directly in the CELLxGENE CellWhisperer browser integration and are not reproduced by the pipeline
+
+Refer to `src/figures/README.md` for further details.
 
 ### Process your own datasets for CellWhisperer+CELLxGENE Explorer
 
@@ -117,6 +132,8 @@ cellwhisperer fit --print_config > run_config.yaml
 cellwhisperer fit --config run_config.yaml
 ```
 
+The config used to train is located at `src/cellwhisperer_clip_v1.yaml`
+
 #### Important parameters
 
 `wandb`: Whether to log to wandb and if so which run_name to use
@@ -131,30 +148,17 @@ To run sweeps, refer to [this README](./src/experiments/sweeps/README.md). You c
 ### Train CellWhisperer LLM
 
 1. Go to `src/llava`
-2. Run `snakemake train`
+2. Run `snakemake`
 
-### Model Analyses and plots
-
-We provide all our validations and analyses in a single pipeline, (re)producing all (*) plots in our paper.
-
-Note that due to the high computational cost, this pipeline relies on some precomputed files, which are downloaded from our server as part of the pipeline. Nevertheless computing all the analyses will require a considerable amount of storage (~1TB), RAM (~1TB), CPU (~100 cores), GPU and time (2 days) resources.
-
-To run the pipeline, execute
-
-```bash
-cd src
-snakemake
-```
-
-(*) Some interactive analyses/screenshots were performed directly in the CELLxGENE CellWhisperer browser integration and are not reproduced by the pipeline
+Note: the pipelines includes code to generate the datasets. Since this takes a considerable amount of time and computational resources, we recommend downloading our provided data set. (automatically done by the main pipeline in `src`).
 
 ## Folder structure
 
 - data: Computationally non-reproducible, expensive, or painful to reproduce
 - results: Can be reproduced with your scripts and pipelines
 - resources: External, references, datasets and tools that are project inherent and can be reproduced or downloaded with your scripts and pipelines
-- **src** (and all other directories needed to run the source code)
-- **modules**
+- **src**: Main model, training, data source code
+- **modules**: Forked and modified source code repositories
 
 ### src/
 
