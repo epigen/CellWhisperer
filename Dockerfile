@@ -64,10 +64,14 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 # Build the web app
 RUN git config --global --add safe.directory /opt/cellwhisperer/modules/cellxgene
+RUN git config --global --add safe.directory /opt/cellwhisperer
 RUN cd modules/cellxgene && CONDA_ENV=cellwhisperer /entrypoint.sh make build-for-server-dev
 
 # [Optional] Install scgpt
 # RUN CONDA_ENV=cellwhisperer /entrypoint.sh bash envs/install_scgpt_after_env_creation.sh
+
+# Initialize an empty git repo (the original one is ignored by .dockerignore), such that all the `git rev-parse` commands works
+RUN git init
 
 # Set the default command to run when creating a new container
 CMD [ "/bin/bash" ]

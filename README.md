@@ -27,14 +27,26 @@ Sun Mar 31 17:36:31 2024
 ...
 ```
 
-2. Install the environments
+3. Install the environments
   ```
   mamba env create -f envs/main.yaml  # name: cellwhisperer   this already includes `pip install -e .`
   mamba env create -f envs/llava.yaml  # name: llava    this already includes `pip install -e ../modules/LLaVA/[train]`
 
   conda activate cellwhisperer
   ```
-3. Develop :)
+4. Develop :)
+
+### Install within Docker
+
+You can also install and use CellWhisperer within docker:
+
+```bash
+docker build -t cellwhisperer .
+docker run --gpus all -it --volume .:/opt/cellwhisperer cellwhisperer bash
+conda activate cellwhisperer
+```
+
+Note that this container loads the project directory as volume (`--volume .:/opt/cellwhisperer`) in the container (such that modifications are visible in the container).
 
 ### Optional: Installing scGPT
 
