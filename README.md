@@ -1,12 +1,12 @@
-# Cellwhisperer
+# CellWhisperer
+
 CellWhisperer project
 
-For more information on project management, follow <- TODO delete in publication
-https://github.com/epigen/cellwhisperer/wiki
+TODO For more information on project management, follow https://github.com/epigen/cellwhisperer/wiki
 
 ## Install
 
-TODO: declare how to run with docker. also indicate how to install llava
+### Install via conda/pip
 
 1. Run `git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules`
   If you already cloned, but did not add the `--recurse-submodules` run the following:
@@ -128,40 +128,89 @@ cellwhisperer fit --config run_config.yaml
 
 To run sweeps, refer to [this README](./src/experiments/sweeps/README.md). You can run sweeps with the `single_cell_sweeping` tool
 
-### TODO Train CellWhisperer LLM
+### Train CellWhisperer LLM
 
-### TODO Model Analyses and plots
+1. Go to `src/llava`
+2. Run `snakemake train`
 
+### Model Analyses and plots
+
+We provide all our validations and analyses in a single pipeline, (re)producing all (*) plots in our paper.
+
+Note that due to the high computational cost, this pipeline relies on some precomputed files, which are downloaded from our server as part of the pipeline. Nevertheless computing all the analyses will require a considerable amount of storage (~1TB), RAM (~1TB), CPU (~100 cores), GPU and time (2 days) resources.
+
+To run the pipeline, execute
+
+```bash
+cd src
+snakemake
+```
+
+(*) Some interactive analyses/screenshots were performed directly in the CELLxGENE CellWhisperer browser integration and are not reproduced by the pipeline
 
 ## Folder structure
 
 - data: Computationally non-reproducible, expensive, or painful to reproduce
-- metadata: Computationally non-reproducible, e.g., sample annotation sheets, clinical annotation
 - results: Can be reproduced with your scripts and pipelines
 - resources: External, references, datasets and tools that are project inherent and can be reproduced or downloaded with your scripts and pipelines
-- src (and all other directories needed to run the source code)
+- **src** (and all other directories needed to run the source code)
+- **modules**
 
 ### src/
 
-Consists of the `cellwhisperer` package and a series of 
+Immediately relevant to the user are:
 
-- `cellwhisperer`:
-- `pre_training_processing`:
-- `post_clip_processing`:  # TODO split
-- `llava`:
-- `ablation`:
-- `figures`:
+- `figures`: Pipeline to (re)produce all analyses/plots for the final manuscript (see the `src/figures/README.md` for details)
+- `cellxgene_preprocessing`: Pipeline to preprocess new (single cell) RNA-seq datasets for interactive exploration in CELLxGENE/CellWhisperer
+
+These modules and pipelines are used 'under the hood':
+
+- `cellwhisperer`: CellWhisperer embedding model python package including model, training and inference code
+- `datasets`: retrieval/preparation of training and validation datasets (transcriptomes as well as annotations)
+- `pre_training_processing`: Generation of natural language captions and other preparations to obtain final datasets for multimodal contrastive training
+- `llava`: Pipeline for training and validation of the CellWhisperer LLM model
+- `ablation`: Pipeline for embedding model ablation and evaluation
+- `hosting`: Hosting infrastructure source code
 
 ### Code style
 
 We use `blacken` for automated code formatting.
 
-## Deploy
-- `cd` to `hosting/home`
-    - To deploy, run `docker compose up -d`
-    - To rebuild the website, run `docker compose -f website-builder-compose.yml up`  # TODO make this part of the docker file and remove here
+### modules/
 
-## Processing of new (single cell) datasets
-- Make sure your dataset adheres to the prerequisites described in the [wiki](https://github.com/epigen/cellwhisperer/wiki/Datasets)
-- Place the dataset into a folder `cellxgene/resources/<dataset_name>/read_count_table.h5ad`
-- Go to `cellwhisperer/src/post_clip_processing` and run `/msc/home/mschae83/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad` (use the correct model name)
+CellWhisperer builds atop two projects that are integrated via git submodules. These were forked from original repositories on GitHub, in order to retain transparency on our code contributions as well as the option to feed back code into the upstream repository (in case of `cellxgene`).
+
+- `llava`: CellWhisperer LLM model python package including model, training and inference code
+- `cellxgene`: CELLxGENE Explorer browser package, modified to integrate UI and API elements for CellWhisperer integration
+- `Geneformer`: The transcriptome model used for the CellWhisperer embedding model
+
+## Processing of (single cell) datasets and use within CELLxGENE
+
+For an efficient use of CellWhisperer in the web browser (CELLxGENE Explorer integration), you need to preprocess your datasets.
+
+1. Prepare your dataset (for guidelines see below)
+2. Place it in `<PROJECT_ROOT>/resources/<dataset_name>/read_count_table.h5ad`
+3. Go to `cellwhisperer/src/cellxgene_preprocessing` and run the pipeline: `snakemake --config 'datasets=["<dataset_name>"]'`
+   - This runs much faster if you use a GPU. Also, depending on your dataset, this might require a substantial amount of RAM.
+   - We use GPT-4 or Mixtral to condense the CellWhisperer-generated cluster captions into brief titles. Set the environment variable `OPENAI_API_KEY` if you want to use the GPT-4
+4. Use the newly created file `snakemake /path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad` to host a CELLxGENE Explorer instance:
+   - `cellxgene launch -p 5005  --debug --host 0.0.0.0 --max-category-items 500 --var-names gene_name /path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad /path/to/cellwhisperer/results/models/jointemb/cellwhisperer_clip_v1.ckpt`
+   - For a docker-driven deployment refer to `hosting/home`
+   - NOTE The CellWhisperer LLM integration relies on an additionally running job (see `hosting/home/docker-compose.yml`). TODO: Add instructions on how to provide the LLM service here
+
+### Dataset input format guidelines
+
+We only use human data and raw read counts (not normalized) for our datasets. Normalization is taken care of by the respective transcriptome models (more specifically their processor classes) and is also performed explicitly in this preparation pipeline.
+
+- A dataset is stored in an h5ad file
+- `X` contains raw read counts and without nans (use int32)
+- `var` has a *unique* index (e.g. the ensembl_id (not mandatory, but recommended)) and an additional field `gene_name` containing the gene symbol.
+  - Optionally, provide an additional field "ensembl_id" (otherwise the pipeline computes it).
+- If your dataset is large (i.e. > 100k cells), restrict the provided metadata fields (e.g. in `obs` and `var`) to what is really necessary
+- For best results, filter cells with few expressed genes (e.g. <100 genes with expression <1)
+- Try to use `categorical` instead of 'object' dtype for categorical `obs` columns
+- Any layouts that should make it into the webapp need to adhere to these rules:
+  - stored in `.obsm` whith name `X_{name}`
+  - type: `np.ndarray` (NOT `pd.DataFrame`), dtype: float/int/uint
+  - shape: `(n_obs, >= 2)`
+  - all values finite or NaN (NO +Inf or -Inf)
