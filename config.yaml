@@ -29,6 +29,9 @@ paths:
     correlation: results/{dataset}/{model}/gsva_correlations.csv
     cw_transcriptome_term_scores: results/{dataset}/{model}/cw_transcriptome_term_scores.parquet
     plots: results/plots/gsva_correlation/{dataset}/{model}
+  
+  zero_shot_validation:
+    result_dir: results/{model}/zero_shot_validation/
 
   llava:
     root: results/llava/
@@ -57,6 +60,7 @@ datasets:
   - car_t
   - bowel_disease
   - gut_cell_atlas
+  - pancreas
   - hcaorganoids_normal__primary
   - hcaorganoids_normal__organoid
   - hcaorganoids_cancer__primary

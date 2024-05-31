@@ -1,0 +1,21 @@
+from pathlib import Path
+# Download and preprocess the Immgen dataset
+
+PROJECT_DIR = Path(workflow.basedir).resolve().parents[2]
+configfile: PROJECT_DIR / "config.yaml"
+
+COUNT_TABLE_URL = "https://figshare.com/ndownloader/files/43480497" 
+
+rule all:
+    input:
+        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="pancreas"),
+
+rule download_data:
+    """
+    """
+    output:
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="pancreas"),
+    shell:
+        wget -O {output["read_count_table"]} {COUNT_TABLE_URL}.zip
+        unzip {output["read_count_table"]}.zip
+        rm {output["read_count_table"]}.zip
