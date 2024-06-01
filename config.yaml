@@ -66,6 +66,13 @@ datasets:
   - hcaorganoids_cancer__primary
   - hcaorganoids_cancer__organoid
 
+zero_shot_validation_datasets: 
+  - immgen
+  - human_disease
+  - tabula_sapiens
+  - pancreas
+  - tabula_sapiens_well_studied_celltypes
+
 retrieval_validation_sets:
   - immgen_deduplicated
   - human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
