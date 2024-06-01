@@ -60,7 +60,8 @@ rule plot_zero_shot_validations:
     """
     """
     input:
-        raw_read_count_tables =  expand(get_path(["paths", "read_count_table"],dataset="{dataset}"), dataset=TARGET_DATASETS),
+        # no need to have a read count table for the well studied cell types, can just use the raw read count table from the full dataset
+        raw_read_count_tables = expand(get_path(["paths", "read_count_table"],dataset="{dataset}"), dataset=[x for x in TARGET_DATASETS if not x=="tabula_sapiens_well_studied_celltypes"]),
     output:
         tabsap_wellstudied_celltypes_on_umap=get_path(["paths", "zero_shot_validation","result_dir"], model="{model}")/"tabula_sapiens/cellwhisperer_predictions.celltype_as_label.X_umap_on_neighbors_cellwhisperer.celltype.pdf",
         tabsap_wellstudied_predictions_on_umap=get_path(["paths", "zero_shot_validation","result_dir"], model="{model}")/"tabula_sapiens/cellwhisperer_predictions.celltype_as_label.X_umap_on_neighbors_cellwhisperer.predicted_labels_cellwhisperer.pdf",
@@ -72,13 +73,14 @@ rule plot_zero_shot_validations:
         rocauc_accuracy_examples=get_path(["paths", "zero_shot_validation","result_dir"], model="{model}")/"performance_metrics_cellwhisperer.selected_classes_and_datasets.pdf",
     params:
         datasets = TARGET_DATASETS,
-        model = "{model}"
+        model = "{model}",
+        result_dir = get_path(["paths", "zero_shot_validation","result_dir"], model="{model}"),
     conda:
         "cellwhisperer"
     resources:
         mem_mb=200000,
         slurm="cpus-per-task=2"
     log:
-        notebook="../logs/plot_zero_shot_validations{dataset}_{model}.ipynb"
+        notebook="../logs/zero_shot_validation_{model}.ipynb"
     notebook:
-        "../notebooks/zero_shot/plot_zero_shot_validations.py.ipynb"
+        "../notebooks/zero_shot_validation.py.ipynb"

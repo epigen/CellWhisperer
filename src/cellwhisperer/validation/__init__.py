@@ -15,7 +15,6 @@ def initialize_validation_functions(
     batch_size: int,
     transcriptome_model_type: str,
     text_model_type: str,
-    val_dataloader: Optional[DataLoader] = None,
 ):
     tabsap_sc_dataset = SingleCellDataSetForValidationScoring(
         cell_number_threshold_per_celltype=100
@@ -65,11 +64,6 @@ def initialize_validation_functions(
             transcriptome_tokenizer_type=transcriptome_model_type,
         ),
     }
-    if val_dataloader is not None:
-        # TODO: For deduplication, would need to provide the dataset name, anndata, or annotations. See src/validation/zero_shot/deduplicate.py
-        training_validation_functions[
-            "zshot_retrieval_validation_set"
-        ] = RetrievalScoreCalculator(val_dataloader)
 
     # Add retrieval validation tests for the deduplicated validation-sets
     for name in config["retrieval_validation_sets"]:

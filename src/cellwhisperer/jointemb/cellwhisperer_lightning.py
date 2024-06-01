@@ -233,7 +233,6 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             batch_size=self.val_batch_size,
             transcriptome_model_type=self.model.transcriptome_model.config.model_type,
             text_model_type=self.model.text_model.config.model_type,
-            val_dataloader=self.trainer.datamodule.val_dataloader(),
         )
         if stage == "fit":
             if isinstance(self.frozen_warmup, float):

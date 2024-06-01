@@ -26,7 +26,7 @@ def score_transcriptomes_vs_texts(
         Union[GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor]
     ] = None,
     batch_size: int = 128,
-    score_norm_method: Optional[str] = "zscore",
+    score_norm_method: Optional[str] = None,
 ) -> Tuple[torch.Tensor, Optional[List[str]]]:
     """
     Convenience function to compute the similarity between text and transcriptome (embeddings) via flexible inputs

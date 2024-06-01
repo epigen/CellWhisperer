@@ -2,9 +2,8 @@ import scanpy as sc
 import anndata
 from cellwhisperer.config import get_path
 import numpy as np
-import glob
 import pandas as pd
-from utils import TABSAP_WELLSTUDIED_COLORMAPPING
+from scripts.utils import TABSAP_WELLSTUDIED_COLORMAPPING
 
 
 def load_dataset(dataset_name: str) -> anndata.AnnData:

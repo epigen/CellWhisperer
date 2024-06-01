@@ -25,7 +25,7 @@ def get_performance_metrics_transcriptome_vs_text(
         Union[GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor]
     ] = None,
     batch_size: int = 128,
-    score_norm_method: Optional[str] = "zscore",
+    score_norm_method: Optional[str] = None,
     report_per_class_metrics: bool = True,
     text_as_classes: bool = True,
 ) -> Tuple[Dict[str, torch.Tensor], pd.DataFrame]:

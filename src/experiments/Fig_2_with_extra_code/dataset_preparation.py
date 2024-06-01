@@ -123,7 +123,6 @@ def preprocess_covid(adata: anndata.AnnData) -> anndata.AnnData:
 def load_and_process_liao_covid() -> anndata.AnnData:
     """Preprocess the liao_covid dataset."""
 
-    # TODO
     file_path = '/msc/home/q56ppene/cellwhisperer/cellwhisperer/resources/liao_covid/*_filtered_feature_bc_matrix.h5'
 
     adatas={}
@@ -145,7 +144,6 @@ def load_and_process_liao_covid() -> anndata.AnnData:
     adata.obs['celltype']=df['celltype']
     adata.obs['sample_new']=df['sample_new']
 
-    # TODO improve classification of the cytokine levels?
     # Plot 3: Il-6, Il-8 and IL-1beta
     # 0: Nothing in plot  3
     # 1: Low in plot 3
@@ -179,7 +177,7 @@ def load_and_process_liao_covid() -> anndata.AnnData:
 
 def preprocess_immune_330k(adata: anndata.AnnData) -> anndata.AnnData:
     """Preprocess the immune_330k dataset."""
-    # TODO data does not seem to be raw counts
+    # Note:  data does not seem to be raw counts
     adata.obs["batch"] = (
         adata.obs["Organ"].astype(str) + "_" + adata.obs["Chemistry"].astype(str)
     )
