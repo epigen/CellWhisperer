@@ -15,6 +15,9 @@ QUESTION_MAP = {
 
 QUESTIONS = list(QUESTION_MAP.keys())
 
+# random sample (n=100) of the GSVA datasets (which are already weight-corrected)
+# Note: Weight correction for archs4 only used the transcriptome- not the annotation-embeddings. Due to this however, there are some single cells in here, which could count as data leakage. We used single_cell_probability > 0.2 and eliminated these samples in TEST_IDS and didn't observe any changes in the final scores.
+TEST_IDS = pd.read_csv(PROJECT_DIR / "src/llava/test_ids", header=None).iloc[:, 0].to_list()
 
 rule llava_stage1_dataset:
     """

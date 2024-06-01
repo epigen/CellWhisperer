@@ -12,6 +12,7 @@ LLAVA_BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
 # GPU_TYPE = "a100"
 GPU_TYPE = "a100-sxm4-80gb"
 
+include: "../shared/rules/download_models.smk"
 include: "../shared/rules/genesets.smk"
 include: "../shared/rules/dataset_processing.smk"
 include: "rules/prepare_cellxgene_dataset.smk"

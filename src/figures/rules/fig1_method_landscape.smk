@@ -2,7 +2,8 @@ rule geo_umap_plots:
     """
     """
     input:
-        rules.pretraining_processing_compile_h5ad.output.adata.format(dataset="archs4_geo", model="{model}"),
+        # rules.compile_h5ad.output.adata.format(dataset="archs4_geo", model="{model}"),
+        adata=PROJECT_DIR / "results" / "archs4_geo" / "{model}" / "cellxgene.h5ad"
     output:
         cluster_labeled=PROJECT_DIR / config["paths"]["geo_umap"] / "cluster_labeled.svg",
         submission_date_labeled=PROJECT_DIR / config["paths"]["geo_umap"] / "submission_date_labeled.svg",

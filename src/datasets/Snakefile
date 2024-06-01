@@ -33,19 +33,20 @@ use rule * from immgen as immgen_*
 use rule * from bowel_disease as bowel_disease_*
 use rule * from human_disease as human_disease_*
 
-
-BASE_URL = "https://medical-epigenomics.org/papers/schaefer2024/data"
+BASE_URL = config["precomputing_base_url"]
 
 rule archs4_geo:
     """
     This "full_data.h5ad" file is a "superset" of read_count_table.h5ad, additionally containing the LLM-curated natural language captions (which are ignored in this context)
     """
     input:
-        full_data=HTTP.remote(f"{BASE_URL}/datasets/archs4_geo_full_data.h5ad")[0]
+        full_data=HTTP.remote(f"{BASE_URL}/datasets/archs4_geo/full_data.h5ad")[0]
     output:
-        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="archs4_geo")
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="archs4_geo"),
+        full_data=PROJECT_DIR / config["paths"]["full_dataset"].format(dataset="archs4_geo"),
     shell: """
         cp {input.full_data} {output}
+        ln -s {output.full_data} {output.read_count_table}
     """
 
 rule cellxgene_census:
@@ -53,11 +54,13 @@ rule cellxgene_census:
     This "full_data.h5ad" file is a "superset" of read_count_table.h5ad, additionally containing the LLM-curated natural language captions (which are ignored in this context)
     """
     input:
-        full_data=HTTP.remote(f"{BASE_URL}/datasets/cellxgene_census_full_data.h5ad")[0]
+        full_data=HTTP.remote(f"{BASE_URL}/datasets/cellxgene_census/full_data.h5ad")[0]
     output:
-        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="cellxgene_census")
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="cellxgene_census"),
+        full_data=PROJECT_DIR / config["paths"]["full_dataset"].format(dataset="cellxgene_census")
     shell: """
-        cp {input.full_data} {output}
+        cp {input.full_data} {output.full_data}
+        ln -s {output.full_data} {output.read_count_table}
     """
 
 

@@ -58,7 +58,7 @@ server:
 
   adaptor:
     anndata_adaptor:
-      backed: true # TODO test
+      backed: true
   #   cxg_adaptor:
   #     # The key/values under tiledb_ctx will be used to initialize the tiledb Context.
   #     # If 'vfs.s3.region' is not set, then it will automatically use the setting from

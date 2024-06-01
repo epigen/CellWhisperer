@@ -9,28 +9,41 @@ LLAVA_BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
 # GPU_TYPE = "a100"
 GPU_TYPE = "a100-sxm4-80gb"
 
-# Required for figure 1 (&2?).
-module pretraining_processing:
-    snakefile: "../cellxgene_preprocessing/Snakefile"
-    config: config
-
-use rule * from pretraining_processing as pretraining_processing_*
+include: "../shared/rules/dataset_processing.smk"
 include: "rules/fig1_method_landscape.smk"
 include: "rules/fig2_embedding_validations.smk"
-include: "rules/fig3_interactive_usecase.smk"
+include: "rules/fig3_interactive_usecase_llm.smk"
 include: "rules/fig4_colonic_epithelium.smk"
 include: "rules/figs1_model_training.smk"
 
 rule all:
     input:
         # Figure 1
-        rules.geo_umap_plots.output.cluster_labeled.format(model=config["model_name_path_map"]["cellwhisperer"])
+        rules.geo_umap_plots.output.cluster_labeled.format(model=config["model_name_path_map"]["cellwhisperer"]),
         # Figure 2
-        rules.plot_zero_shot_validations.output.rocauc_accuracy_overview.format(model=config["model_name_path_map"]["cellwhisperer"])
+        rules.plot_zero_shot_validations.output.rocauc_accuracy_overview.format(model=config["model_name_path_map"]["cellwhisperer"]),
         # Figure 2 (exended)
         expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["archs4_geo", "human_disease", "tabula_sapiens"], model=CLIP_MODEL),
+        # Figure 2 (extended: gene set correlation analysis)
+        expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["human_disease"], model=CLIP_MODEL),  # NOTE: Can also be run for tabula_sapiens and for archs4_geo
+
+        # Figure 3 (extended: LLM validations)
+        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
+               plot_name=["detailed", "perplexity_quantile"],
+               dataset=["main", "tabula_sapiens"],  # NOTE: these are evaluation datasets
+               base_model=[LLAVA_BASE_MODEL],  # NOTE could test as well: "BioMistral-7B", "BioMistral-7B-DARE",
+               model=[CLIP_MODEL],
+               ),
+        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4_review_summary.svg",
+               dataset=["main"],  # NOTE evaluation of tabula_sapiens dataset would only make sense with an adjusted judge-prompt
+               base_model=[LLAVA_BASE_MODEL],
+               model=[CLIP_MODEL],
+               ),
+
         # Figure 4
-        rules.bowel_disease_stem_cell_contribution.output.plot
+        rules.bowel_disease_stem_cell_contribution.output.plot,
         # Supp. Figure 1
-        rules.final_model_retrieval_scores.output.plot
+        rules.final_model_retrieval_scores.output.plot,
+
+        # TODO ablation study
     default_target: True

@@ -1,25 +1,3 @@
-rule combine_processed_data:
-    """
-    Combine the processed data from the two datasets to be able to train on both
-
-    Since we use `orig_ids` to match the data, we can't simply concatenate the arrays.
-    """
-    input:
-        expand(rules.process_full_dataset.output.model_outputs, dataset=["archs4_geo", "tabula_sapiens", "cellxgene_census", "human_disease"], model="{model}"),
-    output:
-        combined=PROJECT_DIR / config["paths"]["llava"]["root"] / "combined_processed_data" / "{model}.npz"
-    resources:
-        mem_mb=100000
-    run:
-        import numpy as np
-        datas = [dict(np.load(dataset_fn, allow_pickle=True)) for dataset_fn in input]
-
-        assert len(set.union(*[set(d["orig_ids"]) for d in datas])) == sum(len(d["orig_ids"]) for d in datas), "No duplicate ids allowed"
-
-        combined = {k: np.concatenate([d[k] for d in datas]) for k in datas[0].keys()}
-        np.savez(output.combined, **combined)
-
-
 rule pretrain_llava:
     """
     Based on /home/moritz/Projects/cellwhisperer/modules/LLaVA/scripts/v1_5/pretrain.sh
@@ -38,7 +16,7 @@ rule pretrain_llava:
         "llava"
     params:
         deepspeed=True,  # debug if False
-        projector_type=PROJECTOR_TYPE,
+        projector_type=config["llava_projector_type"],
         hf_model_name=lambda wildcards: ("BioMistral/" if "Bio" in wildcards.base_model else "mistralai/") +  wildcards.base_model
     output:
         projector=PROJECT_DIR / config["paths"]["llava"]["pretrained_model_dir"] / "mm_projector.bin",
@@ -112,7 +90,7 @@ rule finetune_llava:
         "llava"
     params:
         deepspeed=True,
-        projector_type=PROJECTOR_TYPE,
+        projector_type=config["llava_projector_type"],
         hf_model_name=lambda wildcards: ("BioMistral/" if "Bio" in wildcards.base_model else "mistralai/") +  wildcards.base_model
     output:
         output_dir=protected(directory(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"])),

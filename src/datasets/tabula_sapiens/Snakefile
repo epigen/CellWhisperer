@@ -35,6 +35,7 @@ rule process_data:
     output:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="tabula_sapiens"),
         structured_annotations_full = PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="tabula_sapiens"),
+    conda: "cellwhisperer"
     script:
         "scripts/process_data.py"
 

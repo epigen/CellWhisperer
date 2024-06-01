@@ -40,6 +40,28 @@ rule process_full_dataset:
     notebook:
         "../notebooks/process_full_dataset.py.ipynb"
 
+rule combine_processed_data:
+    """
+    Combine the processed data from all datasets used in LLaVA (CellWhisperer LLM) to be able to train and validate on them.
+
+    Since we use `orig_ids` to match the data, we can't simply concatenate the arrays.
+    """
+    input:
+        expand(rules.process_full_dataset.output.model_outputs, dataset=["archs4_geo", "tabula_sapiens", "cellxgene_census", "human_disease"], model="{model}"),
+    output:
+        combined=PROJECT_DIR / config["paths"]["llava"]["combined_processed_data"]
+    resources:
+        mem_mb=100000
+    run:
+        import numpy as np
+        datas = [dict(np.load(dataset_fn, allow_pickle=True)) for dataset_fn in input]
+
+        assert len(set.union(*[set(d["orig_ids"]) for d in datas])) == sum(len(d["orig_ids"]) for d in datas), "No duplicate ids allowed"
+
+        combined = {k: np.concatenate([d[k] for d in datas]) for k in datas[0].keys()}
+        np.savez(output.combined, **combined)
+
+
 rule compute_top_genes:
     """
     Compute the top genes for each sample based on the gene normalizers.

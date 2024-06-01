@@ -1,5 +1,7 @@
 anndata_label_name: natural_language_annotation
 num_replicates: 5
+llava_projector_type: mlp2x_8t_gelu # NOTE fails if > 8 because we use a fully connected layer between all 8 tokens (i.e. having too many params)
+precomputing_base_url: https://medical-epigenomics.org/papers/schaefer2024/data
 
 paths:
   mixtral_model: ~/text-generation-webui/models/mixtral-8x7b-instruct-v0.1.Q5_K_M.gguf
@@ -38,6 +40,7 @@ paths:
     pretrain_text_dataset: results/llava/pretrain_texts.json
     finetune_text_dataset: results/llava/finetune_conversations.json
     evaluation_text_dataset: results/llava/evaluation/{dataset}_conversations.json
+    combined_processed_data: results/llava/combined_processed_data/{model}.npz
     pretrained_model_dir: results/llava/pretrained/{base_model}__{model}/
     finetuned_model_dir: results/llava/finetuned/{base_model}__{model}/
     evaluation_results:  results/plots/llava/{dataset}/{base_model}__{model}/

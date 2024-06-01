@@ -105,8 +105,8 @@ rule compile_h5ad:
 
     input:
         umap_embedding=rules.leiden_umap_embeddings.output.adata,
-        cellwhisperer_keyword_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels,
-        cellwhisperer_llava_labels=rules.gpt4_curate_llava_annotations.output.curated_labels,
+        # cellwhisperer_keyword_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels, # TODO drop
+        cellwhisperer_llava_labels=rules.gpt4_curate_llava_annotations.output.curated_labels if "OPENAI_API_KEY" in os.environ else rules.gpt4_curate_llava_annotations.output.curated_labels,
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         processed_data=PROJECT_DIR / config["paths"]["model_processed_dataset"], # rules.process_full_dataset.output.model_outputs,
         enrichr_terms=PROJECT_DIR / config["paths"]["enrichr_terms_json"],

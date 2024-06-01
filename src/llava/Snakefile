@@ -13,24 +13,18 @@ configfile: PROJECT_DIR / "config.yaml"
 
 HTTP = HTTPRemoteProvider()
 
-
 GPU_TYPE = "a100"
 # GPU_TYPE = "a100-sxm4-80gb"  # used for the data_processing and conversation generation rules
 CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
-PROJECTOR_TYPE = "mlp2x_8t_gelu"  # NOTE fails if > 8 because we use a fully connected layer between all 8 tokens (i.e. having too many params)
-
-# random sample (n=100) of the GSVA datasets (which are already weight-corrected)
-# Note: Weight correction for archs4 only used the transcriptome- not the annotation-embeddings. Due to this however, there are some single cells in here, which could count as data leakage. We used single_cell_probability > 0.2 and eliminated these samples in TEST_IDS and didn't observe any changes in the final scores.
-TEST_IDS = pd.read_csv("./test_ids", header=None).iloc[:, 0].to_list()
 
 # For snakemake efficiency, extract the samples once and store them
-if not os.path.exists("./tmp_gsva_samples.csv"):
+if not os.path.exists("./gsva_samples.csv"):
     ARCHS4_GSVA_SAMPLES = pd.read_parquet(PROJECT_DIR / config["paths"]["gsva"]["result"].format(dataset="archs4_geo")).set_index("Unnamed: 0").drop(columns=["library"]).columns
     # store GSVA samples
-    with open("./tmp_gsva_samples.csv", "w") as f:
+    with open("./gsva_samples.csv", "w") as f:
         f.write("\n".join(ARCHS4_GSVA_SAMPLES.to_list()))
 else:
-    ARCHS4_GSVA_SAMPLES = pd.read_csv("./tmp_gsva_samples.csv", header=None).iloc[:, 0]
+    ARCHS4_GSVA_SAMPLES = pd.read_csv("./gsva_samples.csv", header=None).iloc[:, 0]
 
 NUM_COMPLEX_SAMPLES = 5000
 NUM_DETAILED_SAMPLES = 10000
@@ -39,18 +33,6 @@ COMPLEX_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[:NUM_COMPLEX_SAMPLES]
 DETAILED_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[NUM_COMPLEX_SAMPLES:CONVERSATION_START]
 scattergather:
     split=128
-
-INSTRUCTION_PROMPT = "Help me analyzing this sample of cells. Respond in proper english in a tone of uncertainty and focus on the biology of the sample rather than any potential donor or patient information (e.g. do not mention age and sex). Start by listing the top genes and, optionally, gene sets in this sample."
-INSTRUCTION_RESPONSE = "Sure. The top normalized genes are {top_genes}. Note that are strongly expressed genes beyond the ones I just listed."
-INSTRUCTION_RESPONSE_GENE_SETS_EXTENSION=" The top gene sets are {top_gene_sets}. Also here, note that there are strongly active gene sets beyond the ones I just listed."
-INSTRUCTION_PROMPT_TEXT_ONLY =  """Respond to my request regarding a sample of cells characterized by their top-expressed genes and gene sets. Respond directly and concisely without much contemplation and in less than 3 sentences with a tone of uncertainty and a focus on the biology of the sample.
-
-Top genes: {top_genes}
-
-Top gene sets: {top_gene_sets}
-
-Request: {question}
-"""
 
 MODELS = [config["model_name_path_map"]["cellwhisperer"]]
 BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
@@ -61,26 +43,9 @@ include: "../shared/rules/training_sample_weights.smk"
 include: "../shared/rules/gsva.smk"
 include: "rules/dataset.smk"
 include: "rules/training.smk"
-include: "rules/evaluation.smk"
-include: "rules/benchmark.smk"
 
 rule all:
     input:
-        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
-               plot_name=["detailed", "perplexity_quantile"],
-               dataset=["main", "tabula_sapiens"],  # these are evaluation-datasets here!
-               base_model=[BASE_MODEL],  # NOTE could test as well: "BioMistral-7B", "BioMistral-7B-DARE",
-               model=MODELS
-               ),
-        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4_review_summary.svg",
-               dataset=["main"],  # these are evaluation-datasets here!  # NOTE evaluation of tabula_sapiens dataset only makes sense if I provide another judgement prompt
-               base_model=[BASE_MODEL],
-               model=MODELS
-               )
-
-    default_target: True
-
-rule train:
-    input:
         rules.finetune_llava.output.output_dir.format(base_model="", model=BASE_MODEL)
 
+    default_target: True
