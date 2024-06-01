@@ -15,23 +15,22 @@ module pretraining_processing:
     config: config
 
 use rule * from pretraining_processing as pretraining_processing_*
-#include: "rules/fig1_method_landscape.smk"
+include: "rules/fig1_method_landscape.smk"
 include: "rules/fig2_embedding_validations.smk"
-#include: "rules/fig3_interactive_usecase.smk"
-#include: "rules/fig4_colonic_epithelium.smk"
-#include: "rules/figs1_model_training.smk"
+include: "rules/fig3_interactive_usecase.smk"
+include: "rules/fig4_colonic_epithelium.smk"
+include: "rules/figs1_model_training.smk"
 
 rule all:
     input:
         # Figure 1
-#        rules.geo_umap_plots.output.cluster_labeled.format(model=config["model_name_path_map"]["cellwhisperer"])
+        rules.geo_umap_plots.output.cluster_labeled.format(model=config["model_name_path_map"]["cellwhisperer"])
         # Figure 2
         rules.plot_zero_shot_validations.output.rocauc_accuracy_overview.format(model=config["model_name_path_map"]["cellwhisperer"])
         # Figure 2 (exended)
-#        expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["archs4_geo", "human_disease", "tabula_sapiens"], model=CLIP_MODEL),
+        expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["archs4_geo", "human_disease", "tabula_sapiens"], model=CLIP_MODEL),
         # Figure 4
-#        rules.bowel_disease_stem_cell_contribution.output.plot
-
+        rules.bowel_disease_stem_cell_contribution.output.plot
         # Supp. Figure 1
-#        rules.final_model_retrieval_scores.output.plot
+        rules.final_model_retrieval_scores.output.plot
     default_target: True
