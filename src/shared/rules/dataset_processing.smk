@@ -12,7 +12,8 @@ rule compute_gene_normalizers:
         gene_mean_log1ps=PROJECT_DIR / "results" / "gene_normalizers" / "{dataset}.pickle"
     resources:
         mem_mb=500000,
-        slurm="cpus-per-task=2"
+        slurm="cpus-per-task=64"
+    threads: 64
     conda:
         "cellwhisperer"
     script:
