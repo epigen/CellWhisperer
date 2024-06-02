@@ -6,6 +6,10 @@ channels:
 dependencies:
   - python=3.10
   - cuda-nvcc=12.3
+  - nbconvert=7.16.0
+  - notebook=7.1.0
+  - pyarrow=16.1.0
   - pip=24.0
   - pip:
     - -e ../modules/LLaVA/[train]
+    - anndata==0.10.7

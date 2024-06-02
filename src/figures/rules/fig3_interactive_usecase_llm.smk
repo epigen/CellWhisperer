@@ -87,10 +87,6 @@ rule llava_evaluation_perplexity_plots:
 rule llava_evaluation_generation_preparation:
     """
     Extract the first question for each conversation (if there are more than one questions) and bring it into the right format for the evaluation
-
-    TODO: continue here *****************
-    - The splits are only used to obtain the top-genes and top gene sets.
-    - I eed to check whether we anyways compute those information in the figures/ pipeline. Then, we don't need the splits 
     """
 
     input:
@@ -112,6 +108,8 @@ rule llava_evaluation_generation_preparation:
         instruction_response=lambda wildcards: INSTRUCTION_RESPONSE,
         instruction_response_gene_sets_extension=lambda wildcards: INSTRUCTION_RESPONSE_GENE_SETS_EXTENSION,
         instruction_prompt_text_only=lambda wildcards: INSTRUCTION_PROMPT_TEXT_ONLY,
+        top_n_genes=50,
+        top_n_gene_sets=50,
     conda:
         "llava"
     notebook:
