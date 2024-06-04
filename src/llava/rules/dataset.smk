@@ -87,7 +87,7 @@ rule generate_llava_stage2_conversations:
 
     """
     input:
-        model=Path(config["paths"]["mixtral_model"]).expanduser(),
+        model=PROJECT_DIR / config["model_name_path_map"]["mixtral"],
         instruction="prompts/llava_stage2_few_shot.txt",
         json_split=PROJECT_DIR / "results/llava/requests/{dataset}/{scatteritem}.json",
         json_schema="prompts/llava_stage2_schema.json",
@@ -100,7 +100,7 @@ rule generate_llava_stage2_conversations:
     resources:
         mem_mb=100000,
         slurm=f"cpus-per-task=25 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
-    conda: "textgen"  # "../envs/llamacpp.yaml" fails to install :/
+    conda: "cellwhisperer"
     notebook: "../notebooks/llava_stage2_dataset.py.ipynb"
 
 

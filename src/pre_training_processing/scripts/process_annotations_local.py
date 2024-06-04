@@ -1,7 +1,7 @@
-from llama_cpp_cuda_tensorcores import (
+from llama_cpp import (
     Llama,
     LlamaGrammar,
-)  # same speed as llama_cpp_cuda, but with tensor cores
+)
 import json
 import yaml
 import pandas as pd

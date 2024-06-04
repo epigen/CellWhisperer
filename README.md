@@ -80,10 +80,10 @@ To run the pipeline, execute
 
 ```bash
 cd src
-snakemake
+snakemake --use-conda
 ```
 
-(*) Some interactive analyses/screenshots were performed directly in the CELLxGENE CellWhisperer browser integration and are not reproduced by the pipeline
+(*) Some interactive analyses/screenshots were performed directly in the CELLxGENE CellWhisperer browser integration and are not reproduced by the pipeline. Also note that some analyses (e.g. Extended Data Figure 3) depend on GPT-4 and the availability of an OpenAI API key.
 
 Refer to `src/figures/README.md` for further details.
 
@@ -196,7 +196,7 @@ For an efficient use of CellWhisperer in the web browser (CELLxGENE Explorer int
 2. Place it in `<PROJECT_ROOT>/resources/<dataset_name>/read_count_table.h5ad`
 3. Go to `cellwhisperer/src/cellxgene_preprocessing` and run the pipeline: `snakemake --config 'datasets=["<dataset_name>"]'`
    - This runs much faster if you use a GPU. Also, depending on your dataset, this might require a substantial amount of RAM.
-   - We use GPT-4 or Mixtral to condense the CellWhisperer-generated cluster captions into brief titles. Set the environment variable `OPENAI_API_KEY` if you want to use the GPT-4
+   - We use GPT-4 or Mixtral to condense the CellWhisperer-generated cluster captions into brief titles. Set the environment variable `OPENAI_API_KEY` if you want to use the GPT-4, otherwise Mixtral is used.
 4. Use the newly created file `snakemake /path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad` to host a CELLxGENE Explorer instance:
    - `cellxgene launch -p 5005  --debug --host 0.0.0.0 --max-category-items 500 --var-names gene_name /path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad /path/to/cellwhisperer/results/models/jointemb/cellwhisperer_clip_v1.ckpt`
    - For a docker-driven deployment refer to `hosting/home`

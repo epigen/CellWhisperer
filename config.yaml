@@ -4,7 +4,6 @@ llava_projector_type: mlp2x_8t_gelu # NOTE fails if > 8 because we use a fully c
 precomputing_base_url: https://medical-epigenomics.org/papers/schaefer2024/data
 
 paths:
-  mixtral_model: ~/text-generation-webui/models/mixtral-8x7b-instruct-v0.1.Q5_K_M.gguf
   read_count_table: resources/{dataset}/read_count_table.h5ad
   raw_annotations: resources/{dataset}/annotations.tsv
   structured_annotations: results/{dataset}/annotations.json
@@ -88,6 +87,7 @@ model_name_path_map:
   scgpt: resources/scGPT_human
   cellwhisperer: cellwhisperer_clip_v1  # wandb run it: t9kkor63
   llava_base_llm: Mistral-7B-Instruct-v0.2
+  mixtral: resources/mixtral-8x7b-instruct-v0.1.Q5_K_M.gguf
 
 genesets:
   - "Azimuth_2023"

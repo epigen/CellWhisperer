@@ -37,7 +37,7 @@ rule process_annotation_local:
     """
     """
     input:
-        model=Path(config["paths"]["mixtral_model"]).expanduser(),
+        model=PROJECT_DIR / config["model_name_path_map"]["mixtral"],
         instruction="prompts/process_annotations_few_shot.txt",
         yaml_split=PROJECT_DIR / "results/pre_training_processing/requests/{dataset,[^/]+}/{replicate}/{scatteritem}.yaml",
         few_shot_prompts=expand("prompts/few_shot_samples/{i}_request.json", i=range(9)),
@@ -52,7 +52,7 @@ rule process_annotation_local:
         mem_mb=100000,
         slurm="cpus-per-task=25 gres=gpu:a100:1 qos=a100 partition=gpu"
         # slurm="cpus-per-task=25 gres=gpu:a100:1 qos=a100 partition=gpu"
-    conda: "textgen"  # TODO "../envs/llamacpp.yaml" fails to install :/
+    conda: "cellwhisperer"
     script: "../scripts/process_annotations_local.py"
 
 rule aggregate_processed:

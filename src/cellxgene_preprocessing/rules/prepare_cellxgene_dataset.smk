@@ -56,6 +56,22 @@ rule gpt4_curate_llava_annotations:
     notebook:
         "../notebooks/gpt4_curate_llava_annotations.py.ipynb"
 
+rule mixtral_curate_llava_annotations:
+    """
+    Output is protected to prevent high GPT-4 cost. Script also fails with more than 200 clusters
+    """
+    input:
+        cellwhisperer_labels=rules.llava_annotate_clusters.output.csv,
+        model=PROJECT_DIR / config["model_name_path_map"]["mixtral"],
+    output:
+        curated_labels=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_curated_annotated_clusters_mixtral.csv"
+    params:
+        request="Condense the information below into a short title of maximum 8 words. Focus on the biological state, rather than the source or any specific perturbations of the sample and generate nothing but the title (no quotes or additional information).\n\n",
+    conda:
+        "cellwhisperer"
+    notebook:
+        "../notebooks/mixtral_curate_llava_annotations.py.ipynb"
+
 
 rule cellwhisperer_cluster_keywords:
     """
@@ -106,7 +122,7 @@ rule compile_h5ad:
     input:
         umap_embedding=rules.leiden_umap_embeddings.output.adata,
         # cellwhisperer_keyword_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels, # TODO drop
-        cellwhisperer_llava_labels=rules.gpt4_curate_llava_annotations.output.curated_labels if "OPENAI_API_KEY" in os.environ else rules.gpt4_curate_llava_annotations.output.curated_labels,
+        cellwhisperer_llava_labels=rules.gpt4_curate_llava_annotations.output.curated_labels if "OPENAI_API_KEY" in os.environ else rules.mixtral_curate_llava_annotations.output.curated_labels,
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         processed_data=PROJECT_DIR / config["paths"]["model_processed_dataset"], # rules.process_full_dataset.output.model_outputs,
         enrichr_terms=PROJECT_DIR / config["paths"]["enrichr_terms_json"],
