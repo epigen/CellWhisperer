@@ -6,7 +6,6 @@ PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shel
 configfile: PROJECT_DIR / "config.yaml"
 
 # http://rstats.immgen.org/DataPage/
-COUNT_TABLE_URL = "https://sharehost.hms.harvard.edu/immgen/GSE227743/GSE227743_Gene_count_table.csv"
 ANNOTAITON_URL = "https://www.cell.com/cms/10.1016/j.cell.2018.12.036/attachment/e5df7329-d77d-40b3-a03a-34bdbe4b402c/mmc1.xlsx"
 
 rule all:
@@ -16,22 +15,14 @@ rule all:
 
 rule download_data:
     """
+
+    COUNT_TABLE_URL = "https://sharehost.hms.harvard.edu/immgen/GSE227743/GSE227743_Gene_count_table.csv"
     """
     output:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="immgen"),
-    run:
-        import pandas as pd
-        import anndata
-
-        df = pd.read_csv(COUNT_TABLE_URL, index_col=0)
-        df.index.name = "sample_name"
-        adata = anndata.AnnData(X=df.T, var=df.index.to_frame(), obs=df.columns.to_frame())
-        adata.obs.index.name = "sample_name"
-        adata.obs.columns = ["sample_name"]
-        adata.var.columns = ["gene_name"]
-        adata.index.name = "gene_name"
-
-        adata.write_h5ad(output.read_count_table)
+    conda: "cellwhisperer"
+    script:
+        "scripts/download_data.py"
 
 rule format_annotations:
     """

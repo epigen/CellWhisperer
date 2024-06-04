@@ -32,7 +32,7 @@ rule plot_gsva_correlations:
     """
     """
     input:
-        cw_transcriptome_term_scores=config["paths"]["gsva"]["cw_transcriptome_term_scores"],
+        cw_transcriptome_term_scores=PROJECT_DIR / config["paths"]["gsva"]["cw_transcriptome_term_scores"],
         gsva_results=PROJECT_DIR / config["paths"]["gsva"]["result"],
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
@@ -59,22 +59,24 @@ rule plot_gsva_correlations:
 # Fig 2
 rule plot_zero_shot_validations:
     """
+
     """
     input:
         # no need to have a read count table for the well studied cell types, can just use the raw read count table from the full dataset
-        raw_read_count_tables = expand(get_path(["paths", "read_count_table"],dataset="{dataset}"), dataset=[x for x in TARGET_DATASETS if not x=="tabula_sapiens_well_studied_celltypes"]),
+        raw_read_count_table = get_path(["paths", "read_count_table"], dataset="{dataset}") # , dataset=[x for x in TARGET_DATASETS if not x=="tabula_sapiens_well_studied_celltypes"]),
+        model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",  # needed for the keywords  # TODO use this one in notebook
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"])    # TODO use this one in notebook
     output:
-        tabsap_wellstudied_celltypes_on_umap=get_path(["paths", "zero_shot_validation","result_dir"], model="{model}")/"tabula_sapiens/cellwhisperer_predictions.celltype_as_label.X_umap_on_neighbors_cellwhisperer.celltype.pdf",
-        tabsap_wellstudied_predictions_on_umap=get_path(["paths", "zero_shot_validation","result_dir"], model="{model}")/"tabula_sapiens/cellwhisperer_predictions.celltype_as_label.X_umap_on_neighbors_cellwhisperer.predicted_labels_cellwhisperer.pdf",
-        tabsap_erythrocytes_on_umap=get_path(["paths", "zero_shot_validation","result_dir"], model="{model}")/"tabula_sapiens/umap_on_neighbors_cellwhisperer.keyword_erythrocyte.asymmetrical_cmap.pdf",
-        tabsap_all_celltypes_on_umap=get_path(["paths", "zero_shot_validation","result_dir"], model="{model}")/"tabula_sapiens/embedding_plots_MS_zero_shot.pdf",
-        tabsap_integration_scores=get_path(["paths", "zero_shot_validation","result_dir"], model="{model}")/"tabula_sapiens/integration_scores.pdf",
-        tabsap_wellstudied_confusion_matrix=get_path(["paths", "zero_shot_validation","result_dir"], model="{model}")/"tabula_sapiens_well_studied_celltypes/confusion_matrix_cellwhisperer.celltype_as_label.norm_True.pdf",
-        rocauc_accuracy_overview=get_path(["paths", "zero_shot_validation","result_dir"], model="{model}")/"performance_metrics_cellwhisperer.selected_datasets.rocauc_and_accuracy.pdf",
-        rocauc_accuracy_examples=get_path(["paths", "zero_shot_validation","result_dir"], model="{model}")/"performance_metrics_cellwhisperer.selected_classes_and_datasets.pdf",
+        tabsap_wellstudied_celltypes_on_umap=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "{dataset}/cellwhisperer_predictions.celltype_as_label.X_umap_on_neighbors_cellwhisperer.celltype.pdf",
+        tabsap_wellstudied_predictions_on_umap=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "tabula_sapiens/cellwhisperer_predictions.celltype_as_label.X_umap_on_neighbors_cellwhisperer.predicted_labels_cellwhisperer.pdf",
+        tabsap_erythrocytes_on_umap=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "tabula_sapiens/umap_on_neighbors_cellwhisperer.keyword_erythrocyte.asymmetrical_cmap.pdf",
+        tabsap_all_celltypes_on_umap=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "tabula_sapiens/embedding_plots_MS_zero_shot.pdf",
+        tabsap_integration_scores=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "tabula_sapiens/integration_scores.pdf",
+        tabsap_wellstudied_confusion_matrix=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "tabula_sapiens_well_studied_celltypes/confusion_matrix_cellwhisperer.celltype_as_label.norm_True.pdf",
+        rocauc_accuracy_overview=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "performance_metrics_cellwhisperer.selected_datasets.rocauc_and_accuracy.pdf",
+        rocauc_accuracy_examples=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "performance_metrics_cellwhisperer.selected_classes_and_datasets.pdf",
     params:
         datasets = TARGET_DATASETS,
-        model = "{model}",
         result_dir = get_path(["paths", "zero_shot_validation","result_dir"], model="{model}"),
     conda:
         "cellwhisperer"

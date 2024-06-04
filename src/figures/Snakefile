@@ -19,9 +19,9 @@ include: "rules/figs1_model_training.smk"
 rule all:
     input:
         # Figure 1
-        rules.geo_umap_plots.output.cluster_labeled.format(model=config["model_name_path_map"]["cellwhisperer"]),
+        rules.geo_umap_plots.output.cluster_labeled.format(model=CLIP_MODEL),
         # Figure 2
-        rules.plot_zero_shot_validations.output.rocauc_accuracy_overview.format(model=config["model_name_path_map"]["cellwhisperer"]),
+        rules.plot_zero_shot_validations.output.rocauc_accuracy_overview.format(model=CLIP_MODEL),
         # Figure 2 (exended)
         expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["archs4_geo", "human_disease", "tabula_sapiens"], model=CLIP_MODEL),
         # Figure 2 (extended: gene set correlation analysis)

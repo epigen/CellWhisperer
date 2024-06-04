@@ -1,6 +1,10 @@
+from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+HTTP = HTTPRemoteProvider()
+
 rule bowel_disease_stem_cell_contribution:
     input:
-        dataset=PROJECT_DIR / "results" / "bowel_disease" / CLIP_MODEL / "cellxgene.h5ad",
+        # dataset=PROJECT_DIR / "results" / "bowel_disease" / CLIP_MODEL / "cellxgene.h5ad",  # Our pipeline could process the file from scratch, but due to stochasticity, there will be slight mismatches with the plots in the manuscript
+        dataset=HTTP.remote(f"{config['precomputing_base_url']}/datasets/bowel_disease/cellxgene.h5ad", keep_local=True)[0],
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / f"{CLIP_MODEL}.ckpt",  # needed for the keywords
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
