@@ -47,7 +47,7 @@ services:
 
   cellwhisperer_llava_model:
     <<: *llava-service
-    command: python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 --controller http://cellwhisperer_llava_controller:10000 --port 40000 --worker http://cellwhisperer_llava_model:40000 --model-path /Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1/
+    command: python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 --controller https://cellwhisperer.bocklab.org/llava-controller --port 40000 --worker https://cellwhisperer.bocklab.org/llava-model-worker --model-path /Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1/
     deploy:
       resources:
         reservations:
@@ -106,7 +106,7 @@ services:
       - ~/cellwhisperer:/opt/cellwhisperer
     # ports:
       # - "5005:5005"  # for testing without nginx
-    # command: cellxgene launch -v -p 5005  --host 0.0.0.0 --max-category-items 500 --var-names gene_name --debug --backed /dataset.h5ad  "http://cellwhisperer_clip:8910/api" --debug
+    # command: cellxgene launch -v -p 5005  --host 0.0.0.0 --max-category-items 500 --var-names gene_name --debug --backed /dataset.h5ad  --cellwhisperer-clip-model "http://cellwhisperer_clip:8910/api" --debug
 
   cellxgene_development_scvi:
     <<: *cellxgene-service

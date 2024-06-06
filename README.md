@@ -198,11 +198,18 @@ For an efficient use of CellWhisperer in the web browser (CELLxGENE Explorer int
    - This runs much faster if you use a GPU. Also, depending on your dataset, this might require a substantial amount of RAM.
    - We use GPT-4 or Mixtral to condense the CellWhisperer-generated cluster captions into brief titles. Set the environment variable `OPENAI_API_KEY` if you want to use the GPT-4, otherwise Mixtral is used.
 4. Use the newly created file `snakemake /path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad` to host a CELLxGENE Explorer instance:
-   - `cellxgene launch -p 5005  --debug --host 0.0.0.0 --max-category-items 500 --var-names gene_name /path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad /path/to/cellwhisperer/results/models/jointemb/cellwhisperer_clip_v1.ckpt`
-   - For a docker-driven deployment refer to `hosting/home`
-   - NOTE The CellWhisperer LLM integration relies on an additionally running job (see `hosting/home/docker-compose.yml`). TODO: Add instructions on how to provide the LLM service here
+  - `cellxgene launch -p 5005  --debug --host 0.0.0.0 --max-category-items 500 --var-names gene_name /path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad`
+  - For your convenience (e.g. runtime performance, GPU dependency), this locally running server will access our API for some of the AI functionalities. If you want to run the models locally follow these instructions:
+    - for the CLIP model, simply provide the command line arguments `--cellwhisperer-clip-model cellwhisperer/results/models/jointemb/cellwhisperer_clip_v1.ckpt`.
+    - for the LLM model:
+      - run a controller with command `python -m llava.serve.controller --host 0.0.0.0 --port 10000` in the `llava` environment
+      - run a worker with the command `python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 --controller localhost:10000 --port 40000 --worker localhost:40000 --model-path /path/to/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1/`
+      - adjust the variable `CONTROLLER_URL` in `cellwhisperer/modules/cellxgene/server/common/compute/llava_utils.py` to your locally running LLM service.
+      - See `hosting/home/docker-compose.yml` for an example.
 
-### Dataset input format guidelines
+For a semi-professional deployment, you may want to consider running everything within a coherent docker environment. See `hosting/home/docker-compose.yml` for a starting point.
+
+### Input dataset format guidelines
 
 We only use human data and raw read counts (not normalized) for our datasets. Normalization is taken care of by the respective transcriptome models (more specifically their processor classes) and is also performed explicitly in this preparation pipeline.
 
