@@ -2,7 +2,7 @@ import os
 
 rule leiden_umap_embeddings:
     input:
-        processed_data=rules.process_full_dataset.output.model_outputs,
+        processed_data=PROJECT_DIR / config["paths"]["model_processed_dataset"],
     output:
         adata=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "leiden_umap_embeddings.h5ad"
     conda:
@@ -127,8 +127,8 @@ rule compile_h5ad:
         processed_data=PROJECT_DIR / config["paths"]["model_processed_dataset"], # rules.process_full_dataset.output.model_outputs,
         enrichr_terms=PROJECT_DIR / config["paths"]["enrichr_terms_json"],
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
-        gene_log1p_normalizers=rules.compute_gene_normalizers.output.gene_mean_log1ps,  # NOTE not required anymore actually
-        top_genes=rules.compute_top_genes.output.top_genes,
+        gene_log1p_normalizers=PROJECT_DIR / "results" / "gene_normalizers" / "{dataset}.pickle",  # NOTE not required anymore actually
+        top_genes=PROJECT_DIR / "results" / "{dataset}" / "top_genes.parquet",
     output:
         adata=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "cellxgene.h5ad"
     params:
