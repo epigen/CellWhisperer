@@ -2,6 +2,15 @@ from anndata import AnnData
 import scanpy as sc
 import pandas as pd
 
+## Define the suffix and prefix for the text embeddings
+SUFFIX_PREFIX_DICT = {}
+SUFFIX_PREFIX_DICT["celltype"] = ("A sample of ", " from a healthy individual")
+SUFFIX_PREFIX_DICT["organ_tissue"] = ("A sample of ", " from a healthy individual")
+SUFFIX_PREFIX_DICT["Disease"] = ("A sample from an individual with ","")
+SUFFIX_PREFIX_DICT["Disease_subtype"] = ("A sample from an individual with ","")
+SUFFIX_PREFIX_DICT["Tissue"] = ("A "," sample")
+SUFFIX_PREFIX_DICT["Tissue_subtype"] = ("A "," sample")
+
 TABSAP_WELLSTUDIED_COLORMAPPING = {
                 'erythrocyte': (0.5, 0, 0), 
                 'macrophage': 'darkblue',

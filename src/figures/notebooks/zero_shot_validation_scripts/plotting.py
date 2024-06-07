@@ -73,9 +73,8 @@ def plot_embeddings_with_scores(
             axes[i][1].get_legend().remove()
     plt.tight_layout()
     plt.suptitle(dataset_name)
-    os.makedirs(os.path.dirname(f"{result_dir}/{dataset_name}/"), exist_ok=True)
     for suffix in ["png", "pdf"]:
-        plt.savefig(f"{result_dir}/{dataset_name}/embedding_plots_MS_zero_shot.{suffix}", dpi=900 if suffix == "png" else None)
+        plt.savefig(f"{result_dir}/embedding_plots_zero_shot_comparison.{suffix}", dpi=900 if suffix == "png" else None)
     plt.show()
     plt.close()
 
@@ -83,7 +82,6 @@ def plot_embeddings_with_scores(
 def plot_cellwhisperer_predictions_on_umap(
     adata: anndata.AnnData,
     result_dir: str,
-    dataset_name: str,
     label_col="celltype",
     color_mapping=None,
     background_adata=None,
@@ -95,15 +93,13 @@ def plot_cellwhisperer_predictions_on_umap(
         warnings.filterwarnings("ignore", category=FutureWarning)
         warnings.filterwarnings("ignore", category=UserWarning)
 
-        embedding_basis = [
-            "X_umap_on_neighbors_cellwhisperer",
-        ]
+        embedding_basis = "X_umap_on_neighbors_cellwhisperer"
 
         if color_mapping is None:
             if f"{label_col}_colors" in adata.uns.keys():
                 del adata.uns[f"{label_col}_colors"]
             # to assign colors to label_col_colors, plot once but don't show
-            sc.pl.embedding(adata, basis=embedding_basis[0], color=[label_col, "batch"], frameon=False, s=10, alpha=0.5, legend_fontsize=8, legend_loc="right margin", legend_fontoutline=2,
+            sc.pl.embedding(adata, basis=embedding_basis, color=[label_col, "batch"], frameon=False, s=10, alpha=0.5, legend_fontsize=8, legend_loc="right margin", legend_fontoutline=2,
                             show=False)
             plt.close()
 
@@ -113,57 +109,54 @@ def plot_cellwhisperer_predictions_on_umap(
         adata.uns[f"predicted_labels_cellwhisperer_colors"] = adata.uns[
             f"{label_col}_colors"
         ]
-        for basis in embedding_basis:
-            for color in [
-                    label_col,
-                    "predicted_labels_cellwhisperer",
-                    "batch",
+        for color in [
+                label_col,
+                "predicted_labels_cellwhisperer",
+                "batch",
 
-            ]:
-                ax=plt.gca()
-                if background_adata is not None:
-                    # Plot the background in grey
-                    sc.pl.embedding(
-                        background_adata,
-                        basis=basis,
-                        frameon=False,
-                        s=10,
-                        alpha=0.3,
-                        legend_fontsize=6,
-                        show=False,
-                        # palette=color_mapping,
-                        ncols=1,
-                        ax=ax
-                    )
-
+        ]:
+            ax=plt.gca()
+            if background_adata is not None:
+                # Plot the background in grey
                 sc.pl.embedding(
-                    adata[adata.obs[label_col].isin(list(color_mapping.keys()))],
-                    basis=basis,
-                    color=color,
+                    background_adata,
+                    basis=embedding_basis,
                     frameon=False,
                     s=10,
-                    alpha=0.5,
+                    alpha=0.3,
                     legend_fontsize=6,
                     show=False,
-                    palette=color_mapping,
+                    # palette=color_mapping,
                     ncols=1,
                     ax=ax
                 )
-                os.makedirs(os.path.dirname(f"{result_dir}/{dataset_name}/"), exist_ok=True)
-                plt.gcf().set_size_inches(10, 5)
-                plt.subplots_adjust(right=0.55)
-                for suffix in ["png", "pdf"]:
-                    plt.savefig(
-                        f"{result_dir}/{dataset_name}/cellwhisperer_predictions.{label_col}_as_label.{basis}.{color}.{suffix}", dpi=900 if suffix == "png" else None
-                    )
-                plt.show()
-                plt.close()
+
+            sc.pl.embedding(
+                adata[adata.obs[label_col].isin(list(color_mapping.keys()))],
+                basis=embedding_basis,
+                color=color,
+                frameon=False,
+                s=10,
+                alpha=0.5,
+                legend_fontsize=6,
+                show=False,
+                palette=color_mapping,
+                ncols=1,
+                ax=ax
+            )
+            plt.gcf().set_size_inches(10, 5)
+            plt.subplots_adjust(right=0.55)
+            for suffix in ["png", "pdf"]:
+                plt.savefig(
+                    f"{result_dir}/UMAP.{label_col}_as_label.{color}.{suffix}", dpi=900 if suffix == "png" else None
+                )
+            plt.show()
+            plt.close()
 
 
 def plot_confusion_matrix(
     performance_metrics_per_label_df: pd.DataFrame,
     result_dir: str,
-    dataset_name: str,
     label_col="celltype",
     order=None,
     title=None,
@@ -217,17 +210,16 @@ def plot_confusion_matrix(
         )
         plt.title(title)
 
-        os.makedirs(os.path.dirname(f"{result_dir}/{dataset_name}/"), exist_ok=True)
         plt.savefig(
-            f"{result_dir}/{dataset_name}/confusion_matrix_cellwhisperer.{label_col}_as_label.norm_{norm}.png", dpi=900
+            f"{result_dir}/confusion_matrix_cellwhisperer.{label_col}_as_label.norm_{norm}.png", dpi=900
         )
         plt.savefig(
-            f"{result_dir}/{dataset_name}/confusion_matrix_cellwhisperer.{label_col}_as_label.norm_{norm}.pdf")
+            f"{result_dir}/confusion_matrix_cellwhisperer.{label_col}_as_label.norm_{norm}.pdf")
         plt.show()
         plt.close()
 
 
-def plot_term_search_result(term, celltype, adata, result_dir, dataset_name, prefix, suffix):
+def plot_term_search_result(term, celltype, adata, result_dir, prefix, suffix):
     """
     Plot the ground truth celltype and the keyword search results on the UMAP.
     """
@@ -241,7 +233,7 @@ def plot_term_search_result(term, celltype, adata, result_dir, dataset_name, pre
     plt.gcf().axes[1].remove()
 
     for file_suffix in ["png","pdf"]:
-        plt.savefig(f"{result_dir}/{dataset_name}/umap_on_neighbors_cellwhisperer.true_celltype_{celltype}.{file_suffix}")
+        plt.savefig(f"{result_dir}/umap_on_neighbors_cellwhisperer.true_celltype_{celltype}.{file_suffix}")
     plt.tight_layout()
     plt.show()
     plt.close()
@@ -259,7 +251,7 @@ def plot_term_search_result(term, celltype, adata, result_dir, dataset_name, pre
 
 
         for file_suffix in ["png","pdf"]:
-            plt.savefig(f"{result_dir}/{dataset_name}/umap_on_neighbors_cellwhisperer.keyword_{term}.{'symmetrical_cmap' if make_colorscale_symmetrical else 'asymmetrical_cmap'}.{file_suffix}")
+            plt.savefig(f"{result_dir}/umap_on_neighbors_cellwhisperer.keyword_{term}.{'symmetrical_cmap' if make_colorscale_symmetrical else 'asymmetrical_cmap'}.{file_suffix}")
         plt.tight_layout()
         plt.show()
         plt.close()
@@ -302,7 +294,7 @@ def plot_confidence_distributions(adata, result_dir, dataset_name, text_list,
                 hist_dfs_all_terms["normed"].append(hist_score_normed.copy())
 
             plt.xlabel("Cellwhisperer score for the label")
-            plt.savefig(f"{result_dir}/{dataset_name}/confidence_distribution_{label_col}_per_label.pdf")
+            plt.savefig(f"{result_dir}/confidence_distribution_{label_col}_per_label.pdf")
             plt.show()
             plt.close()
         
@@ -319,7 +311,7 @@ def plot_confidence_distributions(adata, result_dir, dataset_name, text_list,
             plt.xlabel(f"{'Normalized c' if norm=='normed' else 'C'}ellwhisperer score for the label")
             plt.ylabel("Density")
             plt.gca().get_legend().set_title("Cell type equals label")
-            plt.savefig(f"{result_dir}/{dataset_name}/confidence_distribution_{label_col}_all_labels.{norm}.pdf")
+            plt.savefig(f"{result_dir}/confidence_distribution_{label_col}_all_labels.{norm}.pdf")
             plt.show()
             plt.close()
 
@@ -344,7 +336,7 @@ def plot_confidence_distributions(adata, result_dir, dataset_name, text_list,
             plt.legend(title=f"Cell type",labels=[matching_label,"other"],loc="lower right",
                         ncol=1)
             plt.xlabel("Cellwhisperer score for the label")
-            plt.savefig(f"{result_dir}/{dataset_name}/confidence_distribution_{label_col}_per_label.SELECTED_TERMS.pdf")
+            plt.savefig(f"{result_dir}/confidence_distribution_{label_col}_per_label.SELECTED_TERMS.pdf")
             plt.show()
             plt.close()
             
@@ -359,7 +351,7 @@ def plot_confidence_distributions(adata, result_dir, dataset_name, text_list,
         hue="correct_prediction",
         common_norm=False,
     )
-    plt.savefig(f"{result_dir}/{dataset_name}/confidence_distribution_{label_col}.pdf")
+    plt.savefig(f"{result_dir}//confidence_distribution_{label_col}.pdf")
     plt.close()
 
     sns.histplot(
@@ -368,11 +360,11 @@ def plot_confidence_distributions(adata, result_dir, dataset_name, text_list,
         hue="correct_prediction",
         common_norm=False,
     )
-    plt.savefig(f"{result_dir}/{dataset_name}/confidence_distribution_{label_col}_hist.pdf")
+    plt.savefig(f"{result_dir}//confidence_distribution_{label_col}_hist.pdf")
     plt.close()
 
 
-def plot_integration_metrics(integration_scores_df, result_dir, dataset_name):
+def plot_integration_metrics(integration_scores_df, result_dir):
     """Bar plots of integration metrics for each method."""
 
     sns.barplot(
@@ -391,7 +383,7 @@ def plot_integration_metrics(integration_scores_df, result_dir, dataset_name):
     plt.xlabel("")
     plt.ylabel("Score")
 
-    plt.savefig(f"{result_dir}/{dataset_name}/integration_scores.pdf")
+    plt.savefig(f"{result_dir}//integration_scores.pdf")
     plt.close()
 
 

@@ -57,33 +57,58 @@ rule plot_gsva_correlations:
         "../notebooks/plot_gsva_correlations.py.ipynb"
 
 # Fig 2
-rule plot_zero_shot_validations:
+rule zero_shot_validations:
     """
+    For a given dataset, produce: 
+     - performance evaluation metrics (macro-averaged and per class) for various label predictions
+     - cell type reference and predictions on UMAP
+     - confusion matrix
+     - integration scores
+     
 
     """
     input:
-        # no need to have a read count table for the well studied cell types, can just use the raw read count table from the full dataset
-        raw_read_count_table = get_path(["paths", "read_count_table"], dataset="{dataset}") # , dataset=[x for x in TARGET_DATASETS if not x=="tabula_sapiens_well_studied_celltypes"]),
-        model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",  # needed for the keywords  # TODO use this one in notebook
-        mpl_style=ancient(PROJECT_DIR / config["plot_style"])    # TODO use this one in notebook
+        # no need to have seperate embeddings and read count tables for the tabula sapiens well studied cell types, can just use the full dataset and subset:
+        processed_dataset=lambda wildcards: expand(rules.process_full_dataset.output.model_outputs, dataset=wildcards.dataset if  wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens", model=wildcards.model)[0],
+        raw_read_count_table = lambda wildcards: get_path(["paths", "read_count_table"], dataset=wildcards.dataset if  wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens"),
+        model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",  # needed to embed the keywords  
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
-        tabsap_wellstudied_celltypes_on_umap=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "{dataset}/cellwhisperer_predictions.celltype_as_label.X_umap_on_neighbors_cellwhisperer.celltype.pdf",
-        tabsap_wellstudied_predictions_on_umap=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "tabula_sapiens/cellwhisperer_predictions.celltype_as_label.X_umap_on_neighbors_cellwhisperer.predicted_labels_cellwhisperer.pdf",
-        tabsap_erythrocytes_on_umap=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "tabula_sapiens/umap_on_neighbors_cellwhisperer.keyword_erythrocyte.asymmetrical_cmap.pdf",
-        tabsap_all_celltypes_on_umap=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "tabula_sapiens/embedding_plots_MS_zero_shot.pdf",
-        tabsap_integration_scores=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "tabula_sapiens/integration_scores.pdf",
-        tabsap_wellstudied_confusion_matrix=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "tabula_sapiens_well_studied_celltypes/confusion_matrix_cellwhisperer.celltype_as_label.norm_True.pdf",
-        rocauc_accuracy_overview=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "performance_metrics_cellwhisperer.selected_datasets.rocauc_and_accuracy.pdf",
-        rocauc_accuracy_examples=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "performance_metrics_cellwhisperer.selected_classes_and_datasets.pdf",
+        # Using a directory here because the exact files produced depend on the dataset:
+        output_directory=directory(get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "{dataset}"),
     params:
-        datasets = TARGET_DATASETS,
+        dataset = TARGET_DATASETS,
+        metadata_cols_per_dataset = METADATA_COLS_PER_DATASET,
+        transcriptome_model_name = TRANSCRIPTOME_MODEL_NAME,
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=500000,
+        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
+
+    log:
+        notebook="../logs/zero_shot_validation_{model}_{dataset}.ipynb"
+    notebook:
+        "../notebooks/zero_shot_validation.py.ipynb"
+
+rule performance_macroavg_and_example_plots:
+    """
+    """
+    input:
+       zero_shot_validations_result_dirs=expand(rules.zero_shot_validations.output.output_directory, dataset=TARGET_DATASETS,model="{model}" ),
+    output:
+        macrovag_summary_plot=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "performance_metrics_cellwhisperer.selected_datasets.rocauc_and_accuracy.pdf",
+        per_class_examples_plot=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "performance_metrics_cellwhisperer.selected_classes_and_datasets.pdf",
+    params:
         result_dir = get_path(["paths", "zero_shot_validation","result_dir"], model="{model}"),
     conda:
         "cellwhisperer"
     resources:
-        mem_mb=200000,
-        slurm="cpus-per-task=2"
+        mem_mb=2000,
+        slurm="cpus-per-task=1"
     log:
-        notebook="../logs/zero_shot_validation_{model}.ipynb"
+        notebook="../logs/performance_macroavg_and_example_plots_{model}.ipynb"
     notebook:
-        "../notebooks/zero_shot_validation.py.ipynb"
+        "../notebooks/performance_macroavg_and_example_plots.py.ipynb"
+
+

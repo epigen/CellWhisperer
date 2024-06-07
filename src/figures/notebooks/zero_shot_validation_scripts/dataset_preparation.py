@@ -3,22 +3,27 @@ import anndata
 from cellwhisperer.config import get_path
 import numpy as np
 import pandas as pd
-from scripts.utils import TABSAP_WELLSTUDIED_COLORMAPPING
+from zero_shot_validation_scripts.utils import TABSAP_WELLSTUDIED_COLORMAPPING
 
 
-def load_dataset(dataset_name: str) -> anndata.AnnData:
-    """Load the dataset's adata based on the provided dataset name."""
-    return anndata.read_h5ad(
-        get_path(
-            [
-                "paths",
-                "read_count_table"
-                # if not dataset_name in ["human_disease", "immgen"]
-                # else "full_dataset",
-            ],
-            dataset=dataset_name,
-        )
+def load_dataset(read_count_table_path: str,
+                 processed_data_path: str,
+                    transcriptome_model_name: str) -> anndata.AnnData:
+    """Load the dataset's adata, cellwhisperer embeddings and transcriptome features"""
+    
+    adata = anndata.read_h5ad(
+        read_count_table_path
     )
+    processed_data = np.load(processed_data_path, allow_pickle=True)
+
+    assert (processed_data["orig_ids"] == adata.obs.index).all()
+
+    adata.obsm["X_cellwhisperer"] = processed_data["transcriptome_embeds"]
+    adata.obsm[f"X_{transcriptome_model_name}"] = processed_data["transcriptome_features"]
+
+    return adata
+
+
 
 
 def preprocess_immgen(adata: anndata.AnnData) -> anndata.AnnData:
@@ -126,12 +131,16 @@ def preprocess_human_disease(adata: anndata.AnnData) -> anndata.AnnData:
     return adata.copy()
 
 
-def load_and_preprocess_dataset(dataset_name: str) -> anndata.AnnData:
-    """Preprocess the dataset based on the provided dataset name."""
+def load_and_preprocess_dataset(dataset_name: str,
+                                read_count_table_path: str,
+                 processed_data_path: str,
+                    transcriptome_model_name: str) -> anndata.AnnData:
+    """Preprocess the dataset based on the provided dataset name and paths."""
 
 
-    adata = load_dataset(
-        dataset_name.replace("_well_studied_celltypes", "").replace("_min_100", "")
+    adata = load_dataset(read_count_table_path = read_count_table_path,
+                            processed_data_path = processed_data_path,
+                            transcriptome_model_name = transcriptome_model_name
     )
 
     if "tabula_sapiens" in dataset_name:

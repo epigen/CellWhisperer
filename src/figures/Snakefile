@@ -4,7 +4,9 @@ configfile: PROJECT_DIR / "config.yaml"
 
 CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
 TARGET_DATASETS = config["zero_shot_validation_datasets"]
+METADATA_COLS_PER_DATASET = config["metadata_cols_per_zero_shot_validation_dataset"]
 LLAVA_BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
+TRANSCRIPTOME_MODEL_NAME = config["zero_shot_validation_transcriptome_model_name"]
 
 # GPU_TYPE = "a100"
 GPU_TYPE = "a100-sxm4-80gb"
@@ -21,7 +23,7 @@ rule all:
         # Figure 1
         rules.geo_umap_plots.output.cluster_labeled.format(model=CLIP_MODEL),
         # Figure 2
-        rules.plot_zero_shot_validations.output.rocauc_accuracy_overview.format(model=CLIP_MODEL),
+        expand(rules.performance_macroavg_and_example_plots.output.macrovag_summary_plot, model=CLIP_MODEL),
         # Figure 2 (exended)
         expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["archs4_geo", "human_disease", "tabula_sapiens"], model=CLIP_MODEL),
         # Figure 2 (extended: gene set correlation analysis)

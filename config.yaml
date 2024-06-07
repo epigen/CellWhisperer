@@ -32,7 +32,7 @@ paths:
     plots: results/plots/gsva_correlation/{dataset}/{model}
   
   zero_shot_validation:
-    result_dir: results/{model}/zero_shot_validation/
+    result_dir: results/zero_shot_validation/{model}/
 
   llava:
     root: results/llava/
@@ -68,12 +68,29 @@ datasets:
   - hcaorganoids_cancer__primary
   - hcaorganoids_cancer__organoid
 
+zero_shot_validation_transcriptome_model_name: "geneformer"
+
 zero_shot_validation_datasets: 
   - immgen
   - human_disease
   - tabula_sapiens
   - pancreas
   - tabula_sapiens_well_studied_celltypes
+
+metadata_cols_per_zero_shot_validation_dataset:
+  immgen:
+    - celltype
+  human_disease:
+    - Disease_subtype
+    - Tissue
+  pancreas:
+    - celltype
+  tabula_sapiens:
+    - celltype
+    - organ_tissue
+  tabula_sapiens_well_studied_celltypes:
+    - celltype
+  
 
 retrieval_validation_sets:
   - immgen_deduplicated
