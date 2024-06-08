@@ -46,6 +46,5 @@ rule all:
         rules.bowel_disease_stem_cell_contribution.output.plot,
         # Supp. Figure 1
         rules.final_model_retrieval_scores.output.plot,
-
-        # TODO ablation study
+        rules.plot_wandb.output.all_models_comparison  # Ablation study
     default_target: True

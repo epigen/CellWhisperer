@@ -64,27 +64,24 @@ rule wandb_export:
     output:
         "wandb_export.csv"
     shell: """
-    echo "Go to wandb and export the scores. You've got 2 minutes ;)"
-    sleep 2
+    echo "Go to wandb and export the scores to {output}. You've got 2 minutes ;)"
+    sleep 120
     """
 
 
-rule plot_results:
+rule plot_wandb:
     """
-    CSV obtained from wandb
     """
     input:
-        csv=rules.wandb_export.output[0]
+        csv=ancient(rules.wandb_export.output[0])  # NOTE: CSV was obtained from wandb. For convenience, it is committed as part of the source code right now
     output:
         top_models_metrics_details=PROJECT_DIR / config["paths"]["ablations"]["plots"] / "top_models_metrics_details.pdf",
         all_models_comparison=PROJECT_DIR / config["paths"]["ablations"]["plots"] / "all_models_comparison.pdf",
     params:
         metrics = [
             "valfn_integration_TabSap/avg_bio",
-            "valfn_integration_TabSap/ASW_label__batch",  # relatively narrow result range (0.83 - 0.86)
-            "valfn_human_disease_dedup/recall_at_5_macroAvg",  # Note: this is the average of the two below
-            # "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/transcriptomes_as_classes_recall_at_5_macroAvg",
-            # "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_recall_at_5_macroAvg",
+            "valfn_integration_TabSap/ASW_label__batch",  # Note: relatively narrow result range (0.83 - 0.86)
+            "valfn_human_disease_dedup/recall_at_5_macroAvg",
             "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
             "valfn_zshot_TabSap_celltype_lvl/f1_macroAvg"],
         top_models = ["full_model", "no_archs4_data", "no_census_data", "scgpt"]
@@ -96,6 +93,6 @@ rule plot_results:
 
 rule all:
     input:
-        # [PROJECT_DIR / config["paths"]["ablations"]["models"] / run_config / f"seed_{seed}.ckpt" for seed in SEEDS for run_config in RUN_CONFIGS],
+        [PROJECT_DIR / config["paths"]["ablations"]["models"] / run_config / f"seed_{seed}.ckpt" for seed in SEEDS for run_config in RUN_CONFIGS],
         rules.plot_results.output.all_models_comparison
     default_target: True
