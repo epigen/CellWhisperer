@@ -76,6 +76,8 @@ We provide all our validations and analyses in a single pipeline, (re)producing 
 
 Note that due to the high computational cost, this pipeline relies on some precomputed files, which are downloaded from our server as part of the pipeline. Nevertheless computing all the analyses will require a considerable amount of storage (~1TB), RAM (~1TB), CPU (~100 cores), GPU and time (2 days) resources.
 
+TODO: update specifications (I added downloads)
+
 To run the pipeline, execute
 
 ```bash

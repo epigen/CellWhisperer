@@ -6,7 +6,7 @@ server:
     port: 5006
     open_browser: false
     force_https: false
-    flask_secret_key: "asd"  # TODO
+    flask_secret_key: "this-app-is-not-secured"
     generate_cache_control_headers: true
     # server_timing_headers: true
     # csp_directives:
@@ -71,7 +71,6 @@ server:
     column_request_max: 32
     diffexp_cellcount_max: 10000
 
-# TODO wsgi.py wants this under default_dataset.py, but it did not work
 dataset:
   presentation:
     max_categories: 1000
