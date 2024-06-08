@@ -48,29 +48,3 @@ def adata_to_embeds(
     )
 
     return transcriptome_embeds
-
-
-def text_list_to_embeds(
-    text_list: List[str],
-    model: TranscriptomeTextDualEncoderModel,
-    text_tokenizer: AutoTokenizer,
-) -> torch.Tensor:
-    """
-    Compute the text embeddings for each text in text_list.
-
-    TODO deprecated in favor of lighining module API
-    :param text: List[str] instance. Each text will be tokenized and embedded.
-    :param model: TranscriptomeTextDualEncoderModel instance. Used to compute the text embeddings.
-    :param text_tokenizer: AutoTokenizer instance. Used to tokenize the text.
-    :return: torch.tensor of text embeddings. Shape: len(text_list) * embedding_size (e.g. 512)
-    """
-    # Tokenize the chunk and move it to the device
-    text_tokens = text_tokenizer(text_list, return_tensors="pt", padding=True)
-    for k, v in text_tokens.items():
-        text_tokens[k] = v.to(model.device)
-
-    # Compute text embeddings
-    _, text_embeds = model.get_text_features(**text_tokens)
-    text_embeds = text_embeds / text_embeds.norm(dim=-1, keepdim=True)
-
-    return text_embeds

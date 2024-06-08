@@ -1,4 +1,4 @@
-from cellwhisperer.utils.processing import adata_to_embeds, text_list_to_embeds
+from cellwhisperer.utils.processing import adata_to_embeds
 from cellwhisperer.jointemb.model import TranscriptomeTextDualEncoderModel
 
 from typing import Union, List, Optional, Tuple, Dict
