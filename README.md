@@ -1,8 +1,12 @@
 # CellWhisperer
 
-CellWhisperer project
+This is the *private* `main`` branch. Development is carried on here.
 
-TODO For more information on project management, follow https://github.com/epigen/cellwhisperer/wiki
+The `public` branch contains the source code that is shown to the public, with full commit history.
+
+When releasing code to the [public repository](https://github.com/epigen/cellwhisperer), we prune the history.
+
+For more information on project management, follow https://github.com/epigen/cellwhisperer_private/wiki
 
 ## Install
 
