@@ -127,7 +127,7 @@ services:
   cellxgene_geo:
     <<: *cellxgene-service
     volumes:
-      - ~/cellwhisperer/results/archs4_metasra/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ~/cellwhisperer/results/archs4_geo/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ~/cellwhisperer/hosting/home/cellxgene_config.yaml:/cellxgene_config.yaml:ro
       - ./llava_logs/geo/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
