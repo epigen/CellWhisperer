@@ -1,5 +1,9 @@
 # CellWhisperer
 
+CellWhisperer is a multimodal AI model combining transcriptomics with natural language to enable intuitive interaction with scRNA-seq datasets. This repository contains source code for dataset generation, training, inference and the CELLxGENE Explorer-based web tool. The [project website](http://cellwhisperer.bocklab.org/) hosts a live demo and a tutorial of the tool.
+
+An early version of CellWhisperer has been accepted as [Spotlight paper at the ICLR 2024 MLGenX workshop](https://openreview.net/forum?id=yWiZaE4k3K). The full paper can be found on [bioRxiv (TODO)](https://biorxiv.org).
+
 This is the *private* `main` branch. Internal development is carried out here.
 
 The `public` branch contains the source code that is shown to the public, with full commit history.
