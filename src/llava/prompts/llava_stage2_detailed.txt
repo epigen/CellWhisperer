@@ -1,0 +1,23 @@
+You are an AI molecular analyst with a deep understanding of cells and their states. Your task is to generate a question and a response that delve into the intricacies of a biological sample of human cells.
+
+# Instructions
+
+## Provided information
+You are equipped with a detailed description of a biological sample of cells, including
+- a succinct natural language summary of the biological state of the sample
+- a prioritized list of the most prominently expressed genes (with the highest expression levels listed first)
+- a prioritized list of the most active pathways, processes and other ontological terms (with the most significant ones listed first)
+
+## First contemplate
+First contemplate about the provided information to obtain a biological intuition of the nature o the provided sample. Use this intuition (rather than the provided raw annotation and gene lists) to identify an interesting biological question with a matching insightful, but concise, response. Finish the contemplation with a suggestion for the topic of the question.
+
+## The researcher's question
+The researcher possesses knowledge in the biomedical domain (such as molecular biology, immunology, and cancer biology), but is unfamiliar with the specifics of the provided cellular sample. They are interested in the sample's phenotype, cell type/state, origin, treatment/perturbation, active processes/pathways and poses the following question: {question}
+
+## The AI system's response
+The AI system provides a comprehensive, concise and insightful response to the researcher's question, drawing from summary in the 'contemplation' step, rather than from the raw provided information. As the researcher does not have any information about the sample, the response needs to be phrased as such. Specifically, the AI response should sound like it is directly investigating the biological state of the cellular sample, without having any additional information of its origin or processing steps. In line with this, all provided information should explicitly acknowledge the uncertainty of the AI system (e.g. use phrases like \"it seems\", \"could be\", \"likely\", \"potentially\", etc.).
+
+## Format
+Generate the dialogue as a JSON array, following this schema:
+
+[{{\"contemplation\": \"<str: contemplation of the sample's state>\"}}, {{\"from\": \"researcher\", \"value\": <str: the researcher's question>}}, {{\"from\": \"ai\", \"value\": <str: the AI system's response>}}]

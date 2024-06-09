@@ -1,0 +1,100 @@
+"""
+Downloading all test/validation data sets.
+
+This is just a combination pipeline for all datasets
+
+Downloading/Preparing GEO/SRA/ARCHS4 and the CELLxGENE Census is a resource intensive endeavor. The original code is therefore not included here. Instead it is being downloaded directly
+"""
+
+from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+import subprocess
+HTTP = HTTPRemoteProvider()
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+module tabula_sapiens:
+    snakefile: "tabula_sapiens/Snakefile"
+    config: config
+
+module immgen:
+    snakefile: "immgen/Snakefile"
+    config: config
+
+module bowel_disease:
+    snakefile: "bowel_disease/Snakefile"
+    config: config
+
+module human_disease:
+    snakefile: "human_disease/Snakefile"
+    config: config
+
+module pancreas:
+    snakefile: "pancreas/Snakefile"
+    config: config
+
+
+use rule * from tabula_sapiens as tabula_sapiens_*
+use rule * from immgen as immgen_*
+use rule * from bowel_disease as bowel_disease_*
+use rule * from human_disease as human_disease_*
+use rule * from pancreas as pancreas_*
+
+BASE_URL = config["precomputing_base_url"]
+
+rule archs4_geo:
+    """
+    This "full_data.h5ad" file is a "superset" of read_count_table.h5ad, additionally containing the LLM-curated natural language captions (which are ignored in this context)
+    """
+    input:
+        full_data=HTTP.remote(f"{BASE_URL}/datasets/archs4_geo/full_data.h5ad")[0]
+    output:
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="archs4_geo"),
+        full_data=PROJECT_DIR / config["paths"]["full_dataset"].format(dataset="archs4_geo"),
+    shell: """
+        cp {input.full_data} {output.full_data}
+        ln -s {output.full_data} {output.read_count_table}
+    """
+
+rule cellxgene_census:
+    """
+    This "full_data.h5ad" file is a "superset" of read_count_table.h5ad, additionally containing the LLM-curated natural language captions (which are ignored in this context)
+    """
+    input:
+        full_data=HTTP.remote(f"{BASE_URL}/datasets/cellxgene_census/full_data.h5ad")[0]
+    output:
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="cellxgene_census"),
+        full_data=PROJECT_DIR / config["paths"]["full_dataset"].format(dataset="cellxgene_census")
+    shell: """
+        cp {input.full_data} {output.full_data}
+        ln -s {output.full_data} {output.read_count_table}
+    """
+
+
+rule download_conversation_datasets:
+    """
+    Files required to train CellWhisperer LLM from scratch
+    """
+    input:
+        downloads=[HTTP.remote(f"{BASE_URL}/datasets/cellwhisperer_llava_conversations/{fn}")[0] for fn in ["pretrain_texts.json", "finetune_conversations.json", "main_conversations.json", "tabula_sapiens_conversations.json"]]
+    output:
+        llava_stage1_dataset=PROJECT_DIR / config["paths"]["llava"]["pretrain_text_dataset"],
+        llava_stage2_dataset=PROJECT_DIR / config["paths"]["llava"]["finetune_text_dataset"],
+        evaluation_dataset_main=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="main"),
+        evaluation_dataset_tabula_sapiens=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="tabula_sapiens"),
+    run:
+        import shutil
+        for in_file, out_file in zip(input, output):
+            shutil.copy(in_file, out_file)
+
+
+rule all:
+    input:
+        rules.tabula_sapiens_all.input,
+        rules.immgen_all.input,
+        rules.bowel_disease_all.input,
+        rules.human_disease_all.input,
+        rules.pancreas_all.input,
+        rules.archs4_geo.output,
+        rules.cellxgene_census.output,
+        rules.download_conversation_datasets.output,
+    default_target: True

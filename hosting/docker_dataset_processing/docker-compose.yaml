@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  cellwhisperer_process_dataset:
+    build:
+      context: ../..
+    image: cellwhisperer
+    working_dir: /opt/cellwhisperer/src/cellxgene_preprocessing
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/results:/opt/cellwhisperer/results:rw
+      - /nobackup/lab_bock/projects/cellwhisperer/resources:/opt/cellwhisperer/resources:rw
+    command: snakemake -j16 --config datasets=[\"hca_olo\"] --use-conda  --conda-frontend conda
+    stdin_open: true
+    tty: true
+    restart: "no"
+    environment:
+      CONDA_ENV: cellwhisperer
+      DATASET_NAME: none
+    deploy:
+      resources:
+        limits:
+          memory: 150G
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              driver: nvidia
+              count: all
+    devices:
+      - "nvidia.com/gpu=all"
+    security_opt:
+      - label=type:nvidia_container_t
+ 

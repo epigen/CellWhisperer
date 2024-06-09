@@ -1,0 +1,13 @@
+{
+    "Relevant Information to be Included": [
+        "Cell type: hepatocyte",
+        "Sample type: cell line",
+        "Condition: infected with HCV (strain Jc1)",
+        "Treatment: UV-inactivated HCV (for PHH of donors 4-7)",
+        "Treatment: JAK/STAT inhibitor ruxolitinib (to rescue HCV virion replication and release in PHHs)",
+        "Treatment: HCV replication inhibitor 2’CMA (to confirm IRF1 mediated restriction of HCV replication and translation)",
+        "Time post-infection: 6 hours",
+        "Phenotypic effects: broad upregulation of IFN-mediated defense programs, translational shutoff in PHHs"
+    ],
+    "Final Response": "Primary human hepatocytes (PHHs) cell line, infected with Hepatitis C virus (HCV) strain Jc1 for 6 hours. The cells exhibit a broad upregulation of interferon-mediated defense programs and a translational shutoff, indicating a cellular response to HCV infection."
+}

@@ -1,0 +1,3 @@
+model:
+  loss_config:
+    sample_weighting: false

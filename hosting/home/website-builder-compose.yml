@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  website_builder:
+    build:
+      context: ../..
+    image: cellwhisperer
+    volumes:
+      - ~/cellwhisperer:/opt/cellwhisperer
+      - ./docker_conda:/opt/miniconda3
+    working_dir: /opt/cellwhisperer/modules/cellxgene
+    environment:
+      CONDA_ENV: cellwhisperer
+    # NOTE: I think we don't even need the conda environment
+    command: bash -c "git config --global --add safe.directory /opt/cellwhisperer/modules/cellxgene; source /opt/miniconda3/etc/profile.d/conda.sh; source activate cellwhisperer; make build-for-server-dev"
+    deploy:
+      restart_policy:
+        condition: none

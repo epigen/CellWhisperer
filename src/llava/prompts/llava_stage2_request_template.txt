@@ -1,0 +1,5 @@
+Sample annotation: {annotation}
+
+Gene sets (e.g. pathways, GO terms): {top_gene_sets}
+
+Top expressed normalized genes: {top_genes}

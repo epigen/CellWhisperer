@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "from": {
+        "type": "string",
+        "enum": ["researcher", "ai"]
+      },
+      "value": {
+        "type": "string",
+        "description": "the text of the question or response"
+      }
+    },
+    "required": ["from", "value"],
+    "additionalProperties": false
+  }
+}

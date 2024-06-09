@@ -1,0 +1,121 @@
+anndata_label_name: natural_language_annotation
+num_replicates: 5
+llava_projector_type: mlp2x_8t_gelu # NOTE fails if > 8 because we use a fully connected layer between all 8 tokens (i.e. having too many params)
+precomputing_base_url: https://medical-epigenomics.org/papers/schaefer2024/data
+
+paths:
+  read_count_table: resources/{dataset}/read_count_table.h5ad
+  raw_annotations: resources/{dataset}/annotations.tsv
+  structured_annotations: results/{dataset}/annotations.json
+  processed_annotations: results/{dataset}/processed_annotations.json
+  processed_multi_annotations: results/{dataset}/processed_multi_annotations.json
+  geneset_gmt: results/genesets/{library}.gmt
+  model_processed_dataset: results/{dataset}/{model}/full_output.npz
+  full_dataset: results/{dataset}/full_data.h5ad
+  enrichr_terms_json: resources/enrichr_terms/terms.json
+  ensembl_gene_symbol_map: resources/ensembl_gene_symbol_map.csv
+  jointemb_models: results/models/jointemb
+  wandb_logs: results/wandb_logging
+  datamodule_prepared_path: results/{dataset}/lightning-processed/{hash}.pt
+  cache: results/cache  # overwritable with CELLWHISPERER_CACHE env
+
+  gsva:
+    result: results/{dataset}/gsva.parquet
+    correlation: results/{dataset}/{model}/gsva_correlations.csv
+    cw_transcriptome_term_scores: results/{dataset}/{model}/cw_transcriptome_term_scores.parquet
+    plots: results/plots/gsva_correlation/{dataset}/{model}
+
+  zero_shot_validation:
+    result_dir: results/plots/zero_shot_validation/{model,[^/]+}/
+
+  llava:
+    root: results/llava/
+    pretrain_text_dataset: results/llava/pretrain_texts.json
+    finetune_text_dataset: results/llava/finetune_conversations.json
+    evaluation_text_dataset: results/llava/evaluation/{dataset}_conversations.json
+    combined_processed_data: results/llava/combined_processed_data/{model}.npz
+    pretrained_model_dir: results/llava/pretrained/{base_model}__{model}/
+    finetuned_model_dir: results/llava/finetuned/{base_model}__{model}/
+    evaluation_results:  results/plots/llava/{dataset}/{base_model}__{model}/
+  geo_umap: results/plots/geo_umap/{model}/
+  ablations:
+    models: results/models/ablations/
+    plots: results/plots/ablations/
+
+plot_style: "src/plot_style/main.style"
+
+datasets:
+  - immgen
+  - human_disease
+  - tabula_sapiens
+  - tabula_sapiens_100_cells_per_type
+  - archs4_geo
+  - bowel_disease
+  - pancreas
+
+zero_shot_validation_transcriptome_model_name: "geneformer"
+
+zero_shot_validation_datasets:
+  - immgen
+  - human_disease
+  - tabula_sapiens
+  - pancreas
+  - tabula_sapiens_well_studied_celltypes
+
+metadata_cols_per_zero_shot_validation_dataset:
+  immgen:
+    - celltype
+  human_disease:
+    - Disease_subtype
+    - Tissue
+  pancreas:
+    - celltype
+  tabula_sapiens:
+    - celltype
+    - organ_tissue
+  tabula_sapiens_well_studied_celltypes:
+    - celltype
+
+retrieval_validation_sets:
+  - immgen_deduplicated
+  - human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
+
+model_name_path_map:
+  geneformer: resources/geneformer-12L-30M
+  biogpt: microsoft/biogpt
+  bert: dmis-lab/biobert-v1.1
+  scgpt: resources/scGPT_human
+  cellwhisperer: cellwhisperer_clip_v1  # wandb run ID t9kkor63
+  llava_base_llm: Mistral-7B-Instruct-v0.2
+  mixtral: resources/mixtral-8x7b-instruct-v0.1.Q5_K_M.gguf
+
+genesets:
+  - "Azimuth_2023"
+  - "GO_Biological_Process_2023"
+  - "GO_Molecular_Function_2023"
+  - "OMIM_Expanded"
+  - "PanglaoDB_Augmented_2021"
+  - "Tabula_Sapiens"
+
+# Created by running this on the full tabula sapiens dataset: list(adata.obs[adata.obs["organ_tissue"].isin(["Liver","Lung","Blood"])]["cell_ontology_class"].value_counts().iloc[:20].index)
+top20_lung_liver_blood_celltypes:
+  - "macrophage"
+  - "erythrocyte"
+  - "monocyte"
+  - "type ii pneumocyte"
+  - "classical monocyte"
+  - "neutrophil"
+  - "cd4-positive, alpha-beta t cell"
+  - "nk cell"
+  - "naive b cell"
+  - "basal cell"
+  - "cd8-positive, alpha-beta t cell"
+  - "hepatocyte"
+  - "cd8-positive, alpha-beta cytokine secreting effector t cell"
+  - "club cell"
+  - "non-classical monocyte"
+  - "capillary endothelial cell"
+  - "cd4-positive, alpha-beta memory t cell"
+  - "memory b cell"
+  - "respiratory goblet cell"
+  - "basophil"

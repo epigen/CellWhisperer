@@ -1,0 +1,31 @@
+{
+    "annotation": "The sample is an embryonic stem cell (H1 cell type) that was treated with Activin for 48 hours at a concentration of 50 ng/ml.",
+    "top_genes": ["MIR5787", "HEATR3", "SALL3", "INTS6L", "MAGI2", "PPT1", "SLX1A", "SMIM35", "ZNF134", "SPANXN5", "TPRXL", "MAGEB18", "SPANXN2", "PMPCA", "KANK3", "DOP1B", "RELL1", "LPAR1", "ENO4", "DOLPP1", "TMA16", "ENSG00000248369", "KIR2DL3", "BICD1", "APH1A", "C1QL1", "CIB3", "TMSB4X", "MIR4523", "ESRRG", "HDGF", "CFAP206", "DMTN", "BEST4", "CAVIN1", "KRTAP2-2", "TCEAL3", "NEUROD6", "SIX2", "CPSF2", "OR10Z1", "SMIM34", "PLXDC1", "DAZAP2", "TMSB15C", "SYNPO2L", "MRPL45", "MIR643", "ENSG00000277856", "EDN3", "MIR4741", "MIR1306", "AMY2A", "CDC40", "RGL2", "C5orf63", "LRRTM2", "CEP57L1", "MIR941-1", "GTF2F1", "MTA3", "RAB11FIP4", "SYF2", "SPX", "MIR4489", "CIP2A", "OR10G6", "CHST3", "SLC17A4", "MIR593", "MIR6828", "TPM3", "EXOC3L2", "TRAT1", "MIR155", "PROP1", "PLA2G12B", "MIR5189", "ENSG00000273155", "SETDB2", "LY96", "LINC01711", "ZBTB12", "MLIP", "FASTK", "MIR4463", "FCER1A", "VPS33A", "RPL27A", "DOK7", "SLC22A31", "COMMD8", "CCND2", "CAPNS1", "KPNA2", "MIR4456", "RRP1B", "BCL2L10", "NBDY", "MIR124-3"],
+    "top_gene_sets": [
+        "Pluripotent Stem Cells",
+        "Embryonic Stem Cells",
+        "Embryonic Hindlimb Morphogenesis",
+        "Mesoderm Development",
+        "Embryonic Forelimb Morphogenesis",
+        "Chordate Embryonic Development",
+        "Mesodermal Cell Fate Commitment",
+        "Fetal Development-L2-Thymus-Antigen Presenting Cells",
+        "Fetal Development-L2-Cerebellum-SLC24A4 PEX5L Positive Cells",
+        "Fetal Development-L2-Cerebrum-Inhibitory Neurons",
+        "Trophoblast Cells",
+        "Endoribonuclease Complex",
+        "Trophoblast Progenitor Cells",
+        "Fetal Development-L2-Heart-Visceral Neurons",
+        "Fetal Development-L2-Placenta-IGFBP1 DKK1 Positive Cells",
+        "Pancreatic Progenitor Cells",
+        "Thymus-mesothelial Cell",
+        "Thymus-medullary Thymic Epithelial Cell",
+        "Anaphase-Promoting Complex",
+        "Lymph Node-mature Conventional Dendritic Cell",
+        "Transcription Factor TFIIIC Complex",
+        "Clathrin-Sculpted Gamma-Aminobutyric Acid Transport Vesicle",
+        "NADPH Oxidase Complex",
+        "Uterus-ciliated Epithelial Cell"
+    ],
+    "sample_id": "SRX188848"
+}

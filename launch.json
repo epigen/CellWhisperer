@@ -1,0 +1,99 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "python",
+            "request": "launch",
+            "name": "Train immgen",
+            "program": "${workspaceFolder}/src/cellwhisperer/jointemb/training.py",
+            "condaEnv": "cellwhisperer",
+            "args": [
+                "fit",
+                "--model.model_config.projection_dim",
+                "128",
+                "--model.model_config.locking_mode",
+                "LU",
+                "--model.model_config.transcriptome_model_type",
+                "geneformer",
+                "--data.nproc",
+                "0",
+                "--data.dataset_name",
+                "immgen",
+                "--log_level",
+                "INFO",
+                "--trainer.fast_dev_run",
+                "true",
+            ],
+            "cwd": "${workspaceFolder}",
+            "module": null,
+            "justMyCode": true,
+        },
+        {
+            "type": "python",
+            "request": "launch",
+            "name": "Run training fast_dev_run with default config",
+            "program": "${workspaceFolder}/src/cellwhisperer/jointemb/training.py",
+            "args": [
+                "fit",
+                "--trainer.fast_dev_run",
+                "true",
+                "--model.model_config.projection_dim",
+                "128",
+                "--model.model_config.locking_mode",
+                "LU",
+                "--model.model_config.transcriptome_model_type",
+                "geneformer",
+                "--data.nproc",
+                "0"
+            ],
+            "cwd": "${workspaceFolder}",
+            "module": null,
+            "justMyCode": true,
+        },
+        {
+            "type": "python",
+            "request": "launch",
+            "name": "Run training fit with run_config.yaml",
+            "program": "${workspaceFolder}/src/cellwhisperer/jointemb/training.py",
+            "args": [
+                "fit",
+                "--config",
+                "${workspaceFolder}/run_config.yaml",
+                "--data.nproc",
+                "0"
+            ],
+            "cwd": "${workspaceFolder}",
+            "module": null,
+            "justMyCode": false,
+        },
+        {
+            "name": "Remote DAP debugging (meduni)",
+            "type": "python",
+            "request": "attach",
+            "connect": {
+                "host": "s0-n02.hpc.meduniwien.ac.at",
+                "port": 5678
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "/home/moritz/Projects/cellwhisperer",
+                    "remoteRoot": "/msc/home/mschae83/cellwhisperer"
+                }
+            ],
+            "justMyCode": false
+        },
+        {
+            "type": "python",
+            "request": "launch",
+            "name": "Debug sweeping",
+            "program": "${workspaceFolder}/src/cellwhisperer/jointemb/sweeping.py",
+            "args": [
+                "--sweep_config",
+                "${workspaceFolder}/src/experiments/sweeps/debug_sweep/sweep_config.yaml",
+            ],
+            "cwd": "${workspaceFolder}",
+            "module": null,
+            "justMyCode": false,
+        },
+    ]
+}

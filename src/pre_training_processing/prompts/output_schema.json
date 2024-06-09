@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "1. Relevant Information to be Included": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "2. Final Response": {
+      "type": "string"
+    }
+  },
+  "required": ["1. Final Response", "2. Relevant Information to be Included"]
+}

@@ -1,0 +1,110 @@
+# lightning.pytorch==2.1.0
+seed_everything: 0
+trainer:
+  accelerator: auto
+  devices: auto
+  num_nodes: 1
+  precision: bf16-mixed
+  logger:
+    class_path: lightning.pytorch.loggers.WandbLogger
+    init_args:
+      save_dir: results/wandb_logging
+      version: null
+      offline: false
+      dir: null
+      id: null
+      anonymous: null
+      project: JointEmbed_Training
+      log_model: false
+      experiment: null
+      prefix: ''
+      checkpoint_name: null
+      job_type: null
+      config: null
+      entity: single-cellm
+      reinit: null
+      tags: null
+      group: 
+      notes: null
+      magic: null
+      config_exclude_keys: null
+      config_include_keys: null
+      allow_val_change: null
+      resume: null
+      force: null
+      tensorboard: null
+      sync_tensorboard: null
+      monitor_gym: null
+      save_code: null
+      settings: null
+  callbacks: null
+  fast_dev_run: false
+  max_epochs: 16
+  min_epochs: null
+  max_steps: -1
+  min_steps: null
+  max_time: null
+  limit_train_batches: null
+  limit_val_batches: null
+  limit_test_batches: null
+  limit_predict_batches: null
+  overfit_batches: 0.0
+  val_check_interval: null
+  check_val_every_n_epoch: 1
+  num_sanity_val_steps: 0
+  log_every_n_steps: null
+  enable_checkpointing: null
+  enable_progress_bar: true
+  enable_model_summary: null
+  accumulate_grad_batches: 1
+  gradient_clip_val: null
+  gradient_clip_algorithm: null
+  deterministic: null
+  benchmark: null
+  inference_mode: true
+  use_distributed_sampler: true
+  profiler: null
+  detect_anomaly: false
+  barebones: false
+  plugins: null
+  sync_batchnorm: false
+  reload_dataloaders_every_n_epochs: 1
+  default_root_dir: results/model_training
+model:
+  model_config:
+    projection_dim: 2048
+    transcriptome_model_type: geneformer
+    transcriptome_config: {}
+    text_model_type: bert
+    text_config: {}
+    locking_mode: LU
+    unlocked_fp16: false
+  loss_config:
+    clip_lambda: 1.0
+    clip_lite_lambda: 0.0
+    clip_lite_type: dot
+    clip_lite_prior_weight: 0.1
+    clip_lite_transcriptome_prior: false
+    clip_lite_text_prior: false
+    sample_weighting: true
+  val_batch_size: 32
+  gauss_noise_std: 0.0
+  learning_rate: 0.00001
+  lr_warmup: 0.03
+  frozen_warmup: 0.03
+data:
+  use_replicates: false
+  dataset_names: archs4_geo,cellxgene_census
+  nproc: 8
+  transcriptome_processor_kwargs: {}
+  tokenizer_kwargs:
+    model_max_length: 128
+  min_genes: 100
+  train_fraction: 0.95
+model_ckpt: null
+best_model_path: null
+log_level: INFO
+dap_debug: false
+batch_size: 512
+wandb: 'cellwhisperer_v1'
+ckpt_path: null

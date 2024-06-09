@@ -1,0 +1,163 @@
+import resource
+import pyarrow as pa
+import numpy as np
+import anndata
+import pandas as pd
+import os
+import pathlib
+import requests
+from scipy import sparse
+import requests
+import re
+import glob
+from collections import defaultdict
+import json
+import pickle
+from os import popen
+
+MEM_MAX_GB = 100
+max_memory_bytes = MEM_MAX_GB * 1024 * 1024 * 1024
+resource.setrlimit(resource.RLIMIT_AS, (max_memory_bytes, resource.RLIM_INFINITY))
+
+MIN_GENES_PER_CELL = 100
+N_SINGLE_CELLS = 5
+MAX_UNIQUE_VALUES_PER_OBS_COLUMN = 500
+IGNORE_COLS = ["soma_joinid","donor_id","leiden"] # Those provide no annotation information
+# Always use these columns for splitting, even if they exeed the max number of unique values:
+ALWAYS_USE_COLS = [
+    'assay',
+    'cell_type',
+    'cell_type_ontology_term_id',
+    'development_stage',
+    'development_stage_ontology_term_id',
+    'disease',
+    'disease_ontology_term_id',
+    'self_reported_ethnicity',
+    'sex',
+    'suspension_type',
+    'tissue'
+]
+CENSUS_VERSION = "2023-12-15"
+
+# only allow assays which dont require gene length normalization
+# the allowed cover 31025079 out of 36227903   cells
+# https://cellxgene.cziscience.com/docs/04__Analyze%20Public%20Data/4_2__Gene%20Expression%20Documentation/4_2_3__Gene%20Expression%20Data%20Processing
+
+# Tabula Sapiens dataset IDs (need to be excluded). Note: only the first one is considered. The other ones are not "primary"
+CONTROL_DATASET_IDS = {
+    "53d208b0-2cfd-4366-9866-c3c6114081bc",
+    "ff45e623-7f5f-46e3-b47d-56be0341f66b",
+    "f01bdd17-4902-40f5-86e3-240d66dd2587",
+    "e6a11140-2545-46bc-929e-da243eed2cae",
+    "e5c63d94-593c-4338-a489-e1048599e751",
+    "d8732da6-8d1d-42d9-b625-f2416c30054b",
+    "d77ec7d6-ef2e-49d6-9e79-05b7f8881484",
+    "cee11228-9f0b-4e57-afe2-cfe15ee56312",
+    "a357414d-2042-4eb5-95f0-c58604a18bdd",
+    "a2d4d33e-4c62-4361-b80a-9be53d2e50e8",
+    "a0754256-f44b-4c4a-962c-a552e47d3fdc",
+    "983d5ec9-40e8-4512-9e65-a572a9c486cb",
+    "7357cee7-9f7f-4ab0-8cec-90de8f047e38",
+    "6ec405bb-4727-4c6d-ab4e-01fe489af7ea",
+    "6d41668c-168c-4500-b06a-4674ccf3e19d",
+    "5e5e7a2f-8f1c-42ac-90dc-b4f80f38e84c",
+    "55cf0ea3-9d2b-4294-871e-bb4b49a79fc7",
+    "4f1555bc-4664-46c3-a606-78d34dd10d92",
+    "2ba40233-8576-4dec-a5f1-2adfa115e2dc",
+    "2423ce2c-3149-4cca-a2ff-cf682ea29b5f",
+    "1c9eb291-6d31-47e1-96b2-129b5e1ae64f",
+    "18eb630b-a754-4111-8cd4-c24ec80aa5ec",
+    "0d2ee4ac-05ee-40b2-afb6-ebb584caa867",
+    "0ced5e76-6040-47ff-8a72-93847965afc0",
+    "0041b9c3-6a49-4bf7-8514-9bc7190067a7",
+}
+
+PROJECT_DIR = Path(popen("git rev-parse --show-toplevel").read().strip())
+OUTDIR = PROJECT_DIR / "resources" / "cellxgene_census"
+
+configfile: PROJECT_DIR / "config.yaml"
+
+# include: "rules/census_ids.smk"  # requires installed `cellxgene_census` package
+all_dataset_ids = set(pd.read_csv("ids", header=None)[0].to_list())
+DATASET_IDS = list(all_dataset_ids - CONTROL_DATASET_IDS)
+
+rule all:
+    input:
+        OUTDIR/"processed_datasets_info.csv",
+        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="cellxgene_census"),
+        PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="cellxgene_census"),
+
+rule retrieve_census_datasets_csv:
+    params:
+        census_version = CENSUS_VERSION
+    output: OUTDIR/"cellxgene_census_datasets.csv"
+    conda: "envs/cellxgene_census.yaml"
+    script: "scripts/retrieve_census_datasets_csv.py"
+
+rule download_census_data:
+    output: temporary(OUTDIR / "{dataset_id,.+(?<!_processed)}.h5ad")
+    conda: "envs/cellxgene_census.yaml"
+    script: "scripts/download_census_data.py"
+
+rule process_dataset:
+    input:
+        adata = rules.download_census_data.output,
+        census_datasets_csv = rules.retrieve_census_datasets_csv.output
+    output:
+        adata = OUTDIR/"cellxgene_census_{dataset_id}_processed.h5ad",
+        dataset_info_json = temporary(OUTDIR/"cellxgene_census_{dataset_id}_info.json"),
+    priority: 50
+    params:
+        max_unique_values_per_obs_columns = MAX_UNIQUE_VALUES_PER_OBS_COLUMN,
+        n_single_cells = N_SINGLE_CELLS,
+        ignore_cols = IGNORE_COLS,
+        always_use_cols = ALWAYS_USE_COLS,
+        census_version = CENSUS_VERSION,
+        min_genes_per_cell = MIN_GENES_PER_CELL
+    script: "scripts/process_dataset.py"
+
+rule write_census_datasets_info_csv:
+    input: expand(rules.process_dataset.output.dataset_info_json, dataset_id=DATASET_IDS)
+    output: OUTDIR/"processed_datasets_info.csv"
+    run:
+        dfs = []
+        for json_file_path in input:
+            with open(json_file_path, "r") as f:
+                df = pd.json_normalize(json.load(f))
+                dfs.append(df)
+        dataset_info = pd.concat(dfs)
+        # save as json and csv, in case one is more convenient to use than the other
+        # (the entries with lists in them are easier to read in the json file, but the csv file is easier to read in a spreadsheet program)
+        dataset_info.to_json(str(output).replace(".csv",".json"), orient="records")
+        dataset_info = dataset_info.set_index("dataset_id")
+        dataset_info.to_csv(str(output))
+
+rule integrate_data:
+    """
+    Generate a single dataset from all the Census datasets
+    Format mimicks what we generated for ArchS4 and integrates well into our training pipeline.
+    NOTE: for some reason, there is a limit of 100GB RAM usage on the jupyter notebook kernel process, which makes this one fail in an (interactive) notebook.
+    NOTE: ensembel_symbol_conversion is implicitly generated by the GeneformerTranscriptomeProcessor (src/cellwhisperer/jointemb/geneformer_model.py).
+    """
+    input:
+        datasets=expand(rules.process_dataset.output.adata, dataset_id=DATASET_IDS),
+        ensembl_symbol_conversion=PROJECT_DIR / config["paths"]["ensembl_gene_symbol_map"]
+    output:
+        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="cellxgene_census")
+    params:
+        num_replicates=config["num_replicates"],
+    resources:
+        mem_mb=300000,
+        slurm="cpus-per-task=2"
+    conda: "cellwhisperer"
+    notebook:
+        "notebooks/integrate_data.py.ipynb"
+
+rule structured_json:
+    input:
+        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="cellxgene_census")
+    output:
+        PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="cellxgene_census")
+    conda: "cellwhisperer"
+    script:
+        "scripts/structured_annotations.py"

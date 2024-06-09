@@ -1,0 +1,22 @@
+{
+    "annotation": "The sample is a placenta tissue sample.",
+    "top_genes": ["FRG1", "TUBB6", "CISD3", "ASCL3", "PLEKHD1", "DENND2C", "DDAH2", "UNC119B", "TOMM5", "GPR156", "ZNF77", "TEX26", "TOM1L2", "PRM1", "B3GNT9", "RMI2", "KRTAP10-10", "RPS6KB2", "CCDC195", "OR4B1", "C11orf68", "ENSG00000175604", "CCDC85B", "SUGCT", "JAKMIP2", "FOSL1", "P2RY2", "RAB6A", "LIMS4", "MRPL48", "PAAF1", "TMEM70", "LYSMD3", "PRR5L", "GJA10", "CGA", "MAP3K7", "LCA5", "MIR497", "MIR5196", "ORC3", "LINC01100", "AKIRIN2", "FAM90A23", "EPHA7", "PRRC2A", "MIR4742", "OOSP1", "MIR4420", "MRAP2", "PHF21A", "FAIM2", "LOC102723655", "COQ10A", "TFCP2", "B4GALNT1", "ERCC4", "TROAP", "PPP1R1A", "MIR3689B", "CDK4", "KRT85", "AVIL", "AGAP2", "CBLL2", "MSRA", "SFN", "RUVBL1", "ZNF169", "PRIMA1", "MIR4479", "SLC35E3", "LINC02694", "KDF1", "EIF4E1B", "TTLL11", "AURKAIP1", "LINC02915", "NR2F1", "LINC02873", "NXF2B", "MLXIP", "RBMXL3", "B3GNTL1", "ZNF613", "RNPEP", "MIR3972", "CRLF3", "HSD11B2", "CDC26", "MIR8088", "B3GNT4", "PRR18", "ZSCAN2", "ENSG00000255639", "TAC4", "HMGB4", "COX8A", "FOXR1", "LINC03047"],
+    "top_gene_sets": [
+        "Placenta Development",
+        "Regulation Of Viral Genome Replication",
+        "Enteric Nervous System Development",
+        "Embryonic Placenta Development",
+        "Positive Regulation Of Developmental Process",
+        "Membrane Raft",
+        "Fetal Development-L2-Placenta-Stromal Cells",
+        "Lung V2 (HLCA)-ann Level 5-SMG Serous (Nasal)",
+        "Heart-L1-Pericyte",
+        "Focal Adhesion",
+        "HFE-transferrin Receptor Complex",
+        "Heart-L2-Pericyte",
+        "Fetal Development-L2-Placenta-Extravillous Trophoblasts",
+        "Autophagosome Membrane",
+        "Filopodium Membrane"
+    ],
+    "sample_id": "SRX186162"
+}

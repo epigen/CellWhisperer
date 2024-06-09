@@ -1,0 +1,11 @@
+*/.ipynb_checkpoints/
+.ipynb_checkpoints/
+*/__pycache__/
+notebooks/.ipynb_checkpoints/
+metadata/*.tsv
+metadata/*.csv
+metadata/*.json 
+mapped_metadata/
+out/
+data/
+*.h5ad

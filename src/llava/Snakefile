@@ -1,0 +1,51 @@
+"""
+"""
+
+# snakemake remote HTTP object
+from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+import glob
+import pandas as pd
+import subprocess
+
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+HTTP = HTTPRemoteProvider()
+
+GPU_TYPE = "a100"
+# GPU_TYPE = "a100-sxm4-80gb"  # used for the data_processing and conversation generation rules
+CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
+
+# For snakemake efficiency, extract the samples once and store them
+if not os.path.exists("./gsva_samples.csv"):
+    ARCHS4_GSVA_SAMPLES = pd.read_parquet(PROJECT_DIR / config["paths"]["gsva"]["result"].format(dataset="archs4_geo")).set_index("Unnamed: 0").drop(columns=["library"]).columns
+    # store GSVA samples
+    with open("./gsva_samples.csv", "w") as f:
+        f.write("\n".join(ARCHS4_GSVA_SAMPLES.to_list()))
+else:
+    ARCHS4_GSVA_SAMPLES = pd.read_csv("./gsva_samples.csv", header=None).iloc[:, 0]
+
+NUM_COMPLEX_SAMPLES = 5000
+NUM_DETAILED_SAMPLES = 10000
+CONVERSATION_START = NUM_COMPLEX_SAMPLES + NUM_DETAILED_SAMPLES
+COMPLEX_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[:NUM_COMPLEX_SAMPLES]
+DETAILED_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[NUM_COMPLEX_SAMPLES:CONVERSATION_START]
+scattergather:
+    split=128
+
+MODELS = [config["model_name_path_map"]["cellwhisperer"]]
+BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
+
+
+include: "../shared/rules/dataset_processing.smk"
+include: "../shared/rules/training_sample_weights.smk"
+include: "../shared/rules/gsva.smk"
+include: "rules/dataset.smk"
+include: "rules/training.smk"
+
+rule all:
+    input:
+        rules.finetune_llava.output.output_dir.format(base_model="", model=BASE_MODEL)
+
+    default_target: True

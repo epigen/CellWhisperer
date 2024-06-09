@@ -1,0 +1,65 @@
+from pathlib import Path
+import subprocess
+import itertools
+SEEDS = [0, 1, 2]  # , 3, 4]
+
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+
+configfile: PROJECT_DIR / "config.yaml"
+
+# CONFIGS = [p.stem for p in Path("delta_config").glob("*.yaml") if p.stem in ["locking_mode_UU"]]  # , "locking_mode_UL", "scgpt"]]
+# CONFIGS = ["full_model"]
+
+RUN_CONFIGS = [
+    "no_sample_weights",
+    "locking_mode_UU",
+    "grad_accumulation",
+    "locking_mode_UL",
+    "clip_lite",
+    "clip_mixed",
+    "data_augmentation",
+    "full_model",
+    "locking_mode_LL",
+    "low_batchsize_grad_accumulation",
+    "no_archs4_data",
+    "no_census_data",
+    "scgpt",
+]
+
+rule train:
+    input:
+        delta_config=ancient("delta_config/{run_config}.yaml"),
+        base_config=ancient("base_config.yaml")
+    output:
+        PROJECT_DIR / config["paths"]["ablations"]["models"] / "{run_config}" / "seed_{seed}.ckpt"
+    conda:
+        "cellwhisperer_fixed"  # NOTE: not subject to automatic updates
+    resources:
+        mem_mb=lambda wildcards: 1000000 if wildcards.run_config == "scgpt" else 120000,
+        slurm="cpus-per-task=20 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
+    shell: """
+        cellwhisperer fit --config {input.base_config} --config {input.delta_config} --seed_everything {wildcards.seed} --last_model_path {output} --wandb {wildcards.run_config}_{wildcards.seed}
+    """
+
+rule test:
+    input:
+        delta_config=ancient("delta_config/{run_config}.yaml"),
+        base_config=ancient("base_config.yaml"),
+        model_path=rules.train.output
+    output:
+        PROJECT_DIR / config["paths"]["ablations"]["plots"] / "test_results" / "{run_config}" / "seed_{seed}.log"
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=lambda wildcards: 1000000 if wildcards.run_config == "scgpt" else 400000,
+        slurm="cpus-per-task=20 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
+    shell: """
+        cellwhisperer test --config {input.base_config} --config {input.delta_config} --model_ckpt {input.model_path} --wandb {wildcards.run_config}_{wildcards.seed} --trainer.logger.init_args.group ablation_study3_test --seed_everything {wildcards.seed} > {output}
+    """
+
+rule all:
+    input:
+        [PROJECT_DIR / config["paths"]["ablations"]["models"] / run_config / f"seed_{seed}.ckpt" for seed in SEEDS for run_config in RUN_CONFIGS],
+        # expand(rules.test.output, seed=SEEDS, run_config=RUN_CONFIGS),  # run the tests (although training should include this)
+    default_target: True

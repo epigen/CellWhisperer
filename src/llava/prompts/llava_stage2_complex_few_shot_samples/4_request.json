@@ -1,0 +1,5 @@
+{"annotation": "24-hour SARS-CoV-2 wildtype (WT) infected A549-ACE lung cell line from a male Caucasian donor.",
+ "top_genes": ["AKR1B10", "ALDH3A1", "AKR1C2", "CPLX2", "ALDH1A1", "CYP24A1", "KRT8", "AKR1C3", "TFPI2", "ABCC2", "DKK1", "KRT18", "ACE2", "RSPO3", "AGR2", "CLDN2", "XAGE1A", "MAGEB2", "GABRA5", "PCSK9"],
+ "top_gene_sets": ["Blood-cd141-positive Myeloid Dendritic Cell", "Blood-myeloid Progenitor", "Blood-basophil", "Bone Marrow-myeloid Progenitor", "Bone Marrow-hematopoietic Stem Cell", "Blood-hematopoietic Stem Cell", "Bladder-nk Cell", "Blood-plasmacytoid Dendritic Cell", "Trachea-cd4-positive", "Alpha-Beta T Cell", "Skin-melanocyte", "Prostate-mast Cell", "Large Intestine-cd4-positive", "Alpha-Beta T Cell", "Blood-naive Thymus-Derived Cd4-Positive", "Alpha-Beta T Cell", "Skin-naive B Cell", "Trachea-double-positive", "Alpha-Beta Thymocyte", "Bladder-b Cell", "Salivary Gland-cd4-positive Helper T Cell", "Large Intestine-mast Cell", "Heart-hepatocyte", "Spleen-plasma Cell"],
+ "sample_id": "SRX15624962"
+}

@@ -1,0 +1,12 @@
+archs4_h5: data/human_gene_v2.2.h5
+metasra_path: 'metasra/'
+use_local: True
+entrez:
+  email: dmalzl@cemm.oeaw.ac.at
+  api_key: secret
+archs4_to_uid:
+  n_processes: 4
+archs4_data_extraction:
+  n_processes: 4
+geo_metadata:
+  n_processes: 24

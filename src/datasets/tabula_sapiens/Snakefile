@@ -1,0 +1,67 @@
+from pathlib import Path
+import numpy as np
+from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+import subprocess
+HTTP = HTTPRemoteProvider()
+
+# Download and preprocess the Tabula Sapiens dataset
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+H5AD_URL = "https://figshare.com/ndownloader/files/40067134"
+
+rule all:
+    input:
+        [PROJECT_DIR / config["paths"][dataset_type].format(dataset=dataset_name) for dataset_type in ["read_count_table", "processed_annotations"] for dataset_name in ["tabula_sapiens", "tabula_sapiens_100_cells_per_type"]]
+
+rule download_data:
+    output:
+        temporary("TabulaSapiens.h5ad")
+    params:
+        url=H5AD_URL
+    conda: "../../../envs/unzip.yaml"
+    shell:
+        """
+        wget -O {output[0]}.zip {params.url}
+        unzip {output[0]}.zip
+        rm {output[0]}.zip
+        """
+
+rule process_data:
+    """
+    """
+    input:
+        rules.download_data.output[0]
+    output:
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="tabula_sapiens"),
+        structured_annotations_full = PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="tabula_sapiens"),
+    conda: "cellwhisperer"
+    script:
+        "scripts/process_data.py"
+
+
+rule subsample_data:
+    """
+    """
+    input:
+        read_count_table_full=rules.process_data.output[0]
+    output:
+        read_count_table_100_cells_per_type=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="tabula_sapiens_100_cells_per_type"),
+        structured_annotations_100percelltype = PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="tabula_sapiens_100_cells_per_type"),
+    conda:
+        # PROJECT_DIR / "envs" / "main.yaml"
+        "cellwhisperer"
+    script:
+        "scripts/subsample_data.py"
+
+rule processed_annotations:
+    """
+    we generate processed annotations right away (as a shortcut to circumvent LLM-based processing)
+    """
+    input: PROJECT_DIR / config["paths"]["read_count_table"]
+    output: PROJECT_DIR / config["paths"]["processed_annotations"]
+    conda:
+        "cellwhisperer"
+    script:
+        "scripts/processed_annotations.py"

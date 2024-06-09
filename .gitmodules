@@ -1,0 +1,9 @@
+[submodule "modules/cellxgene"]
+	path = modules/cellxgene
+	url = https://github.com/epigen/cellxgene.git
+[submodule "modules/Geneformer"]
+	path = modules/Geneformer
+	url = https://github.com/epigen/Geneformer.git
+[submodule "modules/LLaVA"]
+	path = modules/LLaVA
+	url = https://github.com/epigen/LLaVA.git

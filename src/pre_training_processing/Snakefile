@@ -1,0 +1,39 @@
+"""
+Use `langchain` to convert structured annotations (JSON) from diverse sources into curated natural language.
+"""
+import subprocess
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+DATASETS = config["datasets"]
+DATASETS = ["cellxgene_census", "archs4_geo"]
+REPLICATES = list(range(config["num_replicates"]))
+REPLICATES = [0]  # archs4_geo uses [0, 1]
+
+include: "../shared/rules/genesets.smk"
+include: "rules/annotation_processing.smk"
+include: "../shared/rules/training_sample_weights.smk"
+
+rule all:
+    input:
+        expand(PROJECT_DIR / config["paths"]["full_dataset"], dataset=DATASETS),
+
+rule integrate_dataset:
+    input:
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
+        # gsva_csv=PROJECT_DIR / config["paths"]["gsva"]["result"],
+        processed_annotations=ancient(rules.aggregate_processed.output.multi),
+        transcriptome_weights=ancient(rules.local_density_to_sample_weight.output.weight.format(modality="transcriptome", dataset="{dataset}")),
+        annotation_weights=ancient(rules.local_density_to_sample_weight.output.weight.format(modality="annotation", dataset="{dataset}")),
+    output:
+        PROJECT_DIR / config["paths"]["full_dataset"]
+    params:
+        anndata_label_name=config["anndata_label_name"],
+    conda:
+        "cellwhisperer"
+        # PROJECT_DIR / "envs" / "main.yaml"
+    resources:
+        mem_mb=300000,
+    script:
+        "scripts/integrate_dataset.py"

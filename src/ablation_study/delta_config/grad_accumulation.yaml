@@ -1,0 +1,4 @@
+trainer:
+  accumulate_grad_batches: 16
+model:
+  learning_rate: 0.0001

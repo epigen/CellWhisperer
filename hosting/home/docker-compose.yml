@@ -1,0 +1,147 @@
+# add these wo lines to the services for debugging
+# - ./docker_conda:/opt/miniconda3
+# - ~/cellwhisperer:/opt/cellwhisperer
+
+
+version: '3.8'
+services:
+  cellwhisperer_clip:
+    build:
+      context: ../..
+    image: cellwhisperer
+    runtime: nvidia
+    working_dir: /opt/cellwhisperer
+    volumes:
+      - ~/cellwhisperer/results/models/jointemb/cellwhisperer_clip_v1.ckpt:/model.ckpt
+      - cache:/cache/
+      - ~/cellwhisperer:/opt/cellwhisperer
+    command: python src/model_server/main.py
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    environment:
+      NVIDIA_VISIBLE_DEVICES: GPU-c38cbc2d-129a-dddf-9ed4-8a0e06763d33
+      MODEL: "/model.ckpt"
+      CONDA_ENV: cellwhisperer
+      TRANSFORMERS_CACHE: /cache/transformers  # soon deprecated in favor of HF_CACHE
+      HF_CACHE: /cache/transformers
+      CELLWHISPERER_CACHE: /cache/cellwhisperer
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              driver: nvidia
+
+  cellwhisperer_llava_controller:  &llava-service
+    stdin_open: true
+    tty: true
+    runtime: nvidia
+    working_dir: /opt/cellwhisperer
+    environment:
+      CONDA_ENV: llava
+    build:
+      context: ../..
+    image: cellwhisperer
+    command: python -m llava.serve.controller --host 0.0.0.0 --port 10000
+
+  cellwhisperer_llava_model:
+    <<: *llava-service
+    command: python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 --controller https://cellwhisperer.bocklab.org/llava-controller --port 40000 --worker https://cellwhisperer.bocklab.org/llava-model-worker --model-path /Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1/
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              driver: nvidia
+    volumes:
+      - ~/cellwhisperer/results/llava/finetuned/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1:/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1:ro  # the name is important
+      - cache:/cache/
+    environment:
+      NVIDIA_VISIBLE_DEVICES: GPU-c38cbc2d-129a-dddf-9ed4-8a0e06763d33
+      CONDA_ENV: llava
+      HF_CACHE: /cache/transformers
+
+  # cellwhisperer_llava_server:
+  #   <<: *llava-service
+  #   command: /bin/bash /start.sh python -m llava.serve.gradio_web_server --controller http://cellwhisperer_llava_controller:10000 --model-list-mode reload
+
+  cellxgene_tabsap: &cellxgene-service
+    build:
+      context: ../..
+    image: cellwhisperer
+    working_dir: /opt/cellwhisperer
+    volumes:
+      - ~/cellwhisperer/results/tabula_sapiens/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ~/cellwhisperer/hosting/home/cellxgene_config.yaml:/cellxgene_config.yaml:ro
+      - ./llava_logs/tabsap/:/logs/
+      - ~/cellwhisperer:/opt/cellwhisperer
+    command: gunicorn --worker-class gevent --bind 0.0.0.0:5005 server.app.wsgi:application --timeout 120
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    environment:
+      CXG_CONFIG_FILE: /cellxgene_config.yaml
+      NVIDIA_VISIBLE_DEVICES: GPU-c38cbc2d-129a-dddf-9ed4-8a0e06763d33
+      LOGDIR: "/logs/"
+      MODEL: "http://cellwhisperer_clip:8910/api"
+      JEST_ENV: "prod"
+      RETRY_ATTEMPTS: 2
+      CONDA_ENV: cellwhisperer
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+    depends_on:
+      - cellwhisperer_clip
+      - cellwhisperer_llava_model
+      - cellwhisperer_llava_controller
+
+  cellxgene_human_disease:
+    <<: *cellxgene-service
+    volumes:
+      - ~/cellwhisperer/hosting/home/cellxgene_config.yaml:/cellxgene_config.yaml:ro
+      - ~/cellwhisperer/results/human_disease/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./llava_logs/human_disease/:/logs/
+      - ~/cellwhisperer:/opt/cellwhisperer
+    # ports:
+      # - "5005:5005"  # for testing without nginx
+    # command: cellxgene launch -v -p 5005  --host 0.0.0.0 --max-category-items 500 --var-names gene_name --debug --backed /dataset.h5ad  --cellwhisperer-clip-model "http://cellwhisperer_clip:8910/api" --debug
+
+  # certificate renewal is run through my nixos configuration
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./htpasswd:/etc/nginx/.htpasswd:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../static:/static
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - cellxgene_tabsap
+      - cellxgene_geo
+      - cellxgene_development_raw
+      - cellxgene_development_scvi
+      - cellxgene_human_disease
+      - cellxgene_car_t
+      - cellxgene_bowel_disease
+      - cellxgene_gut_cell_atlas
+      - cellxgene_hcaorganoids
+      # ...
+    restart: unless-stopped
+
+
+  # was running once: `docker-compose run --rm certbot certonly --webroot --webroot-path=/var/www/certbot -d cellwhisperer.bocklab.org --email mail@moritzs.de --agree-tos --no-eff-email`
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      - nginx
+
+volumes:
+  cache:

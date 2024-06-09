@@ -1,0 +1,560 @@
+"""
+Note: This is pseudo code and not executable without fixing.
+"""
+
+
+from pathlib import Path
+import subprocess
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+rule all:
+    PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="archs4_geo")
+
+rule filter_final_file:
+    """
+    filters the final file to only contain samples that are not in the human_disease dataset.
+    """
+    input:
+        archs4_metadata_unfiltered=PROJECT_DIR / "results" / "archs4_geo_unfiltered.h5ad"
+        human_disease=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="human_disease")
+    output:
+        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="archs4_geo")
+    run:
+        import anndata
+        archs4 = anndata.read_h5ad(input["archs4_metadata_unfiltered"])
+
+        archs4.obs.index.name = "geo_id"
+        archs4.obs.reset_index(inplace=True)
+        archs4.obs.set_index("experiment", inplace=True)
+
+        # add `gene_name` column and set index to ensembl IDs
+        archs4.var.rename(columns={"symbol": "gene_name"}, inplace=True)
+        archs4.var.set_index("ensembl_gene_id", drop=True, inplace=True)
+
+        # filtering
+        human_disease = anndata.read_h5ad(input["human_disease"], backed="r")
+        archs4_filtered = archs4[(~archs4.obs.index.isin(human_disease.obs.index))]
+
+        # compression is 5x slower and 5x smaller
+        archs4_filtered.write_h5ad(output[0])
+
+
+rule structured_json:
+    input:
+        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="archs4_geo")
+    output:
+        PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="archs4_geo")
+    run:
+        import anndata
+        import pandas as pd
+        import json
+        import numpy as np
+        import re
+
+        archs4 = anndata.read_h5ad(input[0], backed="r")
+
+        # Convert a subset of the 'obs' DataFrame to a JSON string with index orientation
+        fields_to_keep_redundant = "study_title sample_name sample_type mapped_ontology_terms raw_SRA_metadata sample_species biosample_title raw_biosample_metadata accession_type geo_metadata molecule_ch1 geo_source_name geo_title".split(
+            " "
+        )
+
+        fields_to_keep_reductionist_v1 = (
+            "sample_name sample_type mapped_ontology_terms raw_SRA_metadata".split(" ")
+        )
+
+        fields_to_keep_reductionist_v2 = (
+            "study_title geo_title geo_source_name sample_type mapped_ontology_terms raw_biosample_metadata treatment".split(" ")
+        )
+
+        # no metasra...
+        fields_to_keep_with_sample_info = "geo_title geo_source_name raw_biosample_metadata treatment treatment_protocol series_summary series_design growth_protocol".split(" ")
+
+        json_list = archs4.obs[fields_to_keep_with_sample_info].to_json(orient="index")
+
+        # Write the JSON string to a file
+        with open(output[0], "w") as f:
+            f.write(json_list)
+
+
+rule archs4_accessions_to_srauids:
+    """
+    Retrieve SRA UIDs for each sample in the ARCHS4 file
+    This can take quite some time (ran ~48 - 72h with 4 cores)
+    """
+    input: 
+        PROJECT_DIR / config["archs4_h5"]
+    output: 
+        PROJECT_DIR / "metadata/archs4_accession_uids.tsv"
+    conda:
+        PROJECT_DIR / "envs/metadatamapping.yaml"
+    threads: config['archs4_to_uid']['n_processes']
+    params:
+        entrez_email = config['entrez']['email'],
+        entrez_api_key = config['entrez']['api_key']
+
+    run:
+        from metadatamapping import archs4, metadata
+        from Bio import Entrez
+        import logging
+
+        Entrez.email = entrez_email
+        Entrez.api_key = entrez_api_key
+
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+
+        # this might be nice to have as config but I leave it as is for now
+        retain_keys = [
+            'geo_accession', 'characteristics_ch1', 'molecule_ch1', 'readsaligned', 'relation', 
+            'series_id', 'singlecellprobability', 'source_name_ch1', 'title'
+        ]
+        archs4_metadata = archs4.get_filtered_sample_metadata(
+            input[0],
+            retain_keys
+        )
+
+        metadata.map_accessions_to_srauids(
+            archs4_metadata,
+            output[0],
+            n_processes = threads
+        )
+
+
+rule gzip_archs4_accession_srauid_map:
+    """
+    compresses the raw textfile to save space
+    """
+    input:
+        PROJECT_DIR / "metadata/archs4_accession_uids.tsv"
+    output:
+        PROJECT_DIR / "metadata/archs4_accession_uids.tsv.gz"
+    shell:
+        "gzip {input}"
+    
+
+rule accessions_from_srauids:
+    """
+    uses the retrieved SRA UIDs and fetches all associated accessions
+    from the SRA server using eSummary
+    """
+    input:
+        PROJECT_DIR / "metadata/archs4_accession_uids.tsv.gz"
+    output:
+        PROJECT_DIR / "metadata/ncbi_accessions_from_srauids.tsv.gz"
+    conda:
+        PROJECT_DIR / "envs/metadatamapping.yaml"
+    params:
+        entrez_email = config['entrez']['email'],
+        entrez_api_key = config['entrez']['api_key']
+    
+    run:
+        import logging
+        
+        import pandas as pd
+
+        from metadatamapping import metadata
+        from Bio import Entrez
+
+        Entrez.email = entrez_email
+        Entrez.api_key = entrez_api_key
+
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+
+        archs4_accession_uids = pd.read_csv(
+            input[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+        archs4_accession_uids.drop_duplicates(inplace = True)
+
+        ncbi_accessions = metadata.srauids_to_accessions(
+            archs4_accession_uids
+        )
+
+        ncbi_accessions.to_csv(
+            output[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+
+rule link_sra_uids_to_biosample_uids:
+    """
+    links SRA UIDs to BioSample UIDs to subsequently retrieve BioSample metadata
+    """
+    input:
+        PROJECT_DIR / "metadata/ncbi_accessions_from_srauids.tsv.gz"
+    output:
+        PROJECT_DIR / "metadata/srauids_to_biosampleuids.tsv.gz"
+    conda:
+        PROJECT_DIR / "envs/metadatamapping.yaml"
+    params:
+        entrez_email = config['entrez']['email'],
+        entrez_api_key = config['entrez']['api_key']
+
+    run:
+        import logging
+        
+        import pandas as pd
+
+        from metadatamapping import link
+        from Bio import Entrez
+
+        Entrez.email = entrez_email
+        Entrez.api_key = entrez_api_key
+
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+
+        ncbi_accessions = pd.read_csv(
+            input[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+        srauids_to_biosampleuids = link.link_sra_to_biosample(
+            ncbi_accessions.uid
+        )
+
+        srauids_to_accessions.dropna(inplace = True)
+
+        ncbi_accessions.to_csv(
+            output[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+
+rule collect_metadata_from_biosample:
+    """
+    uses the linked biosample UIDs to fetch available metadata from NCBI BioSample
+    """
+    input:
+        PROJECT_DIR / "metadata/srauids_to_biosampleuids.tsv.gz"
+    output:
+        PROJECT_DIR / "metadata/biosample_metadata.tsv.gz"
+    conda:
+        PROJECT_DIR / "envs/metadatamapping.yaml"
+    params:
+        entrez_email = config['entrez']['email'],
+        entrez_api_key = config['entrez']['api_key']
+    
+    run:
+        import logging
+        
+        import pandas as pd
+
+        from metadatamapping import metadata
+        from Bio import Entrez
+
+        Entrez.email = entrez_email
+        Entrez.api_key = entrez_api_key
+
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+
+        srauids_to_biosampleuids = pd.read_csv(
+            input[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+        biosample_metadata = metadata.biosample_uids_to_metadata(
+            srauids_to_biosampleuids.biosample
+        )
+
+        biosample_metadata.to_csv(
+            output[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+
+# I actually don't know how to make rules conditional
+# this should probably be a configurable telling the pipeline to get the 
+# normalized metadata from the MetaSRA server or do the mapping locally (see below)
+rule collect_metadata_from_metasra_server:
+    """
+    uses the linked biosample UIDs to fetch available metadata from NCBI BioSample
+    """
+    input:
+        PROJECT_DIR / "metadata/ncbi_accessions_from_srauids.tsv.gz"
+    output:
+        PROJECT_DIR / "metasra_output/api/metasra_metadata.tsv.gz"
+    conda:
+        PROJECT_DIR / "envs/metadatamapping.yaml"
+    run:
+        import logging
+
+        import pandas as pp
+
+        from metadatamapping import metadata
+
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+
+        ncbi_accessions = pd.read_csv(
+            input[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+        metasra_metadata = metadata.metasra_from_study_id(
+            ncbi_accessions.study.unique()
+        )
+
+        metasra_metadata.to_csv(
+            output[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+
+# do the mapping locally by splitting the biosample metadata into batches of
+# 10k samples and running a modified version of the MetaSRA pipeline on each
+# of these batches concurrently to speed up the process (it is very slow)
+# however I don't know if this code even runs as I have no experience with
+# wildcards and their specifics in snakemake
+rule split_raw_metadata_into_batches:
+    """
+    splits the acquired BioSample metadata into batches of 2,500 samples
+    for parallel normalization with MetaSRA
+    """
+    input:
+        PROJECT_DIR / config["archs4_h5"],
+        PROJECT_DIR / "metadata/srauids_to_biosampleuids.tsv.gz",
+        PROJECT_DIR / "metadata/biosample_metadata.tsv.gz",
+        PROJECT_DIR / "metadata/ncbi_accessions_from_srauids.tsv.gz"
+    output:
+        PROJECT_DIR / "metasra_output/raw/raw_biosample_metadata_{id}.json"
+    conda:
+        PROJECT_DIR / "envs/metadatamapping.yaml"
+    run:
+        from metadatamapping import metadata, archs4, metasra
+
+        def read_compessed_tsv(filename):
+            df = pd.read_csv(
+                filename,
+                sep = '\t',
+                compression = 'gzip'
+            )
+            return df
+
+        srauids_to_biosampleuids = read_compessed_tsv(input[1])
+        biosample_metadata = read_compessed_tsv(input[2])
+        ncbi_accessions = read_compessed_tsv(input[3])
+
+        retain_keys = [
+            'geo_accession', 'characteristics_ch1', 'molecule_ch1', 'readsaligned', 'relation', 
+            'series_id', 'singlecellprobability', 'source_name_ch1', 'title'
+        ]
+        archs4_metadata = archs4.get_filtered_sample_metadata(
+            input[0],
+            retain_keys
+        )
+
+        archs4_annotated = metadata.merge_to_annotated_metadata_frame(
+            biosample_metadata,
+            srauids_to_biosampleuids,
+            ncbi_accessions,
+            archs4_metadata
+        )
+
+        accession_and_attributes = metasra.make_accession_and_attributes_table(
+            archs4_annotated
+        )
+
+        metasra.raw_metadata_to_json(
+            accession_and_attributes, 
+            output[0], 
+            chunksize = 2500
+        )
+
+
+rule normalize_metadata_with_metasra:
+    """
+    uses a modified version of the MetaSRA pipeline to normalize metadata fetched from BioSample
+    """
+    input:
+        PROJECT_DIR / "metasra_output/raw/raw_biosample_metadata_{id}.json"
+    output:
+        PROJECT_DIR / "metasra_output/normalized/normalized_biosample_metadata_{id}.json"
+    conda:
+        PROJECT_DIR / "envs/metasra.yaml"
+    shell:
+        "scripts/run_metasra.sh {input} {output}"
+
+
+rule collect_metadata_from_metasra_pipeline:
+    """
+    gathers the outputs of the mapping stage and converts it to a pandas.DataFrame
+    """
+    input:
+        expand(PROJECT_DIR / "metasra_output/normalized/normalized_biosample_metadata_{id}.json", id = ?) # don't know how to write this for aggregation
+    output:
+        PROJECT_DIR / "metasra_output/local/metasra_metadata.tsv.gz"
+    conda:
+        PROJECT_DIR / "envs/metadatamapping.yaml"
+    run:
+        from metadatamapping import metasra, obo
+        import pandas as pd
+
+        import json
+        import os
+
+        # read ontologies used for normalizing metadata
+        metasra_path = config['metasra_path']
+        with open(os.path.join(metasra_path, 'map_sra_to_ontology/ont_prefix_to_filename.json'), 'r') as f:
+            ontology_files = json.load(f)
+
+        for k, v in ontology_files.items():
+            ontology_files[k] = os.path.join(metasra_path, 'map_sra_to_ontology/obo/', v)
+
+        ontologies = [
+            obo.make_id_to_term_dictionary(obo_file) for obo_file in ontology_files.values()
+        ]
+
+        mappings = [
+            metasra.metasra_output_json_to_dataframe(jsonfile, ontologies) for jsonfile in input
+        ]
+
+        metasra_mappings = pd.concat(mappings)
+
+        metasra_mappings.to_csv(
+            output[0],
+            sep = '\t',
+            compression = 'gzip'
+        )
+
+
+def conditional_metasra_input(wildcards):
+    if config["use_local"]
+        return "metasra_output/local/metasra_metadata.tsv.gz"  # output generated by local-based rule
+    else:
+        return "metasra_output/api/metasra_metadata.tsv.gz"  # output generated by api-based rule
+
+
+rule fetch_study_level_metadata_from_geo:
+    """
+    uses GEO accessions for sample and series from archs4 metadata to fetch
+    treatment and growth protocol as well as study summary from GEO FTP to
+    enrich metadata
+    """
+    input:
+        PROJECT_DIR / config["archs4_h5"]
+    output:
+        PROJECT_DIR / "metadata/geo_metadata.tsv.gz"
+    conda:
+        PROJECT_DIR / "envs/metadatamapping.yaml"
+    threads: config['geo_metadata']['n_processes']
+    run:
+        from metadatamapping import metadata, archs4
+
+        retain_keys = [
+            'geo_accession', 'characteristics_ch1', 'molecule_ch1', 'readsaligned', 'relation', 
+            'series_id', 'singlecellprobability', 'source_name_ch1', 'title'
+        ]
+        archs4_metadata = archs4.get_filtered_sample_metadata(
+            input[0],
+            retain_keys
+        )
+        geo_accessions = [
+            (r.geo_accession, r.series_id) for _, r in archs4_metadata.iterrows()
+        ]
+
+        geo_metadata = metadata.fetch_geo_metadata(
+            geo_accessions,
+            output[0],
+            n_processes = threads
+        )
+
+
+rule gzip_geo_metadata:
+    """
+    compresses the raw textfile to save space
+    """
+    input:
+        PROJECT_DIR / "metadata/geo_metadata.tsv"
+    output:
+        PROJECT_DIR / "metadata/geo_metadata.tsv.gz"
+    shell:
+        "gzip {input}"
+
+
+rule generate_anndata_file:
+    """
+    collects the results of all steps, extracts the relevant expression data
+    from the ARCHS4 file and generates an h5ad file from it. This may need a lot of memory
+    For extracting 720k samples we had to use ~300GB of RAM.
+    """
+    input:
+        PROJECT_DIR / config["archs4_h5"],
+        PROJECT_DIR / "metadata/srauids_to_biosampleuids.tsv.gz",
+        PROJECT_DIR / "metadata/biosample_metadata.tsv.gz",
+        PROJECT_DIR / "metadata/ncbi_accessions_from_srauids.tsv.gz",
+        PROJECT_DIR / conditional_metasra_input()
+        PROJECT_DIR / "metadata/geo_metadata.tsv.gz"
+    output:
+        archs4_metadata_unfiltered=PROJECT_DIR / "results" / "archs4_geo_unfiltered.h5ad" 
+    threads: config['archs4_data_extraction']['n_processes']
+    conda:
+        PROJECT_DIR / "envs/metadatamapping.yaml"
+    run:
+        import anndata as ad
+        import pandas as pd
+        import numpy as np
+        from metadatamapping import archs4, metadata
+
+        def read_compressed_tsv(filename):
+            df = pd.read_csv(
+                filename,
+                sep = '\t',
+                compression = 'gzip'
+            )
+            return df
+
+        srauids_to_biosampleuids = read_compessed_tsv(input[1])
+        biosample_metadata = read_compessed_tsv(input[2])
+        ncbi_accessions = read_compessed_tsv(input[3])
+        metasra_metadata = read_compessed_tsv(input[4])
+        geo_metadata = read_compressed_tsv(input[5])
+
+        retain_keys = [
+            'geo_accession', 'characteristics_ch1', 'molecule_ch1', 'readsaligned', 'relation', 
+            'series_id', 'singlecellprobability', 'source_name_ch1', 'title'
+        ]
+        archs4_metadata = archs4.get_filtered_sample_metadata(
+            input[0],
+            retain_keys
+        )
+
+        archs4_annotated = metadata.merge_to_annotated_metadata_frame(
+            biosample_metadata,
+            srauids_to_biosampleuids,
+            ncbi_accessions,
+            archs4_metadata,
+            geo_metadata
+        )
+
+        archs4_geo = metadata.annotate_with_metasra_and_treatment(
+            archs4_annotated,
+            metasra_metadata
+        )
+
+        archs4_data = archs4.samples(
+            input[0],
+            archs4_geo.set_index('geo'),
+            n_processes = threads
+        )
+
+        expression_index = np.array(
+            [(row > 0).sum() for row in archs4_data.X]
+        )
+
+        # based on visualization and the objective to retain as many samples as possible we use 250
+        # see notebooks/filter_samples_by_expression.ipynb for more details
+        archs4_data[expression_index > 250].write(output[0])

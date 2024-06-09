@@ -1,0 +1,10 @@
+{
+    "growth_protocol": NaN,
+    "series_design": "91 samples from 50 patients showing a long-term response (LR) or a short-term response (SR) to treatment are included",
+    "series_summary": "Transcriptional profiles of formalin-fixed-paraffin-embedded melanoma metastases including pre-treatment (PRE) and post-treatment (POST) specimens from 50 patients treated with BRAF inhibitors or with BRAF and MEK inhibitors",
+    "treatment_protocol": NaN,
+    "geo_source_name": "melanoma metastases",
+    "geo_title": "EY15 [pt38]",
+    "raw_biosample_metadata": "source_name: melanoma metastases; tissue: melanoma metastases; tumor_id: 2; sample_class: PRE SR; drug: BRAFi",
+    "treatment": NaN
+}

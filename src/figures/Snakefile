@@ -1,0 +1,42 @@
+import subprocess
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
+LLAVA_BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
+
+GPU_TYPE = "a100"
+# GPU_TYPE = "a100-sxm4-80gb"
+
+include: "../shared/rules/dataset_processing.smk"
+include: "rules/fig1_landscape_validation_ablation.smk"
+include: "rules/fig2_embedding_validations.smk"
+include: "rules/fig3_interactive_usecase_llm.smk"
+include: "rules/fig4_colonic_epithelium.smk"
+
+rule all:
+    input:
+        # Figure 1
+        rules.geo_umap_plots.output.cluster_labeled.format(model=CLIP_MODEL),
+        # Figure 1 (extended)
+        rules.final_model_retrieval_scores.output.barplot,
+        rules.final_model_retrieval_scores.output.lineplot,
+        rules.plot_ablation_wandb.output.all_models_comparison,  # Ablation study
+        # Figure 2
+        expand(rules.performance_macroavg_and_example_plots.output.macrovag_summary_plot, model=CLIP_MODEL),
+        # Figure 2 (extended: embedding and gene set correlation analyses)
+        expand(rules.zero_shot_validations.output.output_directory, dataset=["pancreas"], model=CLIP_MODEL),
+        expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["human_disease"], model=CLIP_MODEL),  # NOTE: Can also be run for tabula_sapiens and for archs4_geo
+
+        # Figure 3 (extended: LLM validations)
+        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
+               plot_name=["detailed", "perplexity_quantile"],
+               dataset=["main", "tabula_sapiens"],  # NOTE: these are evaluation datasets
+               base_model=[LLAVA_BASE_MODEL],  # NOTE could test as well: "BioMistral-7B", "BioMistral-7B-DARE",
+               model=[CLIP_MODEL],
+               ),
+
+        # Figure 4
+        expand(rules.bowel_disease_stem_cell_contribution.output.plot, target_cluster=["", "Cycling ileal epithelial precursor cells"]),
+
+    default_target: True

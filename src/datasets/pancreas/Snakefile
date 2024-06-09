@@ -1,0 +1,25 @@
+"Download and preprocess the Pancreas dataset"
+import subprocess
+from pathlib import Path
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+rule all:
+    input:
+        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="pancreas"),
+
+rule download_data:
+    """
+    """
+    output:
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="pancreas"),
+    conda: "../../../envs/unzip.yaml"
+    shell: """
+        wget -O 43480497.zip https://ndownloader.figshare.com/files/43480497
+        unzip -p -j 43480497.zip data/datasets/pancreas_scib.h5ad > {output.read_count_table}
+        rm 43480497.zip
+        # open with adata and run     adata.X = adata.layers["counts"]
+        python -c "import scanpy as sc; adata = sc.read_h5ad('{output.read_count_table}'); adata.X = adata.layers['counts']; adata.write_h5ad('{output.read_count_table}')"
+
+    """

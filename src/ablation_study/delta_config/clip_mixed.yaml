@@ -1,0 +1,4 @@
+model:
+  loss_config:
+    clip_lambda: 0.5
+    clip_lite_lambda: 0.5

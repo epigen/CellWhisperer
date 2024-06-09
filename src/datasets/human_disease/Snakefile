@@ -1,0 +1,63 @@
+# This snakefile is meant for the batch-effect-corrected version of human_disease's data
+from pathlib import Path
+from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+import subprocess
+
+HTTP = HTTPRemoteProvider()
+
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+COUNT_TABLE_URL = "https://medical-epigenomics.org/papers/schaefer2024/data/datasets/human_disease/rnaseq._.samples.h5ad"
+ANNOTATITON_URL = "https://medical-epigenomics.org/papers/schaefer2024/data/datasets/human_disease/manually_annotated_samples.rnaseq.annotated.tsv"
+
+
+rule all:
+    input:
+        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="human_disease"),
+        PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="human_disease")
+
+
+rule prepare_read_count_table:
+    input:
+        read_count_table=HTTP.remote(COUNT_TABLE_URL, keep_local=True)[0]
+    output:
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="human_disease"),
+    shell: "cp {input} {output}"
+
+rule format_annotations:
+    """
+    Convert the annotations from tsv to json, using the index as the keys
+    """
+    input: HTTP.remote(ANNOTATITON_URL, keep_local=True)[0]
+    output: PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="human_disease")
+
+    run:
+        import pandas as pd
+        import json
+
+        columns = ["sra_title",
+            "sra_study_title",
+            # "sra_study_abstract",  # too much text
+            "sra_sample_attributes",
+            "sample_name",
+            "mapped_ontology_terms",
+            "raw_SRA_metadata",
+            "geo_title",
+            "Tissue",
+            "Tissue_subtype",
+            "Disease",
+            "Disease_subtype",
+            "Treated",
+            "Type",
+            "Comment"]
+
+        df = pd.read_csv(input[0], index_col=1, sep="\t")[columns]
+        # df = df.sample(n=len(df), random_state=42)
+
+        # Transform the df to a dict, such that the index is the key and the values are additional dicts (col: value pairs for each row)
+        annotations = df.to_dict(orient="index")
+
+        with open(output[0], "w") as f:
+            json.dump(annotations, f, indent=4)

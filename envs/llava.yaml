@@ -1,0 +1,21 @@
+name: llava
+channels:
+  - conda-forge
+  - nvidia
+  - nodefaults
+dependencies:
+  - cuda=12.1
+  - python=3.10
+  - cuda-nvcc=12.3
+  - nbconvert=7.16.0
+  - nb_conda=2.2.1
+  - nb_conda_kernels=2.3.1
+  - pyarrow=16.1.0
+  - pip=24.0
+  - transformers=4.37.2
+  - numpy=1.26.4
+  - httpx=0.24.0
+  - httpcore=0.17.3
+  - pip:
+    - -e ../modules/LLaVA/[train]
+    - anndata==0.10.7

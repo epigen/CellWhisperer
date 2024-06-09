@@ -1,0 +1,4 @@
+
+model:
+  model_config:
+    locking_mode: LL

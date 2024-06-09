@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CellWhisperer: Unlocking the Language of Cells</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #1e2820;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 20px;
+            padding-bottom: 60px;
+        }
+        .headline {
+            color: #eee;
+            margin: 40px 0px 20px 0px;
+        }
+        .description {
+            margin-bottom: 30px;
+            color: #bbb;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 10px;
+            background-color: #007bff;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .inactive {
+            background-color: #6c757d;
+            pointer-events: none;
+        }
+        .video-wrapper {
+            cursor: pointer;
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: auto;
+        }
+        .video-wrapper video {
+            width: 100%;
+            display: block;
+        }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #1e2820;
+            background-size: cover;
+            cursor: pointer;
+        }
+        a {
+            color: #bbb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="headline">Unlocking the Language of Cells</h1>
+        <p class="description">
+            CellWhisperer bridges the gap between transcriptomics data and natural language,
+            enabling intuitive interaction with scRNA-seq datasets.
+        </p>
+        <div>
+            <a href="/tabulasapiens/" class="button">Decipher single cells from the <span style="font-weight: bold">Tabula Sapiens dataset</span></a>
+            <a href="/geo/" class="button">Explore the human transcriptome landscape in <span style="font-weight: bold">GEO</span></a>
+            <a href="/colonic_epithelium/" class="button">Chat with <span style="font-weight: bold">colonic epithelium</span></a>
+        </div>
+        <img src="tree_of_knowledge.webp" alt="Centered Image" style="display: block; margin-left: auto; margin-right: auto; width: 50%;" />
+        <div>
+            <a href="https://openreview.net/forum?id=yWiZaE4k3K" class="button">Spotlight paper @ ICLR 2024 MLGenX</a>
+            <a href="TODO" class="button inactive" style="font-weight: bold;">BioRxiv (soon)</a>
+            <a href="https://github.com/epigen/cellwhisperer" class="button">Code</a>
+            <a href="https://medical-epigenomics.org/papers/schaefer2024/data/" class="button">Generated datasets and models</a>
+        </div>
+        <h2 class="headline">Tutorial</h2>
+        <p class="description">(Click the annotated screenshot for a 2-minute video-tutorial)</p>
+        <div class="video-wrapper">
+            <video id="videoPlayer" width="100%" controls>
+                <source src="https://medical-epigenomics.org/papers/schaefer2024/video/Main%20v1%20HighRes.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div class="overlay" id="videoOverlay">
+                <img src="annotated_screenshot.png" alt="Annotated screenshot of CellWhisperer application" width="100%" />
+            </div>
+        </div>
+        <h2 class="headline">Analyze your own data</h2>
+        <div class="description" style="
+                    max-width: 800px;
+                    margin: auto;
+                    ">
+            <p>
+                To prepare your scRNA-seq data for use within CellWhisperer, follow these simple steps:
+            </p>
+            <ol style="
+                    padding-left: 110px;
+                    padding-right: 110px;
+                    ">
+                <li>Generate an h5ad file containing raw reads and a <tt>gene_name</tt> <tt>var</tt> column</li>
+                <li>Run our single-command processing pipeline</li>
+                <li>Start the CellWhisperer-integrated CELLxGENE Explorer</li>
+            </ol>For details on these steps, refer to the "Analysis of new datasets with CellWhisperer" section in our <a href="https://github.com/epigen/cellwhisperer#analyze" target="_blank">README</a>.
+        </div>
+        <h2 class="headline">Citation</h2>
+        <div class="description" style="
+                    max-width: 800px;
+                    margin: auto;
+                    ">
+            <p>
+                If you use CellWhisperer in your research, please cite the following preprint:
+            </p>
+            <p>
+                Moritz Schaefer*, Peter Peneder*, Daniel Malzl, Mihaela Peycheva, Jake Burton, Anna Hakobyan, Varun Sharma, Thomas Krausgruber, Jörg Menche, Eleni M. Tomazou, Christoph Bock (2024) <i>Multimodal learning of transcriptomes and text enables interactive single-cell RNA-seq data exploration with natural-language chats.</i> bioRxiv. TODO URL
+            </p>
+        </div>
+    </div>
+    <script>
+        document.getElementById('videoOverlay').addEventListener('click', function() {
+            var video = document.getElementById('videoPlayer');
+            this.style.display = 'none';
+            video.style.display = 'block';
+            video.play();
+        });
+    </script>
+</body>
+</html>

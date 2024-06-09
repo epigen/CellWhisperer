@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+
+[project]
+name = "cellwhisperer"
+version = "0.1.0"
+description = "CellWhisperer"
+readme = "README.md"
+authors = [{name = "Moritz Schaefer", email = "mail@moritzs.de"}]
+keywords = ["single cell llm"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+]
+# homepage = "https://github.com/epigen/cellwhisperer"
+
+[project.scripts]
+cellwhisperer = "cellwhisperer.jointemb.training:cli_main"
+cellwhisperer_sweeping = "cellwhisperer.jointemb.sweeping:main"
+
+[tool.setuptools.packages.find]
+where = ["src", "modules/Geneformer", "modules"]
+namespaces = false
+# packages = ["cellwhisperer", "geneformer"]
+
+[tool.setuptools.package-dir]
+"cellwhisperer" = "src/cellwhisperer"
+"geneformer" = "modules/Geneformer/geneformer"

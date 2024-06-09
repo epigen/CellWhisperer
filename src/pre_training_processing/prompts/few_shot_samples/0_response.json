@@ -1,0 +1,11 @@
+{
+    "Relevant Information to be Included": [
+        "Gliomasphere cell lines cultured in Neurobasal Medium with supplements",
+        "Cells derived from glioblastoma patients",
+        "Cells depleted for CD45+ inflammatory cells",
+        "Single cells sorted from glioblastoma patients and established cell lines",
+        "Gliomasphere cell lines differentiated using serum",
+        "Cell type: Glioblastoma"
+    ],
+    "Final Response": "Glioblastoma cells derived from gliomasphere cell lines depleted for CD45+-cells. These cells were cultured in Neurobasal Medium supplemented with B27, N2, and EGF/FGF, and were differentiated by transitioning to DMEM with 10% FCS for 7 days."
+}

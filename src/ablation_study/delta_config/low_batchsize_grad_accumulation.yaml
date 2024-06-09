@@ -1,0 +1,3 @@
+batch_size: 16
+trainer:
+  accumulate_grad_batches: 32
