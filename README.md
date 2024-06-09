@@ -1,6 +1,6 @@
 # CellWhisperer
 
-This is the *private* `main`` branch. Development is carried on here.
+This is the *private* `main` branch. Internal development is carried out here.
 
 The `public` branch contains the source code that is shown to the public, with full commit history.
 
@@ -78,9 +78,7 @@ See [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md)
 
 We provide all our validations and analyses in a single pipeline, (re)producing all (*) plots in our paper.
 
-Note that due to the high computational cost, this pipeline relies on some precomputed files, which are downloaded from our server as part of the pipeline. Nevertheless computing all the analyses will require a considerable amount of storage (~1TB), RAM (~1TB), CPU (~100 cores), GPU and time (2 days) resources.
-
-TODO: update specifications (I added downloads)
+Note that due to the high computational cost, this pipeline relies on some precomputed files, which are downloaded from our server as part of the pipeline. Nevertheless computing all the analyses will require a considerable amount of storage (~1TB), RAM (500GB), GPU and time (2 days) resources.
 
 To run the pipeline, execute
 
@@ -164,7 +162,7 @@ Note: the pipelines includes code to generate the datasets. Since this takes a c
 - results: Can be reproduced with your scripts and pipelines
 - resources: External, references, datasets and tools that are project inherent and can be reproduced or downloaded with your scripts and pipelines
 - **src**: Main model, training, data source code
-- **modules**: Forked and modified source code repositories
+- **modules**: Forked and modified source code repositories included as git submodules
 
 ### src/
 
@@ -173,7 +171,7 @@ Immediately relevant to the user are:
 - `figures`: Pipeline to (re)produce all analyses/plots for the final manuscript (see the `src/figures/README.md` for details)
 - `cellxgene_preprocessing`: Pipeline to preprocess new (single cell) RNA-seq datasets for interactive exploration in CELLxGENE/CellWhisperer
 
-These modules and pipelines are used 'under the hood':
+Under the hood, the main python package (`cellwhisperer`) and a series of pipelines are important:
 
 - `cellwhisperer`: CellWhisperer embedding model python package including model, training and inference code
 - `datasets`: retrieval/preparation of training and validation datasets (transcriptomes as well as annotations)
@@ -188,7 +186,7 @@ We use `blacken` for automated code formatting.
 
 ### modules/
 
-CellWhisperer builds atop two projects that are integrated via git submodules. These were forked from original repositories on GitHub, in order to retain transparency on our code contributions as well as the option to feed back code into the upstream repository (in case of `cellxgene`).
+CellWhisperer builds atop three projects that are integrated via git submodules. These were forked from original repositories on GitHub, in order to retain transparency on our code contributions as well as the option to feed back code into the upstream repository (in case of `cellxgene`).
 
 - `llava`: CellWhisperer LLM model python package including model, training and inference code
 - `cellxgene`: CELLxGENE Explorer browser package, modified to integrate UI and API elements for CellWhisperer integration

@@ -81,7 +81,7 @@ rule cellwhisperer_cluster_keywords:
     """
     input:
         adata=rules.leiden_umap_embeddings.output.adata,
-        model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
+        model=ancient(PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt"),
     output:
         csv=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "cellwhisperer_annotated_clusters.csv",
     conda:
@@ -126,7 +126,6 @@ rule compile_h5ad:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         processed_data=PROJECT_DIR / config["paths"]["model_processed_dataset"], # rules.process_full_dataset.output.model_outputs,
         enrichr_terms=PROJECT_DIR / config["paths"]["enrichr_terms_json"],
-        model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
         gene_log1p_normalizers=PROJECT_DIR / "results" / "gene_normalizers" / "{dataset}.pickle",  # NOTE not required anymore actually
         top_genes=PROJECT_DIR / "results" / "{dataset}" / "top_genes.parquet",
     output:

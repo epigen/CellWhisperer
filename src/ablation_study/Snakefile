@@ -58,41 +58,8 @@ rule test:
         cellwhisperer test --config {input.base_config} --config {input.delta_config} --model_ckpt {input.model_path} --wandb {wildcards.run_config}_{wildcards.seed} --trainer.logger.init_args.group ablation_study3_test --seed_everything {wildcards.seed} > {output}
     """
 
-rule wandb_export:
-    input:
-        expand(rules.test.output, seed=SEEDS, run_config=RUN_CONFIGS),
-    output:
-        "wandb_export.csv"
-    shell: """
-    echo "Go to wandb and export the scores to {output}. You've got 2 minutes ;)"
-    sleep 120
-    """
-
-
-rule plot_wandb:
-    """
-    """
-    input:
-        csv=ancient(rules.wandb_export.output[0])  # NOTE: CSV was obtained from wandb. For convenience, it is committed as part of the source code right now
-    output:
-        top_models_metrics_details=PROJECT_DIR / config["paths"]["ablations"]["plots"] / "top_models_metrics_details.pdf",
-        all_models_comparison=PROJECT_DIR / config["paths"]["ablations"]["plots"] / "all_models_comparison.pdf",
-    params:
-        metrics = [
-            "valfn_integration_TabSap/avg_bio",
-            "valfn_integration_TabSap/ASW_label__batch",  # Note: relatively narrow result range (0.83 - 0.86)
-            "valfn_human_disease_dedup/recall_at_5_macroAvg",
-            "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
-            "valfn_zshot_TabSap_celltype_lvl/f1_macroAvg"],
-        top_models = ["full_model", "no_archs4_data", "no_census_data", "scgpt"]
-    conda:
-        "cellwhisperer"
-    notebook:
-        "notebooks/plot_results.py.ipynb"
-
-
 rule all:
     input:
         [PROJECT_DIR / config["paths"]["ablations"]["models"] / run_config / f"seed_{seed}.ckpt" for seed in SEEDS for run_config in RUN_CONFIGS],
-        rules.plot_results.output.all_models_comparison
+        # expand(rules.test.output, seed=SEEDS, run_config=RUN_CONFIGS),  # run the tests (although training should include this)
     default_target: True

@@ -8,8 +8,8 @@ METADATA_COLS_PER_DATASET = config["metadata_cols_per_zero_shot_validation_datas
 LLAVA_BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
 TRANSCRIPTOME_MODEL_NAME = config["zero_shot_validation_transcriptome_model_name"]
 
-# GPU_TYPE = "a100"
-GPU_TYPE = "a100-sxm4-80gb"
+GPU_TYPE = "a100"
+# GPU_TYPE = "a100-sxm4-80gb"
 
 include: "../shared/rules/dataset_processing.smk"
 include: "rules/fig1_method_landscape.smk"

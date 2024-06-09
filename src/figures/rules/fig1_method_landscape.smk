@@ -11,6 +11,9 @@ rule geo_umap_plots:
         cluster_labeled=PROJECT_DIR / config["paths"]["geo_umap"] / "cluster_labeled.svg",
         submission_date_labeled=PROJECT_DIR / config["paths"]["geo_umap"] / "submission_date_labeled.svg",
         highlighted_clusters_date_kdes=PROJECT_DIR / config["paths"]["geo_umap"] / "highlighted_clusters_date_kdes.svg",
+    resources:
+        mem_mb=300000,  # for good measure
+        slurm="cpus-per-task=2"
     params:
         highlight_clusters=["Active Myeloid Differentiation in HSPCs", "K562 Erythroleukemia Cells in Culture", "Obese adipose tissue immune and metabolic state"]  # optional: "Undifferentiated Human Pluripotent Stem cells", "Active Myeloid and T Cell Immune Response",
     conda:

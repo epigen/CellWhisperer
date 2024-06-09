@@ -9,8 +9,8 @@ configfile: PROJECT_DIR / "config.yaml"
 CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
 LLAVA_BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
 
-# GPU_TYPE = "a100"
-GPU_TYPE = "a100-sxm4-80gb"
+GPU_TYPE = "a100"
+# GPU_TYPE = "a100-sxm4-80gb"
 
 include: "../shared/rules/download_models.smk"
 include: "../shared/rules/genesets.smk"
