@@ -64,8 +64,6 @@ rule zero_shot_validations:
      - cell type reference and predictions on UMAP
      - confusion matrix
      - integration scores
-     
-
     """
     input:
         # no need to have seperate embeddings and read count tables for the tabula sapiens well studied cell types, can just use the full dataset and subset:
@@ -83,7 +81,7 @@ rule zero_shot_validations:
     conda:
         "cellwhisperer"
     resources:
-        mem_mb=500000,
+        mem_mb=350000,
         slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
 
     log:
@@ -93,14 +91,13 @@ rule zero_shot_validations:
 
 rule performance_macroavg_and_example_plots:
     """
+    Summarize the performance metrics across multiple datasets and metadata columns
     """
     input:
-       zero_shot_validations_result_dirs=expand(rules.zero_shot_validations.output.output_directory, dataset=TARGET_DATASETS,model="{model}" ),
+       zero_shot_validations_result_dirs=lambda wildcards: expand(rules.zero_shot_validations.output.output_directory, dataset=TARGET_DATASETS, model=[wildcards.model]),
     output:
         macrovag_summary_plot=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "performance_metrics_cellwhisperer.selected_datasets.rocauc_and_accuracy.pdf",
         per_class_examples_plot=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "performance_metrics_cellwhisperer.selected_classes_and_datasets.pdf",
-    params:
-        result_dir = get_path(["paths", "zero_shot_validation","result_dir"], model="{model}"),
     conda:
         "cellwhisperer"
     resources:
