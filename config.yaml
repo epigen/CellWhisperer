@@ -30,7 +30,7 @@ paths:
     plots: results/plots/gsva_correlation/{dataset}/{model}
 
   zero_shot_validation:
-    result_dir: results/zero_shot_validation/{model}/
+    result_dir: results/plots/zero_shot_validation/{model}/
 
   llava:
     root: results/llava/
