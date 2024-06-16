@@ -69,6 +69,8 @@ rule compute_top_genes:
     All genes are considered such that also genes may come up that are not reflected Geneformer's vocabulary. This may be fine, since these non-represented genes are likely impacting other, represented, genes.
 
     Requires a lot of RAM to be able to transpose the sparse matrix (required for efficient computation)
+
+    Takes about ~1 hour for archs4_geo
     """
 
     input:

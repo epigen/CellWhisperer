@@ -98,6 +98,7 @@ rule performance_macroavg_and_example_plots:
     output:
         macrovag_summary_plot=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "performance_metrics_cellwhisperer.selected_datasets.rocauc_and_accuracy.pdf",
         per_class_examples_plot=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "performance_metrics_cellwhisperer.selected_classes_and_datasets.pdf",
+        result_dir=lambda wildcards, output: get_path(["paths", "zero_shot_validation", "result_dir"], model=wildcards.model)
     conda:
         "cellwhisperer"
     resources:

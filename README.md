@@ -82,7 +82,7 @@ See [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md)
 
 We provide all our validations and analyses in a single pipeline, (re)producing all (*) plots in our paper.
 
-Note that due to the high computational cost, this pipeline relies on some precomputed files, which are downloaded from our server as part of the pipeline. Nevertheless computing all the analyses will require a considerable amount of storage (~1TB), RAM (500GB), GPU and time (2 days) resources.
+Note that due to the high computational cost, this pipeline relies on some precomputed files, which are downloaded from our server as part of the pipeline. Nevertheless computing all the analyses will require a considerable amount of storage (~1TB), RAM (up to 1TB), GPU and time (2 days) resources.
 
 To run the pipeline, execute
 

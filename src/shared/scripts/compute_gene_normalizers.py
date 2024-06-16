@@ -22,7 +22,7 @@ columns = [adata.X[:, i].toarray() for i in tqdm(range(len(tqdm(adata.var))))]
 # Calculate the normalization with 0s using parallel processing
 gene_mean_log1ps = {}
 
-with concurrent.futures.ProcessPoolExecutor(max_workers=snakemake.threads) as executor:
+with concurrent.futures.ProcessPoolExecutor(max_workers=64) as executor:
     # Map the calculate_mean_log1p function to the columns
     results = list(tqdm(executor.map(calculate_mean_log1p, columns)))
 
