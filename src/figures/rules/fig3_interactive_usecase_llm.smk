@@ -170,7 +170,7 @@ rule llava_eval_gpt4_review:
         reference_responses=rules.llava_evaluation_generation_preparation.output.reference_responses,
         llava_responses=expand(rules.llava_evaluation_generation.output.llava_responses, input_features=["", "_with_top_genes", "_with_top_genes_gene_sets", "_text_only"], allow_missing=True),
         gpt4transcriptome_baseline_responses=rules.gpt4transcriptome_baseline.output,
-        rule=ancient("llava/prompts/gpt_evaluation_prompts.json")
+        rule=ancient("llava/prompts/gpt_evaluation_prompts.json")  # Alternative prompt (leading to similar results: llava/prompts/gpt_evaluation_prompts_alternative.json)
     output:
         evaluation=protected(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4_review.jsonl")
     conda:

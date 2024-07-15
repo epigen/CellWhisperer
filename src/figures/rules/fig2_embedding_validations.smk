@@ -1,10 +1,9 @@
-from cellwhisperer.config import get_path
-from snakemake.io import directory
-
-# Extended fig 2
-
 include: "../../shared/rules/training_sample_weights.smk"
 
+ZERO_SHOT_RESULTS = PROJECT_DIR / config["paths"]["zero_shot_validation"]["result_dir"]
+
+
+# Extended fig 2
 rule cw_transcriptome_term_scores:
     """
     - Compute the term-based match scores using (CW)
@@ -68,12 +67,12 @@ rule zero_shot_validations:
     input:
         # no need to have seperate embeddings and read count tables for the tabula sapiens well studied cell types, can just use the full dataset and subset:
         processed_dataset=lambda wildcards: expand(rules.process_full_dataset.output.model_outputs, dataset=wildcards.dataset if  wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens", model=wildcards.model)[0],
-        raw_read_count_table = lambda wildcards: get_path(["paths", "read_count_table"], dataset=wildcards.dataset if  wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens"),
+        raw_read_count_table = lambda wildcards: (PROJECT_DIR / config["paths"]["read_count_table"]).to_posix().format(dataset=wildcards.dataset if  wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens"),
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",  # needed to embed the keywords  
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
         # Using a directory here because the exact files produced depend on the dataset:
-        output_directory=directory(get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "{dataset}"),
+        output_directory=directory(ZERO_SHOT_RESULTS / "{dataset}"),
     params:
         dataset = TARGET_DATASETS,
         metadata_cols_per_dataset = METADATA_COLS_PER_DATASET,
@@ -96,9 +95,9 @@ rule performance_macroavg_and_example_plots:
     input:
        zero_shot_validations_result_dirs=lambda wildcards: expand(rules.zero_shot_validations.output.output_directory, dataset=TARGET_DATASETS, model=[wildcards.model]),
     output:
-        macrovag_summary_plot=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "performance_metrics_cellwhisperer.selected_datasets.rocauc_and_accuracy.pdf",
-        per_class_examples_plot=get_path(["paths", "zero_shot_validation", "result_dir"], model="{model}") / "performance_metrics_cellwhisperer.selected_classes_and_datasets.pdf",
-        result_dir=lambda wildcards, output: get_path(["paths", "zero_shot_validation", "result_dir"], model=wildcards.model)
+        macrovag_summary_plot=ZERO_SHOT_RESULTS / "performance_metrics_cellwhisperer.selected_datasets.rocauc_and_accuracy.pdf",
+        per_class_examples_plot=ZERO_SHOT_RESULTS / "performance_metrics_cellwhisperer.selected_classes_and_datasets.pdf",
+        result_dir=ZERO_SHOT_RESULTS
     conda:
         "cellwhisperer"
     resources:
