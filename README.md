@@ -14,12 +14,13 @@ For more information on project management, follow https://github.com/epigen/cel
 
 ## Install
 
+To obtain this repository, run `git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules`. Make sure to add the flag to download the submodules as well.
+
+If you already cloned, but without the `--recurse-submodules` flag, run the following: `git submodule update --init --recursive`
+
 ### Install via conda/pip
 
-1. Run `git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules`
-  If you already cloned, but did not add the `--recurse-submodules` run the following:
-  `git submodule update --init --recursive`
-2. Ensure correct environment (conda flexible channel prio and CUDA >= 12)
+1. Ensure correct environment (conda flexible channel prio and CUDA >= 12)
 
 ```bash
 cat `~/.condarc`
@@ -35,14 +36,14 @@ Sun Mar 31 17:36:31 2024
 ...
 ```
 
-3. Install the environments
+2. Install the environments
   ```
   mamba env create -f envs/main.yaml  # name: cellwhisperer   this already includes `pip install -e .`
   mamba env create -f envs/llava.yaml  # name: llava    this already includes `pip install -e ../modules/LLaVA/[train]`
 
   conda activate cellwhisperer
   ```
-4. Develop :)
+3. Develop :)
 
 ### Install within Docker
 
