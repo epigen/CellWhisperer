@@ -1,3 +1,0 @@
-Using the provided YAML annotation of an RNA sequencing study for a single sample, please describe the sample in natural language. Your response should be brief and focus solely on the biological aspects of the sample that contribute to understanding its cell state, such as cell type and any pertinent conditions or treatments.
-
-Specifically, exclude all technical and methodological details of the sequencing process, including but not limited to library type, read length, sequencing platform, or any other laboratory technique-related information. The aim is to succinctly convey what the sample is, biologically, without any reference to how it was sequenced or any other procedural data.
