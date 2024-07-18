@@ -26,8 +26,6 @@ import copy
 from functools import partial
 import logging
 
-from cellwhisperer.jointemb.regularization import InputRegularization
-
 logger = logging.getLogger(__name__)
 
 warnings.filterwarnings(
@@ -54,7 +52,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             model_config: configuration for the model. Can be a dict or a TranscriptomeTextDualEncoderConfig object.
             loss_config: configuration for the loss. Can be a dict or a LossConfig object.
             val_batch_size: batch size to used for dedicated validation functions. 32 should be feasible on most GPUs.
-            gauss_noise_std: Currently inactive: standard deviation of the gaussian noise to add to the input embeddings (features). if 0.0 or None noise won't be added to training embeddings
+            gauss_noise_std: Deprecated & unused. Will be removed in future versions.
             max_epochs: maximum number of epochs to train for
             learning_rate: learning rate to use for the optimizer.
             lr_warmup: number of steps to use for learning rate warmup. If set to 0, no warmup is used. If set to a float, it is interpreted as a fraction of the total number of steps.
@@ -84,7 +82,6 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             self.model.discriminator
         )
 
-        self.input_regularization = InputRegularization(gauss_noise_std=gauss_noise_std)
         self.val_batch_size = val_batch_size
 
         self.save_hyperparameters()
