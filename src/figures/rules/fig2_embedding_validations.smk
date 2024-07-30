@@ -66,13 +66,13 @@ rule zero_shot_validations:
     """
     input:
         # no need to have seperate embeddings and read count tables for the tabula sapiens well studied cell types, can just use the full dataset and subset:
-        processed_dataset=lambda wildcards: expand(rules.process_full_dataset.output.model_outputs, dataset=wildcards.dataset if  wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens", model=wildcards.model)[0],
-        raw_read_count_table = lambda wildcards: (PROJECT_DIR / config["paths"]["read_count_table"]).to_posix().format(dataset=wildcards.dataset if  wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens"),
+        processed_dataset=lambda wildcards: rules.process_full_dataset.output.model_outputs.format(dataset=wildcards.dataset if wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens", model=wildcards.model),
+        raw_read_count_table=lambda wildcards: str(PROJECT_DIR / config["paths"]["read_count_table"]).format(dataset=wildcards.dataset if wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens"),
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",  # needed to embed the keywords  
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
         # Using a directory here because the exact files produced depend on the dataset:
-        output_directory=directory(ZERO_SHOT_RESULTS / "{dataset}"),
+        output_directory=directory(ZERO_SHOT_RESULTS / "datasets" / "{dataset,[^/]+}"),
     params:
         dataset = TARGET_DATASETS,
         metadata_cols_per_dataset = METADATA_COLS_PER_DATASET,
@@ -93,7 +93,7 @@ rule performance_macroavg_and_example_plots:
     Summarize the performance metrics across multiple datasets and metadata columns
     """
     input:
-       zero_shot_validations_result_dirs=lambda wildcards: expand(rules.zero_shot_validations.output.output_directory, dataset=TARGET_DATASETS, model=[wildcards.model]),
+        zero_shot_validations_result_dirs=[ZERO_SHOT_RESULTS / "datasets" / dataset for dataset in TARGET_DATASETS],
     output:
         macrovag_summary_plot=ZERO_SHOT_RESULTS / "performance_metrics_cellwhisperer.selected_datasets.rocauc_and_accuracy.pdf",
         per_class_examples_plot=ZERO_SHOT_RESULTS / "performance_metrics_cellwhisperer.selected_classes_and_datasets.pdf",
