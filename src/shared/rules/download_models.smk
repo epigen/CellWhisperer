@@ -45,7 +45,7 @@ rule download_cellwhisperer_llm:
     input:
         HTTP.remote(f"{BASE_URL}/models/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1.tar.gz")
     output:
-        directory(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"])
+        directory(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"].format(base_model=config["model_name_path_map"]["llava_base_llm"] , model=config["model_name_path_map"]["cellwhisperer"]))
     shell: """
         mkdir {output}
         tar -xzvf {input} -C {output}
