@@ -2,6 +2,9 @@ from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
 HTTP = HTTPRemoteProvider()
 
 rule bowel_disease_stem_cell_contribution:
+    """
+    leads to p < 1e-37
+    """
     input:
         # dataset=PROJECT_DIR / "results" / "bowel_disease" / CLIP_MODEL / "cellxgene.h5ad",  # Our pipeline could process the file from scratch, but due to stochasticity, there will be slight mismatches with the plots in the manuscript
         dataset=HTTP.remote(f"{config['precomputing_base_url']}/datasets/bowel_disease/cellxgene.h5ad", keep_local=True)[0],
@@ -15,7 +18,7 @@ rule bowel_disease_stem_cell_contribution:
         mem_mb=50000,
         slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
     params:
-        search_term="stem cell",
+        search_term="stem cells",
         target_cluster="Cycling ileal epithelial precursor cells"
     notebook:
         "../notebooks/bowel_disease_stem_cell_contribution.py.ipynb"
