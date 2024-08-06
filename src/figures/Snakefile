@@ -27,8 +27,6 @@ rule all:
         rules.plot_ablation_wandb.output.all_models_comparison,  # Ablation study
         # Figure 2
         expand(rules.performance_macroavg_and_example_plots.output.macrovag_summary_plot, model=CLIP_MODEL),
-        # Figure 2 (extended)
-        expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["archs4_geo", "human_disease", "tabula_sapiens"], model=CLIP_MODEL),
         # Figure 2 (extended: gene set correlation analysis)
         expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["human_disease"], model=CLIP_MODEL),  # NOTE: Can also be run for tabula_sapiens and for archs4_geo
 
@@ -47,6 +45,5 @@ rule all:
 
         # Figure 4
         rules.bowel_disease_stem_cell_contribution.output.plot,
-
 
     default_target: True
