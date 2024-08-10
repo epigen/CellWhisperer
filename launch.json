@@ -6,6 +6,7 @@
             "request": "launch",
             "name": "Train immgen",
             "program": "${workspaceFolder}/src/cellwhisperer/jointemb/training.py",
+            "condaEnv": "cellwhisperer",
             "args": [
                 "fit",
                 "--model.model_config.projection_dim",

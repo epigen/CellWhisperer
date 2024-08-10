@@ -17,10 +17,16 @@ rule leiden_umap_embeddings:
 
 rule llava_annotate_clusters:
     """
-    Generate CSV has two cols. (1) leiden cluster ID. (2) annotation
+    Uses the `leiden` obs column as well as all columns declared in `.uns["cluster_fields"]` to generate clusters
+
+    Generated CSV has the following columns:
+    - cluster_field: obs column name representing clustering (e.g., "leiden")
+    - cluster_value: value within the cluster obs column (e.g., leiden cluster ID "1")
+    - cluster_annotation: generated annotations
     """
     input:
-        adata=rules.leiden_umap_embeddings.output.adata,
+        embedding_adata=rules.leiden_umap_embeddings.output.adata,
+        read_count_adata=PROJECT_DIR / config["paths"]["read_count_table"],  # needed for potential uns and obs fields
         llava_model=ancient(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"].format(base_model=LLAVA_BASE_MODEL, model="{model}")),
     output:
         csv=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_annotated_clusters.csv"
@@ -58,7 +64,6 @@ rule gpt4_curate_llava_annotations:
 
 rule mixtral_curate_llava_annotations:
     """
-    Output is protected to prevent high GPT-4 cost. Script also fails with more than 200 clusters
     """
     input:
         cellwhisperer_labels=rules.llava_annotate_clusters.output.csv,
@@ -75,9 +80,9 @@ rule mixtral_curate_llava_annotations:
 
 rule cellwhisperer_cluster_keywords:
     """
-    Needs a 5GB GPU
-    TODO drop
+    Alternative strategy to generate cluster labels. No need for multimodal LLM.
 
+    Needs a 5GB GPU
     """
     input:
         adata=rules.leiden_umap_embeddings.output.adata,
@@ -98,7 +103,7 @@ rule cellwhisperer_cluster_keywords:
 rule gpt4_curate_cluster_keywords:
     """
     Output is protected to prevent high GPT-4 cost. Script also fails with more than 200 clusters
-    TODO drop
+
     """
     input:
         cellwhisperer_labels=rules.cellwhisperer_cluster_keywords.output.csv,
@@ -121,7 +126,7 @@ rule compile_h5ad:
 
     input:
         umap_embedding=rules.leiden_umap_embeddings.output.adata,
-        # cellwhisperer_keyword_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels, # TODO drop
+        # cellwhisperer_keyword_labels=rules.gpt4_curate_cluster_keywords.output.curated_labels, # alternative strategy to generate cluster labels
         cellwhisperer_llava_labels=rules.gpt4_curate_llava_annotations.output.curated_labels if "OPENAI_API_KEY" in os.environ else rules.mixtral_curate_llava_annotations.output.curated_labels,
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         processed_data=PROJECT_DIR / config["paths"]["model_processed_dataset"], # rules.process_full_dataset.output.model_outputs,

@@ -229,8 +229,11 @@ We only use human data and raw read counts (not normalized) for our datasets. No
 - If your dataset is large (i.e. > 100k cells), restrict the provided metadata fields (e.g. in `obs` and `var`) to what is really necessary
 - For best results, filter cells with few expressed genes (e.g. <100 genes with expression <1)
 - Try to use `categorical` instead of 'object' dtype for categorical `obs` columns
+- If you want to generate cluster-labels for your own provided `obs` cluster column(s), provide a field `.uns["cluster_fields"] = ["obs_col_name1", "obs_col_name2", ...]`
 - Any layouts that should make it into the webapp need to adhere to these rules:
   - stored in `.obsm` whith name `X_{name}`
   - type: `np.ndarray` (NOT `pd.DataFrame`), dtype: float/int/uint
   - shape: `(n_obs, >= 2)`
   - all values finite or NaN (NO +Inf or -Inf)
+  - If you use multiple 'layers' of layouts/embeddings (e.g. sub-clustering), you can 'mask out' cells by setting them to nan
+    - consider following this naming schema: `'X_umap_<name_of_obs_column>-<value_of_obs_column>` if you provide a nan-filled layout per obs-value and `'X_umap_<name_of_obs_column>` if you provide the sub-clustered embeddings in parallel in a single column.

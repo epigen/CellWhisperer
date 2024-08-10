@@ -17,6 +17,7 @@ include: "../shared/rules/genesets.smk"
 include: "../shared/rules/dataset_processing.smk"
 include: "rules/prepare_cellxgene_dataset.smk"
 
+
 rule all:
     input:
         expand(rules.compile_h5ad.output["adata"], dataset=config["datasets"], model=CLIP_MODEL),
