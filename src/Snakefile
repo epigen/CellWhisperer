@@ -67,4 +67,5 @@ rule models:
     input:
         rules.download_cellwhisperer_embedding_model.output,  # Download included through
         rules.download_cellwhisperer_llm.output,
-        rules.download_mixtral.output
+        rules.download_mixtral.output,
+        rules.download_geneformer.output,
