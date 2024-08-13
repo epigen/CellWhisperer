@@ -56,7 +56,7 @@ dependencies:
     - scvi-tools==0.20.3
     - cell-gears==0.0.2
     - umap-learn==0.5.5
-    - llama-cpp-python==0.2.77 -C cmake.args="-DLLAMA_CUBLAS=on;-DLLAMA_BLAS_VENDOR=OpenBLAS"
+    - llama-cpp-python==0.2.77 -C cmake.args="-DGGML_CUDA=on"
     - -e ..
     - -e ../modules/cellxgene/
     - -e ../modules/Geneformer/

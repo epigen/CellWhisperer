@@ -1,8 +1,17 @@
-FROM nvidia/cuda:11.6.2-base-ubuntu20.04
-# FROM nvidia/cuda:12.3.1-devel-ubuntu20.04  # should also work..
+# FROM nvidia/cuda:11.6.2-base-ubuntu20.04
+FROM nvidia/cuda:12.3.1-devel-ubuntu20.04
 
 # Add some dependencies
 ENV DEBIAN_FRONTEND=noninteractive
+
+# Change the UID of the apt user to work in rootless container.
+RUN sed -i 's/_apt:x:100:65534/_apt:x:100:100/g' /etc/passwd
+
+# Explicitly pull the 55 version of the cuda-drivers, to work
+# with the L4 GPUs in the hosting machine. Otherwise ubuntu
+# pulls the wrong version automatically (535) with the toolkit.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        nvidia-cuda-toolkit git cuda-drivers-555
 
 # Install any needed packages specified in requirements.txt
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -49,10 +58,14 @@ RUN conda config --set channel_priority flexible
 
 # Clone the repository (git@github.com:epigen/cellwhisperer.git --recurse-submodules) (or copy it in this case)
 # RUN git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules /opt/cellwhisperer
-COPY . /opt/cellwhisperer
+COPY --chmod=0755 . /opt/cellwhisperer
 
 # Change the working directory
 WORKDIR /opt/cellwhisperer
+
+# Set compiler flags because of llama-cpp issue.
+RUN export NVCC_PREPEND_FLAGS='-ccbin /usr/bin/g++-12'
+RUN export HOST_COMPILER=/usr/bin/g++-12
 
 # Install the dependencies
 RUN conda env create -f envs/main.yaml
