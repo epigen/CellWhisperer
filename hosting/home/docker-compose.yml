@@ -76,7 +76,7 @@ services:
       - ~/cellwhisperer/hosting/home/cellxgene_config.yaml:/cellxgene_config.yaml:ro
       - ./llava_logs/tabsap/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
-    command: gunicorn --worker-class gevent --bind 0.0.0.0:5005 server.app.wsgi:application --timeout 60
+    command: gunicorn --worker-class gevent --bind 0.0.0.0:5005 server.app.wsgi:application --timeout 120
     stdin_open: true
     tty: true
     restart: unless-stopped
@@ -192,6 +192,14 @@ services:
       - ./llava_logs/gut_cell_atlas/:/logs/
       - ~/cellwhisperer:/opt/cellwhisperer
 
+  cellxgene_hcaorganoids:
+    <<: *cellxgene-service
+    volumes:
+      - ~/cellwhisperer/results/hcaorganoids/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ~/cellwhisperer/hosting/home/cellxgene_config.yaml:/cellxgene_config.yaml:ro
+      - ./llava_logs/hcaorganoids/:/logs/
+      - ~/cellwhisperer:/opt/cellwhisperer
+
   # certificate renewal is run through my nixos configuration
   nginx:
     image: nginx:latest
@@ -213,6 +221,7 @@ services:
       - cellxgene_car_t
       - cellxgene_bowel_disease
       - cellxgene_gut_cell_atlas
+      - cellxgene_hcaorganoids
       # ...
     restart: unless-stopped
 
