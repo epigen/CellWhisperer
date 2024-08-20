@@ -97,7 +97,6 @@ rule performance_macroavg_and_example_plots:
     output:
         macrovag_summary_plot=ZERO_SHOT_RESULTS / "performance_metrics_cellwhisperer.selected_datasets.rocauc_and_accuracy.pdf",
         per_class_examples_plot=ZERO_SHOT_RESULTS / "performance_metrics_cellwhisperer.selected_classes_and_datasets.pdf",
-        result_dir=ZERO_SHOT_RESULTS
     conda:
         "cellwhisperer"
     resources:

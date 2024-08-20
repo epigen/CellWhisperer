@@ -28,7 +28,7 @@ rule all:
         # Figure 2
         expand(rules.performance_macroavg_and_example_plots.output.macrovag_summary_plot, model=CLIP_MODEL),
         # Figure 2 (extended: embedding and gene set correlation analyses)
-        expand(rules.zero_shot_validations.output.output_directory, dataset=["pancreas"]),
+        expand(rules.zero_shot_validations.output.output_directory, dataset=["pancreas"], model=CLIP_MODEL),
         expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["human_disease"], model=CLIP_MODEL),  # NOTE: Can also be run for tabula_sapiens and for archs4_geo
 
         # Figure 3 (extended: LLM validations)
