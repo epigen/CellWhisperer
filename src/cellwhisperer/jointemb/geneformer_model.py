@@ -321,7 +321,7 @@ class GeneformerModel(
         # model configuration
         bert_config = {
             "hidden_size": 512,
-            "num_hidden_layers": 6,
+            "num_hidden_layers": 12,
             "initializer_range": 0.2,
             "layer_norm_eps": 1e-12,
             "attention_probs_dropout_prob": 0.02,
