@@ -13,25 +13,27 @@ services:
     working_dir: /opt/cellwhisperer
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/models/jointemb/cellwhisperer_clip_v1.ckpt:/opt/cellwhisperer/results/models/jointemb/cellwhisperer_clip_v1.ckpt:ro
-      - cache:/cache/
+      - cache:/cache/:Z
       - /nobackup/lab_bock/projects/cellwhisperer/resources/:/opt/cellwhisperer/resources
     command: python src/model_server/main.py
     stdin_open: true
     tty: true
     restart: unless-stopped
     environment:
-      NVIDIA_VISIBLE_DEVICES: GPU-c38cbc2d-129a-dddf-9ed4-8a0e06763d33
       MODEL: "/model.ckpt"
       CONDA_ENV: cellwhisperer
       TRANSFORMERS_CACHE: /cache/transformers  # soon deprecated in favor of HF_CACHE
       HF_CACHE: /cache/transformers
       CELLWHISPERER_CACHE: /cache/cellwhisperer
+    devices:
+          - "nvidia.com/gpu=all"
     deploy:
       resources:
         reservations:
           devices:
             - capabilities: [gpu]
               driver: nvidia
+              count: all
     networks:
         - whisper
 
@@ -48,7 +50,7 @@ services:
     command: python -m llava.serve.controller --host 0.0.0.0 --port 10000
     networks:
         - whisper
-        
+
   cellwhisperer_llava_model:
     <<: *llava-service
     command: python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 --controller https://cellwhisperer.bocklab.org/llava-controller --port 40000 --worker https://cellwhisperer.bocklab.org/llava-model-worker --model-path /Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1/
@@ -57,18 +59,16 @@ services:
         reservations:
           devices:
             - capabilities: [gpu]
+              count: all
               driver: nvidia
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/llava/finetuned/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1:/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1:ro  # the name is important
-      - cache:/cache/
+      - cache:/cache/:Z
+    devices:
+          - "nvidia.com/gpu=all"
     environment:
-      NVIDIA_VISIBLE_DEVICES: GPU-c38cbc2d-129a-dddf-9ed4-8a0e06763d33
       CONDA_ENV: llava
       HF_CACHE: /cache/transformers
-
-  # cellwhisperer_llava_server:
-  #   <<: *llava-service
-  #   command: /bin/bash /start.sh python -m llava.serve.gradio_web_server --controller http://cellwhisperer_llava_controller:10000 --model-list-mode reload
 
   cellxgene_tabsap: &cellxgene-service
     build:
@@ -77,15 +77,14 @@ services:
     working_dir: /opt/cellwhisperer
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/tabula_sapiens/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro
-      - ./llava_logs/tabsap/:/logs/
+      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro,Z
+      - ./llava_logs/tabsap/:/logs/:Z
     command: gunicorn --worker-class gevent --bind 0.0.0.0:5005 server.app.wsgi:application --timeout 60
     stdin_open: true
     tty: true
     restart: unless-stopped
     environment:
       CXG_CONFIG_FILE: /cellxgene_config.yaml
-      NVIDIA_VISIBLE_DEVICES: GPU-c38cbc2d-129a-dddf-9ed4-8a0e06763d33
       LOGDIR: "/logs/"
       MODEL: "http://cellwhisperer_clip:8910/api"
       JEST_ENV: "prod"
@@ -102,107 +101,34 @@ services:
     networks:
         - whisper
 
-  cellxgene_human_disease:
-    <<: *cellxgene-service
-    volumes:
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro
-      - /nobackup/lab_bock/projects/cellwhisperer/results/human_disease/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ./llava_logs/human_disease/:/logs/
-    # ports:
-      # - "5005:5005"  # for testing without nginx
-    # command: cellxgene launch -v -p 5005  --host 0.0.0.0 --max-category-items 500 --var-names gene_name --debug --backed /dataset.h5ad  --cellwhisperer-clip-model "http://cellwhisperer_clip:8910/api" --debug
-
-  cellxgene_development_scvi:
-    <<: *cellxgene-service
-    volumes:
-      - /nobackup/lab_bock/projects/cellwhisperer/results/development_merged5000/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro
-      - ./llava_logs/development_scvi/:/logs/
-
-  cellxgene_development_raw:
-    <<: *cellxgene-service
-    volumes:
-      - /nobackup/lab_bock/projects/cellwhisperer/results/development4s_raw/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro
-      - ./llava_logs/development_raw/:/logs/
-        
-  cellxgene_geo:
-    <<: *cellxgene-service
-    volumes:
-      - /nobackup/lab_bock/projects/cellwhisperer/results/archs4_geo/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro
-      - ./llava_logs/geo/:/logs/
-    deploy:
-      resources:
-        limits:
-          memory: 20G
-        
   cellxgene_car_t:
     <<: *cellxgene-service
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/car_t/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro
-      - ./llava_logs/car_t/:/logs/
-        
+      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro,Z
+      - ./llava_logs/car_t/:/logs/:Z
+
   cellxgene_bowel_disease:
     <<: *cellxgene-service
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/bowel_disease/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro
-      - ./llava_logs/bowel_idisease/:/logs/
-        
-  cellxgene_hcaorganoids_cancer__organoid:
-    <<: *cellxgene-service
-    volumes:
-      - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_cancer__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro
-      - ./llava_logs/hcaorganoids_cancer__organoid/:/logs/
-
-  cellxgene_hcaorganoids_cancer__primary:
-    <<: *cellxgene-service
-    volumes:
-      - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_cancer__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro
-      - ./llava_logs/hcaorganoids_cancer__primary/:/logs/
-
-  cellxgene_hcaorganoids_normal__primary:
-    <<: *cellxgene-service
-    volumes:
-      - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_normal__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro
-      - ./llava_logs/hcaorganoids_normal__primary/:/logs/
-
-  cellxgene_hcaorganoids_normal__organoid:
-    <<: *cellxgene-service
-    volumes:
-      - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_normal__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro
-      - ./llava_logs/hcaorganoids_normal__organoid/:/logs/
-
-  cellxgene_gut_cell_atlas:
-    <<: *cellxgene-service
-    volumes:
-      - /nobackup/lab_bock/projects/cellwhisperer/results/gut_cell_atlas/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro
-      - ./llava_logs/gut_cell_atlas/:/logs/
+      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro,Z
+      - ./llava_logs/bowel_idisease/:/logs/:Z
 
   cellxgene_gbusslinger:
     <<: *cellxgene-service
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/gbusslinger/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro
-      - ./llava_logs/gbusslinger/:/logs/
+      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro,Z
+      - ./llava_logs/gbusslinger/:/logs/:Z
 
   # certificate renewal is run through my nixos configuration
   nginx:
     image: nginx:latest
     volumes:
-      - ./htpasswd:/etc/nginx/.htpasswd:ro
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ../static:/static
-      - ./log/nginx:/var/log/nginx
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
+            - ./htpasswd:/etc/nginx/.htpasswd:ro,Z
+            - ./nginx.conf:/etc/nginx/nginx.conf:ro,Z
+            - ../static:/static:Z
     ports:
       - "8000:8000"
     depends_on:

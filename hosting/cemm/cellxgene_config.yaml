@@ -3,7 +3,7 @@ server:
     verbose: true
     debug: true
     host: 0.0.0.0
-    port: 5005
+    port: 5006
     open_browser: false
     force_https: false
     flask_secret_key: "this-app-is-not-secured"
