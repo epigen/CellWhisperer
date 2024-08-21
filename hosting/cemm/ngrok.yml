@@ -1,8 +1,0 @@
-version: 2
-tunnels:
-  default:
-    proto: http
-    addr: 80
-    basic_auth:
-      - "review:iclr2024-mlgenx"
-    hostname: "upright-communal-panda.ngrok-free.app"

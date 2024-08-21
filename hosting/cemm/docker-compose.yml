@@ -199,7 +199,7 @@ services:
     volumes:
       - ./htpasswd:/etc/nginx/.htpasswd:ro
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./static:/static
+      - ../static:/static
       - ./log/nginx:/var/log/nginx
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
