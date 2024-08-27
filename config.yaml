@@ -104,13 +104,10 @@ model_name_path_map:
 genesets:
   - "Azimuth_2023"
   - "GO_Biological_Process_2023"
-  - "GO_Cellular_Component_2023"
   - "GO_Molecular_Function_2023"
   - "OMIM_Expanded"
   - "PanglaoDB_Augmented_2021"
   - "Tabula_Sapiens"
-  - "Cytopus_immune_identities"
-  - "Cytopus_processes"
 
 # Created by running this on the full tabula sapiens dataset: list(adata.obs[adata.obs["organ_tissue"].isin(["Liver","Lung","Blood"])]["cell_ontology_class"].value_counts().iloc[:20].index)
 top20_lung_liver_blood_celltypes:
