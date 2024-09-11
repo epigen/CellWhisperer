@@ -92,7 +92,7 @@ rule llava_evaluation_generation_preparation:
         full_data=expand(PROJECT_DIR / config["paths"]["full_dataset"], dataset=["archs4_geo", "cellxgene_census"]),  # for annotations
         gsva=expand(PROJECT_DIR / config["paths"]["gsva"]["result"], dataset=["archs4_geo", "cellxgene_census"]),  # for annotations
         top_genes=expand(rules.compute_top_genes.output.top_genes, dataset=["archs4_geo", "cellxgene_census"]),
-        request_template=ancient("llava/prompts/llava_stage2_request_template.txt"),
+        request_template=ancient("../llava/prompts/llava_stage2_request_template.txt"),
         # archs4_request_splits=gather.split(PROJECT_DIR / "results/llava/requests/archs4_geo/{scatteritem}.json"),
         # cellxgene_request_splits=gather.split(PROJECT_DIR / "results/llava/requests/cellxgene_census/{scatteritem}.json"),
     output:
@@ -168,7 +168,7 @@ rule llava_eval_gpt4_review:
         reference_responses=rules.llava_evaluation_generation_preparation.output.reference_responses,
         llava_responses=expand(rules.llava_evaluation_generation.output.llava_responses, input_features=["", "_text_only"], allow_missing=True),
         gpt4transcriptome_baseline_responses=rules.gpt4transcriptome_baseline.output,
-        rule=ancient("llava/prompts/gpt_evaluation_prompts.json")  # Alternative prompt (leading to similar results: llava/prompts/gpt_evaluation_prompts_alternative.json)
+        rule=ancient("../llava/prompts/gpt_evaluation_prompts.json")  # Alternative prompt (leading to similar results: ../llava/prompts/gpt_evaluation_prompts_alternative.json)
     output:
         evaluation=protected(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4_review.jsonl")
     conda:
