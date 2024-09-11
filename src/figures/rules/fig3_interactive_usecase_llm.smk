@@ -18,12 +18,10 @@ scattergather:  # same as in llava pipeline
 
 INSTRUCTION_PROMPT = "Help me analyzing this sample of cells. Respond in proper english in a tone of uncertainty and focus on the biology of the sample rather than any potential donor or patient information (e.g. do not mention age and sex). Start by listing the top genes and, optionally, gene sets in this sample."
 INSTRUCTION_RESPONSE = "Sure. The top normalized genes are {top_genes}. Note that are strongly expressed genes beyond the ones I just listed."
-INSTRUCTION_RESPONSE_GENE_SETS_EXTENSION=" The top gene sets are {top_gene_sets}. Also here, note that there are strongly active gene sets beyond the ones I just listed."
-INSTRUCTION_PROMPT_TEXT_ONLY =  """Respond to my request regarding a sample of cells characterized by their top-expressed genes and gene sets. Respond directly and concisely without much contemplation and in less than 3 sentences with a tone of uncertainty and a focus on the biology of the sample.
+INSTRUCTION_RESPONSE_GENE_SETS_EXTENSION=" The top gene sets are {top_gene_sets}. Also here, note that there are strongly active gene sets beyond the ones I just listed."  # Unused, to keep it comparable to Hou et al., 2024 https://www.nature.com/articles/s41592-024-02235-4
+INSTRUCTION_PROMPT_TEXT_ONLY =  """Respond to my request regarding a sample of cells characterized by their top-expressed genes. Respond directly and concisely without much contemplation and in less than 3 sentences with a tone of uncertainty and a focus on the biology of the sample.
 
 Top genes: {top_genes}
-
-Top gene sets: {top_gene_sets}
 
 Request: {question}
 """
@@ -144,7 +142,7 @@ rule llava_evaluation_generation:
 
 rule gpt4transcriptome_baseline:
     """
-    Run GPT-4 with gene- and gene-set information (top 50)
+    Run GPT-4 with top-gene information (top 50)
     """
     input:
         transcriptome_text_features=rules.llava_evaluation_generation_preparation.output.formatted_questions_text_only,
@@ -168,7 +166,7 @@ rule llava_eval_gpt4_review:
     input:
         questions=rules.llava_evaluation_generation_preparation.output.formatted_questions,  # Contains 'reference' data (top genes, gene sets, caption), the question ('text') and the transcriptome ID ('image')
         reference_responses=rules.llava_evaluation_generation_preparation.output.reference_responses,
-        llava_responses=expand(rules.llava_evaluation_generation.output.llava_responses, input_features=["", "_with_top_genes", "_with_top_genes_gene_sets", "_text_only"], allow_missing=True),
+        llava_responses=expand(rules.llava_evaluation_generation.output.llava_responses, input_features=["", "_text_only"], allow_missing=True),
         gpt4transcriptome_baseline_responses=rules.gpt4transcriptome_baseline.output,
         rule=ancient("llava/prompts/gpt_evaluation_prompts.json")  # Alternative prompt (leading to similar results: llava/prompts/gpt_evaluation_prompts_alternative.json)
     output:
