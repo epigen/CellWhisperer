@@ -35,11 +35,6 @@ rule all:
                base_model=[LLAVA_BASE_MODEL],  # NOTE could test as well: "BioMistral-7B", "BioMistral-7B-DARE",
                model=[CLIP_MODEL],
                ),
-        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4_review_summary.svg",
-               dataset=["main"],  # NOTE evaluation of tabula_sapiens dataset would only make sense with an adjusted judge-prompt
-               base_model=[LLAVA_BASE_MODEL],
-               model=[CLIP_MODEL],
-               ),
 
         # Figure 4
         expand(rules.bowel_disease_stem_cell_contribution.output.plot, target_cluster=["", "Cycling ileal epithelial precursor cells"]),
