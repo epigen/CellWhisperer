@@ -54,7 +54,7 @@ rule gpt4_curate_llava_annotations:
     output:
         curated_labels=protected(PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_curated_annotated_clusters.csv")
     params:
-        request="Condense this information into a short title of maximum 8 words. Focus on the biological state, rather than the source or any specific perturbations of the sample",
+        request="Condense this information into a short title (using normal sentence case) of maximum 8 words. Focus on the biological state, rather than the source or any specific perturbations of the sample",
         max_num_clusters=200,  # to prevent high GPT-4 cost
         openai_api_key=os.getenv("OPENAI_API_KEY")
     conda:
@@ -71,7 +71,7 @@ rule mixtral_curate_llava_annotations:
     output:
         curated_labels=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_curated_annotated_clusters_mixtral.csv"
     params:
-        request="Condense the information below into a short title of maximum 8 words. Focus on the biological state, rather than the source or any specific perturbations of the sample and generate nothing but the title (no quotes or additional information).\n\n",
+        request="Condense the information below into a short title (using normal sentence case) of maximum 8 words. Focus on the biological state, rather than the source or any specific perturbations of the sample and generate nothing but the title (no quotes or additional information, using sentence case).\n\n",
     conda:
         "cellwhisperer"
     notebook:
