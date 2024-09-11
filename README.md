@@ -159,7 +159,8 @@ To run sweeps, refer to [this README](./src/experiments/sweeps/README.md). You c
 1. Go to `src/llava`
 2. Run `snakemake`
 
-Note: the pipelines includes code to generate the datasets. Since this takes a considerable amount of time and computational resources, we recommend downloading our provided data set. (automatically done by the main pipeline in `src`).
+Note 1: The pipelines includes code to generate the datasets. Since this takes a considerable amount of time and computational resources, we recommend downloading our provided data set. (automatically done by the main pipeline in `src`).
+Note 2: You might be requested to login to huggingface to be able to download the Mistral-7B model. Simply follow the instructions printed in the command line. The `huggingface-cli` tool is installed in the `cellwhisperer` environment. 
 
 ## Folder structure
 
