@@ -1,5 +1,4 @@
 import gseapy as gp
-import cytopus as cp
 
 
 def load_enrichr_terms(
@@ -20,32 +19,7 @@ def load_enrichr_terms(
     return terms
 
 
-def load_cytopus(library):
-    G = cp.KnowledgeBase()
-
-    terms = {}
-
-    if library == "Cytopus_processes":
-        for gs in G.processes.keys():
-            gene_list = G.processes[gs]
-            line = "\t".join(gene_list)
-            terms[gs] = line
-
-    elif library == "Cytopus_immune_identities":
-        for gs in G.identities.keys():
-            gene_list = G.identities[gs]
-            line = "\t".join(gene_list)
-            terms[gs] = line
-    else:
-        raise ValueError(f"Unknown library {library}")
-    return terms
-
-
-if snakemake.wildcards.library.startswith("Cytopus"):
-    terms = load_cytopus(snakemake.wildcards.library)
-else:
-    terms = load_enrichr_terms(snakemake.wildcards.library)
-
+terms = load_enrichr_terms(snakemake.wildcards.library)
 
 # Save as GMT file
 with open(snakemake.output.geneset_gmt, "w") as f:

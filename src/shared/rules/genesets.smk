@@ -1,6 +1,5 @@
 rule download_genesets:
     """
-    cytopus from https://www.nature.com/articles/s41587-023-01940-3 (not included in publication due to cryptic names)
     """
     output:
         geneset_gmt=PROJECT_DIR / config["paths"]["geneset_gmt"],

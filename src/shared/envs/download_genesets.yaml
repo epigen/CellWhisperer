@@ -3,8 +3,5 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - gseapy
-  - pandas
-  - pip
-  - pip:
-    - cytopus
+  - gseapy=1.0.6
+  - pandas=2.1.3
