@@ -74,9 +74,9 @@ rule zero_shot_validations:
         # Using a directory here because the exact files produced depend on the dataset:
         output_directory=directory(ZERO_SHOT_RESULTS / "datasets" / "{dataset,[^/]+}"),
     params:
-        dataset = TARGET_DATASETS,
-        metadata_cols_per_dataset = METADATA_COLS_PER_DATASET,
-        transcriptome_model_name = TRANSCRIPTOME_MODEL_NAME,
+        dataset = config["zero_shot_validation_datasets"],
+        metadata_cols_per_dataset = config["metadata_cols_per_zero_shot_validation_dataset"],
+        transcriptome_model_name = "geneformer"
     conda:
         "cellwhisperer"
     resources:
@@ -88,12 +88,13 @@ rule zero_shot_validations:
     notebook:
         "../notebooks/zero_shot_validation.py.ipynb"
 
+
 rule performance_macroavg_and_example_plots:
     """
     Summarize the performance metrics across multiple datasets and metadata columns
     """
     input:
-        zero_shot_validations_result_dirs=[ZERO_SHOT_RESULTS / "datasets" / dataset for dataset in TARGET_DATASETS],
+        zero_shot_validations_result_dirs=[ZERO_SHOT_RESULTS / "datasets" / dataset for dataset in config["zero_shot_validation_datasets"]],
     output:
         macrovag_summary_plot=ZERO_SHOT_RESULTS / "performance_metrics_cellwhisperer.selected_datasets.rocauc_and_accuracy.pdf",
         per_class_examples_plot=ZERO_SHOT_RESULTS / "performance_metrics_cellwhisperer.selected_classes_and_datasets.pdf",

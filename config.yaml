@@ -65,8 +65,6 @@ datasets:
   - hcaorganoids_cancer__primary
   - hcaorganoids_cancer__organoid
 
-zero_shot_validation_transcriptome_model_name: "geneformer"
-
 zero_shot_validation_datasets:
   - immgen
   - human_disease

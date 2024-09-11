@@ -206,7 +206,7 @@ For an efficient use of CellWhisperer in the web browser (CELLxGENE Explorer int
 3. Go to `cellwhisperer/src/cellxgene_preprocessing` and run the pipeline: `snakemake --config 'datasets=["<dataset_name>"]'`
    - This runs much faster if you use a GPU. Also, depending on your dataset, this might require a substantial amount of RAM.
    - We use GPT-4 or Mixtral to condense the CellWhisperer-generated cluster captions into brief titles. Set the environment variable `OPENAI_API_KEY` if you want to use the GPT-4, otherwise Mixtral is used.
-4. Use the newly created file `snakemake /path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad` to host a CELLxGENE Explorer instance:
+4. Use the newly created file `/path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad` to host a CELLxGENE Explorer instance:
   - `cellxgene launch -p 5005  --debug --host 0.0.0.0 --max-category-items 500 --var-names gene_name /path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad`
   - For your convenience (e.g. runtime performance, GPU dependency), this locally running server will access our API for some of the AI functionalities. If you want to run the models locally follow these instructions:
     - for the CLIP model, simply provide the command line arguments `--cellwhisperer-clip-model cellwhisperer/results/models/jointemb/cellwhisperer_clip_v1.ckpt`.
