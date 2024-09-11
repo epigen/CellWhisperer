@@ -22,6 +22,8 @@ dependencies:
   - anaconda::utf8proc=2.6.1
   - pytorch-cuda=12.1
   - notebook=7.0.8
+  - multiprocess=0.70.14
+  - numpy=1.23.5
   - cuda-nvcc=12.1
   - cuda-toolkit=12.1
   - mscorefonts=0.0.1=3
@@ -56,6 +58,7 @@ dependencies:
     - scvi-tools==0.20.3
     - cell-gears==0.0.2
     - umap-learn==0.5.5
+    - matplotlib_venn==0.11.10
     - llama-cpp-python==0.2.77 -C cmake.args="-DGGML_CUDA=on"
     - -e ..
     - -e ../modules/cellxgene/
