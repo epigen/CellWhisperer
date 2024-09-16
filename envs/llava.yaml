@@ -8,6 +8,8 @@ dependencies:
   - cuda-nvcc=12.3
   - nbconvert=7.16.0
   - notebook=7.1.0
+  - nb_conda=2.2.1
+  - nb_conda_kernels=2.3.1
   - pyarrow=16.1.0
   - pip=24.0
   - transformers=4.37.2
