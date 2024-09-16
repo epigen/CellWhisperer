@@ -177,6 +177,7 @@ def plot_confusion_matrix(
         if order is not None:
             confusion_matrix = confusion_matrix[order]
             confusion_matrix = confusion_matrix.loc[order]
+        confusion_matrix.to_excel(f"{result_dir}/confusion_matrix_cellwhisperer.{label_col}_as_label.norm_{norm}.xlsx", index=True)
 
         plt.figure(figsize=(10, 10))
         sns.heatmap(confusion_matrix, cmap="Blues", annot=False, square=True,
