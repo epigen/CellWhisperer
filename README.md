@@ -18,7 +18,7 @@ To obtain this repository, run `git clone git@github.com:epigen/cellwhisperer.gi
 
 If you already cloned, but without the `--recurse-submodules` flag, run the following: `git submodule update --init --recursive`
 
-CellWhisperer can be run through conda and docker. Both options take about 15 minutes to set up.
+CellWhisperer can be run through conda and docker. Both options take about 15 minutes to set up. The versioned packages installed in the environment are defined in the environment files in the `envs` folder.
 
 ### Install via conda/pip
 
@@ -202,7 +202,7 @@ CellWhisperer builds atop three projects that are integrated via git submodules.
 
 ## Processing of (single cell) datasets and use within CELLxGENE
 
-For an efficient use of CellWhisperer in the web browser (CELLxGENE Explorer integration), you need to preprocess your datasets.
+For "latent-free" data analysis in the web browser with CellWhisperer (CELLxGENE Explorer integration), you need to preprocess your datasets. This takes from few hours up to a day or two, dependent on the dataset size and whether you have access to a GPU or a large number of CPU cores.
 
 1. Prepare your dataset (for guidelines see below)
 2. Place it in `<PROJECT_ROOT>/resources/<dataset_name>/read_count_table.h5ad`
