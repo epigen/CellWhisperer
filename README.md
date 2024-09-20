@@ -18,6 +18,8 @@ To obtain this repository, run `git clone git@github.com:epigen/cellwhisperer.gi
 
 If you already cloned, but without the `--recurse-submodules` flag, run the following: `git submodule update --init --recursive`
 
+CellWhisperer can be run through conda and docker. Both options take about 15 minutes to set up.
+
 ### Install via conda/pip
 
 1. Ensure correct environment (conda flexible channel prio and CUDA >= 12)
@@ -36,7 +38,7 @@ Sun Mar 31 17:36:31 2024
 ...
 ```
 
-2. Install the environments
+2. Install the environments 
   ```
   mamba env create -f envs/main.yaml  # name: cellwhisperer   this already includes `pip install -e .`
   mamba env create -f envs/llava.yaml  # name: llava    this already includes `pip install -e ../modules/LLaVA/[train]`
