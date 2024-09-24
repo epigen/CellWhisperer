@@ -20,10 +20,9 @@ For more information on project management, follow https://github.com/epigen/cel
 - [Analyze your own datasets](#analyze)
 
 
-<a name="install">
+<a name="install"/>
   
 ## Install
-</a>
 
 To obtain this repository, run `git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules`. Make sure to add the flag to download the submodules as well.
 
