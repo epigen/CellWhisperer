@@ -61,6 +61,9 @@
             background-size: cover;
             cursor: pointer;
         }
+        a {
+            color: #bbb;
+        }
     </style>
 </head>
 <body>
@@ -79,7 +82,7 @@
         <div>
             <a href="https://openreview.net/forum?id=yWiZaE4k3K" class="button">Spotlight paper @ ICLR 2024 MLGenX</a>
             <a href="TODO" class="button inactive" style="font-weight: bold;">BioRxiv (soon)</a>
-            <a href="https://github.com/epigen/cellwhisperer" class="button inactive">Code (soon)</a>
+            <a href="https://github.com/epigen/cellwhisperer" class="button">Code</a>
             <a href="https://medical-epigenomics.org/papers/schaefer2024/data/" class="button">Generated datasets and models</a>
         </div>
         <h2 class="headline">Tutorial</h2>
@@ -93,6 +96,23 @@
                 <img src="annotated_screenshot.png" alt="Annotated screenshot of CellWhisperer application" width="100%" />
             </div>
         </div>
+    </div>
+    <h2 class="headline">Analyze your own data</h2>
+    <div class="description" style="
+                max-width: 800px;
+                margin: auto;
+                ">
+        <p>
+            To prepare your scRNA-seq data for use within CellWhisperer, follow these simple steps:
+        </p>
+        <ol style="
+                   padding-left: 110px;
+                   padding-right: 110px;
+                   ">
+            <li>Generate an h5ad file containing raw reads and a <tt>gene_name</tt> <tt>var</tt> column</li>
+            <li>Run our single-command processing pipeline</li>
+            <li>Start the CellWhisperer-integrated CELLxGENE Explorer</li>
+        </ol>For details on these steps, refer to the "Analysis of new datasets with CellWhisperer" section in our <a href="https://github.com/epigen/cellwhisperer" target="_blank">README</a>.
     </div>
     <script>
         document.getElementById('videoOverlay').addEventListener('click', function() {

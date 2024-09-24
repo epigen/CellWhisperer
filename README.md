@@ -200,7 +200,7 @@ CellWhisperer builds atop three projects that are integrated via git submodules.
 - `cellxgene`: CELLxGENE Explorer browser package, modified to integrate UI and API elements for CellWhisperer integration
 - `Geneformer`: The transcriptome model used for the CellWhisperer embedding model
 
-## Processing of (single cell) datasets and use within CELLxGENE
+## Analysis of new datasets with CellWhisperer
 
 For "latent-free" data analysis in the web browser with CellWhisperer (CELLxGENE Explorer integration), you need to preprocess your datasets. This takes from few hours up to a day or two, dependent on the dataset size and whether you have access to a GPU or a large number of CPU cores.
 
