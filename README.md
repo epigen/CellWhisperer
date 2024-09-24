@@ -20,8 +20,10 @@ For more information on project management, follow https://github.com/epigen/cel
 - [Analyze your own datasets](#analyze)
 
 
-<a name="install"/> 
+<a name="install">
+  
 ## Install
+</a>
 
 To obtain this repository, run `git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules`. Make sure to add the flag to download the submodules as well.
 
@@ -88,7 +90,8 @@ See [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md)
 - Install from local files: `make install-dev`
 - Install prereqs for client: `make dev-env`
 
-<a name="run"/> 
+<a name="run"/>
+
 ## Run
 
 ### Reproduce manuscript analyses and plots
@@ -174,7 +177,8 @@ To run sweeps, refer to [this README](./src/experiments/sweeps/README.md). You c
 Note 1: The pipelines includes code to generate the datasets. Since this takes a considerable amount of time and computational resources, we recommend downloading our provided data set. (automatically done by the main pipeline in `src`).
 Note 2: You might be requested to login to huggingface to be able to download the Mistral-7B model. Simply follow the instructions printed in the command line. The `huggingface-cli` tool is installed in the `cellwhisperer` environment. 
 
-<a name="structure"/> 
+<a name="structure"/>
+
 ## Folder structure
 
 - data: Computationally non-reproducible, expensive, or painful to reproduce
@@ -211,8 +215,9 @@ CellWhisperer builds atop three projects that are integrated via git submodules.
 - `cellxgene`: CELLxGENE Explorer browser package, modified to integrate UI and API elements for CellWhisperer integration
 - `Geneformer`: The transcriptome model used for the CellWhisperer embedding model
 
-<a name="analyze"/> 
-## Analysis your own datasets
+<a name="analyze"/>
+
+## Analyze your own datasets
 
 For "latent-free" data analysis in the web browser with CellWhisperer (CELLxGENE Explorer integration), you need to preprocess your datasets. This takes from few hours up to a day or two, dependent on the dataset size and whether you have access to a GPU or a large number of CPU cores.
 
