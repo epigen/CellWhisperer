@@ -222,8 +222,9 @@ For "latent-free" data analysis in the web browser with CellWhisperer (CELLxGENE
 
 1. Prepare your dataset (for guidelines see below)
 2. Place it in `<PROJECT_ROOT>/resources/<dataset_name>/read_count_table.h5ad`
-3. Go to `cellwhisperer/src/cellxgene_preprocessing` and run the pipeline: `snakemake --config 'datasets=["<dataset_name>"]'`
-   - This runs much faster if you use a GPU. Also, depending on your dataset, this might require a substantial amount of RAM.
+3. Go to `cellwhisperer/src/cellxgene_preprocessing` and run the pipeline: `snakemake -c  <number of cores> --config 'datasets=["<dataset_name>"]'`
+   - This runs much faster if you have a GPU available. If you don't have one, make sure to compensate with a substantial number of CPU cores (e.g. 32 or more)
+   - Depending on your dataset, you might also require a substantial amount of RAM (e.g. your dataset size times 2)
    - We use GPT-4 or Mixtral to condense the CellWhisperer-generated cluster captions into brief titles. Set the environment variable `OPENAI_API_KEY` if you want to use the GPT-4, otherwise Mixtral is used.
 4. Use the newly created file `/path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad` to host a CELLxGENE Explorer instance:
   - `cellxgene launch -p 5005  --debug --host 0.0.0.0 --max-category-items 500 --var-names gene_name /path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad`

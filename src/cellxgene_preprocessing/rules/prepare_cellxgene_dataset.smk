@@ -35,6 +35,7 @@ rule llava_annotate_clusters:
     params:
         request="<s>[INST] Help me analyzing this sample of cells. Always respond in proper english sentences and in a tone of uncertainty. [/INST] Sure thing. What do you want to know? </s> [INST] Describe the biological state of these cells\n<image> [/INST]",
         num_beams=10
+    threads: 64
     resources:
         mem_mb=40000,
         slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
@@ -72,6 +73,10 @@ rule mixtral_curate_llava_annotations:
         curated_labels=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_curated_annotated_clusters_mixtral.csv"
     params:
         request="Condense the information below into a short title (using normal sentence case) of maximum 8 words. Focus on the biological state, rather than the source or any specific perturbations of the sample and generate nothing but the title (no quotes or additional information, using sentence case).\n\n",
+    threads: 64
+    resources:
+        mem_mb=40000,
+        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
     conda:
         "cellwhisperer"
     notebook:
@@ -91,6 +96,7 @@ rule cellwhisperer_cluster_keywords:
         csv=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "cellwhisperer_annotated_clusters.csv",
     conda:
         "cellwhisperer"
+    threads: 64
     resources:
         mem_mb=40000,
         slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"

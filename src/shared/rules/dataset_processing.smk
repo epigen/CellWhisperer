@@ -32,6 +32,7 @@ rule process_full_dataset:
     resources:
         mem_mb=600000,  # could be made more efficient...
         slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
+    threads: 64
     log:
         notebook="../logs/notebooks/process_full_dataset_{dataset}_{model}.py.ipynb",
         log_file="../logs/process_full_dataset_{dataset}_{model}.log"
