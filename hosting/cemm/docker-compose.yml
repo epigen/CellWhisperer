@@ -122,6 +122,14 @@ services:
       - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro,Z
       - ./llava_logs/gbusslinger/:/logs/:Z
 
+  cellxgene_hca_olo:
+    <<: *cellxgene-service
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/results/hca_olo/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/hca_olo/:/logs/:Z
+
+
   # certificate renewal is run through my nixos configuration
   nginx:
     image: nginx:latest
