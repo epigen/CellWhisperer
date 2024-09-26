@@ -23,7 +23,7 @@ should be populated with the required models.
 These can be fetched using `snakemake`:
 First you would need to ensure that `snakemake` is installed (`mamba install -c bioconda snakemake=7.15.2`)
 
-You can then fetch the required modules by running `snakemake models` from within the `src` folder
+You can then fetch the required modules by running `snakemake -j1 models` from within the `src` folder
 in the repository root.
 
 ## Maintenance

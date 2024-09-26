@@ -31,8 +31,8 @@ RUN apt-get install -y --no-install-recommends cpio
 RUN rm -rf /var/lib/apt/lists/*
 
 # Define the version of Miniconda to install
-ENV MINICONDA_VERSION=latest
-ENV PYTHON_VERSION=3.9
+ENV MINICONDA_VERSION=py310_24.7.1-0
+ENV PYTHON_VERSION=3.10
 
 # Define the Miniconda installer filename
 ENV INSTALLER=Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh
