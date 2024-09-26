@@ -1,3 +1,4 @@
+#!/bin/bash
 # Cycles the CellWhisperer containers on CeMM infrastructure.
 # Due to apparent issues with podman-compose setting up and tearing down networks
 # leading to dns issues we manage the network lifecycle externally.
@@ -6,6 +7,15 @@
 # resolve one another by hostname. Keeping the container environment clean by stopping
 # all the containers and cleaning all the dangling resources with prune seems to 
 # prevent this issue.
+
+# Jump to the directory that contains the script (also contains docker-compose.yaml)
+cd "$(dirname "$0")"
+
+# Make sure that the network filesystem is mounted
+if ! timeout 200 bash -c 'until [ -d /nobackup/lab_bock/projects/cellwhisperer/ ]; do sleep 1; done'; then
+  echo "Error: Directory /nobackup/lab_bock/projects/cellwhisperer/ not found after 200 seconds."
+  exit 1
+fi
 
 # First stop any running cell whisperer containers
 docker compose down

@@ -1,5 +1,5 @@
 # FROM nvidia/cuda:11.6.2-base-ubuntu20.04
-FROM nvidia/cuda:12.3.1-devel-ubuntu20.04
+FROM nvidia/cuda:12.3.1-devel-ubuntu22.04
 
 # Add some dependencies
 ENV DEBIAN_FRONTEND=noninteractive
@@ -11,7 +11,7 @@ RUN sed -i 's/_apt:x:100:65534/_apt:x:100:100/g' /etc/passwd
 # with the L4 GPUs in the hosting machine. Otherwise ubuntu
 # pulls the wrong version automatically (535) with the toolkit.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        nvidia-cuda-toolkit git cuda-drivers-555
+        git cuda-drivers-555 pkg-config libopenblas-dev
 
 # Install any needed packages specified in requirements.txt
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -41,7 +41,7 @@ ENV INSTALLER=Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh
 ENV INSTALL_DIR=/opt/miniconda3
 
 # Download the Miniconda installer
-RUN wget "https://repo.anaconda.com/miniconda/$INSTALLER" -O /tmp/miniconda.sh
+RUN wget --no-check-certificate "https://repo.anaconda.com/miniconda/$INSTALLER" -O /tmp/miniconda.sh
 
 # Install Miniconda
 RUN /bin/bash /tmp/miniconda.sh -b -p $INSTALL_DIR \
@@ -51,7 +51,7 @@ RUN /bin/bash /tmp/miniconda.sh -b -p $INSTALL_DIR \
 ENV PATH=$INSTALL_DIR/bin:$PATH
 
 # Initialize Miniconda
-RUN conda init bash
+RUN conda init --all
 
 # Set channel_priority to flexible
 RUN conda config --set channel_priority flexible
@@ -63,9 +63,8 @@ COPY --chmod=0755 . /opt/cellwhisperer
 # Change the working directory
 WORKDIR /opt/cellwhisperer
 
-# Set compiler flags because of llama-cpp issue.
-RUN export NVCC_PREPEND_FLAGS='-ccbin /usr/bin/g++-12'
-RUN export HOST_COMPILER=/usr/bin/g++-12
+# Ignore SSL issues arising from proxy-ing (also for wget)
+RUN npm config set strict-ssl false
 
 # Install the dependencies
 RUN conda env create -f envs/main.yaml
@@ -79,6 +78,10 @@ ENTRYPOINT ["/entrypoint.sh"]
 RUN git config --global --add safe.directory /opt/cellwhisperer/modules/cellxgene
 RUN git config --global --add safe.directory /opt/cellwhisperer
 RUN cd modules/cellxgene && CONDA_ENV=cellwhisperer /entrypoint.sh make build-for-server-dev
+
+# Install llama-cpp-python with GPU support (installing this within conda did not work properly :|)
+# CMAKE_ARGS only required if not providing extra-url
+RUN CMAKE_ARGS="-DGGML_BLAS=ON -DGGML_BLAS_VENDOR=OpenBLAS -DGGML_CUDA=on" CONDA_ENV=cellwhisperer /entrypoint.sh pip install llama-cpp-python --force-reinstall --no-cache-dir --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
 
 # [Optional] Install scgpt
 # RUN CONDA_ENV=cellwhisperer /entrypoint.sh bash envs/install_scgpt_after_env_creation.sh

@@ -26,7 +26,9 @@ services:
       HF_CACHE: /cache/transformers
       CELLWHISPERER_CACHE: /cache/cellwhisperer
     devices:
-          - "nvidia.com/gpu=all"
+        - "nvidia.com/gpu=all"
+    security_opt:
+        - label=type:nvidia_container_t
     deploy:
       resources:
         reservations:
@@ -53,7 +55,7 @@ services:
 
   cellwhisperer_llava_model:
     <<: *llava-service
-    command: python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 --controller https://cellwhisperer.bocklab.org/llava-controller --port 40000 --worker https://cellwhisperer.bocklab.org/llava-model-worker --model-path /Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1/
+    command: python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 --controller https://cellwhisperer.cemm.at/llava-controller --port 40000 --worker https://cellwhisperer.cemm.at/llava-model-worker --model-path /Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1/
     deploy:
       resources:
         reservations:
@@ -65,10 +67,14 @@ services:
       - /nobackup/lab_bock/projects/cellwhisperer/results/llava/finetuned/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1:/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1:ro  # the name is important
       - cache:/cache/:Z
     devices:
-          - "nvidia.com/gpu=all"
+      - "nvidia.com/gpu=all"
+    security_opt:
+      - label=type:nvidia_container_t
     environment:
       CONDA_ENV: llava
       HF_CACHE: /cache/transformers
+    networks:
+      - whisper
 
   cellxgene_tabsap: &cellxgene-service
     build:
@@ -77,7 +83,7 @@ services:
     working_dir: /opt/cellwhisperer
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/tabula_sapiens/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro,Z
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/tabsap/:/logs/:Z
     command: gunicorn --worker-class gevent --bind 0.0.0.0:5005 server.app.wsgi:application --timeout 60
     stdin_open: true
@@ -105,22 +111,78 @@ services:
     <<: *cellxgene-service
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/car_t/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro,Z
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/car_t/:/logs/:Z
 
   cellxgene_bowel_disease:
     <<: *cellxgene-service
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/bowel_disease/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro,Z
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/bowel_idisease/:/logs/:Z
 
   cellxgene_gbusslinger:
     <<: *cellxgene-service
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/gbusslinger/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ../../hosting/cemm/cellxgene_config.yaml:/cellxgene_config.yaml:ro,Z
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/gbusslinger/:/logs/:Z
+      
+  cellxgene_human_disease:
+    <<: *cellxgene-service
+    volumes:
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - /nobackup/lab_bock/projects/cellwhisperer/results/human_disease/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./llava_logs/human_disease/:/logs/:Z
+      
+  cellxgene_geo:
+    <<: *cellxgene-service
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/results/archs4_geo/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/geo/:/logs/:Z
+
+  cellxgene_hcaorganoids_cancer__organoid:
+    <<: *cellxgene-service
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_cancer__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/hcaorganoids_cancer__organoid/:/logs/:Z
+      
+  cellxgene_hcaorganoids_cancer__primary:
+    <<: *cellxgene-service
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_cancer__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/hcaorganoids_cancer__primary/:/logs/:Z
+      
+  cellxgene_hcaorganoids_normal__primary:
+    <<: *cellxgene-service
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_normal__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/hcaorganoids_normal__primary/:/logs/:Z
+
+  cellxgene_hcaorganoids_normal__organoid:
+    <<: *cellxgene-service
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_normal__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/hcaorganoids_normal__organoid/:/logs/:Z
+
+  cellxgene_gut_cell_atlas:
+    <<: *cellxgene-service
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/results/gut_cell_atlas/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/gut_cell_atlas/:/logs/:Z
+
+  cellxgene_hcaorganoids:
+    <<: *cellxgene-service
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/hcaorganoids/:/logs/:Z
 
   cellxgene_hca_olo:
     <<: *cellxgene-service
@@ -129,26 +191,22 @@ services:
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/hca_olo/:/logs/:Z
 
-
   # certificate renewal is run through my nixos configuration
   nginx:
     image: nginx:latest
     volumes:
-            - ./htpasswd:/etc/nginx/.htpasswd:ro,Z
-            - ./nginx.conf:/etc/nginx/nginx.conf:ro,Z
-            - ../static:/static:Z
+        - ./htpasswd:/etc/nginx/.htpasswd:ro,Z
+        - ./nginx.conf:/etc/nginx/nginx.conf:ro,Z
+        - ../static:/static:Z
     ports:
       - "8000:8000"
     depends_on:
-      #- cellxgene_tabsap
-      #- cellxgene_geo
-      #- cellxgene_development_raw
-      #- cellxgene_development_scvi
-      #- cellxgene_human_disease
-      #- cellxgene_car_t
+      - cellxgene_tabsap
+      - cellxgene_geo
+      - cellxgene_human_disease
+      - cellxgene_car_t
       - cellxgene_bowel_disease
-      #- cellxgene_gut_cell_atlas
-      # ...
+      - cellxgene_gut_cell_atlas
     restart: unless-stopped
     networks:
         - whisper

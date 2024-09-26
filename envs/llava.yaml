@@ -4,8 +4,10 @@ channels:
   - nvidia
   - defaults
 dependencies:
+  - cuda=12.1
   - python=3.10
   - cuda-nvcc=12.3
+  - nb_conda=2.2.1
   - nbconvert=7.16.0
   - notebook=7.1.0
   - nb_conda=2.2.1
