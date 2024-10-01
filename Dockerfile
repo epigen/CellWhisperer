@@ -81,7 +81,7 @@ RUN cd modules/cellxgene && CONDA_ENV=cellwhisperer /entrypoint.sh make build-fo
 
 # Install llama-cpp-python with GPU support (installing this within conda did not work properly :|)
 # CMAKE_ARGS only required if not providing extra-url
-RUN CMAKE_ARGS="-DGGML_BLAS=ON -DGGML_BLAS_VENDOR=OpenBLAS -DGGML_CUDA=on" CONDA_ENV=cellwhisperer /entrypoint.sh pip install llama-cpp-python --force-reinstall --no-cache-dir --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
+# RUN CMAKE_ARGS="-DGGML_BLAS=ON -DGGML_BLAS_VENDOR=OpenBLAS -DGGML_CUDA=on" CONDA_ENV=cellwhisperer /entrypoint.sh pip install llama-cpp-python --force-reinstall --no-cache-dir --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
 
 # [Optional] Install scgpt
 # RUN CONDA_ENV=cellwhisperer /entrypoint.sh bash envs/install_scgpt_after_env_creation.sh
