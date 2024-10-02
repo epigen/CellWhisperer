@@ -52,7 +52,7 @@ rule process_annotation_local:
         mem_mb=100000,
         slurm="cpus-per-task=25 gres=gpu:a100:1 qos=a100 partition=gpu"
         # slurm="cpus-per-task=25 gres=gpu:a100:1 qos=a100 partition=gpu"
-    conda: "cellwhisperer"
+    conda: "llama_cpp"
     script: "../scripts/process_annotations_local.py"
 
 rule aggregate_processed:

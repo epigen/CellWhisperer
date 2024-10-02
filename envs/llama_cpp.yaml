@@ -1,0 +1,16 @@
+name: llama_cpp
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+  - nodefaults
+dependencies:
+  - cuda=12.1
+  - pip=23.3.1
+  - anndata=0.10.2
+  - nbconvert=7.16.0
+  - nb_conda=2.2.1
+  - nb_conda_kernels=2.3.1
+  - pip:
+    - --extra-index-url=https://abetlen.github.io/llama-cpp-python/whl/cu121
+    - llama-cpp-python==0.2.77

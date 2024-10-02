@@ -19,9 +19,9 @@ def load_enrichr_terms(
     return terms
 
 
-terms = load_enrichr_terms(snakemake.wildcards.library)
+terms = load_enrichr_terms(snakemake.wildcards.library)  # type: ignore [reportUndefinedVariable]
 
 # Save as GMT file
-with open(snakemake.output.geneset_gmt, "w") as f:
+with open(snakemake.output.geneset_gmt, "w") as f:  # type: ignore [reportUndefinedVariable]
     for term, genes in terms.items():
         f.write(f"{term}\t\t{genes}\n")

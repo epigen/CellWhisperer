@@ -1,7 +1,7 @@
 channels:
   - conda-forge
   - bioconda
-  - defaults
+  - nodefaults
 dependencies:
   - gseapy=1.0.6
   - pandas=2.1.3

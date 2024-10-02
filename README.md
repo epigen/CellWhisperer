@@ -24,11 +24,11 @@ For more information on project management, follow https://github.com/epigen/cel
   
 ## Install
 
-To obtain this repository, run `git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules`. Make sure to add the flag to download the submodules as well.
+To obtain this repository, run `git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules`.
 
-If you already cloned, but without the `--recurse-submodules` flag, run the following: `git submodule update --init --recursive`
+*You do need the submodules*, so if you already cloned, but without the `--recurse-submodules` flag, run the following: `git submodule update --init --recursive`
 
-CellWhisperer can be run through conda and docker. Both options take about 15 minutes to set up. The versioned packages installed in the environment are defined in the environment files in the `envs` folder.
+CellWhisperer can be run through conda and docker. Both options take about 15 minutes to set up. The versioned packages installed in the environments are defined in the files in the `envs` folder.
 
 ### Install via conda/pip
 
@@ -48,14 +48,15 @@ Sun Mar 31 17:36:31 2024
 ...
 ```
 
-2. Install the environments 
+2. Install the environments
   ```
-  mamba env create -f envs/main.yaml  # name: cellwhisperer   this already includes `pip install -e .`
+  mamba env create -f envs/main.yaml  # name: cellwhisperer    this already includes `pip install -e .`
   mamba env create -f envs/llava.yaml  # name: llava    this already includes `pip install -e ../modules/LLaVA/[train]`
+  mamba env create -f envs/llama_cpp.yaml  # name: llama_cpp
 
   conda activate cellwhisperer
   ```
-3. Develop :)
+3. Run the app or analyze your datasets :)
 
 ### Install within Docker
 
@@ -63,21 +64,25 @@ You can also install and use CellWhisperer within docker:
 
 ```bash
 docker build -t cellwhisperer .
-docker run --gpus all -it --volume .:/opt/cellwhisperer cellwhisperer bash
+docker run --gpus all -it --volume .:/opt/cellwhisperer cellwhisperer bash  # also works without GPUs
 conda activate cellwhisperer
 ```
 
-Note that this container loads the project directory as volume (`--volume .:/opt/cellwhisperer`) in the container (such that modifications are visible in the container).
+Note that this container mounts the project directory as volume (`--volume .:/opt/cellwhisperer`) in the container (such that code modifications are visible in the container). Consider mounting also a `resources` and `results` directory to `/opt/cellwhisperer/resources` and `/opt/cellwhisperer/results`, as these are source and target directories when processing datasets (see section [Analyze your own datasets](#analyze) below).
+
+
 
 ### Optional: Installing scGPT
 
 If you want to use scGPT instead of Geneformer (default), install `scgpt` and `flash-attn` (they need pip installation flags to be installed properly) via this script.
+
 ```
 bash envs/install_scgpt_after_env_creation.sh
 ```
 
 Then manually download the scGPT model, as indicated in the shell script.
 
+Note: You might need to install gcc and gxx (e.g. v9.5). Note that if you install them with conda. Installing them with conda might lead to [issues](https://github.com/conda/conda/issues/6945) with snakemake.
 
 ### Optional: Installing CELLxGENE
 

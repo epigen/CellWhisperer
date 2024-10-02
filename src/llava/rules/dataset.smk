@@ -100,7 +100,7 @@ rule generate_llava_stage2_conversations:
     resources:
         mem_mb=100000,
         slurm=f"cpus-per-task=25 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
-    conda: "cellwhisperer"
+    conda: "llama_cpp"
     notebook: "../notebooks/llava_stage2_dataset.py.ipynb"
 
 

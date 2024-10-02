@@ -18,9 +18,9 @@ rule download_geneformer:
     Explicitly download geneformer files (We dropped git-lfs in our geneformer fork, which contained the model files.)
     """
     input:
-        HTTP.remote("https://huggingface.co/ctheodoris/Geneformer/resolve/main/geneformer-12L-30M/config.json?download=true", keep_local=False),
-        HTTP.remote("https://huggingface.co/ctheodoris/Geneformer/resolve/main/geneformer-12L-30M/pytorch_model.bin?download=true", keep_local=False),
-        HTTP.remote("https://huggingface.co/ctheodoris/Geneformer/resolve/main/geneformer-12L-30M/training_args.bin?download=true", keep_local=False)
+        HTTP.remote("https://huggingface.co/ctheodoris/Geneformer/resolve/9d41e7053af8a702003d99305cee01cd34b62ab7/geneformer-12L-30M/config.json?download=true", keep_local=False),
+        HTTP.remote("https://huggingface.co/ctheodoris/Geneformer/resolve/9d41e7053af8a702003d99305cee01cd34b62ab7/geneformer-12L-30M/pytorch_model.bin?download=true", keep_local=False),
+        HTTP.remote("https://huggingface.co/ctheodoris/Geneformer/resolve/9d41e7053af8a702003d99305cee01cd34b62ab7/geneformer-12L-30M/training_args.bin?download=true", keep_local=False)
     output:
         PROJECT_DIR / config["model_name_path_map"]["geneformer"] / "config.json",
         PROJECT_DIR / config["model_name_path_map"]["geneformer"] / "pytorch_model.bin",

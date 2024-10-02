@@ -76,10 +76,9 @@ rule mixtral_curate_llava_annotations:
     threads: 64
     resources:
         mem_mb=40000,
-
         slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
     conda:
-        "cellwhisperer"
+        "llama_cpp"
     notebook:
         "../notebooks/mixtral_curate_llava_annotations.py.ipynb"
 
