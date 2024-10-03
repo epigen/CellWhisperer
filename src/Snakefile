@@ -49,13 +49,6 @@ GPU_TYPE = "a100-sxm4-80gb"
 include: "cellxgene_preprocessing/rules/prepare_cellxgene_dataset.smk"
 include: "shared/rules/download_models.smk"
 
-# # Required for figure 1 (&2?).
-# module cellxgene_preprocessing:
-#     snakefile: "../cellxgene_preprocessing/Snakefile"
-#     config: config
-
-# use rule * from cellxgene_preprocessing as cellxgene_preprocessing_*
-
 rule all:
     input:
         rules.datasets_all.input,

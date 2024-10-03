@@ -30,4 +30,3 @@ namespaces = false
 [tool.setuptools.package-dir]
 "cellwhisperer" = "src/cellwhisperer"
 "geneformer" = "modules/Geneformer/geneformer"
-"clip_lite" = "modules/clip_lite"
