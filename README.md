@@ -58,21 +58,7 @@ Sun Mar 31 17:36:31 2024
   ```
 3. Run the app or analyze your datasets :)
 
-### Install within Docker
-
-You can also install and use CellWhisperer within docker:
-
-```bash
-docker build -t cellwhisperer .
-docker run --gpus all -it --volume .:/opt/cellwhisperer cellwhisperer bash  # also works without GPUs
-conda activate cellwhisperer
-```
-
-Note that this container mounts the project directory as volume (`--volume .:/opt/cellwhisperer`) in the container (such that code modifications are visible in the container). Consider mounting also a `resources` and `results` directory to `/opt/cellwhisperer/resources` and `/opt/cellwhisperer/results`, as these are source and target directories when processing datasets (see section [Analyze your own datasets](#analyze) below).
-
-
-
-### Optional: Installing scGPT
+#### Optional: Installing scGPT
 
 If you want to use scGPT instead of Geneformer (default), install `scgpt` and `flash-attn` (they need pip installation flags to be installed properly) via this script.
 
@@ -82,9 +68,13 @@ bash envs/install_scgpt_after_env_creation.sh
 
 Then manually download the scGPT model, as indicated in the shell script.
 
-Note: You might need to install gcc and gxx (e.g. v9.5). Note that if you install them with conda. Installing them with conda might lead to [issues](https://github.com/conda/conda/issues/6945) with snakemake.
+Note: You might need to install gcc and gxx (e.g. v9.5) if you don't have them. Note that if you install them with conda might lead to [issues](https://github.com/conda/conda/issues/6945) with snakemake.
 
-### Optional: Installing CELLxGENE
+#### Optional: Installing CELLxGENE
+
+If 
+
+`cd modules/cellxgene && make build-for-server-dev`
 
 See [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md). In short:
 
@@ -95,6 +85,19 @@ See [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md)
 - Install prereqs for client: `make dev-env`
 
 <a name="run"/>
+
+### Install within Docker
+
+You can also install and use CellWhisperer within docker, which includes all installation steps above (including cellxgene installation):
+
+```bash
+docker build -t cellwhisperer .
+docker run --gpus all -it --volume .:/opt/cellwhisperer cellwhisperer bash  # also works without GPUs
+conda activate cellwhisperer
+```
+
+Note that this container mounts the project directory as volume (`--volume .:/opt/cellwhisperer`) in the container (such that code modifications are visible in the container). Consider mounting also a `resources` and `results` directory to `/opt/cellwhisperer/resources` and `/opt/cellwhisperer/results`, as these are source and target directories when processing datasets (see section [Analyze your own datasets](#analyze) below).
+
 
 ## Run
 
@@ -225,7 +228,7 @@ CellWhisperer builds atop three projects that are integrated via git submodules.
 
 For "latent-free" data analysis in the web browser with CellWhisperer (CELLxGENE Explorer integration), you need to preprocess your datasets. This takes from few hours up to a day or two, dependent on the dataset size and whether you have access to a GPU or a large number of CPU cores.
 
-1. Prepare your dataset (for guidelines see below)
+1. Prepare your dataset (see [guidelines below](#dataset_format_guidelines)
 2. Place it in `<PROJECT_ROOT>/resources/<dataset_name>/read_count_table.h5ad`
 3. Go to `cellwhisperer/src/cellxgene_preprocessing` and run the pipeline: `snakemake --use-conda --conda-frontend conda -c  <number of cores> --config 'datasets=["<dataset_name>"]'`
    - This runs much faster if you have a GPU available. If you don't have one, make sure to compensate with a substantial number of CPU cores (e.g. 32 or more)
@@ -233,15 +236,21 @@ For "latent-free" data analysis in the web browser with CellWhisperer (CELLxGENE
    - We use GPT-4 or Mixtral to condense the CellWhisperer-generated cluster captions into brief titles. Set the environment variable `OPENAI_API_KEY` if you want to use the GPT-4, otherwise Mixtral is used.
 4. Use the newly created file `/path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad` to host a CELLxGENE Explorer instance:
   - `cellxgene launch -p 5005  --debug --host 0.0.0.0 --max-category-items 500 --var-names gene_name /path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad`
-  - For your convenience (e.g. runtime performance, GPU dependency), this locally running server will access our API for some of the AI functionalities. If you want to run the models locally follow these instructions:
-    - for the CLIP model, simply provide the command line arguments `--cellwhisperer-clip-model cellwhisperer/results/models/jointemb/cellwhisperer_clip_v1.ckpt`.
-    - for the LLM model:
-      - run a controller with command `python -m llava.serve.controller --host 0.0.0.0 --port 10000` in the `llava` environment
-      - run a worker with the command `python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 --controller localhost:10000 --port 40000 --worker localhost:40000 --model-path /path/to/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1/`
-      - adjust the variable `CONTROLLER_URL` in `cellwhisperer/modules/cellxgene/server/common/compute/llava_utils.py` to your locally running LLM service.
-      - See `hosting/home/docker-compose.yml` for an example.
+
+### Self-host the AI models (GPU highly recommended)
+
+For your convenience, the CellWhisperer-integrated `cellxgene` server will access our API for AI functionalities. If you instead want to run the AI models locally follow these instructions:
+
+- for the CLIP model, simply provide the command line argument `--cellwhisperer-clip-model cellwhisperer/results/models/jointemb/cellwhisperer_clip_v1.ckpt` to the `cellxgene` command.
+- for the LLM model:
+  - run a controller with command `python -m llava.serve.controller --host 0.0.0.0 --port 10000` in the `llava` environment
+  - run a worker with the command `python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 --controller localhost:10000 --port 40000 --worker localhost:40000 --model-path /path/to/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1/`
+  - adjust the variable `CONTROLLER_URL` in `cellwhisperer/modules/cellxgene/server/common/compute/llava_utils.py` to your locally running LLM service.
+  - See `hosting/home/docker-compose.yml` for an example.
 
 For a semi-professional deployment, you may want to consider running everything within a coherent docker environment. See `hosting/home/docker-compose.yml` for a starting point.
+
+<a name="dataset_format_guidelines"/>
 
 ### Input dataset format guidelines
 
