@@ -70,19 +70,12 @@ Then manually download the scGPT model, as indicated in the shell script.
 
 Note: You might need to install gcc and gxx (e.g. v9.5) if you don't have them. Note that if you install them with conda might lead to [issues](https://github.com/conda/conda/issues/6945) with snakemake.
 
-#### Optional: Installing CELLxGENE
+#### Optional: Installing CELLxGENE single cell browser web app
 
-If 
+1. `conda activate cellwhisperer` (provides `npm`, which is required for (2))
+2. `cd modules/cellxgene && make build-for-server-dev` (builds the client)
 
-`cd modules/cellxgene && make build-for-server-dev`
-
-See [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md). In short:
-
-- Make sure you have npm (install via conda or apt-get)
-- For older versions of npm, run `export NODE_OPTIONS=--openssl-legacy-provider` ([workaround](https://stackoverflow.com/questions/69692842/error-message-error0308010cdigital-envelope-routinesunsupported))
-- Build the client and put static files in place: `make build-for-server-dev`
-- Install from local files: `make install-dev`
-- Install prereqs for client: `make dev-env`
+For details, refer to the [developer_guidelines](./modules/cellxgene/dev_docs/developer_guidelines.md).
 
 <a name="run"/>
 
@@ -228,7 +221,7 @@ CellWhisperer builds atop three projects that are integrated via git submodules.
 
 For "latent-free" data analysis in the web browser with CellWhisperer (CELLxGENE Explorer integration), you need to preprocess your datasets. This takes from few hours up to a day or two, dependent on the dataset size and whether you have access to a GPU or a large number of CPU cores.
 
-1. Prepare your dataset (see [guidelines below](#dataset_format_guidelines)
+1. Prepare your dataset (see [guidelines below](#dataset_format_guidelines))
 2. Place it in `<PROJECT_ROOT>/resources/<dataset_name>/read_count_table.h5ad`
 3. Go to `cellwhisperer/src/cellxgene_preprocessing` and run the pipeline: `snakemake --use-conda --conda-frontend conda -c  <number of cores> --config 'datasets=["<dataset_name>"]'`
    - This runs much faster if you have a GPU available. If you don't have one, make sure to compensate with a substantial number of CPU cores (e.g. 32 or more)
