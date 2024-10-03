@@ -20,6 +20,7 @@ rule download_data:
         temporary("TabulaSapiens.h5ad")
     params:
         url=H5AD_URL
+    conda: "../../../envs/unzip.yaml"
     shell:
         """
         wget -O {output[0]}.zip {params.url}
