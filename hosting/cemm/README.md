@@ -3,7 +3,7 @@
 This folder contains the configuration necessary for deploying CellWhisperer on CeMM
 infrastructure. Upon changes/deployment, it is recommended that you cycle the cellwhisperer containers by
 running `./cellwhisperer_cycle.sh`. This will ensure that the network is set up correctly
-and that the container environment is kept clean.
+and that the container environment is kept clean. Additionally, it is required to rebuild the image using `docker compose build`
 
 Alternatively you can consult that same file to determine which commands to run.
 
