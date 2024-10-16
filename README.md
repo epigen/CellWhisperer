@@ -98,7 +98,7 @@ Note that this container mounts the project directory as volume (`--volume .:/op
 
 We provide all our validations and analyses in a single pipeline, (re)producing all (*) plots in our paper.
 
-Note that due to the high computational cost, this pipeline relies on some precomputed files, which are downloaded from our server as part of the pipeline. Nevertheless computing all the analyses will require a considerable amount of storage (~1TB), RAM (up to 1TB), GPU and time (2 days) resources.
+Note that due to the high computational cost, this pipeline relies on some precomputed files, which are downloaded from our server as part of the pipeline. Nevertheless computing all the analyses will require a considerable amount of storage (~1TB), RAM (up to 1TB), GPU (40GB VRAM) and time (2 days) resources.
 
 To run the pipeline, execute
 
@@ -144,7 +144,7 @@ We rely on pytorch lightning, which significantly reduces boilerplate for a mult
 - CLI args
 - model sharing
 
-Before training, make sure to read the [LightningCLI documentation](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html) (the three Basics are enough). It's short and really helpful! E.g. to start a run do this:
+Before training, make sure to read the [LightningCLI documentation](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html) (the three 'Basic' tutorials are enough). It's short and really helpful! E.g. to start a run do this:
 
 ```bash
 cd cellwhisperer  # go to the project directory to line up all paths correctly
@@ -221,13 +221,13 @@ For "latent-free" data analysis in the web browser with CellWhisperer (CELLxGENE
 1. Prepare your dataset (see [guidelines below](#dataset_format_guidelines))
 2. Place it in `<PROJECT_ROOT>/resources/<dataset_name>/read_count_table.h5ad`
 3. Go to `cellwhisperer/src/cellxgene_preprocessing` and run the pipeline: `snakemake --use-conda --conda-frontend conda -c  <number of cores> --config 'datasets=["<dataset_name>"]'`
-   - This runs much faster if you have a GPU available. If you don't have one, make sure to compensate with a substantial number of CPU cores (e.g. 32 or more)
+   - This runs much faster if you have a GPU (4GB VRAM are enough) available. If you don't have one, make sure to compensate with a substantial number of CPU cores (e.g. 32 or more)
    - Depending on your dataset, you might also require a substantial amount of RAM (e.g. your dataset size times 2)
-   - We use GPT-4 or Mixtral to condense the CellWhisperer-generated cluster captions into brief titles. Set the environment variable `OPENAI_API_KEY` if you want to use the GPT-4, otherwise Mixtral is used.
+   - We use the GPT-4 API or a local Mixtral model (GPU with 40GB VRAM recommended) to condense the CellWhisperer-generated cluster captions into brief titles. Set the environment variable `OPENAI_API_KEY` if you want to use the GPT-4, otherwise Mixtral is used.
 4. Use the newly created file `/path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad` to host a CELLxGENE Explorer instance:
   - `cellxgene launch -p 5005  --debug --host 0.0.0.0 --max-category-items 500 --var-names gene_name /path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad`
 
-### Self-host the AI models (GPU highly recommended)
+### Self-host the AI models (GPU with 24GB VRAM highly recommended)
 
 For your convenience, the CellWhisperer-integrated `cellxgene` server will access our API for AI functionalities. If you instead want to run the AI models locally follow these instructions:
 
