@@ -157,10 +157,10 @@ The config used to train is located at `src/cellwhisperer_clip_v1.yaml`
 
 #### Important parameters
 
-`wandb`: Whether to log to wandb and if so which run_name to use
-`trainer.logger.log_model`: Upload model to WandB?
-`trainer.fast_dev_run`: Name is self-explanatory. Super useful for debugging
-`ckpt_path`: a path (to load a model, e.g. for resuming)
+- `wandb`: Whether to log to wandb and if so which run_name to use
+- `trainer.logger.log_model`: Upload model to WandB?
+- `trainer.fast_dev_run`: Name is self-explanatory. Super useful for debugging
+- `ckpt_path`: a path (to load a model, e.g. for resuming)
 
 #### TODO Sweeps
 
