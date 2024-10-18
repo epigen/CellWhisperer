@@ -2,7 +2,7 @@
 
 CellWhisperer is a multimodal AI model combining transcriptomics with natural language to enable intuitive interaction with scRNA-seq datasets. This repository contains source code for dataset generation, training, inference and the CellWhisperer web tool, which is based on the CELLxGENE Explorer. The [project website](http://cellwhisperer.bocklab.org/) hosts the web tool with several example datasets as well as a short video tutorial.
 
-An early version of CellWhisperer has been accepted as [Spotlight paper at the ICLR 2024 MLGenX workshop](https://openreview.net/forum?id=yWiZaE4k3K). The full paper can be found on [bioRxiv (TODO)](https://biorxiv.org).
+An early version of CellWhisperer has been accepted as [Spotlight paper at the ICLR 2024 MLGenX workshop](https://openreview.net/forum?id=yWiZaE4k3K). The full paper can be found on [bioRxiv](https://www.biorxiv.org/content/10.1101/2024.10.15.618501v1).
 
 ##### Table of Contents
 
