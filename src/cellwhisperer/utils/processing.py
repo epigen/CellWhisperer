@@ -1,3 +1,5 @@
+import numpy as np
+from scipy import sparse
 import anndata
 import torch
 from transformers import AutoTokenizer
@@ -48,3 +50,18 @@ def adata_to_embeds(
     )
 
     return transcriptome_embeds
+
+
+def ensure_raw_counts_adata(adata):
+    # Check if the values in the X layer are counts (i.e., integers)
+    comp = np.abs(adata.X[:100] - adata.X[:100].astype(int))
+    if isinstance(adata.X, sparse.csr_matrix):
+        comp = comp.toarray()
+
+    if not np.all(comp < 1e-6):
+        try:
+            adata.X = adata.layers["counts"]
+        except KeyError:
+            raise ValueError(
+                'adata.X contains normalized counts, but raw counts are not provided in adata.layers["counts"].'
+            )

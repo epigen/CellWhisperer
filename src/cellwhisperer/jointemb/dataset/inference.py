@@ -9,6 +9,7 @@ No need for prepare_data() etc. here
 from torch.utils.data import DataLoader
 from cellwhisperer.jointemb.processing import TranscriptomeTextDualEncoderProcessor
 import anndata
+from cellwhisperer.utils.processing import ensure_raw_counts_adata
 from .jointemb import JointEmbedDataset
 from pathlib import Path
 from typing import Union
@@ -31,6 +32,9 @@ class CellxGenePreparationLoader(DataLoader):
         """ """
         if isinstance(read_count_table, (str, Path)):
             read_count_table = anndata.read_h5ad(read_count_table)
+
+        ensure_raw_counts_adata(read_count_table)
+
         self.transcriptome_processor = transcriptome_processor
         self.transcriptome_processor_kwargs = transcriptome_processor_kwargs
 

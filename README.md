@@ -247,7 +247,7 @@ For a semi-professional deployment, you may want to consider running everything 
 We only use human data and raw read counts (not normalized) for our datasets. Normalization is taken care of by the respective transcriptome models (more specifically their processor classes) and is also performed explicitly in this preparation pipeline.
 
 - A dataset is stored in an h5ad file
-- `X` contains raw read counts and without nans (use int32)
+- Raw read counts need to be provided in `X` or in `.layers["counts"]` without nans (use int32).
 - `var` has a *unique* index (e.g. the ensembl_id (not mandatory, but recommended)) and an additional field `gene_name` containing the gene symbol.
   - Optionally, provide an additional field "ensembl_id" (otherwise the pipeline computes it).
 - If your dataset is large (i.e. > 100k cells), restrict the provided metadata fields (e.g. in `obs` and `var`) to what is really necessary
