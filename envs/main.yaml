@@ -33,6 +33,7 @@ dependencies:
   - umap-learn=0.5.3
   - datasets=2.12.0
   - typing-extensions=4.8.0
+  - unzip=6.0
   - ninja=1.11.1
   - scib=1.1.4
   - louvain=0.8.1

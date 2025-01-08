@@ -18,4 +18,4 @@
 # export NCCL_DEBUG=INFO
 # export PYTHONFAULTHANDLER=1
 
-srun /msc/home/mschae83/cellwhisperer/slurm/conda_env_process.sh $*
+srun /msc/home/mschae83/cellwhisperer_private/slurm/conda_env_process.sh $*

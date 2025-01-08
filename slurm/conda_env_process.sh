@@ -8,6 +8,6 @@ export LOCAL_RANK=$SLURM_LOCALID
 export RANK=$SLURM_LOCALID
 
 # Move into the correct directory, especially for wandb to pick up the git commit
-cd $HOME/cellwhisperer
+cd $HOME/cellwhisperer_private
 # start training (or whatever)
 "$@"
