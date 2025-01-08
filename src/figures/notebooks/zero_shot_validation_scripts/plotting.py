@@ -8,11 +8,18 @@ import warnings
 import matplotlib
 from collections import defaultdict
 
-sc.set_figure_params(vector_friendly=True, dpi_save=500)  # Makes PDFs of scatter plots much smaller in size but still high-quality
+sc.set_figure_params(
+    vector_friendly=True, dpi_save=500
+)  # Makes PDFs of scatter plots much smaller in size but still high-quality
+
 
 def plot_embeddings_with_scores(
-    adata, analysis_types, result_metrics_dict, dataset_name, result_dir,
-    celltype_plot_palette=None
+    adata,
+    analysis_types,
+    result_metrics_dict,
+    dataset_name,
+    result_dir,
+    celltype_plot_palette=None,
 ):
     """
     Plot the embeddings colored by batch and celltype, and add the integration scores to the title.
@@ -38,7 +45,8 @@ def plot_embeddings_with_scores(
         )
         try:
             batch_integration_score = round(
-                result_metrics_dict[(dataset_name, analysis_type)]["ASW_label__batch"], 2
+                result_metrics_dict[(dataset_name, analysis_type)]["ASW_label__batch"],
+                2,
             )
         except KeyError:
             batch_integration_score = "NA"
@@ -74,7 +82,10 @@ def plot_embeddings_with_scores(
     plt.tight_layout()
     plt.suptitle(dataset_name)
     for suffix in ["png", "pdf"]:
-        plt.savefig(f"{result_dir}/embedding_plots_zero_shot_comparison.{suffix}", dpi=900 if suffix == "png" else None)
+        plt.savefig(
+            f"{result_dir}/embedding_plots_zero_shot_comparison.{suffix}",
+            dpi=900 if suffix == "png" else None,
+        )
     plt.show()
     plt.close()
 
@@ -99,23 +110,39 @@ def plot_cellwhisperer_predictions_on_umap(
             if f"{label_col}_colors" in adata.uns.keys():
                 del adata.uns[f"{label_col}_colors"]
             # to assign colors to label_col_colors, plot once but don't show
-            sc.pl.embedding(adata, basis=embedding_basis, color=[label_col, "batch"], frameon=False, s=10, alpha=0.5, legend_fontsize=8, legend_loc="right margin", legend_fontoutline=2,
-                            show=False)
+            sc.pl.embedding(
+                adata,
+                basis=embedding_basis,
+                color=[label_col, "batch"],
+                frameon=False,
+                s=10,
+                alpha=0.5,
+                legend_fontsize=8,
+                legend_loc="right margin",
+                legend_fontoutline=2,
+                show=False,
+            )
             plt.close()
 
-            color_mapping = dict(zip(adata.obs[label_col].cat.categories, adata.uns[f"{label_col}_colors"]))
-            color_mapping.update(dict(zip(adata.obs["batch"].cat.categories, adata.uns[f"batch_colors"])))
+            color_mapping = dict(
+                zip(
+                    adata.obs[label_col].cat.categories,
+                    adata.uns[f"{label_col}_colors"],
+                )
+            )
+            color_mapping.update(
+                dict(zip(adata.obs["batch"].cat.categories, adata.uns[f"batch_colors"]))
+            )
 
         adata.uns[f"predicted_labels_cellwhisperer_colors"] = adata.uns[
             f"{label_col}_colors"
         ]
         for color in [
-                label_col,
-                "predicted_labels_cellwhisperer",
-                "batch",
-
+            label_col,
+            "predicted_labels_cellwhisperer",
+            "batch",
         ]:
-            ax=plt.gca()
+            ax = plt.gca()
             if background_adata is not None:
                 # Plot the background in grey
                 sc.pl.embedding(
@@ -128,7 +155,7 @@ def plot_cellwhisperer_predictions_on_umap(
                     show=False,
                     # palette=color_mapping,
                     ncols=1,
-                    ax=ax
+                    ax=ax,
                 )
 
             sc.pl.embedding(
@@ -142,13 +169,14 @@ def plot_cellwhisperer_predictions_on_umap(
                 show=False,
                 palette=color_mapping,
                 ncols=1,
-                ax=ax
+                ax=ax,
             )
             plt.gcf().set_size_inches(10, 5)
             plt.subplots_adjust(right=0.55)
             for suffix in ["png", "pdf"]:
                 plt.savefig(
-                    f"{result_dir}/UMAP.{label_col}_as_label.{color}.{suffix}", dpi=900 if suffix == "png" else None
+                    f"{result_dir}/UMAP.{label_col}_as_label.{color}.{suffix}",
+                    dpi=900 if suffix == "png" else None,
                 )
             plt.show()
             plt.close()
@@ -164,24 +192,35 @@ def plot_confusion_matrix(
     """Plot a heatmap of the confusion matrix in 2 versions: normalized and not normalized."""
     for norm in [True, False]:
         confusion_matrix = performance_metrics_per_label_df[
-            [x for x in performance_metrics_per_label_df if x.startswith("n_samples_predicted_as_")]
+            [
+                x
+                for x in performance_metrics_per_label_df
+                if x.startswith("n_samples_predicted_as_")
+            ]
         ]
         if norm:
             confusion_matrix = confusion_matrix.div(
                 confusion_matrix.sum(axis=1), axis=0
             )
         confusion_matrix.columns = [
-                x.replace("n_samples_predicted_as_", "")
-                for x in confusion_matrix.columns
-            ]
+            x.replace("n_samples_predicted_as_", "") for x in confusion_matrix.columns
+        ]
         if order is not None:
             confusion_matrix = confusion_matrix[order]
             confusion_matrix = confusion_matrix.loc[order]
-        confusion_matrix.to_excel(f"{result_dir}/confusion_matrix_cellwhisperer.{label_col}_as_label.norm_{norm}.xlsx", index=True)
+        confusion_matrix.to_excel(
+            f"{result_dir}/confusion_matrix_cellwhisperer.{label_col}_as_label.norm_{norm}.xlsx",
+            index=True,
+        )
 
         plt.figure(figsize=(10, 10))
-        sns.heatmap(confusion_matrix, cmap="Blues", annot=False, square=True,
-                    cbar_kws={"shrink": .7})
+        sns.heatmap(
+            confusion_matrix,
+            cmap="Blues",
+            annot=False,
+            square=True,
+            cbar_kws={"shrink": 0.7},
+        )
         plt.yticks(
             [x + 0.5 for x in range(len(confusion_matrix.index))],
             confusion_matrix.index,
@@ -382,11 +421,17 @@ def plot_integration_metrics(integration_scores_df, result_dir):
         palette="Greys",
     )
     for i, row in integration_scores_df.iterrows():
-        plt.text(x=i/2-0.25,y=row["value"]+0.01,s=f"{round(row['value'],2)}",ha="center",fontsize=10)
+        plt.text(
+            x=i / 2 - 0.25,
+            y=row["value"] + 0.01,
+            s=f"{round(row['value'],2)}",
+            ha="center",
+            fontsize=10,
+        )
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
     plt.gcf().set_size_inches(5, 4)
-    plt.ylim(0,1)
+    plt.ylim(0, 1)
     plt.xlabel("")
     plt.ylabel("Score")
 
