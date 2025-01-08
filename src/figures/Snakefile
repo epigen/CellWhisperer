@@ -1,9 +1,20 @@
 import subprocess
+
 PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
 configfile: PROJECT_DIR / "config.yaml"
 
 CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
 LLAVA_BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
+
+CELLTYPE_TERMS_DICT={
+    "erythrocyte": "red blood cells",
+    "erythrocyte": "erythrocyte",
+    "nk cell": "Natural killer cells",
+    "t cell": "T cells",
+    "b cell": "B cells",
+    "platelet": "blood platelets",
+}
+
 
 GPU_TYPE = "a100"
 # GPU_TYPE = "a100-sxm4-80gb"
@@ -24,6 +35,7 @@ rule all:
         rules.plot_ablation_wandb.output.all_models_comparison,  # Ablation study
         # Figure 2
         expand(rules.performance_macroavg_and_example_plots.output.macrovag_summary_plot, model=CLIP_MODEL),
+        expand(rules.plot_term_search_results.output.umap_on_neighbors_celltype, celltype=CELLTYPE_TERMS_DICT.keys(), file_suffix=["png"], model="cellwhisperer_clip_v1"),
         # Figure 2 (extended: embedding and gene set correlation analyses)
         expand(rules.zero_shot_validations.output.output_directory, dataset=["pancreas"], model=CLIP_MODEL),
         expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["human_disease"], model=CLIP_MODEL),  # NOTE: Can also be run for tabula_sapiens and for archs4_geo

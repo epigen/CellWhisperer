@@ -88,6 +88,35 @@ rule zero_shot_validations:
     notebook:
         "../notebooks/zero_shot_validation.py.ipynb"
 
+rule plot_term_search_results:
+    """
+    Plot the ground truth celltype and the keyword search results on the UMAP (Fig 2a)
+    """
+    input:
+        # no need to have seperate embeddings and read count tables for the tabula sapiens well studied cell types, can just use the full dataset and subset:
+        processed_dataset=lambda wildcards: rules.process_full_dataset.output.model_outputs.format(dataset="tabula_sapiens", model=wildcards.model),
+        raw_read_count_table=str(PROJECT_DIR / config["paths"]["read_count_table"]).format(dataset="tabula_sapiens"),
+        model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",  # needed to embed the keywords  
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"])
+    output:
+        # Using a directory here because the exact files produced depend on the dataset:
+        umap_on_neighbors_celltype=ZERO_SHOT_RESULTS / "datasets" / "tabula_sapiens" / "umap_on_neighbors_cellwhisperer.true_celltype_{celltype}.{file_suffix}",
+        colorscale_symmetrical=ZERO_SHOT_RESULTS / "datasets" / "tabula_sapiens" / "umap_on_neighbors_cellwhisperer.keyword_for_{celltype}.symmetrical_cmap.{file_suffix}",
+        colorscale_asymmetrical=ZERO_SHOT_RESULTS / "datasets" / "tabula_sapiens" / "umap_on_neighbors_cellwhisperer.keyword_for_{celltype}.asymmetrical_cmap.{file_suffix}",
+    params:
+        celltype_terms_dict=CELLTYPE_TERMS_DICT,
+        suffix_prefix_dict=SUFFIX_PREFIX_DICT,
+        dataset = "tabula_sapiens",
+        transcriptome_model_name = "geneformer"
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=350000,
+        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
+    log:
+        notebook="../logs/plot_term_search_results_{model}_{celltype}_tabula_sapiens_{file_suffix}.ipynb"
+    notebook:
+        "../notebooks/plot_term_search_results.py.ipynb"
 
 rule performance_macroavg_and_example_plots:
     """
@@ -107,5 +136,3 @@ rule performance_macroavg_and_example_plots:
         notebook="../logs/performance_macroavg_and_example_plots_{model}.ipynb"
     notebook:
         "../notebooks/performance_macroavg_and_example_plots.py.ipynb"
-
-

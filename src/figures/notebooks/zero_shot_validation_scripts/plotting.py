@@ -207,143 +207,149 @@ def plot_confusion_matrix(
                     )
 
         plt.gcf().set_size_inches(
-            max(5,len(confusion_matrix.index) // 2), max(5,len(confusion_matrix.index) // 2)
+            max(5, len(confusion_matrix.index) // 2),
+            max(5, len(confusion_matrix.index) // 2),
         )
         plt.title(title)
 
         plt.savefig(
-            f"{result_dir}/confusion_matrix_cellwhisperer.{label_col}_as_label.norm_{norm}.png", dpi=900
+            f"{result_dir}/confusion_matrix_cellwhisperer.{label_col}_as_label.norm_{norm}.png",
+            dpi=900,
         )
         plt.savefig(
-            f"{result_dir}/confusion_matrix_cellwhisperer.{label_col}_as_label.norm_{norm}.pdf")
+            f"{result_dir}/confusion_matrix_cellwhisperer.{label_col}_as_label.norm_{norm}.pdf"
+        )
         plt.show()
         plt.close()
 
 
-def plot_term_search_result(term, celltype, adata, result_dir, prefix, suffix):
-    """
-    Plot the ground truth celltype and the keyword search results on the UMAP.
-    """
-    sc.pl.embedding(adata, 
-                    basis="X_umap_on_neighbors_cellwhisperer",
-                    color=[f"label contains '{celltype}'"],
-                    cmap = matplotlib.colors.ListedColormap(['silver', 'firebrick']),
-                    show=False)
-    plt.title("Ground truth label")
-    plt.gcf().axes[0].set_facecolor("white")
-    plt.gcf().axes[1].remove()
-
-    for file_suffix in ["png","pdf"]:
-        plt.savefig(f"{result_dir}/umap_on_neighbors_cellwhisperer.true_celltype_{celltype}.{file_suffix}")
-    plt.tight_layout()
-    plt.show()
-    plt.close()
-
-    for make_colorscale_symmetrical in [True,False]:
-        vmax=adata.obs[f"score_for_{term}"].max()
-        sc.pl.embedding(adata, 
-        basis="X_umap_on_neighbors_cellwhisperer" ,#if not "X_umap_original" in adata.obsm.keys() else "X_umap_original",
-        color=[f"score_for_{term}"],
-        cmap="RdBu_r", vmin=-vmax if make_colorscale_symmetrical else None, vmax=vmax if make_colorscale_symmetrical else None,show=False)
-        plt.title("Keyword search results")
-        # label the colorbar
-        plt.gcf().axes[1].set_ylabel(f"Score for: '{prefix}{term}{suffix}'", fontsize=7)
-        plt.gcf().axes[0].set_facecolor("white")
-
-
-        for file_suffix in ["png","pdf"]:
-            plt.savefig(f"{result_dir}/umap_on_neighbors_cellwhisperer.keyword_{term}.{'symmetrical_cmap' if make_colorscale_symmetrical else 'asymmetrical_cmap'}.{file_suffix}")
-        plt.tight_layout()
-        plt.show()
-        plt.close()
-
-
-def plot_confidence_distributions(adata, result_dir, dataset_name, text_list,
-                                  label_col="celltype"):
+def plot_confidence_distributions(
+    adata, result_dir, dataset_name, text_list, label_col="celltype"
+):
     """Plot a number of histograms and KDEplots for the cellwhisperer score across different values for label_col"""
-    
 
-    hist_dfs_all_terms={"unnormed":[],"normed":[]}
-    try: # can lead to errors if the number of unique labels is too high
+    hist_dfs_all_terms = {"unnormed": [], "normed": []}
+    try:  # can lead to errors if the number of unique labels is too high
         if len(adata.obs[label_col].unique()) < 1000:
-            fig, ax = plt.subplots(len(adata.obs[label_col].unique()),1, sharex=True,sharey=False,figsize=(8,2*len(adata.obs[label_col].unique())))
+            fig, ax = plt.subplots(
+                len(adata.obs[label_col].unique()),
+                1,
+                sharex=True,
+                sharey=False,
+                figsize=(8, 2 * len(adata.obs[label_col].unique())),
+            )
             for i, term in enumerate(text_list):
-                matching_label=adata.obs[label_col].unique().tolist()[i]
-                adata.obs["label_matches_term"]=adata.obs[label_col]==matching_label
-                sns.histplot(data=adata.obs,
-                            x=f"score_for_{term}",
-                            hue="label_matches_term",
-                            ax=ax[i],bins=20,
-                            stat="density",
-                            common_norm=False,
-                            palette={True:"coral",False:"silver"},
-                            legend=False)
-                hist_df=adata.obs[[f"score_for_{term}","label_matches_term"]]
-                hist_df.columns=["score","label_matches_term"]
+                matching_label = adata.obs[label_col].unique().tolist()[i]
+                adata.obs["label_matches_term"] = adata.obs[label_col] == matching_label
+                sns.histplot(
+                    data=adata.obs,
+                    x=f"score_for_{term}",
+                    hue="label_matches_term",
+                    ax=ax[i],
+                    bins=20,
+                    stat="density",
+                    common_norm=False,
+                    palette={True: "coral", False: "silver"},
+                    legend=False,
+                )
+                hist_df = adata.obs[[f"score_for_{term}", "label_matches_term"]]
+                hist_df.columns = ["score", "label_matches_term"]
                 hist_dfs_all_terms["unnormed"].append(hist_df.copy())
 
-
                 plt.sca(ax[i])
-                plt.legend(title=f"Cell type",labels=[matching_label,"other"],loc="lower right",
-                        ncol=1)
+                plt.legend(
+                    title=f"Cell type",
+                    labels=[matching_label, "other"],
+                    loc="lower right",
+                    ncol=1,
+                )
 
                 # z-normalize vs the label_matches_term = False
-                hist_score_normed=hist_df.copy()
-                mean=hist_score_normed[hist_score_normed["label_matches_term"]==False]["score"].mean()
-                std=hist_score_normed[hist_score_normed["label_matches_term"]==False]["score"].std()
-                hist_score_normed["score"]=(hist_score_normed["score"]-mean)/std
+                hist_score_normed = hist_df.copy()
+                mean = hist_score_normed[
+                    hist_score_normed["label_matches_term"] == False
+                ]["score"].mean()
+                std = hist_score_normed[
+                    hist_score_normed["label_matches_term"] == False
+                ]["score"].std()
+                hist_score_normed["score"] = (hist_score_normed["score"] - mean) / std
                 hist_dfs_all_terms["normed"].append(hist_score_normed.copy())
 
             plt.xlabel("Cellwhisperer score for the label")
-            plt.savefig(f"{result_dir}/confidence_distribution_{label_col}_per_label.pdf")
+            plt.savefig(
+                f"{result_dir}/confidence_distribution_{label_col}_per_label.pdf"
+            )
             plt.show()
             plt.close()
-        
-        for norm in ["unnormed","normed"]:
-            hist_df_all_terms=pd.concat(hist_dfs_all_terms[norm])
-            sns.histplot(data=hist_df_all_terms,
-                                x=f"score",
-                                hue="label_matches_term",
-                                bins=20,
-                                stat="density",
-                                common_norm=False,
-                                palette={True:"coral",False:"silver"},
-                                legend=True)
-            plt.xlabel(f"{'Normalized c' if norm=='normed' else 'C'}ellwhisperer score for the label")
+
+        for norm in ["unnormed", "normed"]:
+            hist_df_all_terms = pd.concat(hist_dfs_all_terms[norm])
+            sns.histplot(
+                data=hist_df_all_terms,
+                x=f"score",
+                hue="label_matches_term",
+                bins=20,
+                stat="density",
+                common_norm=False,
+                palette={True: "coral", False: "silver"},
+                legend=True,
+            )
+            plt.xlabel(
+                f"{'Normalized c' if norm=='normed' else 'C'}ellwhisperer score for the label"
+            )
             plt.ylabel("Density")
             plt.gca().get_legend().set_title("Cell type equals label")
-            plt.savefig(f"{result_dir}/confidence_distribution_{label_col}_all_labels.{norm}.pdf")
+            plt.savefig(
+                f"{result_dir}/confidence_distribution_{label_col}_all_labels.{norm}.pdf"
+            )
             plt.show()
             plt.close()
 
         # Some specific examples
         if "tabula_sapiens" in dataset_name:
-            fig, ax = plt.subplots(3,1, sharex=True,sharey=False,figsize=(8,2*3))
-            for i, term in enumerate(["cardiac muscle cell","alveolar fibroblast","thymocyte", "erythrocyte"]):
-                matching_label=adata.obs[label_col].unique().tolist()[i]
-                adata.obs["label_matches_term"]=adata.obs[label_col]==matching_label
-                sns.histplot(data=adata.obs,
-                            x=f"score_for_{term}",
-                            hue="label_matches_term",
-                            ax=ax[i],bins=20,
-                            stat="density",
-                            common_norm=False,
-                            palette={True:"coral",False:"silver"},
-                            legend=False)
-                hist_df=adata.obs[[f"score_for_{term}","label_matches_term"]]
-                hist_df.columns=["score","label_matches_term"]
+            fig, ax = plt.subplots(3, 1, sharex=True, sharey=False, figsize=(8, 2 * 3))
+            for i, term in enumerate(
+                [
+                    "cardiac muscle cell",
+                    "alveolar fibroblast",
+                    "thymocyte",
+                    "erythrocyte",
+                ]
+            ):
+                matching_label = adata.obs[label_col].unique().tolist()[i]
+                adata.obs["label_matches_term"] = adata.obs[label_col] == matching_label
+                sns.histplot(
+                    data=adata.obs,
+                    x=f"score_for_{term}",
+                    hue="label_matches_term",
+                    ax=ax[i],
+                    bins=20,
+                    stat="density",
+                    common_norm=False,
+                    palette={True: "coral", False: "silver"},
+                    legend=False,
+                )
+                hist_df = adata.obs[[f"score_for_{term}", "label_matches_term"]]
+                hist_df.columns = ["score", "label_matches_term"]
                 hist_dfs_all_terms["unnormed"].append(hist_df.copy())
                 plt.sca(ax[i])
-            plt.legend(title=f"Cell type",labels=[matching_label,"other"],loc="lower right",
-                        ncol=1)
+            plt.legend(
+                title=f"Cell type",
+                labels=[matching_label, "other"],
+                loc="lower right",
+                ncol=1,
+            )
             plt.xlabel("Cellwhisperer score for the label")
-            plt.savefig(f"{result_dir}/confidence_distribution_{label_col}_per_label.SELECTED_TERMS.pdf")
+            plt.savefig(
+                f"{result_dir}/confidence_distribution_{label_col}_per_label.SELECTED_TERMS.pdf"
+            )
             plt.show()
             plt.close()
-            
+
     except Exception as e:
-        print(f"Got the following error during plotting of confidence distributions (continueing): {e}")
-        
+        print(
+            f"Got the following error during plotting of confidence distributions (continueing): {e}"
+        )
 
     # Plot the distribution of confidence scores - seperately for cases where the prediction is correct vs incorrect
     sns.kdeplot(
