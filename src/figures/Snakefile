@@ -6,7 +6,7 @@ configfile: PROJECT_DIR / "config.yaml"
 CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
 LLAVA_BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
 
-CELLTYPE_TERMS_DICT={
+CELLTYPE_TERMS_DICT={  # consider moving to config
     "erythrocyte": "red blood cells",
     "erythrocyte": "erythrocyte",
     "nk cell": "Natural killer cells",
@@ -14,6 +14,8 @@ CELLTYPE_TERMS_DICT={
     "b cell": "B cells",
     "platelet": "blood platelets",
 }
+
+from notebooks.zero_shot_validation_scripts.utils import SUFFIX_PREFIX_DICT  # consider moving to config
 
 
 GPU_TYPE = "a100"
@@ -29,18 +31,32 @@ rule all:
     input:
         # Figure 1
         rules.geo_umap_plots.output.cluster_labeled.format(model=CLIP_MODEL),
-        # Figure 1 (extended)
+        # Figure S1
         rules.final_model_retrieval_scores.output.barplot,
         rules.final_model_retrieval_scores.output.lineplot,
         rules.plot_ablation_wandb.output.all_models_comparison,  # Ablation study
-        # Figure 2
-        expand(rules.performance_macroavg_and_example_plots.output.macrovag_summary_plot, model=CLIP_MODEL),
-        expand(rules.plot_term_search_results.output.umap_on_neighbors_celltype, celltype=CELLTYPE_TERMS_DICT.keys(), file_suffix=["png"], model="cellwhisperer_clip_v1"),
-        # Figure 2 (extended: embedding and gene set correlation analyses)
-        expand(rules.zero_shot_validations.output.output_directory, dataset=["pancreas"], model=CLIP_MODEL),
-        expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["human_disease"], model=CLIP_MODEL),  # NOTE: Can also be run for tabula_sapiens and for archs4_geo
 
-        # Figure 3 (extended: LLM validations)
+        # Figure 2
+        expand(rules.plot_confusion_matrix.output.confusion_matrix_plot,
+               model=CLIP_MODEL,
+               dataset=["tabula_sapiens", "tabula_sapiens_well_studied_celltypes"],  # TODO pancreas?
+               metadata_col="celltype",
+               normed=["normed", "raw"]),
+        expand(rules.plot_term_search_results.output.umap_on_neighbors_celltype, celltype=CELLTYPE_TERMS_DICT.keys(), file_suffix=["png"], model="cellwhisperer_clip_v1"),
+        [
+            base_fn.format(dataset=dataset, model=CLIP_MODEL, metadata_col=metadata_col)
+            for base_fn in [rules.plot_zero_shot_predictions_on_umap.output.result_dir, rules.plot_confidence_distributions.output.plot_dir]
+            for dataset in ["tabula_sapiens", "pancreas"]  # TODO config["metadata_cols_per_zero_shot_validation_dataset"].keys()
+            for model in [CLIP_MODEL]
+            for metadata_col in config["metadata_cols_per_zero_shot_validation_dataset"][dataset]
+        ],
+        expand(rules.zero_shot_performance_macroavg.output.macroavg_summary_plot, model=CLIP_MODEL),
+        expand(rules.zero_shot_performance_examples.output.per_class_examples_plot, model=CLIP_MODEL),
+        # Figure S2 (extended: embedding and gene set correlation analyses) TODO
+        expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["human_disease"], model=CLIP_MODEL),  # NOTE: Can also be run for tabula_sapiens and for archs4_geo
+        expand(rules.plot_joint_transcriptome_embedding_scib.output.integration_scores, dataset=["tabula_sapiens", "pancreas"]),
+
+        # Figure S3 (LLM validations)
         expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
                plot_name=["detailed", "perplexity_quantile"],
                dataset=["main", "tabula_sapiens"],  # NOTE: these are evaluation datasets

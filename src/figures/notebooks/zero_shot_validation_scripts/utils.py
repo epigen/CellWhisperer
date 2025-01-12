@@ -1,5 +1,3 @@
-from anndata import AnnData
-import scanpy as sc
 import pandas as pd
 
 ## Define the suffix and prefix for the text embeddings
@@ -57,7 +55,7 @@ def umap_on_embedding(
     embedding_key: str = "X_cellwhisperer",
     neighbors_key: str = "neighbors_cellwhisperer",
     umap_key: str = "X_umap_on_neighbors_cellwhisperer",
-) -> AnnData:
+):
     """
     Calculate UMAP on the given embedding and store it in adata.obsm[umap_key].
     :param adata: anndata.AnnData instance.
@@ -66,6 +64,7 @@ def umap_on_embedding(
     :param umap_key: Key in adata.obsm where the UMAP embedding should be stored.
     :return: adata with UMAP embedding stored in adata.obsm[umap_key].
     """
+    import scanpy as sc
     sc.pp.neighbors(adata, use_rep=embedding_key, key_added=neighbors_key)
     adata.obsm[umap_key] = sc.tl.umap(
         adata, neighbors_key=neighbors_key, copy=True

@@ -31,6 +31,7 @@ rule llava_evaluation_perplexity:
     """
     Current limitations:
     - Each of our datasets can only provide one evaluation dataset
+
     """
     input:
         llava_model=ancient(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"]),
@@ -67,6 +68,6 @@ rule llava_evaluation_perplexity_plots:
         comparison_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "perplexity_quantile.svg",  # barplot
         detailed_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "detailed.svg",  # barplot
     conda:
-        "cellwhisperer"
+        "llava"
     notebook:
         "../notebooks/llava_evaluation_perplexity_plots.py.ipynb"

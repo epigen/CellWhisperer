@@ -29,9 +29,6 @@ paths:
     cw_transcriptome_term_scores: results/{dataset}/{model}/cw_transcriptome_term_scores.parquet
     plots: results/plots/gsva_correlation/{dataset}/{model}
 
-  zero_shot_validation:
-    result_dir: results/plots/zero_shot_validation/{model,[^/]+}/
-
   llava:
     root: results/llava/
     pretrain_text_dataset: results/llava/pretrain_texts.json
