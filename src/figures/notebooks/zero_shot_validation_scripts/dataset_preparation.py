@@ -29,7 +29,7 @@ def preprocess_immgen(adata: anndata.AnnData) -> anndata.AnnData:
 
 
 def preprocess_tabula_sapiens(
-    adata: anndata.AnnData, well_studied_only=False, min_100=False
+    adata: anndata.AnnData, min_100=False
 ) -> anndata.AnnData:
     """Preprocess the tabula_sapiens_100_cells_per_type or the full tabula_sapiens dataset."""
     adata.obs["celltype"] = adata.obs["cell_ontology_class"]
@@ -109,10 +109,7 @@ def preprocess_tabula_sapiens(
     if "raw_counts" in adata.layers.keys():
         adata.X = adata.layers["raw_counts"].copy()
         # raise ValueError("Raw counts should be in adata.X, not in adata.layers['raw_counts']")
-    if well_studied_only:
-        adata = adata[
-            adata.obs["celltype"].isin(list(TABSAP_WELLSTUDIED_COLORMAPPING.keys())), :
-        ]
+
     if min_100:
         value_counts_per_celltype = adata.obs["celltype"].value_counts()
         celltypes_to_keep = value_counts_per_celltype[
@@ -164,7 +161,6 @@ def load_and_preprocess_dataset(
     if "tabula_sapiens" in dataset_name:
         adata = preprocess_tabula_sapiens(
             adata,
-            well_studied_only="well_studied_celltypes" in dataset_name,
             min_100="min_100" in dataset_name,
         )
     elif dataset_name == "pancreas":

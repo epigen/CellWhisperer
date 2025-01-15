@@ -1,15 +1,25 @@
-include: "../../shared/rules/training_sample_weights.smk"
+
 
 ZERO_SHOT_RESULTS = PROJECT_DIR / "results/plots/zero_shot_validation"
-ZERO_SHOT_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,[^/]+}"
+ZERO_SHOT_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,cellwhisperer_clip_v1}"  # TODO add other models here
 
+ZERO_SHOT_PREDICTORS = [
+        "gpt4", 
+        "llama33", 
+        "cellwhisperer_clip_v1",
+        # "claudesonnet"  # TODO consider also opus, as it was best in another benchmark..
+        ] 
+
+include: "../../shared/rules/training_sample_weights.smk"
+
+# Computations
 rule compute_umap_neighbors:
     """
     # TODO generalize towards others models (beyond cellwhisperer_clip_v1)
     """
     input:
-        processed_dataset=lambda wildcards: rules.process_full_dataset.output.model_outputs.format(dataset=wildcards.dataset if wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens", model=wildcards.model),
-        raw_read_count_table=lambda wildcards: str(PROJECT_DIR / config["paths"]["read_count_table"]).format(dataset=wildcards.dataset if wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens"),
+        processed_dataset=rules.process_full_dataset.output.model_outputs,
+        raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"]
     output:
         umap=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "X_umap_on_neighbors_{model}.npz"
     conda:
@@ -21,6 +31,193 @@ rule compute_umap_neighbors:
         notebook="../logs/compute_umap_neighbors_{dataset}_{model}.ipynb"
     notebook:
         "../notebooks/compute_umap_neighbors.py.ipynb"
+
+rule zero_shot_cellwhisperer_prediction:
+    """
+    Zero-shot property prediction with CellWhisperer
+
+    For a given dataset and field, compute all predictions for downstream analysis
+
+    NOTE: could be used as template for few-shot learing with other embedding-based model zero shot predictions
+    """
+    input:
+        # no need to have seperate embeddings and read count tables for the tabula sapiens well studied cell types, can just use the full dataset and subset:
+        processed_dataset=rules.process_full_dataset.output.model_outputs,
+        raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
+        model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",  # needed to embed the keywords  
+    output:
+        # Using a directory here because the exact files produced depend on the dataset:
+        predictions=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv",  # NOTE: might be used as input for `plot_confusion_matrix` as well (and by extension `zero_shot_performance_macroavg`)
+        # scores=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping}.scores.csv",  # TODO refactor away since everything is in predictions anyways
+    params:
+        use_prefix_suffix_version=True,
+        average_by_class=lambda wildcards: wildcards.grouping == "by_class",
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=350000,
+        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
+    log:
+        notebook="../logs/zero_shot_cellwhisperer_prediction_{model}_{dataset}_{metadata_col}_{grouping}.ipynb"
+    notebook:
+        "../notebooks/zero_shot_cellwhisperer_prediction.py.ipynb"
+
+# TODO move to config
+API_KEYS = {
+    "gpt4": os.getenv("OPENAI_API_KEY"),
+    "llama33": "AAAAC3NzaC1lZDI1NTE5AAAAIHBNHW83n+Y6CxrSudipeoRn7qC0EjnVRh00pWHn/oNy",
+    # TODO "claudesonnet": os.getenv("ANTHROPIC_API_KEY"),  # TODO opus is even better apparently
+}
+
+API_BASE_URLS = {
+    "gpt4": "https://api.openai.com/v1/",
+    "llama33": "http://s0-n02.hpc.meduniwien.ac.at:8080/v1/",
+    # TODO "claudesonnet": "https://api.anthropic.com/v1/completions",
+}
+
+MODEL_NAMES = {
+    "gpt4": "gpt-4o-2024-11-20",
+    "llama33": "llama3.3:70b",
+    # "claudesonnet": "claudesonnet",  TODO
+    # "claudeopus": "claudeopus",  TODO
+}
+
+rule zero_shot_llm_prediction:
+    """
+    GPT-4 zero-shot predictions, adapting prompt from Hou et al., 2024 (https://www.nature.com/articles/s41592-024-02235-4)
+    For Llama 3.3, run first `export OLLAMA_HOST=0.0.0.0:8080 ~/ollama/bin/ollama serve`
+
+    NOTE 2: for now we do cell type level predictions. better would be for each cell, or at least for each pseudo-cell (how to aggregate?). Alternatively, I could predict (all) cells with LLaMA 3
+    """
+    input:
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
+        gene_normalizers=rules.compute_gene_normalizers.output.gene_mean_log1ps,  # NOTE could also get the ones computed with `seurat_get_top_genes`
+    output:
+        # Using a directory here because the exact files produced depend on the dataset:
+        predictions=protected(ZERO_SHOT_RESULTS / "{model,gpt4|llama33|sonnet}" / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv"),
+    params:
+        api_key=lambda wildcards: API_KEYS.get(wildcards.model),
+        api_base_url=lambda wildcards: API_BASE_URLS.get(wildcards.model),
+        prompt=lambda wildcards: f"Identify the {wildcards.metadata_col} for a given set of markers. Only provide the name of the {wildcards.metadata_col}. Do not show numbers before the name. \n{wildcards.metadata_col} candidates: {{candidates}}\n\nMarkers: {{markers}}",
+        top_n_genes=50,
+        model=lambda wildcards: MODEL_NAMES.get(wildcards.model),
+        average_by_class=lambda wildcards: wildcards.grouping == "by_class",
+    resources:
+        mem_mb=350000,
+        slurm="cpus-per-task=2"
+    conda:
+        "cellwhisperer"
+    log:
+        notebook="../logs/zero_shot_llm_prediction_{model}_{dataset}_{metadata_col}_{grouping}.ipynb"
+    notebook:
+        "../notebooks/zero_shot_llm_prediction.py.ipynb"
+
+
+# dataset_selector=lambda wildcards: 
+def dataset_selector(wildcards):
+    return [dataset for dataset, mcols in config["metadata_cols_per_zero_shot_validation_dataset"].items() 
+                                    if wildcards.metadata_col in mcols
+                                    and (  # exclude some of the tabula_sapiens datasets (to save costs on the API)
+                                        (wildcards.grouping == "by_cell" and dataset not in ["tabula_sapiens", "tabula_sapiens_well_studied_celltypes"]) or
+                                        (wildcards.grouping == "by_class" and dataset != "tabula_sapiens_100_cells_per_type")
+                                    )]
+rule aggregate_zero_shot_property_predictions:
+    """
+    Aggregate the zero-shot property predictions for all models and datasets
+
+    TODO implement
+
+    grouping: indicate whether the feature matrix is grouped and mean-aggregated prior to prediction. Either "by_class" or "by_cell"
+    """
+    input:
+        predictions=lambda wildcards: [
+            ZERO_SHOT_RESULTS / model / "datasets" / dataset / "predictions" / f"{wildcards.metadata_col}.{wildcards.grouping}.csv"
+            for model in ZERO_SHOT_PREDICTORS
+            for dataset in dataset_selector(wildcards)
+        ]
+    output:
+        aggregated_predictions=ZERO_SHOT_RESULTS / "aggregated_predictions_{metadata_col}_{grouping,by_cell|by_class}.csv",
+        aggregated_predictions_plot=ZERO_SHOT_RESULTS / "aggregated_predictions_{metadata_col}_{grouping,by_cell|by_class}.png"
+    params:
+        metric="accuracy",
+        models=ZERO_SHOT_PREDICTORS,
+        datasets=dataset_selector
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=2000,
+        slurm="cpus-per-task=1"
+    log:
+        notebook="../logs/aggregate_zero_shot_property_predictions_{metadata_col}_{grouping}.ipynb"
+    notebook:
+        "../notebooks/aggregate_zero_shot_property_predictions.py.ipynb"
+
+rule seurat_get_top_genes:
+    """
+    TODO still unused
+
+    """
+    input:
+        raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"]
+    conda:
+        "../../../envs/gpt4_hou2024.yaml"
+    resources:
+        mem_mb=350000,
+        slurm="cpus-per-task=2"
+    log:
+        notebook="../logs/zero_shot_gpt4_prediction_{dataset}_{metadata_col}.ipynb"
+    notebook:
+        "../notebooks/zero_shot_gpt4_prediction.r.ipynb"
+
+
+# Embedding analysis using scIB (Extended data figure)
+rule transcriptome_embedding_scib:
+    """
+    Embedding integration scores, computed using the `scib` package
+    """
+    input:
+        # no need to have seperate embeddings and read count tables for the tabula sapiens well studied cell types, can just use the full dataset and subset:
+        processed_dataset=rules.process_full_dataset.output.model_outputs,
+        raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
+        umap=rules.compute_umap_neighbors.output.umap,
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
+    output:
+    # /mnt/muwhpc/cellwhisperer_private/results/plots/zero_shot_validation/cellwhisperer_clip_v1/datasets/tabula_sapiens_well_studied_celltypes
+        embedding_plots_zero_shot_comparison_pdf=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "embedding_plots_zero_shot_comparison.pdf",
+        embedding_plots_zero_shot_comparison_png=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "embedding_plots_zero_shot_comparison.png",
+        integration_scores=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "embedding_scib_scores.json",
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=350000,
+        slurm="cpus-per-task=2"
+    log:
+        notebook="../logs/transcriptome_embeddings_scib_{model}_{dataset}.ipynb"
+    notebook:
+        "../notebooks/transcriptome_embedding_scib.py.ipynb"
+
+rule plot_joint_transcriptome_embedding_scib:
+    """Bar plots of integration metrics for all methods."""
+    input:
+        # TODO all the different models to cross-check
+        [rules.transcriptome_embedding_scib.output.integration_scores.replace("{model}", model) for model in ["cellwhisperer_clip_v1"]]  # TODO "geneformer", 
+    output:
+        integration_scores=ZERO_SHOT_RESULTS / "integration_scores_{dataset}.csv",
+        integration_scores_plot=ZERO_SHOT_RESULTS / "integration_scores_{dataset}.pdf"
+    conda:
+        "cellwhisperer"
+    params:
+        models=["geneformer", "cellwhisperer"]
+    resources:
+        mem_mb=2000,
+        slurm="cpus-per-task=1"
+    log:
+        notebook="../logs/plot_joint_transcriptome_embedding_scib_{dataset}.ipynb"
+    notebook:
+        "../notebooks/plot_joint_transcriptome_embedding_scib.py.ipynb"
+
+
+
 
 # Extended fig 2
 rule cw_transcriptome_term_scores:
@@ -74,82 +271,6 @@ rule plot_gsva_correlations:
     notebook:
         "../notebooks/plot_gsva_correlations.py.ipynb"
 
-# Fig 2
-rule transcriptome_embedding_scib:
-    """
-    Embedding integration scores, computed using the `scib` package
-    """
-    input:
-        # no need to have seperate embeddings and read count tables for the tabula sapiens well studied cell types, can just use the full dataset and subset:
-        processed_dataset=lambda wildcards: rules.process_full_dataset.output.model_outputs.format(dataset=wildcards.dataset if wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens", model=wildcards.model),
-        raw_read_count_table=lambda wildcards: str(PROJECT_DIR / config["paths"]["read_count_table"]).format(dataset=wildcards.dataset if wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens"),
-        umap=rules.compute_umap_neighbors.output.umap,
-        mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
-    output:
-    # /mnt/muwhpc/cellwhisperer_private/results/plots/zero_shot_validation/cellwhisperer_clip_v1/datasets/tabula_sapiens_well_studied_celltypes
-        embedding_plots_zero_shot_comparison_pdf=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "embedding_plots_zero_shot_comparison.pdf",
-        embedding_plots_zero_shot_comparison_png=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "embedding_plots_zero_shot_comparison.png",
-        integration_scores=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "embedding_scib_scores.json",
-    conda:
-        "cellwhisperer"
-    resources:
-        mem_mb=350000,
-        slurm="cpus-per-task=2"
-    log:
-        notebook="../logs/transcriptome_embeddings_scib_{model}_{dataset}.ipynb"
-    notebook:
-        "../notebooks/transcriptome_embedding_scib.py.ipynb"
-
-rule plot_joint_transcriptome_embedding_scib:
-    """Bar plots of integration metrics for all methods."""
-    input:
-        # TODO all the different models to cross-check
-        [rules.transcriptome_embedding_scib.output.integration_scores.replace("{model}", model) for model in ["cellwhisperer"]]  # TODO "geneformer", 
-    output:
-        integration_scores=ZERO_SHOT_RESULTS / "integration_scores_{dataset}.csv",
-        integration_scores_plot=ZERO_SHOT_RESULTS / "integration_scores_{dataset}.pdf"
-    conda:
-        "cellwhisperer"
-    params:
-        models=["geneformer", "cellwhisperer"]
-    resources:
-        mem_mb=2000,
-        slurm="cpus-per-task=1"
-    log:
-        notebook="../logs/plot_joint_transcriptome_embedding_scib_{dataset}.ipynb"
-    notebook:
-        "../notebooks/plot_joint_transcriptome_embedding_scib.py.ipynb"
-
-
-rule zero_shot_validation:
-    """
-    For a given dataset and field, compute all predictions for downstream analysis (NOTE: this is not yet fully true. Could still precompute for the confusion matrix etc.)
-    """
-    input:
-        # no need to have seperate embeddings and read count tables for the tabula sapiens well studied cell types, can just use the full dataset and subset:
-        processed_dataset=lambda wildcards: rules.process_full_dataset.output.model_outputs.format(dataset=wildcards.dataset if wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens", model=wildcards.model),
-        raw_read_count_table=lambda wildcards: str(PROJECT_DIR / config["paths"]["read_count_table"]).format(dataset=wildcards.dataset if wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens"),
-        model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",  # needed to embed the keywords  
-        mpl_style=ancient(PROJECT_DIR / config["plot_style"])
-    output:
-        # Using a directory here because the exact files produced depend on the dataset:
-        predictions=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.csv",
-        scores=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.scores.csv",  # NOTE: might be used as input for several other 
-    params:
-        dataset = config["zero_shot_validation_datasets"],
-        metadata_cols_per_dataset = config["metadata_cols_per_zero_shot_validation_dataset"],
-        transcriptome_model_name = "geneformer",
-        use_prefix_suffix_version=True
-    conda:
-        "cellwhisperer"
-    resources:
-        mem_mb=350000,
-        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
-
-    log:
-        notebook="../logs/zero_shot_validation_{model}_{dataset}_{metadata_col}.ipynb"
-    notebook:
-        "../notebooks/zero_shot_validation.py.ipynb"
 
 rule plot_confidence_distributions:
     """
@@ -157,9 +278,9 @@ rule plot_confidence_distributions:
 
     """
     input:
-        processed_dataset=lambda wildcards: rules.process_full_dataset.output.model_outputs.format(dataset=wildcards.dataset if wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens", model=wildcards.model),
-        raw_read_count_table=lambda wildcards: str(PROJECT_DIR / config["paths"]["read_count_table"]).format(dataset=wildcards.dataset if wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens"),
-        predictions=rules.zero_shot_validation.output.predictions,
+        processed_dataset=rules.process_full_dataset.output.model_outputs,
+        raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
+        predictions=rules.zero_shot_cellwhisperer_prediction.output.predictions.replace("{grouping}", "by_cell"),
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
         plot_dir=directory(ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "confidence_distribution_plots")  # NOTE: could be disentangled as well
@@ -180,10 +301,9 @@ rule plot_zero_shot_predictions_on_umap:
     Generate a series of plots that summarize the zero-shot validation results
     """
     input:
-        processed_dataset=lambda wildcards: rules.process_full_dataset.output.model_outputs.format(dataset=wildcards.dataset if wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens", model=wildcards.model),
-        raw_read_count_table=lambda wildcards: str(PROJECT_DIR / config["paths"]["read_count_table"]).format(dataset=wildcards.dataset if wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens"),
-        predictions=rules.zero_shot_validation.output.predictions,
-        scores=rules.zero_shot_validation.output.scores,
+        processed_dataset=rules.process_full_dataset.output.model_outputs,
+        raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
+        predictions=rules.zero_shot_cellwhisperer_prediction.output.predictions.replace("{grouping}", "by_cell"),
         umap=rules.compute_umap_neighbors.output.umap,
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
@@ -203,12 +323,12 @@ rule plot_zero_shot_predictions_on_umap:
 
 rule plot_confusion_matrix:
     """
-    NOTE: could probably use `scores` computed by `zero_shot_validation`. This would work by refactoring the bloated function `get_performance_metrics_transcriptome_vs_text`, such that it takes as input only the scores and then computes the metrics.
+    NOTE: could probably use `scores` computed by `zero_shot_cellwhisperer_prediction`. This would work by refactoring the bloated function `get_performance_metrics_transcriptome_vs_text`, such that it takes as input only the scores and then computes the metrics.
     """
     input:
-        predictions=rules.zero_shot_validation.output.predictions,
-        processed_dataset=lambda wildcards: rules.process_full_dataset.output.model_outputs.format(dataset=wildcards.dataset if wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens", model=wildcards.model),
-        raw_read_count_table=lambda wildcards: str(PROJECT_DIR / config["paths"]["read_count_table"]).format(dataset=wildcards.dataset if wildcards.dataset != "tabula_sapiens_well_studied_celltypes" else "tabula_sapiens"),
+        predictions=rules.zero_shot_cellwhisperer_prediction.output.predictions.replace("{grouping}", "by_cell"),
+        processed_dataset=rules.process_full_dataset.output.model_outputs,
+        raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt"
     output:

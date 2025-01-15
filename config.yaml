@@ -82,6 +82,9 @@ metadata_cols_per_zero_shot_validation_dataset:
     - organ_tissue
   tabula_sapiens_well_studied_celltypes:
     - celltype
+  tabula_sapiens_100_cells_per_type:
+    - celltype
+    - organ_tissue
 
 retrieval_validation_sets:
   - immgen_deduplicated

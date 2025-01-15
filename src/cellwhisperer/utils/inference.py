@@ -13,6 +13,7 @@ import os
 import json
 from pathlib import Path
 import pandas as pd
+import numpy as np
 
 
 def score_transcriptomes_vs_texts(
@@ -55,16 +56,35 @@ def score_transcriptomes_vs_texts(
         assert (
             transcriptome_input.dim() == 2
         ), f"transcriptome_input must be a tensor of shape n_cells * embedding_size, but is {transcriptome_input.shape}"
+        assert average_mode != "cells", "average_mode='cells' requires adata input"
     if grouping_keys is None and average_mode is not None:
         grouping_keys = ["all"] * transcriptome_input.shape[0]
 
     #### Prepare transcriptome embeddings ###
-    if average_mode == "cells":
-        raise NotImplementedError("average_mode='cells' not implemented yet")  # TODO
-
     if type(transcriptome_input) == torch.Tensor:
         transcriptome_embeds = transcriptome_input
     else:
+        if average_mode == "cells":
+            sorted_unique_annotations = sorted(list(set(grouping_keys)))
+            averaged_transcriptome_inputs = []
+            for annotation in sorted_unique_annotations:
+                avg_input_this_value = transcriptome_input[
+                    [annotation == x for x in grouping_keys]
+                ].X.mean(
+                    axis=0
+                ).A1  # 512
+                averaged_transcriptome_inputs.append(avg_input_this_value)
+                
+            averaged_transcriptome_inputs = np.stack(averaged_transcriptome_inputs) # n_celltypes * n_genes
+            grouping_keys = sorted_unique_annotations
+
+            # rebulid adata
+            transcriptome_input = anndata.AnnData(
+                X=averaged_transcriptome_inputs,
+                obs=pd.DataFrame(index=grouping_keys),
+                var=transcriptome_input.var,
+            )
+
         transcriptome_embeds = adata_to_embeds(
             transcriptome_input,
             model,

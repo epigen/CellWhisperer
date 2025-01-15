@@ -26,7 +26,6 @@ include: "rules/fig1_landscape_validation_ablation.smk"
 include: "rules/fig2_embedding_validations.smk"
 include: "rules/fig3_interactive_usecase_llm.smk"
 include: "rules/fig4_colonic_epithelium.smk"
-
 rule all:
     input:
         # Figure 1
@@ -50,6 +49,10 @@ rule all:
             for model in [CLIP_MODEL]
             for metadata_col in config["metadata_cols_per_zero_shot_validation_dataset"][dataset]
         ],
+        expand(rules.aggregate_zero_shot_property_predictions.output.aggregated_predictions, 
+               metadata_col=list(set([v for l in config["metadata_cols_per_zero_shot_validation_dataset"].values() for v in l])), 
+               grouping=["by_cell", "by_class"]
+               ),
         expand(rules.zero_shot_performance_macroavg.output.macroavg_summary_plot, model=CLIP_MODEL),
         expand(rules.zero_shot_performance_examples.output.per_class_examples_plot, model=CLIP_MODEL),
         # Figure S2 (extended: embedding and gene set correlation analyses) TODO
