@@ -34,6 +34,7 @@ rule compute_umap_neighbors:
         "../notebooks/compute_umap_neighbors.py.ipynb"
 
 include: "zero_shot_llm.smk"
+include: "zero_shot_finetuning.smk"
 
 rule zero_shot_cellwhisperer_prediction:
     """

@@ -6,6 +6,7 @@ from itertools import zip_longest
 import torch
 import random
 import logging
+import pandas as pd
 
 import torch
 from torch.utils.data import ConcatDataset
@@ -84,6 +85,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         min_genes=100,
         train_fraction: Union[str, float] = 0.95,
         use_replicates: bool = True,
+        include_labels: Optional[str] = None,
     ):
         """
 
@@ -110,8 +112,10 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.transcriptome_processor_kwargs = transcriptome_processor_kwargs.copy()
         self.tokenizer_kwargs = tokenizer_kwargs.copy()
         self.use_replicates = use_replicates
+        self.include_labels = include_labels
 
     def _processed_path(self, dataset_name):
+        # TODO why is self.transcriptome_processor not part of the final name?
         return get_path(
             ["paths", "datamodule_prepared_path"],
             dataset=dataset_name,
@@ -120,6 +124,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                     self.transcriptome_processor,
                     self.tokenizer,
                     str(self.min_genes),
+                    self.include_labels or "",
                 ]
             ),
         )
@@ -166,6 +171,19 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 inputs[modality_weights_key] = torch.ones(len(adata.obs))
 
         replicate_inputs = self._prepare_replicate_inputs(inputs, adata, processor)
+
+        if self.include_labels is not None:
+            # Add labels to the inputs.
+            if adata.obs[self.include_labels].dtype.name != "category":
+                adata.obs[self.include_labels] = pd.Categorical(
+                    adata.obs[self.include_labels]
+                )
+                # TODO maybe save the categorical as well for later?
+
+            inputs["labels"] = torch.tensor(
+                adata.obs[self.include_labels].astype("category").cat.codes.values,
+                dtype=torch.long,
+            )
 
         # Filter for empty inputs (NOTE: empty inputs should be avoided)
         if self.transcriptome_processor == "geneformer":
