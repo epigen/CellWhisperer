@@ -5,8 +5,6 @@ import subprocess
 PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
 FINETUNE_RESULTS_DIR = PROJECT_DIR / "results" / "finetuning_eval"
 configfile: PROJECT_DIR / "config.yaml"
-EVAL_DATASETS = [d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]
-MODELS = ["geneformer"]  # "scgpt", "uce"
 GPU_TYPE = "a100"
 
 rule finetune_scfm:
@@ -19,7 +17,7 @@ rule finetune_scfm:
     output:
         model_weights=FINETUNE_RESULTS_DIR / "{model}" / "finetuned.pt"
     params:
-        label_col="celltype",  # We only have this one consistently
+        label_col="cell_type",  # We only have this one consistently
         use_replicates=False,
         use_aggregated=True,
         num_epochs=2,  # TODO 16?
@@ -33,7 +31,7 @@ rule finetune_scfm:
     log:
         notebook="logs/finetune_scfm_{model}.ipyb"
     notebook:
-        "../notebooks/finetune_scfm_{wildcards.model}.py.ipynb"
+        "../notebooks/finetune_scfm.py.ipynb"
 
 rule transfer_labels:
     """
@@ -48,6 +46,9 @@ rule transfer_labels:
         label_col="celltype",
         openai_api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-2024-11-20"
+    resources:
+        mem_mb=350000,
+        slurm="cpus-per-task=2"
     conda:
         "cellwhisperer"
     log:
@@ -70,16 +71,12 @@ rule evaluate_scfm:
     params:
         batch_size=128,
         label_col="celltype",
+    resources:
+        mem_mb=350000,
+        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
     conda:
         "cellwhisperer"
     log:
         notebook="logs/evaluate_scfm_{model}_{dataset}.ipynb"
     notebook:
         "../notebooks/evaluate_scfm.py.ipynb"
-
-
-rule all:
-    input:
-        expand(rules.evaluate_scfm.output[0], model=MODELS, dataset=EVAL_DATASETS, label_col=["celltype"])  # TODO use all properties
-
-    default_target: True

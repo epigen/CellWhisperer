@@ -351,7 +351,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             ConcatDataset(self.val_datasets),
             batch_size=self.batch_size,
             num_workers=self.nproc,
-            drop_last=False,
+            drop_last=False,  # more accurate if we don't drop the last
             shuffle=False,
         )
 
