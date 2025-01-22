@@ -5,7 +5,7 @@ import subprocess
 PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
 FINETUNE_RESULTS_DIR = PROJECT_DIR / "results" / "finetuning_eval"
 configfile: PROJECT_DIR / "config.yaml"
-GPU_TYPE = "a100"
+GPU_TYPE = "a100-sxm4-80gb"
 
 rule finetune_scfm:
     """
@@ -15,21 +15,22 @@ rule finetune_scfm:
         model_weights=lambda wildcards: PROJECT_DIR / config["model_name_path_map"][wildcards.model],
         training_data=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="cellxgene_census"),
     output:
-        model_weights=FINETUNE_RESULTS_DIR / "{model}" / "finetuned.pt"
+        model_weights=FINETUNE_RESULTS_DIR / "{model}" / "finetuned_{training_options}.pt"
     params:
-        label_col="cell_type",  # We only have this one consistently
-        use_replicates=False,
-        use_aggregated=True,
-        num_epochs=2,  # TODO 16?
-        batch_size=64,
-        freeze_fm=True,
+        label_col="cell_type",  # We only have this one consistently (and it's with '_' in this dataset)
+        use_replicates=lambda wildcards: "singlecells" in wildcards.training_options,
+        num_epochs=4,  # TODO 8? (or 6 or 7 would be better actually, because it covers all single cell layers)
+        batch_size=16,  # NOTE: the frozen ones were trained with 64 (translating to a lower learning rate)
+        learning_rate=1e-4,  # NOTE: could be more aggressive according to val_loss 
+        freeze_fm=lambda wildcards: "unfrozen" not in wildcards.training_options,
     resources:
         mem_mb=350000,
         slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
     conda:
-        lambda wildcards: "cellwhisperer" if wildcards.model in ["geneformer", "scgpt"] else "../../envs/uce.yaml"
+        "cellwhisperer"
+        # lambda wildcards: "cellwhisperer" if wildcards.model in ["geneformer", "scgpt"] else "../../envs/uce.yaml"
     log:
-        notebook="logs/finetune_scfm_{model}.ipyb"
+        notebook="logs/finetune_scfm_{model}_{training_options}.ipynb"
     notebook:
         "../notebooks/finetune_scfm.py.ipynb"
 
@@ -65,9 +66,9 @@ rule evaluate_scfm:
         eval_data=PROJECT_DIR / config["paths"]["read_count_table"],
         transfered_labels=rules.transfer_labels.output.transfered_labels,
     output:
-        predictions_raw=FINETUNE_RESULTS_DIR / "{model}" / "{dataset}" / "predictions_raw.csv",  # this is the same for all datasets
-        predictions=FINETUNE_RESULTS_DIR / "{model}" / "{dataset}" / "predictions.csv",
-        performance=FINETUNE_RESULTS_DIR / "{model}" / "{dataset}" / "performance.csv",
+        predictions_raw=FINETUNE_RESULTS_DIR / "{model}" / "{dataset}" / "predictions_raw_{training_options}.csv",  # this is the same for all datasets
+        predictions=FINETUNE_RESULTS_DIR / "{model}" / "{dataset}" / "predictions_{training_options}.csv",
+        performance=FINETUNE_RESULTS_DIR / "{model}" / "{dataset}" / "performance_{training_options}.csv",
     params:
         batch_size=128,
         label_col="celltype",
@@ -77,6 +78,6 @@ rule evaluate_scfm:
     conda:
         "cellwhisperer"
     log:
-        notebook="logs/evaluate_scfm_{model}_{dataset}.ipynb"
+        notebook="logs/evaluate_scfm_{model}_{dataset}_{training_options}.ipynb"
     notebook:
         "../notebooks/evaluate_scfm.py.ipynb"

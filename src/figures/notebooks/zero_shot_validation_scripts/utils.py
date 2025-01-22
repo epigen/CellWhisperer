@@ -81,32 +81,32 @@ def prepare_integration_df(result_metrics_dict: dict) -> pd.DataFrame:
     integration_scores_df = pd.DataFrame(result_metrics_dict).T
     integration_scores_df = integration_scores_df.reset_index()
     integration_scores_df = integration_scores_df.rename(
-        columns={"level_0": "dataset_name", "level_1": "Method"}
+        columns={"level_0": "dataset_name", "level_1": "method"}
     )
-    integration_scores_df["Method"] = integration_scores_df["Method"].str.capitalize()
+    integration_scores_df["method"] = integration_scores_df["method"]
     integration_scores_df = integration_scores_df.rename(
         columns={
-            "ASW_label__batch": "Batch\nintegration\nscore",
-            "avg_bio": "Cell type\nintegration score\n(avg)",
-            "ASW_label": "Cell type\nintegration score\n(ASW)",
+            "ASW_label__batch": "Batch integration score",
+            "avg_bio": "Cell type integration score (avg)",
+            "ASW_label": "Cell type integration score (ASW)",
         }
     )
     integration_scores_df = integration_scores_df[
         [
             "dataset_name",
             "Method",
-            "Batch\nintegration\nscore",
-            "Cell type\nintegration score\n(avg)",
-            "Cell type\nintegration score\n(ASW)",
+            "Batch integration score",
+            "Cell type integration score (avg)",
+            "Cell type integration score (ASW)",
         ]
     ]
     integration_scores_df = pd.melt(
         integration_scores_df,
         id_vars=["dataset_name", "Method"],
         value_vars=[
-            "Batch\nintegration\nscore",
-            "Cell type\nintegration score\n(avg)",
-            "Cell type\nintegration score\n(ASW)",
+            "Batch integration score",
+            "Cell type integration score (avg)",
+            "Cell type integration score (ASW)",
         ],
         var_name="metric",
         value_name="value",

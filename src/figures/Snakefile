@@ -15,6 +15,9 @@ CELLTYPE_TERMS_DICT={  # consider moving to config
     "platelet": "blood platelets",
 }
 
+# TODO add UCE or scFoundation
+SCFMS = ["geneformer", "scgpt", "uce"]  # TODO add `cellwhisperer` and make sure it is translated to `cellwhisperer_clip_v1` everywhere. Or add the latter anyways
+
 from notebooks.zero_shot_validation_scripts.utils import SUFFIX_PREFIX_DICT  # consider moving to config
 
 
@@ -56,7 +59,8 @@ rule all:
         expand(rules.zero_shot_performance_macroavg.output.macroavg_summary_plot, model=CLIP_MODEL),
         expand(rules.zero_shot_performance_examples.output.per_class_examples_plot, model=CLIP_MODEL),
         expand(rules.evaluate_scfm.output.performance, 
-                model=["geneformer", "scgpt"],  # TODO add UCE or scFoundation
+                model=SCFMS,
+                training_options=["unfrozen", "frozen", "frozen_singlecells"],
                 dataset=["tabula_sapiens", "pancreas", "immgen"]),  # alternative: [d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]
         
         # Figure S2 (extended: embedding and gene set correlation analyses) TODO

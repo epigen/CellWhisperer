@@ -10,6 +10,8 @@ ZERO_SHOT_PREDICTORS = [
         # "claudesonnet"  # TODO consider also opus, as it was best in another benchmark..
         ] 
 
+
+
 include: "../../shared/rules/training_sample_weights.smk"
 
 # Computations
@@ -96,15 +98,14 @@ rule transcriptome_embedding_scib:
 rule plot_joint_transcriptome_embedding_scib:
     """Bar plots of integration metrics for all methods."""
     input:
-        # TODO all the different models to cross-check
-        [rules.transcriptome_embedding_scib.output.integration_scores.replace("{model}", model) for model in ["cellwhisperer_clip_v1"]]  # TODO "geneformer", 
+        [rules.transcriptome_embedding_scib.output.integration_scores.replace("{model}", model) for model in SCFMS]
     output:
         integration_scores=ZERO_SHOT_RESULTS / "integration_scores_{dataset}.csv",
         integration_scores_plot=ZERO_SHOT_RESULTS / "integration_scores_{dataset}.pdf"
     conda:
         "cellwhisperer"
     params:
-        models=["geneformer", "cellwhisperer"]
+        models=SCFMS
     resources:
         mem_mb=2000,
         slurm="cpus-per-task=1"
