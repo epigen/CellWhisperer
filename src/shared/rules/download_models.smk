@@ -30,6 +30,32 @@ rule download_geneformer:
         for fin, fout in zip(input, output):
             shutil.copy(fin, fout)
 
+
+rule download_uce:
+    input:
+        HTTP.remote("https://figshare.com/ndownloader/files/42706576", keep_local=False),
+        HTTP.remote("https://figshare.com/ndownloader/files/43423236", keep_local=False),
+        HTTP.remote("https://figshare.com/ndownloader/files/42715213", keep_local=False),
+        HTTP.remote("https://figshare.com/ndownloader/files/42706555", keep_local=False),
+        HTTP.remote("https://figshare.com/ndownloader/files/42706558", keep_local=False),
+        HTTP.remote("https://figshare.com/ndownloader/files/42706585", keep_local=False),
+    output:
+        PROJECT_DIR / config["model_name_path_map"]["uce4layer"],
+        PROJECT_DIR / config["model_name_path_map"]["uce"],
+        directory(PROJECT_DIR / config["uce_paths"]["protein_embeddings_dir"]),
+        PROJECT_DIR / config["uce_paths"]["offset_pkl_path"],
+        PROJECT_DIR / config["uce_paths"]["spec_chrom_csv_path"],
+        PROJECT_DIR / config["uce_paths"]["tokens"],
+    run:
+        import shutil
+        for fin, fout in zip(input, output):
+            shutil.copy(fin, fout)
+        # unpack protein embeddings
+        import tarfile
+        with tarfile.open(output[2], "r:gz") as tar:
+            tar.extractall(output[2].parent)
+
+
 rule download_cellwhisperer_embedding_model:
     input:
         HTTP.remote(f"{BASE_URL}/models/{CLIP_MODEL_FN}")[0]

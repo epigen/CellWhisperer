@@ -151,6 +151,13 @@ class JointEmbedDataModule(pl.LightningDataModule):
         adata = anndata.read_h5ad(
             (get_path(["paths", "full_dataset"], dataset=dataset_name))
         )
+        # drop vars with no gene name
+        adata = adata[:, adata.var.gene_name != ""]
+        adata = adata[:, ~adata.var.gene_name.isna()]
+
+        adata.var.index = (
+            adata.var.gene_name
+        )  # required for UCE TODO move into UCE code :)
 
         # Fixed size embedding (https://huggingface.co/docs/transformers/en/pad_truncation), as we combine multiple datasets
         inputs = processor(
@@ -189,6 +196,11 @@ class JointEmbedDataModule(pl.LightningDataModule):
         if self.transcriptome_processor == "geneformer":
             n_genes_filter = inputs["expression_token_lengths"] >= self.min_genes
         elif self.transcriptome_processor == "scgpt":
+            n_genes_filter = (inputs["expression_key_padding_mask"] == False).sum(
+                dim=1
+            ) >= self.min_genes
+        elif self.transcriptome_processor == "uce":
+            # TODO does not work like this unfortunately (the mask is not built based on expression)
             n_genes_filter = (inputs["expression_key_padding_mask"] == False).sum(
                 dim=1
             ) >= self.min_genes

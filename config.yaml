@@ -91,13 +91,31 @@ retrieval_validation_sets:
   - human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
 
 model_name_path_map:
+  cellwhisperer: cellwhisperer_clip_v1  # wandb run ID t9kkor63
+
   geneformer: resources/geneformer-12L-30M
+  scgpt: resources/scGPT_human
+  uce: resources/UCE/33layer_model.torch
+  uce4layer: resources/UCE/4layer_model.torch
+
   biogpt: microsoft/biogpt
   bert: dmis-lab/biobert-v1.1
-  scgpt: resources/scGPT_human
-  cellwhisperer: cellwhisperer_clip_v1  # wandb run ID t9kkor63
+
   llava_base_llm: Mistral-7B-Instruct-v0.2
+
   mixtral: resources/mixtral-8x7b-instruct-v0.1.Q5_K_M.gguf
+
+uce_paths:
+  protein_embeddings_dir: resources/UCE/protein_embeddings
+  offset_pkl_path: resources/UCE/species_offsets.pkl
+  spec_chrom_csv_path: resources/UCE/species_chrom.csv
+
+  tokens: resources/UCE/all_tokens.torch
+
+  tmp_pe_idx_path: results/UCE/default_pe_idx.torch
+  tmp_chroms_path: results/UCE/default_chroms.pkl
+  tmp_starts_path: results/UCE/default_starts.pkl
+  tmp_feature_path: results/UCE
 
 genesets:
   - "Azimuth_2023"
