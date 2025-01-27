@@ -1,3 +1,6 @@
+# TODO tissue prediction is performed for human_disease
+
+
 # TODO move to config
 API_KEYS = {
     "gpt4": os.getenv("OPENAI_API_KEY"),

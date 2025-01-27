@@ -9,7 +9,7 @@ class UCECelltypeModel(nn.Module):
     def __init__(self, config: UCEConfig, num_classes: int, freeze: bool = True):
         super().__init__()
         self.num_classes = num_classes
-        self.output_layer = nn.Linear(config.d_hid, num_classes)
+        self.output_layer = nn.Linear(config.output_dim, num_classes)
         self.uce_model = UCEModel.from_pretrained(
             get_path(["model_name_path_map", "uce"]),
             get_path(["uce_paths", "tokens"]),
@@ -22,8 +22,8 @@ class UCECelltypeModel(nn.Module):
 
     def forward(
         self,
-        expression_tokens: torch.Tensor,
-        expression_token_lengths: torch.Tensor,
+        expression_tokens: torch.Tensor=None,
+        expression_token_lengths: torch.Tensor=None,
         expression_gene=None,  # ignored, but needed for compatibility with other models
         expression_expr=None,  # ignored, but needed for compatibility with other models
         expression_key_padding_mask=None,  # ignored, but needed for compatibility with other models

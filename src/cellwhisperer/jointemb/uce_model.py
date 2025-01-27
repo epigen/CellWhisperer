@@ -40,9 +40,9 @@ PAD_TOKEN_IDX = 0
 class UCETranscriptomeProcessor(ProcessorMixin):
     attributes = []
 
-    def __init__(self, nproc = 8, **kwargs):
+    def __init__(self, nproc=8, **kwargs):
         self.name = "default"
-        self.nproc = nproc  # TODO use
+        self.nproc = nproc
 
         super().__init__(**kwargs)
 
@@ -87,7 +87,9 @@ class UCETranscriptomeProcessor(ProcessorMixin):
         with open(get_path(["uce_paths", "offset_pkl_path"]), "rb") as f:
             species_to_offsets = pickle.load(f)
 
-        gene_to_chrom_pos = get_spec_chrom_csv(get_path(["uce_paths", "spec_chrom_csv_path"]))
+        gene_to_chrom_pos = get_spec_chrom_csv(
+            get_path(["uce_paths", "spec_chrom_csv_path"])
+        )
         dataset_species = "human"
         spec_pe_genes = list(species_to_pe[dataset_species].keys())
         offset = species_to_offsets[dataset_species]
@@ -166,7 +168,7 @@ class UCETranscriptomeProcessor(ProcessorMixin):
             batch_size=len(dataset),
             shuffle=False,
             collate_fn=multi_dataset_sentence_collator,
-            num_workers=0,
+            num_workers=self.nproc,
         )
 
         data = next(iter(dataloader))
@@ -188,7 +190,7 @@ class UCEConfig(PretrainedConfig):
         d_model=PE_DIM,
         nhead=20,
         d_hid=TOKEN_DIM,
-        nlayers=4,  # TODO change to 33 later
+        nlayers=33,
         dropout=0.05,
         output_dim=PE_DIM,
     ):
@@ -211,7 +213,6 @@ class UCEModel(PreTrainedModel):
         is_parallelizable = False  # not sure actually
         main_input_name = "expression_gene"  # NOTE there are actually three main inputs, but probably good enough
 
-        # TODO import correctly
         self.uce_model = TransformerModel(
             d_model=config.d_model,
             nhead=config.nhead,
@@ -241,6 +242,7 @@ class UCEModel(PreTrainedModel):
             expression_key_padding_mask,  # batch[1],
             expression_gene,  # batch[2],
         )
+        assert (expression_key_padding_mask.sum(dim=1) > 10).all(), f"Num over 10: {(expression_key_padding_mask.sum(dim=1) > 10).sum()}"
 
         batch_sentences = batch_sentences.permute(1, 0)
         batch_sentences = self.uce_model.pe_embedding(batch_sentences.long())

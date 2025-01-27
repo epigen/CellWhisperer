@@ -100,6 +100,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             min_genes: minimum number of genes to use for a sample. A larger value may increase the dataset quality. Choose a value > 0 to prevent NaNs, which can occur when the number of genes is 0
             train_fraction: fraction of the data to use for training. The rest will be used for validation.
             use_replicates: whether to use replicates for the transcriptome and annotation data.
+            include_labels: name of the column in the AnnData object to use as labels. If None, no labels will be included
         """
         super().__init__()
         self.batch_size = batch_size
@@ -122,8 +123,9 @@ class JointEmbedDataModule(pl.LightningDataModule):
             hash="_".join(
                 [
                     self.transcriptome_processor,
-                    self.tokenizer,
+                    self.tokenizer or "",
                     str(self.min_genes),
+                    str(self.use_replicates),
                     self.include_labels or "",
                 ]
             ),
@@ -146,7 +148,11 @@ class JointEmbedDataModule(pl.LightningDataModule):
         # Load data and processor
         processor = TranscriptomeTextDualEncoderProcessor(
             self.transcriptome_processor,
-            AutoTokenizer.from_pretrained(self.tokenizer, **self.tokenizer_kwargs),
+            (
+                AutoTokenizer.from_pretrained(self.tokenizer, **self.tokenizer_kwargs)
+                if self.tokenizer
+                else None
+            ),
         )
         adata = anndata.read_h5ad(
             (get_path(["paths", "full_dataset"], dataset=dataset_name))
@@ -161,7 +167,11 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
         # Fixed size embedding (https://huggingface.co/docs/transformers/en/pad_truncation), as we combine multiple datasets
         inputs = processor(
-            text=list(adata.obs["natural_language_annotation"]),
+            text=(
+                list(adata.obs["natural_language_annotation"])
+                if self.tokenizer
+                else None
+            ),
             transcriptomes=adata,
             return_tensors="pt",
             padding="max_length",
@@ -177,7 +187,11 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 # add 1 if no weights are available
                 inputs[modality_weights_key] = torch.ones(len(adata.obs))
 
-        replicate_inputs = self._prepare_replicate_inputs(inputs, adata, processor)
+        logging.info("Preparing replicates")
+        if self.use_replicates:
+            replicate_inputs = self._prepare_replicate_inputs(inputs, adata, processor)
+        else:
+            replicate_inputs = {}
 
         if self.include_labels is not None:
             # Add labels to the inputs.
@@ -201,9 +215,11 @@ class JointEmbedDataModule(pl.LightningDataModule):
             ) >= self.min_genes
         elif self.transcriptome_processor == "uce":
             # TODO does not work like this unfortunately (the mask is not built based on expression)
+            breakpoint()
+
             n_genes_filter = (inputs["expression_key_padding_mask"] == False).sum(
                 dim=1
-            ) >= self.min_genes
+            ) >= 1  # self.min_genes  # TODO they are all `4`. I don't know why. Need to debug uce_model.py
         else:
             raise ValueError(
                 "Transcriptome processor {self.transcriptome_processor} not supported"
@@ -258,7 +274,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             for col_name in replicate_df:
                 replicate_annotations = replicate_df[col_name]
                 replicate_input = processor(
-                    text=replicate_annotations.to_list(),
+                    text=replicate_annotations.to_list() if self.tokenizer else None,
                     return_tensors="pt",
                     padding="max_length",  # enforces fixed size (https://huggingface.co/docs/transformers/en/pad_truncation)
                     max_length=max_length,

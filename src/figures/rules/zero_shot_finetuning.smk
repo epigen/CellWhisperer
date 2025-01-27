@@ -19,12 +19,12 @@ rule finetune_scfm:
     params:
         label_col="cell_type",  # We only have this one consistently (and it's with '_' in this dataset)
         use_replicates=lambda wildcards: "singlecells" in wildcards.training_options,
-        num_epochs=4,  # TODO 8? (or 6 or 7 would be better actually, because it covers all single cell layers)
+        num_epochs=8,  # TODO 8! (or 6 or 7 would be better actually, because it covers all single cell layers)
         batch_size=16,  # NOTE: the frozen ones were trained with 64 (translating to a lower learning rate)
-        learning_rate=1e-4,  # NOTE: could be more aggressive according to val_loss 
+        learning_rate=1e-4,  # NOTE: could be more aggressive according to val_loss
         freeze_fm=lambda wildcards: "unfrozen" not in wildcards.training_options,
     resources:
-        mem_mb=350000,
+        mem_mb=lambda wildcards: 800000 if wildcards.model == "uce" else 350000,
         slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
     conda:
         "cellwhisperer"

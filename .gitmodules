@@ -11,3 +11,6 @@
 [submodule "modules/LLaVA"]
 	path = modules/LLaVA
 	url = git@github.com:epigen/LLaVA
+[submodule "modules/UCE"]
+	path = modules/UCE
+	url = git@github.com:epigen/develop

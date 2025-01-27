@@ -45,6 +45,7 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
         tokenizer ([`PreTrainedTokenizer`], *optional*):
             The tokenizer is a required input.
     """
+
     attributes = ["tokenizer", "transcriptome_processor"]  # "transcriptome_processor",
     transcriptome_processor_class = "ProcessorMixin"
     tokenizer_class = "AutoTokenizer"
@@ -142,13 +143,16 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
                 return_tensors=return_tensors,
                 **kwargs,
             )
+        else:
+            encoding = {}
+            
 
         if transcriptomes is not None:
             transcriptome_processor_results = self.transcriptome_processor(
                 transcriptomes, return_tensors=return_tensors, **kwargs
             )
 
-        if text is not None and transcriptomes is not None:  
+        if text is not None and transcriptomes is not None:
             # NOTE this block could be refactored
             if type(self.transcriptome_processor) == GeneformerTranscriptomeProcessor:
                 encoding["expression_tokens"] = transcriptome_processor_results[
@@ -162,7 +166,7 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
                     encoding[key] = transcriptome_processor_results[key]
             elif type(self.transcriptome_processor) == UCETranscriptomeProcessor:
                 for key in transcriptome_processor_results.keys():
-                    encoding[key] = transcriptome_processor_results
+                    encoding[key] = transcriptome_processor_results[key]
             else:
                 raise ValueError("Unsupported transcriptome processor type.")
             return encoding
