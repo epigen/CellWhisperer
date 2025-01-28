@@ -45,7 +45,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         max_epochs: int = 16,
         learning_rate: float = 1e-3,
         lr_warmup: Union[int, float] = 0.03,
-        frozen_warmup: Union[int, float] = 0.03,
+        frozen_warmup: Union[int, float, None] = None,
     ):
         """
         Args:
@@ -56,7 +56,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             max_epochs: maximum number of epochs to train for
             learning_rate: learning rate to use for the optimizer.
             lr_warmup: number of steps to use for learning rate warmup. If set to 0, no warmup is used. If set to a float, it is interpreted as a fraction of the total number of steps.
-            frozen_warmup: number of steps to use for pure projection layer training. If set to 0, no warmup is used. If set to a float, it is interpreted as a fraction of the total number of steps.
+            frozen_warmup: number of steps to use for pure projection layer training. If set to 0, no warmup is used. If set to a float, it is interpreted as a fraction of the total number of steps. If set to None, `lr_warmup` is used.
         """
         super(TranscriptomeTextDualEncoderLightning, self).__init__()
 
@@ -75,7 +75,10 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         self.lr_warmup = lr_warmup
         self.warmup_reset_step = 0
 
-        self.frozen_warmup = frozen_warmup
+        if frozen_warmup is None:
+            self.frozen_warmup = lr_warmup
+        else:
+            self.frozen_warmup = frozen_warmup
 
         self.loss_config = loss_config
         self.loss_functions = self.loss_config.configure_losses(
