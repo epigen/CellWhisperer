@@ -1,0 +1,19 @@
+method: grid
+name: revision_hyperparameters
+metric:
+  goal: minimize
+  name: val/loss_epoch
+parameters:
+  data.train_fraction:
+    - archs4_geo
+    - cellxgene_census
+  model.lr_warmup_steps:
+    values:
+      - 0.1
+      - 0.03
+      - 0.01
+  model.learning_rate:
+    values:
+      - 0.000001
+      - 0.00001
+      - 0.0001
