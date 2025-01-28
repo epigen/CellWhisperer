@@ -16,7 +16,7 @@ from cellwhisperer.jointemb.processing import TranscriptomeTextDualEncoderProces
 
 from cellwhisperer.config import get_path, model_path_from_name
 
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             "model_max_length": 128  # 128 seems to be a decent fit (previously 100)
         },  # see https://github.com/epigen/cellwhisperer/issues/193
         min_genes=100,
-        train_fraction=0.95,
+        train_fraction: Union[str, float] = 0.95,
         use_replicates: bool = True,
     ):
         """
@@ -264,14 +264,26 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.val_datasets = []
         for dataset_name in self.dataset_names:
             (inputs, replicate_inputs) = torch.load(self._processed_path(dataset_name))
-            # Assuming you want to split the data into train and val for simplicity
-            train_size = int(self.train_fraction * len(inputs["input_ids"]))
-            # randomly sample train_size indices for train and use the rest for val
-            # fix the seed
-            random.seed(42)
-            total_ids = list(range(len(inputs["input_ids"])))
-            train_ids = random.sample(total_ids, train_size)
-            val_ids = sorted(list(set(total_ids) - set(train_ids)))
+
+            if isinstance(self.train_fraction, (int, float)):
+                # Assuming you want to split the data into train and val for simplicity
+                train_size = int(self.train_fraction * len(inputs["input_ids"]))
+                # randomly sample train_size indices for train and use the rest for val
+                # fix the seed
+                random.seed(42)
+                total_ids = list(range(len(inputs["input_ids"])))
+                train_ids = random.sample(total_ids, train_size)
+                val_ids = sorted(list(set(total_ids) - set(train_ids)))
+            elif isinstance(self.train_fraction, str):
+                total_ids = list(range(len(inputs["input_ids"])))
+                if dataset_name == self.train_fraction:
+                    train_ids = total_ids
+                    val_ids = []
+                else:
+                    train_ids = []
+                    val_ids = total_ids
+            else:
+                raise ValueError("train_fraction must be either a float or string")
 
             self.train_datasets.append(
                 JointEmbedDataset(
