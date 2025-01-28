@@ -94,7 +94,7 @@ model:
   frozen_warmup: 0.03
 data:
   use_replicates: false
-  dataset_name: archs4_geo,cellxgene_census
+  dataset_names: archs4_geo,cellxgene_census
   nproc: 8
   transcriptome_processor_kwargs: {}
   tokenizer_kwargs:

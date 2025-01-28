@@ -5,9 +5,10 @@ metric:
   name: val/loss_epoch
 parameters:
   data.train_fraction:
-    - archs4_geo
-    - cellxgene_census
-  model.lr_warmup_steps:
+    values:
+      - "archs4_geo"
+      - "cellxgene_census"
+  model.lr_warmup:
     values:
       - 0.1
       - 0.03

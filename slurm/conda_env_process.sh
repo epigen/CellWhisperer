@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source /msc/home/mschae83/miniconda3/etc/profile.d/conda.sh
-source activate cellwhisperer
+source activate cellwhisperer_stable
 
 export GLOBAL_RANK=$SLURM_LOCALID
 export LOCAL_RANK=$SLURM_LOCALID
