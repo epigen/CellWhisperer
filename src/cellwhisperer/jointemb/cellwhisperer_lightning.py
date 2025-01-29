@@ -390,12 +390,21 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         # If we are still in the warmup phase, overwrite learning rate
         current_step = self.trainer.global_step - self.warmup_reset_step
 
-        if current_step < self.lr_warmup_steps:
-            lr_scale = min(1.0, float(current_step + 1) / self.lr_warmup_steps)
+        if (
+            self.trainer.global_step < self.frozen_warmup_steps
+            or current_step < self.lr_warmup_steps
+        ):
+            if self.trainer.global_step < self.frozen_warmup_steps:
+                # still in frozen stage
+                normalizer = self.frozen_warmup_steps
+            else:
+                normalizer = self.lr_warmup_steps
+
+            lr_scale = min(1.0, float(current_step + 1) / normalizer)
             for pg in optimizer.param_groups:
                 pg["lr"] = lr_scale * self.learning_rate
 
-        # Call the original optimizer_step. (It's fine if it applies cosine scheduling there)
+        # Call the original optimizer_step. (It's only mildly inaccurate if it applies cosine scheduling even if we are still in warmup)
         super(TranscriptomeTextDualEncoderLightning, self).optimizer_step(
             epoch, batch_idx, optimizer, optimizer_closure
         )
