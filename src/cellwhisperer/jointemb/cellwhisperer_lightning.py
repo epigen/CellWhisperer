@@ -281,19 +281,21 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                         self.logger.experiment.log_artifact(artifact)
 
     def on_train_batch_start(self, *args):
-        if self.trainer.global_step >= self.frozen_warmup_steps:
-            logger.debug("Unfreezing U towers")
+        if (
+            self.trainer.global_step >= self.frozen_warmup_steps
+            and self.warmup_reset_step == 0
+            and self.frozen_warmup_steps > 0
+        ):
+            logger.info("Unfreezing U towers")
             self.model.unfreeze_U_towers()
 
-            logger.debug("Warmup again")
+            logger.info("Warmup again")
             self.warmup_reset_step = self.trainer.global_step
 
             # Reset the optimizer (doesn't work because of the scheduler. would need to find the correct function)
             # new_optimizers = self.configure_optimizers()
             # self.trainer.optimizers = [new_optimizers["optimizer"]]
             # self.trainer.lr_schedulers_configs = [new_optimizers["lr_scheduler"]]
-
-            self.frozen_warmup_steps = 1e9  # never evaluate this code again
 
     def on_train_epoch_end(self):
         """
@@ -365,7 +367,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             )
         else:
             self.lr_warmup_steps = self.lr_warmup
-        logger.info("Using lr_warmup_steps: %d", self.lr_warmup_steps)
+        logger.info("Using lr_warmup_steps: ", self.lr_warmup_steps)
 
         scheduler = CosineAnnealingLR(
             optimizer,
