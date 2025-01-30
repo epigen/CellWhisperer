@@ -116,14 +116,13 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.include_labels = include_labels
 
     def _processed_path(self, dataset_name):
-        # TODO why is self.transcriptome_processor not part of the final name?
         return get_path(
             ["paths", "datamodule_prepared_path"],
             dataset=dataset_name,
             hash="_".join(
                 [
                     self.transcriptome_processor,
-                    self.tokenizer or "",
+                    "" if not self.tokenizer else self.tokenizer.replace("/", "__"),
                     str(self.min_genes),
                     str(self.use_replicates),
                     self.include_labels or "",
