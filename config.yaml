@@ -147,3 +147,21 @@ top20_lung_liver_blood_celltypes:
   - "memory b cell"
   - "respiratory goblet cell"
   - "basophil"
+
+zero_shot_llms:
+  gpt4:
+    api_key_env: OPENAI_API_KEY
+    base_url: https://api.openai.com/v1/
+    model_name: gpt-4o-2024-11-20
+  llama33:
+    api_key_env: OLLAMA_API_KEY
+    base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
+    model_name: llama3.3:70b
+  claudesonnet:
+    api_key_env: ANTHROPIC_API_KEY
+    base_url: null
+    model_name: claude-3-5-sonnet-20241022
+  deepseek:
+    api_key_env: OLLAMA_API_KEY
+    base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
+    model_name: deepseek-r1:70b

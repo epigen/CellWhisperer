@@ -1,16 +1,8 @@
 
-
 ZERO_SHOT_RESULTS = PROJECT_DIR / "results/plots/zero_shot_validation"
-ZERO_SHOT_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,cellwhisperer_clip_v1}"  # TODO add other models here
+ZERO_SHOT_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,cellwhisperer_clip_v1}"  # NOTE new CW models (e.g. v2) need to be added here
 
-ZERO_SHOT_PREDICTORS = [
-        "gpt4", 
-        "llama33", 
-        "cellwhisperer_clip_v1",
-        # "claudesonnet"  # TODO consider also opus, as it was best in another benchmark..
-        ] 
-
-
+ZERO_SHOT_PREDICTORS = list(config["zero_shet_llms"].keys()) + ["cellwhisperer_clip_v1"]
 
 include: "../../shared/rules/training_sample_weights.smk"
 
@@ -50,7 +42,7 @@ rule zero_shot_cellwhisperer_prediction:
         # no need to have seperate embeddings and read count tables for the tabula sapiens well studied cell types, can just use the full dataset and subset:
         processed_dataset=rules.process_full_dataset.output.model_outputs,
         raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
-        model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",  # needed to embed the keywords  
+        model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",  # needed to embed the keywords
     output:
         # Using a directory here because the exact files produced depend on the dataset:
         predictions=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv",  # NOTE: might be used as input for `plot_confusion_matrix` as well (and by extension `zero_shot_performance_macroavg`)

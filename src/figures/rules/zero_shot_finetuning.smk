@@ -19,7 +19,7 @@ rule finetune_scfm:
     params:
         label_col="cell_type",  # We only have this one consistently (and it's with '_' in this dataset)
         use_replicates=lambda wildcards: "singlecells" in wildcards.training_options,
-        num_epochs=8,  # TODO 8! (or 6 or 7 would be better actually, because it covers all single cell layers)
+        num_epochs=8,
         batch_size=16,  # NOTE: the frozen ones were trained with 64 (translating to a lower learning rate)
         learning_rate=1e-4,  # NOTE: could be more aggressive according to val_loss
         freeze_fm=lambda wildcards: "unfrozen" not in wildcards.training_options,

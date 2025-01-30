@@ -15,7 +15,6 @@ CELLTYPE_TERMS_DICT={  # consider moving to config
     "platelet": "blood platelets",
 }
 
-# TODO add UCE or scFoundation
 SCFMS = ["geneformer", "scgpt", "uce"]  # TODO add `cellwhisperer` and make sure it is translated to `cellwhisperer_clip_v1` everywhere. Or add the latter anyways
 
 from notebooks.zero_shot_validation_scripts.utils import SUFFIX_PREFIX_DICT  # consider moving to config
@@ -52,18 +51,18 @@ rule all:
             for model in [CLIP_MODEL]
             for metadata_col in config["metadata_cols_per_zero_shot_validation_dataset"][dataset]
         ],
-        expand(rules.aggregate_zero_shot_property_predictions.output.aggregated_predictions, 
-               metadata_col=list(set([v for l in config["metadata_cols_per_zero_shot_validation_dataset"].values() for v in l])), 
+        expand(rules.aggregate_zero_shot_property_predictions.output.aggregated_predictions,
+               metadata_col=list(set([v for l in config["metadata_cols_per_zero_shot_validation_dataset"].values() for v in l])),
                grouping=["by_cell", "by_class"]
                ),
         expand(rules.zero_shot_performance_macroavg.output.macroavg_summary_plot, model=CLIP_MODEL),
         expand(rules.zero_shot_performance_examples.output.per_class_examples_plot, model=CLIP_MODEL),
-        expand(rules.evaluate_scfm.output.performance, 
+        expand(rules.evaluate_scfm.output.performance,
                 model=SCFMS,
                 training_options=["unfrozen", "frozen", "frozen_singlecells"],
                 dataset=["tabula_sapiens", "pancreas", "immgen"]),  # alternative: [d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]
-        
-        # Figure S2 (extended: embedding and gene set correlation analyses) TODO
+
+        # Figure S2 (extended: embedding and gene set correlation analyses)
         expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["human_disease"], model=CLIP_MODEL),  # NOTE: Can also be run for tabula_sapiens and for archs4_geo
         expand(rules.plot_joint_transcriptome_embedding_scib.output.integration_scores, dataset=["tabula_sapiens", "pancreas"]),
 

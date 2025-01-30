@@ -53,9 +53,6 @@ class UCETranscriptomeProcessor(ProcessorMixin):
         covar_col=np.nan,
         additional_filter=False,
     ) -> np.ndarray:
-        # TODO this function should be implemented in the models
-        # TODO consider returning the modified adata
-
         labels = []
         if "cell_type" in adata.obs.columns:
             labels.append("cell_type")
@@ -242,7 +239,9 @@ class UCEModel(PreTrainedModel):
             expression_key_padding_mask,  # batch[1],
             expression_gene,  # batch[2],
         )
-        assert (expression_key_padding_mask.sum(dim=1) > 10).all(), f"Num over 10: {(expression_key_padding_mask.sum(dim=1) > 10).sum()}"
+        assert (
+            expression_key_padding_mask.sum(dim=1) > 10
+        ).all(), f"Num over 10: {(expression_key_padding_mask.sum(dim=1) > 10).sum()}"
 
         batch_sentences = batch_sentences.permute(1, 0)
         batch_sentences = self.uce_model.pe_embedding(batch_sentences.long())
