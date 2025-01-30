@@ -44,7 +44,7 @@ rule llava_evaluation_perplexity:
         all_perplexities=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "all_perplexities.csv",
     params:
         num_projector_tokens=int(config["llava_projector_type"].split("_")[1].strip("t")),
-        background_shuffle=lambda wildcards: "transcriptome" if wildcards.dataset == "archs4_geo" else "llm-response",
+        background_shuffle="transcriptome",
         num_negatives=30
     resources:
         mem_mb=300000,
@@ -68,6 +68,6 @@ rule llava_evaluation_perplexity_plots:
         comparison_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "perplexity_quantile.svg",  # barplot
         detailed_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "detailed.svg",  # barplot
     conda:
-        "llava"
+        "llava"  # newer version of pandas in this env
     notebook:
         "../notebooks/llava_evaluation_perplexity_plots.py.ipynb"
