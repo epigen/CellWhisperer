@@ -9,11 +9,10 @@ rule zero_shot_llm_prediction:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         gene_normalizers=rules.compute_gene_normalizers.output.gene_mean_log1ps,  # NOTE could also get the ones computed with `seurat_get_top_genes`
     output:
-        # Using a directory here because the exact files produced depend on the dataset:
-        predictions=protected(ZERO_SHOT_RESULTS / "{model,gpt4|llama33|sonnet|deepseek}" / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv"),
+        predictions=protected(ZERO_SHOT_RESULTS / "{model,gpt4|llama33|claudesonnet|deepseek}" / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv"),
     params:
-        api_key=lambda wildcards: os.getenv(config["zero_shot_llms"][wildcards.name]["api_key_env"]),
-        api_base_url=lambda wildcards: config["zero_shot_llms"][wildcards.name]["base_url"]
+        api_key=lambda wildcards: os.getenv(config["zero_shot_llms"][wildcards.model]["api_key_env"]),
+        api_base_url=lambda wildcards: config["zero_shot_llms"][wildcards.model]["base_url"],
         prompt=lambda wildcards: f"Identify the {wildcards.metadata_col} for a given set of markers. Only provide the name of the {wildcards.metadata_col}. Do not show numbers before the name. \n{wildcards.metadata_col} candidates: {{candidates}}\n\nMarkers: {{markers}}",
         top_n_genes=50,
         model=lambda wildcards: config["zero_shot_llms"][wildcards.model]["model_name"],
@@ -42,6 +41,8 @@ rule aggregate_zero_shot_property_predictions:
     Aggregate the zero-shot property predictions for all models and datasets
 
     grouping: indicate whether the feature matrix is grouped and mean-aggregated prior to prediction. Either "by_class" or "by_cell"
+
+    TODO organ_tissue not working
     """
     input:
         predictions=lambda wildcards: [
