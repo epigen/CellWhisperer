@@ -60,10 +60,7 @@ rule all:
                ),
         expand(rules.zero_shot_performance_macroavg.output.macroavg_summary_plot, model=CLIP_MODEL),
         expand(rules.zero_shot_performance_examples.output.per_class_examples_plot, model=CLIP_MODEL),
-        expand(rules.evaluate_scfm.output.performance,
-                model=SCFMS,
-                training_options=["unfrozen", "frozen", "frozen_singlecells"],
-                dataset=["tabula_sapiens", "pancreas", "immgen"]),  # alternative: [d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]
+        expand(rules.aggregate_scfm_evaluations.output, training_options=TRAINING_OPTIONS),
 
         # Figure S2 (extended: embedding and gene set correlation analyses)
         expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["human_disease"], model=CLIP_MODEL),  # NOTE: Can also be run for tabula_sapiens and for archs4_geo

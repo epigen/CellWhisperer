@@ -82,3 +82,29 @@ rule evaluate_scfm:
         progress="logs/evaluate_scfm_{model}_{dataset}_{training_options}.log"
     notebook:
         "../notebooks/evaluate_scfm.py.ipynb"
+
+rule aggregate_scfm_evaluations:
+    """
+    """
+    input:
+        predictions=lambda wildcards: [
+            rules.evaluate_scfm.output.performance.format(model=model, dataset=dataset, training_options=wildcards.training_options)
+            for model in SCFMS
+            for dataset in ["tabula_sapiens", "pancreas", "immgen"]]
+            # for dataset in [d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]]
+    output:
+        aggregated_predictions=FINETUNE_RESULTS_DIR / "aggregated_predictions_{training_options}.csv",
+        aggregated_predictions_plot=FINETUNE_RESULTS_DIR / "aggregated_predictions_{training_options}.png"
+    params:
+        metric="accuracy",  # TODO add ROCAUC and F1 (might need `predictions` output)
+        models=SCFMS,
+        datasets=[d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=2000,
+        slurm="cpus-per-task=1"
+    log:
+        notebook="../logs/aggregate_scfm_evaluations_{training_options}.ipynb"
+    notebook:
+        "../notebooks/aggregate_zero_shot_llm_property_predictions.py.ipynb"  # borrowed from `zero_shot_llm.smk`. Consider renaming the file (i.e. remove `_llm`)
