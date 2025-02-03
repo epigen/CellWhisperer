@@ -9,7 +9,7 @@ rule zero_shot_llm_prediction:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         gene_normalizers=rules.compute_gene_normalizers.output.gene_mean_log1ps,  # NOTE could also get the ones computed with `seurat_get_top_genes`
     output:
-        predictions=protected(ZERO_SHOT_RESULTS / "{model,gpt4|llama33|claudesonnet|deepseek}" / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv"),
+        predictions=protected(ZERO_SHOT_RESULTS / "{model,gpt4|llama33|claudesonnet|deepseek|llama31|mistral7b}" / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv"),
     params:
         api_key=lambda wildcards: os.getenv(config["zero_shot_llms"][wildcards.model]["api_key_env"]),
         api_base_url=lambda wildcards: config["zero_shot_llms"][wildcards.model]["base_url"],
@@ -23,7 +23,8 @@ rule zero_shot_llm_prediction:
     conda:
         "cellwhisperer"
     log:
-        notebook="../logs/zero_shot_llm_prediction_{model}_{dataset}_{metadata_col}_{grouping}.ipynb"
+        notebook="../logs/zero_shot_llm_prediction_{model}_{dataset}_{metadata_col}_{grouping}.ipynb",
+        progress="../logs/zero_shot_llm_prediction_{model}_{dataset}_{metadata_col}_{grouping}.log"
     notebook:
         "../notebooks/zero_shot_llm_prediction.py.ipynb"
 
@@ -36,7 +37,7 @@ def dataset_selector(wildcards):
                                         (wildcards.grouping == "by_cell" and dataset not in ["tabula_sapiens", "tabula_sapiens_well_studied_celltypes"]) or
                                         (wildcards.grouping == "by_class" and dataset != "tabula_sapiens_100_cells_per_type")
                                     )]
-rule aggregate_zero_shot_property_predictions:
+rule aggregate_zero_shot_llm_property_predictions:
     """
     Aggregate the zero-shot property predictions for all models and datasets
 
@@ -63,6 +64,6 @@ rule aggregate_zero_shot_property_predictions:
         mem_mb=2000,
         slurm="cpus-per-task=1"
     log:
-        notebook="../logs/aggregate_zero_shot_property_predictions_{metadata_col}_{grouping}.ipynb"
+        notebook="../logs/aggregate_zero_shot_llm_property_predictions_{metadata_col}_{grouping}.ipynb"
     notebook:
-        "../notebooks/aggregate_zero_shot_property_predictions.py.ipynb"
+        "../notebooks/aggregate_zero_shot_llm_property_predictions.py.ipynb"

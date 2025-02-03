@@ -51,8 +51,11 @@ rule all:
             for model in [CLIP_MODEL]
             for metadata_col in config["metadata_cols_per_zero_shot_validation_dataset"][dataset]
         ],
-        expand(rules.aggregate_zero_shot_property_predictions.output.aggregated_predictions,
-               metadata_col=list(set([v for l in config["metadata_cols_per_zero_shot_validation_dataset"].values() for v in l])),
+
+        # LLM prediction
+        expand(rules.aggregate_zero_shot_llm_property_predictions.output.aggregated_predictions,
+               # metadata_col=list(set([v for l in config["metadata_cols_per_zero_shot_validation_dataset"].values() for v in l])),
+               metadata_col=["Tissue", "celltype"],  # NOTE For cost-reasons we restricted to two properties for now.
                grouping=["by_cell", "by_class"]
                ),
         expand(rules.zero_shot_performance_macroavg.output.macroavg_summary_plot, model=CLIP_MODEL),

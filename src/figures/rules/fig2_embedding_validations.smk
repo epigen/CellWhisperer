@@ -2,7 +2,7 @@
 ZERO_SHOT_RESULTS = PROJECT_DIR / "results/plots/zero_shot_validation"
 ZERO_SHOT_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,cellwhisperer_clip_v1}"  # NOTE new CW models (e.g. v2) need to be added here
 
-ZERO_SHOT_PREDICTORS = list(config["zero_shet_llms"].keys()) + ["cellwhisperer_clip_v1"]
+ZERO_SHOT_PREDICTORS = list(config["zero_shot_llms"].keys()) + ["cellwhisperer_clip_v1"]
 
 include: "../../shared/rules/training_sample_weights.smk"
 
