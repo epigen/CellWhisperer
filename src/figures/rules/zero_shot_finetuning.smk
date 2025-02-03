@@ -4,8 +4,8 @@ import subprocess
 
 PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
 FINETUNE_RESULTS_DIR = PROJECT_DIR / "results" / "finetuning_eval"
-configfile: PROJECT_DIR / "config.yaml"
-GPU_TYPE = "a100-sxm4-80gb"
+GPU_TYPE = "a100-sxm4-80gb"  # we actually need 80gb for `unfrozen` (at least for UCE) and more
+TRAINING_OPTIONS=["frozen", "frozen_singlecells", "unfrozen"]
 
 rule finetune_scfm:
     """
@@ -21,11 +21,11 @@ rule finetune_scfm:
         use_replicates=lambda wildcards: "singlecells" in wildcards.training_options,
         num_epochs=8,
         batch_size=16,  # NOTE: the frozen ones were trained with 64 (translating to a lower learning rate)
-        learning_rate=1e-4,  # NOTE: could be more aggressive according to val_loss
+        learning_rate=lambda wildcards: 1e-4 if "unfrozen" not in wildcards.training_options else 1e-5,  # NOTE: 1e-5 was only introduced for uce. The others did not yet 'benefit' from it
         freeze_fm=lambda wildcards: "unfrozen" not in wildcards.training_options,
     resources:
         mem_mb=lambda wildcards: 800000 if wildcards.model == "uce" else 350000,
-        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
+        slurm=f"cpus-per-task=5 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
     conda:
         "cellwhisperer"
         # lambda wildcards: "cellwhisperer" if wildcards.model in ["geneformer", "scgpt"] else "../../envs/uce.yaml"
@@ -70,14 +70,15 @@ rule evaluate_scfm:
         predictions=FINETUNE_RESULTS_DIR / "{model}" / "{dataset}" / "predictions_{training_options}.csv",
         performance=FINETUNE_RESULTS_DIR / "{model}" / "{dataset}" / "performance_{training_options}.csv",
     params:
-        batch_size=128,
+        batch_size=64,
         label_col="celltype",
     resources:
-        mem_mb=350000,
-        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
+        mem_mb=lambda wildcards: 450000 if wildcards.model == "uce" else 300000,
+        slurm=f"cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
     conda:
         "cellwhisperer"
     log:
-        notebook="logs/evaluate_scfm_{model}_{dataset}_{training_options}.ipynb"
+        notebook="logs/evaluate_scfm_{model}_{dataset}_{training_options}.ipynb",
+        progress="logs/evaluate_scfm_{model}_{dataset}_{training_options}.log"
     notebook:
         "../notebooks/evaluate_scfm.py.ipynb"

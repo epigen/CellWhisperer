@@ -8,6 +8,7 @@ import logging
 import pandas as pd
 import pickle
 from torch.utils.data import DataLoader
+import random
 
 from transformers.modeling_utils import PreTrainedModel
 from transformers.modeling_outputs import BaseModelOutputWithPooling
@@ -41,7 +42,7 @@ class UCETranscriptomeProcessor(ProcessorMixin):
     attributes = []
 
     def __init__(self, nproc=8, **kwargs):
-        self.name = "default"
+        self.name = f"default_{random.randint(0, 1000000)}"  # NOTE: this is not ideal but necessary to prevent file collisions... CHECK the size of the tmp files (results/UCE) and consider passing them directly in RAM
         self.nproc = nproc
 
         super().__init__(**kwargs)
@@ -99,10 +100,10 @@ class UCETranscriptomeProcessor(ProcessorMixin):
         )
 
         # Save to the temp dict
-        torch.save({self.name: pe_row_idxs}, get_path(["uce_paths", "tmp_pe_idx_path"]))
-        with open(get_path(["uce_paths", "tmp_chroms_path"]), "wb+") as f:
+        torch.save({self.name: pe_row_idxs}, get_path(["uce_paths", "tmp_pe_idx_path"], name=self.name))
+        with open(get_path(["uce_paths", "tmp_chroms_path"], name=self.name), "wb+") as f:
             pickle.dump({self.name: dataset_chroms}, f)
-        with open(get_path(["uce_paths", "tmp_starts_path"]), "wb+") as f:
+        with open(get_path(["uce_paths", "tmp_starts_path"], name=self.name), "wb+") as f:
             pickle.dump({self.name: dataset_pos}, f)
 
     def __call__(self, adata, *args, **kwargs) -> dict:
@@ -116,7 +117,7 @@ class UCETranscriptomeProcessor(ProcessorMixin):
             dict: The processed data, as a dict of tensors.
         """
 
-        npzs_dir = get_path(["uce_paths", "tmp_feature_path"])
+        npzs_dir = get_path(["uce_paths", "tmp_feature_path"], name=self.name)
         processed_adata = self._compute_features(adata)
         features = data_to_torch_X(processed_adata.X).numpy()
         num_cells = processed_adata.X.shape[0]
@@ -150,10 +151,10 @@ class UCETranscriptomeProcessor(ProcessorMixin):
             ),
             npzs_dir=str(npzs_dir) + "/",
             dataset_to_protein_embeddings_path=get_path(
-                ["uce_paths", "tmp_pe_idx_path"]
+                ["uce_paths", "tmp_pe_idx_path"], name=self.name
             ),
-            datasets_to_chroms_path=get_path(["uce_paths", "tmp_chroms_path"]),
-            datasets_to_starts_path=get_path(["uce_paths", "tmp_starts_path"]),
+            datasets_to_chroms_path=get_path(["uce_paths", "tmp_chroms_path"], name=self.name),
+            datasets_to_starts_path=get_path(["uce_paths", "tmp_starts_path"], name=self.name),
         )
 
         multi_dataset_sentence_collator = MultiDatasetSentenceCollator(

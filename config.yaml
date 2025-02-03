@@ -112,9 +112,9 @@ uce_paths:
 
   tokens: resources/UCE/all_tokens.torch
 
-  tmp_pe_idx_path: results/UCE/default_pe_idx.torch
-  tmp_chroms_path: results/UCE/default_chroms.pkl
-  tmp_starts_path: results/UCE/default_starts.pkl
+  tmp_pe_idx_path: results/UCE/{name}_pe_idx.torch
+  tmp_chroms_path: results/UCE/{name}_chroms.pkl
+  tmp_starts_path: results/UCE/{name}_starts.pkl
   tmp_feature_path: results/UCE
 
 genesets:
