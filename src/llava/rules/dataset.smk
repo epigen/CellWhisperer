@@ -221,14 +221,16 @@ rule curate_evaluation_dataset:
 
 rule tabsap_celltype_evaluation_dataset:
     input:
-        dataset=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="tabula_sapiens"),
+        dataset=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="tabula_sapiens_100_cells_per_type"),
     output:
-        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="tabula_sapiens"),
+        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="tabula_sapiens_100_cells_per_type"),
     params:
-        celltypes=config["top20_lung_liver_blood_celltypes"],
-        num_cells_per_celltype=20,
-        question="Which cell type is this cell?",
-        response_prefix="This cell is a " ,
+        celltypes=None,  # `None` corresponds to *all* cell types. Alternative: config["top20_lung_liver_blood_celltypes"],
+        num_cells_per_celltype=None,  # `None` corresponds to *all* cells. The input dataset is already downsampled to 100 cells per cell type.
+        question=config["llava_eval"]["question"],
+        response_prefix=config["llava_eval"]["response_prefix"],
+    resources:
+        mem_mb=90000,
     conda:
         "cellwhisperer"
     notebook:

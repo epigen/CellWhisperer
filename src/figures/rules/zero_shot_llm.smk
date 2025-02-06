@@ -18,7 +18,7 @@ rule zero_shot_llm_prediction:
         model=lambda wildcards: config["zero_shot_llms"][wildcards.model]["model_name"],
         average_by_class=lambda wildcards: wildcards.grouping == "by_class",
     resources:
-        mem_mb=350000,
+        mem_mb=120000,  # TODO check if really enough..
         slurm="cpus-per-task=2"
     conda:
         "cellwhisperer"
@@ -57,7 +57,8 @@ rule aggregate_zero_shot_llm_property_predictions:
     params:
         metric="accuracy",
         models=ZERO_SHOT_PREDICTORS,
-        datasets=dataset_selector
+        datasets=dataset_selector,
+        plot_title=lambda wildcards: f"{wildcards.metric} for {wildcards.metadata_col} ({wildcards.training_options})"
     conda:
         "cellwhisperer"
     resources:

@@ -40,12 +40,13 @@ BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
 
 include: "../shared/rules/dataset_processing.smk"
 include: "../shared/rules/training_sample_weights.smk"
+include: "../shared/rules/genesets.smk"
 include: "../shared/rules/gsva.smk"
 include: "rules/dataset.smk"
 include: "rules/training.smk"
 
 rule all:
     input:
-        rules.finetune_llava.output.output_dir.format(base_model="", model=BASE_MODEL)
+        rules.finetune_llava.output.output_dir.format(base_model=BASE_MODEL, model=CLIP_MODEL)
 
     default_target: True

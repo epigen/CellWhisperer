@@ -27,3 +27,5 @@ llava_logs/
 
 *.mp4
 lsyncd*.conf
+
+*#

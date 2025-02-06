@@ -6,10 +6,12 @@ PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shel
 FINETUNE_RESULTS_DIR = PROJECT_DIR / "results" / "finetuning_eval"
 GPU_TYPE = "a100-sxm4-80gb"  # we actually need 80gb for `unfrozen` (at least for UCE) and more
 TRAINING_OPTIONS=["frozen", "frozen_singlecells", "unfrozen"]
+FINETUNE_EVAL_DATASETS = ["tabula_sapiens", "pancreas", "immgen"]  # optionally: [d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]
 
 rule finetune_scfm:
     """
-    Fine-tune on cellxgene_census (due to their consistent annotations)
+    Fine-tune on cellxgene_census (due to their consistent `cell_type` annotations)
+
     """
     input:
         model_weights=lambda wildcards: PROJECT_DIR / config["model_name_path_map"][wildcards.model],
@@ -74,7 +76,7 @@ rule evaluate_scfm:
         label_col="celltype",
     resources:
         mem_mb=lambda wildcards: 450000 if wildcards.model == "uce" else 300000,
-        slurm=f"cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
+        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"  # TODO exchange for a100 again
     conda:
         "cellwhisperer"
     log:
@@ -90,21 +92,23 @@ rule aggregate_scfm_evaluations:
         predictions=lambda wildcards: [
             rules.evaluate_scfm.output.performance.format(model=model, dataset=dataset, training_options=wildcards.training_options)
             for model in SCFMS
-            for dataset in ["tabula_sapiens", "pancreas", "immgen"]]
+            for dataset in FINETUNE_EVAL_DATASETS]
             # for dataset in [d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]]
     output:
-        aggregated_predictions=FINETUNE_RESULTS_DIR / "aggregated_predictions_{training_options}.csv",
-        aggregated_predictions_plot=FINETUNE_RESULTS_DIR / "aggregated_predictions_{training_options}.png"
+        aggregated_predictions=FINETUNE_RESULTS_DIR / "aggregated_predictions_{training_options}_{metric}.csv",
+        aggregated_predictions_plot=FINETUNE_RESULTS_DIR / "aggregated_predictions_{training_options}_{metric}.png"
     params:
-        metric="accuracy",  # TODO add ROCAUC and F1 (might need `predictions` output)
+        metric=lambda wildcards: wildcards.metric,
         models=SCFMS,
-        datasets=[d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]
+        datasets=FINETUNE_EVAL_DATASETS,
+        plot_title=lambda wildcards: f"{wildcards.metric} for celltype ({wildcards.training_options})"
     conda:
         "cellwhisperer"
     resources:
         mem_mb=2000,
         slurm="cpus-per-task=1"
     log:
-        notebook="../logs/aggregate_scfm_evaluations_{training_options}.ipynb"
+        notebook="../logs/aggregate_scfm_evaluations_{training_options}_{metric}.ipynb"
     notebook:
         "../notebooks/aggregate_zero_shot_llm_property_predictions.py.ipynb"  # borrowed from `zero_shot_llm.smk`. Consider renaming the file (i.e. remove `_llm`)
+

@@ -86,6 +86,11 @@ metadata_cols_per_zero_shot_validation_dataset:
     - celltype
     - organ_tissue
 
+llava_eval:
+  question: "Which cell type is this cell?"
+  response_prefix: "This cell is a "
+
+
 retrieval_validation_sets:
   - immgen_deduplicated
   - human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
@@ -155,7 +160,7 @@ zero_shot_llms:
     model_name: gpt-4o-2024-11-20
   llama33:
     api_key_env: OLLAMA_API_KEY
-    base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
+    base_url: http://s0-n00.hpc.meduniwien.ac.at:8080/v1/  # Internal server
     model_name: llama3.3:70b
   claudesonnet:
     api_key_env: ANTHROPIC_API_KEY
@@ -163,9 +168,9 @@ zero_shot_llms:
     model_name: claude-3-5-sonnet-20241022
   llama31:
     api_key_env: OLLAMA_API_KEY
-    base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
+    base_url: http://s0-n00.hpc.meduniwien.ac.at:8080/v1/  # Internal server
     model_name: llama3.1:8b
   mistral7b:
     api_key_env: OLLAMA_API_KEY
-    base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
+    base_url: http://s0-n00.hpc.meduniwien.ac.at:8080/v1/  # Internal server
     model_name: mistral:7b-instruct-v0.2-fp16

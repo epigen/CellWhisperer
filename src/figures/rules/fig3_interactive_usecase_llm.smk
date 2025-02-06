@@ -67,6 +67,10 @@ rule llava_evaluation_perplexity_plots:
         log_perplexity_ratio=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "log_mean_perplexity.ratio",  # smaller is better log(ppl_real/ppl_neg_control)
         comparison_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "perplexity_quantile.svg",  # barplot
         detailed_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "detailed.svg",  # barplot
+        full_supp_table=PROJECT_DIR / config["paths"]["llava"]["root"] / "{dataset}" / "{base_model}__{model}" / "quantile_stats.xlsx"
+    params:
+        plot_celltypes=config["top20_lung_liver_blood_celltypes"],
+        response_prefix=config["llava_eval"]["response_prefix"]
     conda:
         "llava"  # newer version of pandas in this env
     notebook:
