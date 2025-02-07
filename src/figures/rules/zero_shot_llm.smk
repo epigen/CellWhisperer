@@ -58,7 +58,7 @@ rule aggregate_zero_shot_llm_property_predictions:
         metric="accuracy",
         models=ZERO_SHOT_PREDICTORS,
         datasets=dataset_selector,
-        plot_title=lambda wildcards: f"{wildcards.metric} for {wildcards.metadata_col} ({wildcards.training_options})"
+        plot_title=lambda wildcards: f"accuracy for {wildcards.metadata_col} ({wildcards.grouping})"
     conda:
         "cellwhisperer"
     resources:
