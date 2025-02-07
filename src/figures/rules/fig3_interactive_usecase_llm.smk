@@ -45,7 +45,8 @@ rule llava_evaluation_perplexity:
     params:
         num_projector_tokens=int(config["llava_projector_type"].split("_")[1].strip("t")),
         background_shuffle="transcriptome",
-        num_negatives=30
+        num_negatives=30,
+        model_layer_selector=lambda wildcards: {"cellwhisperer_clip_v1": -1, "geneformer": -2}[wildcards.model]
     resources:
         mem_mb=300000,
         slurm=f"cpus-per-task=40 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"

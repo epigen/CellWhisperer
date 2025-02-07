@@ -11,13 +11,14 @@ rule pretrain_llava:
     """
     input:
         data_path=rules.llava_stage1_dataset.output["train_set"],
-        image_data=rules.combine_processed_data.output.combined,
+        image_data=rules.combine_processed_data.output.combined.format(model="cellwhisperer_clip_v1"),  # hard-coding model since it generates both for CW and for Geneformer
     conda:
         "llava"
     params:
         deepspeed=True,  # debug if False
         projector_type=config["llava_projector_type"],
-        hf_model_name=lambda wildcards: ("BioMistral/" if "Bio" in wildcards.base_model else "mistralai/") +  wildcards.base_model
+        hf_model_name=lambda wildcards: ("BioMistral/" if "Bio" in wildcards.base_model else "mistralai/") +  wildcards.base_model,
+        model_layer_selector=lambda wildcards: {"cellwhisperer_clip_v1": -1, "geneformer": -2}[wildcards.model]
     output:
         projector=PROJECT_DIR / config["paths"]["llava"]["pretrained_model_dir"] / "mm_projector.bin",
         output_dir=protected(directory(PROJECT_DIR / config["paths"]["llava"]["pretrained_model_dir"])),
@@ -45,7 +46,7 @@ rule pretrain_llava:
             --version plain \
             --mm_projector_type {params.projector_type} \
             --tune_mm_mlp_adapter True \
-            --mm_vision_select_layer -1 \
+            --mm_vision_select_layer {params.model_layer_selector} \
             --mm_vision_select_feature cls_patch \
             --mm_use_im_start_end False \
             --mm_use_im_patch_token False \
@@ -84,14 +85,15 @@ rule finetune_llava:
     """
     input:
         data_path=rules.aggregate_llava_stage2_dataset.output["llava_stage2_dataset"],
-        image_data=rules.combine_processed_data.output.combined,
+        image_data=rules.combine_processed_data.output.combined.format(model="cellwhisperer_clip_v1"),  # hard-coding model since it generates both for CW and for Geneformer
         pretrained_projector=rules.pretrain_llava.output.projector
     conda:
         "llava"
     params:
         deepspeed=True,
         projector_type=config["llava_projector_type"],
-        hf_model_name=lambda wildcards: ("BioMistral/" if "Bio" in wildcards.base_model else "mistralai/") +  wildcards.base_model
+        hf_model_name=lambda wildcards: ("BioMistral/" if "Bio" in wildcards.base_model else "mistralai/") +  wildcards.base_model,
+        model_layer_selector=lambda wildcards: {"cellwhisperer_clip_v1": -1, "geneformer": -2}[wildcards.model]
     output:
         output_dir=protected(directory(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"])),
     resources:
@@ -118,7 +120,7 @@ rule finetune_llava:
             --version mistral_instruct \
             --pretrain_mm_mlp_adapter {input.pretrained_projector} \
             --mm_projector_type {params.projector_type} \
-            --mm_vision_select_layer -1 \
+            --mm_vision_select_layer {params.model_layer_selector} \
             --mm_use_im_start_end False \
             --mm_use_im_patch_token False \
             --group_by_modality_length False \

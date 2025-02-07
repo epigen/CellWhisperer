@@ -71,7 +71,7 @@ rule all:
                plot_name=["detailed", "perplexity_quantile"],
                dataset=["main", "tabula_sapiens_100_cells_per_type"],  # NOTE: these are evaluation datasets
                base_model=[LLAVA_BASE_MODEL],  # NOTE could test as well: "BioMistral-7B", "BioMistral-7B-DARE",
-               model=[CLIP_MODEL],
+               model=[CLIP_MODEL, "geneformer"],
                ),
 
         # Figure 4
