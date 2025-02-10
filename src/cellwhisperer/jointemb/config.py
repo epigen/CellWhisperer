@@ -4,6 +4,7 @@ import logging
 from .geneformer_model import GeneformerConfig
 from cellwhisperer.config import model_path_from_name
 from .scgpt_model import ScGPTConfig
+from .uce_model import UCEConfig
 from transformers.configuration_utils import PretrainedConfig
 from transformers.utils import logging
 from transformers.models.auto.configuration_auto import AutoConfig
@@ -71,6 +72,8 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
             self.transcriptome_config = GeneformerConfig(**transcriptome_config)
         elif transcriptome_model_type == "scgpt":
             self.transcriptome_config = ScGPTConfig(**transcriptome_config)
+        elif transcriptome_model_type == "uce":
+            self.transcriptome_config = UCEConfig(**transcriptome_config)
         else:
             raise ValueError(
                 f"Unsupported transcriptome model type: {transcriptome_model_type}"

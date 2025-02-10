@@ -145,7 +145,6 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
             )
         else:
             encoding = {}
-            
 
         if transcriptomes is not None:
             transcriptome_processor_results = self.transcriptome_processor(

@@ -120,8 +120,8 @@ class SingleCellZeroshotValidationScoreCalculator:
             suffix_for_text_embeddings: suffix to add to the celltype name to generate the text to embed.
             nproc_transcriptome_processor: number of processes to use for the transcriptome processor.
             tokenizer_name: name of the tokenizer to use for the text. Must be a key in the config file.
-            transcriptome_tokenizer_type: type of tokenizer to use for the transcriptome. Must be one of "geneformer" or "scgpt".
-            transcriptome_processor_kwargs: kwargs to pass to the transcriptome processor. Default: None for geneformer, \
+            transcriptome_tokenizer_type: type of tokenizer to use for the transcriptome. Must be one of "geneformer", "scgpt" or "uce".
+            transcriptome_processor_kwargs: kwargs to pass to the transcriptome processor. Default: None for geneformer and "scgpt", \
                 {"gene_col":"gene_name"} for scgpt.
             batch_size: batch size to use for the forward pass through the model and for the score calculation.
             average_mode: how to average the transcriptome embeddings. Must be one of "cells", "embeddings", or None.

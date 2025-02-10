@@ -191,7 +191,10 @@ class UCEConfig(PretrainedConfig):
         nlayers=33,
         dropout=0.05,
         output_dim=PE_DIM,
+        **kwargs,
     ):
+
+        self.model_type = UCEConfig.model_type
         self.token_dim = token_dim
         self.d_model = d_model
         self.nhead = nhead
