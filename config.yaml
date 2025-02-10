@@ -104,8 +104,8 @@ model_name_path_map:
 
   geneformer: resources/geneformer-12L-30M
   scgpt: resources/scGPT_human
-  uce: resources/UCE/33layer_model.torch
-  uce4layer: resources/UCE/4layer_model.torch
+  uce: resources/UCE/4layer_model.torch  # TODO switch
+  # uce4layer: resources/UCE/4layer_model.torch
 
   biogpt: microsoft/biogpt
   bert: dmis-lab/biobert-v1.1
