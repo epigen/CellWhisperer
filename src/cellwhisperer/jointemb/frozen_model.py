@@ -9,7 +9,7 @@ import torch
 import time
 import torch.nn as nn
 import pickle
-from typing import Optional, Union
+from typing import Optional, Union, Any
 import types
 from pathlib import Path
 import torch
@@ -54,17 +54,21 @@ class FrozenCachedModel(nn.Module):
 
     """
 
-    def __init__(self, model):
+    def __init__(self, model: nn.Module, use_cache: bool = True):
         super(FrozenCachedModel, self).__init__()
-        # Avoiding parameter tracking
+        # Avoiding parameter tracking and moving to CPU for memory reduction
         self._models = [model.eval().cpu()]
 
-        self.model_hash = hash_object(self.model.parameters())
-        logger.info(f"Initializing frozen model with hash {self.model_hash}")
-        logger.debug(f"Corresponding model config: {self.model.config}")
+        if use_cache:
 
-        self.cache_file = Path(get_cache_dir()) / f"{self.model_hash}.pkl"
-        self.cache = self._load_cache()
+            self.model_hash = hash_object(self.model.parameters())
+            logger.info(f"Initializing frozen model with hash {self.model_hash}")
+            logger.debug(f"Corresponding model config: {self.model.config}")
+
+            self.cache_file = Path(get_cache_dir()) / f"{self.model_hash}.pkl"
+            self.cache = self._load_cache()
+        else:
+            self.cache = None
 
     @property
     def model(self):
@@ -167,6 +171,9 @@ class FrozenCachedModel(nn.Module):
 
         Returns a tuple of tensors (token_embeddings, Optional[sentence_embedding]). The sentence_embedding is just returned if provided by the model
         """
+        if self.cache is None:
+            return self.model(*args, **kwargs)
+
         assert len(args) == 0, "not implemented for positional args"
 
         device = [x for x in kwargs.values() if isinstance(x, torch.Tensor)][0].device
