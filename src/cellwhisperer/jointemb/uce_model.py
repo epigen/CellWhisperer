@@ -157,9 +157,7 @@ class UCETranscriptomeProcessor(ProcessorMixin):
             datasets_to_starts_path=get_path(["uce_paths", "tmp_starts_path"], name=self.name),
         )
 
-        multi_dataset_sentence_collator = MultiDatasetSentenceCollator(
-            args=SimpleNamespace(pad_length=PAD_LENGTH)
-        )
+        multi_dataset_sentence_collator = MultiDatasetSentenceCollator(pad_length=1152)  # hard-code here to support joint training with cellxgene_census and archs4_metasra
 
         dataloader = DataLoader(
             dataset,
@@ -173,7 +171,6 @@ class UCETranscriptomeProcessor(ProcessorMixin):
         logging.info("Generated dataset for UCE model.")
 
         return {
-            "expression_gene": data[2],  # idx
             "expression_expr": data[0],  # batch_sentences
             "expression_key_padding_mask": data[1],  # mask
         }
@@ -212,7 +209,7 @@ class UCEModel(PreTrainedModel):
         config_class = UCEConfig
         base_model_prefix = "uce_model"
         is_parallelizable = False  # not sure actually
-        main_input_name = "expression_gene"  # NOTE there are actually three main inputs, but probably good enough
+        main_input_name = "expression_expr"  # NOTE there are actually three main inputs, but probably good enough
 
         self.uce_model = TransformerModel(
             d_model=config.d_model,
@@ -238,10 +235,9 @@ class UCEModel(PreTrainedModel):
         return_dict: Optional[bool] = None,
         **kwargs,
     ):
-        batch_sentences, mask, idxs = (
+        batch_sentences, mask = (
             expression_expr,  # batch[0],
             expression_key_padding_mask,  # batch[1],
-            expression_gene,  # batch[2],
         )
         assert (
             expression_key_padding_mask.sum(dim=1) > 10

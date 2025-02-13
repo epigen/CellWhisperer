@@ -284,8 +284,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         assert (
             expression_tokens is not None and expression_token_lengths is not None
         ) or (
-            expression_gene is not None
-            and expression_expr is not None
+            expression_expr is not None
+            # and expression_gene is not None  # not needed for UCE
             and expression_key_padding_mask is not None
         ), "Either expression_tokens and expression_token_lengths or expression_gene, expression_expr and expression_key_padding_mask must be provided"
 
