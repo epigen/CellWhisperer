@@ -24,9 +24,6 @@ CONVERSATION_START = NUM_COMPLEX_SAMPLES + NUM_DETAILED_SAMPLES
 COMPLEX_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[:NUM_COMPLEX_SAMPLES]
 DETAILED_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[NUM_COMPLEX_SAMPLES:CONVERSATION_START]
 
-GPU_TYPE = "a100"
-
-
 rule llava_evaluation_perplexity:
     """
     Current limitations:
@@ -34,24 +31,33 @@ rule llava_evaluation_perplexity:
 
     """
     input:
-        llava_model=ancient(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"]),
+        llava_model=lambda wildcards:
+            ancient(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"].format(base_model=wildcards.base_model, model=wildcards.model))
+            if wildcards.model != "NONE" else
+            ancient(PROJECT_DIR / "resources" / wildcards.base_model),
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
         # image_data=rules.process_full_dataset.output.model_outputs.format(dataset="{dataset}", model=config["model_name_path_map"]["cellwhisperer"]),
         image_data=rules.combine_processed_data.output.combined.format(model=config["model_name_path_map"]["cellwhisperer"]),
+        top_genes=lambda wildcards: rules.compute_top_genes.output.top_genes.format(dataset=wildcards.dataset) if wildcards.dataset != "main" else [ancient(rules.compute_top_genes.output.top_genes.format(dataset=dataset)) for dataset in ["cellxgene_census", "archs4_geo"]] ,  # only required for `prompt_variation="with50topgenes"`. not sure if `ancient` is correct
     conda:
-        "llava"
+        "llava5"
     output:
         all_perplexities=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "all_perplexities.csv",
     params:
         num_projector_tokens=int(config["llava_projector_type"].split("_")[1].strip("t")),
         background_shuffle="transcriptome",
         num_negatives=30,
-        model_layer_selector=lambda wildcards: {"cellwhisperer_clip_v1": -1, "geneformer": -2}[wildcards.model]
+        model_layer_selector=lambda wildcards: {"cellwhisperer_clip_v1": -1, "geneformer": -2, "NONE": -1}[wildcards.model],  # NOTE would be better if we could use `None` instead of -1
+        pre_prompt_topgenes=lambda wildcards: {"with50topgenes": config["llava_eval"]["pre_prompt_topgenes"], "without50topgenes": None}[wildcards.prompt_variation],
+        top_n_genes=50,
+        is_multimodal=lambda wildcards: wildcards.model != "NONE"
     resources:
-        mem_mb=300000,
-        slurm=f"cpus-per-task=40 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
+        mem_mb=400000,
+        slurm=lambda wildcards: "cpus-per-task=20 gres=gpu:{gpu_type}:1 qos={gpu_type} partition=gpu".format(
+            gpu_type={LLAVA_BASE_MODEL: "3g.20gb", "Llama-3.1-8B-Instruct": "a100", "Llama-3.3-8B-Instruct": "a100-sxm4-80gb"}[wildcards.base_model])
     log:
-        "logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}.log"
+        notebook="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{prompt_variation}.ipynb",
+        log="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{prompt_variation}.log"
     threads: 16
     notebook:
         "../notebooks/llava_evaluation_perplexity.py.ipynb"
@@ -68,11 +74,13 @@ rule llava_evaluation_perplexity_plots:
         log_perplexity_ratio=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "log_mean_perplexity.ratio",  # smaller is better log(ppl_real/ppl_neg_control)
         comparison_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "perplexity_quantile.svg",  # barplot
         detailed_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "detailed.svg",  # barplot
-        full_supp_table=PROJECT_DIR / config["paths"]["llava"]["root"] / "{dataset}" / "{base_model}__{model}" / "quantile_stats.xlsx"
+        full_supp_table=PROJECT_DIR / config["paths"]["llava"]["root"] / "{dataset}" / "{base_model}__{model}" / "quantile_stats_{prompt_variation}.xlsx"
     params:
         plot_celltypes=config["top20_lung_liver_blood_celltypes"],
         response_prefix=config["llava_eval"]["response_prefix"]
     conda:
-        "llava"  # newer version of pandas in this env
+        "llava5"  # newer version of pandas in this env
+    log:
+        notebook="logs/llava_evaluation_perplexity_plots/{dataset}_{base_model}_{model}_{prompt_variation}.ipynb"
     notebook:
         "../notebooks/llava_evaluation_perplexity_plots.py.ipynb"

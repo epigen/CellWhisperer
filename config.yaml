@@ -37,7 +37,7 @@ paths:
     combined_processed_data: results/llava/combined_processed_data/{model}.npz
     pretrained_model_dir: results/llava/pretrained/{base_model}__{model}/
     finetuned_model_dir: results/llava/finetuned/{base_model}__{model}/
-    evaluation_results:  results/plots/llava/{dataset}/{base_model}__{model}/
+    evaluation_results:  results/plots/llava/{dataset}/{base_model}__{model}/{prompt_variation}/
   geo_umap: results/plots/geo_umap/{model}/
   ablations:
     models: results/models/ablations/
@@ -89,7 +89,11 @@ metadata_cols_per_zero_shot_validation_dataset:
 llava_eval:
   question: "Which cell type is this cell?"
   response_prefix: "This cell is a "
-
+  pre_prompt_topgenes:
+    - from: human
+      value: "Respond to my request regarding a sample of cells characterized by its top-expressed genes being {}"
+    - from: gpt
+      value: "Sure. What's your request?"
 
 retrieval_validation_sets:
   - immgen_deduplicated
@@ -109,6 +113,11 @@ model_name_path_map:
   llava_base_llm: Mistral-7B-Instruct-v0.2
 
   mixtral: resources/mixtral-8x7b-instruct-v0.1.Q5_K_M.gguf
+
+  # manually downloaded with `git clone` (requires license agreement)
+  mistral: resources/Mistral-7B-Instruct-v0.2
+  llama31: resources/Llama-3.1-8B-Instruct
+  llama33: resources/Llama-3.3-70B-Instruct
 
 uce_paths:
   protein_embeddings_dir: resources/UCE/protein_embeddings
