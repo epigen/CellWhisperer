@@ -106,5 +106,5 @@ best_model_path: null
 log_level: INFO
 dap_debug: false
 batch_size: 512
-wandb: 'uce4layer_fulldata_4epochs'
+wandb: 'uce33layer_fulldata_4epochs'
 ckpt_path: null

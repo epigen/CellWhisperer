@@ -185,7 +185,7 @@ class UCEConfig(PretrainedConfig):
         d_model=PE_DIM,
         nhead=20,
         d_hid=TOKEN_DIM,
-        nlayers=4,  # TODO 33
+        nlayers=33,  # TODO 33
         dropout=0.05,
         output_dim=PE_DIM,
         **kwargs,
