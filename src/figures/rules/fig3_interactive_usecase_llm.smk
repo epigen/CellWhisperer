@@ -24,11 +24,25 @@ CONVERSATION_START = NUM_COMPLEX_SAMPLES + NUM_DETAILED_SAMPLES
 COMPLEX_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[:NUM_COMPLEX_SAMPLES]
 DETAILED_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[NUM_COMPLEX_SAMPLES:CONVERSATION_START]
 
+rule llava_evaluation_topgenes_dataset:
+    input:
+        dataset=lambda wildcards: str(PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"]).format(dataset=wildcards.dataset.replace("_top50genes", "")),
+        top_genes=[ancient(rules.compute_top_genes.output.top_genes.format(dataset=dataset)) for dataset in ["cellxgene_census", "archs4_geo"]]
+    output:
+        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
+    params:
+        question=config["llava_eval"]["question_topgenes"],
+        response_prefix=config["llava_eval"]["response_prefix_topgenes"],
+        top_n_genes=50,
+    resources:
+        mem_mb=90000,
+    conda:
+        "cellwhisperer"
+    notebook:
+        "../notebooks/llava_evaluation_topgenes_dataset.py.ipynb"
+
 rule llava_evaluation_perplexity:
     """
-    Current limitations:
-    - Each of our datasets can only provide one evaluation dataset
-
     """
     input:
         llava_model=lambda wildcards:
@@ -38,7 +52,7 @@ rule llava_evaluation_perplexity:
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
         # image_data=rules.process_full_dataset.output.model_outputs.format(dataset="{dataset}", model=config["model_name_path_map"]["cellwhisperer"]),
         image_data=rules.combine_processed_data.output.combined.format(model=config["model_name_path_map"]["cellwhisperer"]),
-        top_genes=lambda wildcards: rules.compute_top_genes.output.top_genes.format(dataset=wildcards.dataset) if wildcards.dataset != "main" else [ancient(rules.compute_top_genes.output.top_genes.format(dataset=dataset)) for dataset in ["cellxgene_census", "archs4_geo"]] ,  # only required for `prompt_variation="with50topgenes"`. not sure if `ancient` is correct
+        top_genes=[ancient(rules.compute_top_genes.output.top_genes.format(dataset=dataset)) for dataset in ["cellxgene_census", "archs4_geo"]] ,  # only required for `prompt_variation="with50topgenes"`. not sure if `ancient` is correct # lambda wildcards: rules.compute_top_genes.output.top_genes.format(dataset=wildcards.dataset) if wildcards.dataset != "main" else 
     conda:
         "llava5"
     output:
@@ -54,7 +68,7 @@ rule llava_evaluation_perplexity:
     resources:
         mem_mb=400000,
         slurm=lambda wildcards: "cpus-per-task=20 gres=gpu:{gpu_type}:1 qos={gpu_type} partition=gpu".format(
-            gpu_type={LLAVA_BASE_MODEL: "3g.20gb", "Llama-3.1-8B-Instruct": "a100", "Llama-3.3-8B-Instruct": "a100-sxm4-80gb"}[wildcards.base_model])
+            gpu_type={LLAVA_BASE_MODEL: "a100", "Llama-3.1-8B-Instruct": "a100", "Llama-3.3-8B-Instruct": "a100-sxm4-80gb"}[wildcards.base_model])
     log:
         notebook="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{prompt_variation}.ipynb",
         log="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{prompt_variation}.log"
@@ -77,7 +91,8 @@ rule llava_evaluation_perplexity_plots:
         full_supp_table=PROJECT_DIR / config["paths"]["llava"]["root"] / "{dataset}" / "{base_model}__{model}" / "quantile_stats_{prompt_variation}.xlsx"
     params:
         plot_celltypes=config["top20_lung_liver_blood_celltypes"],
-        response_prefix=config["llava_eval"]["response_prefix"]
+        response_prefix=lambda wildcards: config["llava_eval"]["response_prefix_{}".format(
+            "topgenes" if "_top50genes" in wildcards.dataset else "celltype")]
     conda:
         "llava5"  # newer version of pandas in this env
     log:

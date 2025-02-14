@@ -227,8 +227,8 @@ rule tabsap_celltype_evaluation_dataset:
     params:
         celltypes=None,  # `None` corresponds to *all* cell types. Alternative: config["top20_lung_liver_blood_celltypes"],
         num_cells_per_celltype=None,  # `None` corresponds to *all* cells. The input dataset is already downsampled to 100 cells per cell type.
-        question=config["llava_eval"]["question"],
-        response_prefix=config["llava_eval"]["response_prefix"],
+        question=config["llava_eval"]["question_celltype"],
+        response_prefix=config["llava_eval"]["response_prefix_celltype"],
     resources:
         mem_mb=90000,
     conda:

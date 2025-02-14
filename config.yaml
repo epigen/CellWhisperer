@@ -87,13 +87,15 @@ metadata_cols_per_zero_shot_validation_dataset:
     - organ_tissue
 
 llava_eval:
-  question: "Which cell type is this cell?"
-  response_prefix: "This cell is a "
+  question_celltype: "Which cell type is this cell?"
+  response_prefix_celltype: "This cell is a "
   pre_prompt_topgenes:
     - from: human
       value: "Respond to my request regarding a sample of cells characterized by its top-expressed genes being {}"
     - from: gpt
       value: "Sure. What's your request?"
+  question_topgenes: "Which are the 50 most strongly expressed genes in this sample of cells?"
+  response_prefix_topgenes: "The 50 most strongly expressed genes are {}"
 
 retrieval_validation_sets:
   - immgen_deduplicated

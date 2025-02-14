@@ -70,7 +70,6 @@ rule pretrain_llava:
             --dataloader_num_workers {threads} \
             --report_to wandb \
             --lazy_preprocess True 2>&1| tee {log}
-            # --report_to wandb
     """
 
 rule finetune_llava:
@@ -144,5 +143,4 @@ rule finetune_llava:
             --dataloader_num_workers {threads} \
             --report_to wandb \
             --lazy_preprocess True 2>&1 | tee {log}
-            # --report_to wandb
     """
