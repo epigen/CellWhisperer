@@ -9,6 +9,7 @@ import pandas as pd
 import pickle
 from torch.utils.data import DataLoader
 import random
+import uuid
 
 from transformers.modeling_utils import PreTrainedModel
 from transformers.modeling_outputs import BaseModelOutputWithPooling
@@ -42,7 +43,9 @@ class UCETranscriptomeProcessor(ProcessorMixin):
     attributes = []
 
     def __init__(self, nproc=8, **kwargs):
-        self.name = f"default_{random.randint(0, 1000000)}"  # NOTE: this is not ideal but necessary to prevent file collisions... CHECK the size of the tmp files (results/UCE) and consider passing them directly in RAM
+        self.name = (
+            uuid.uuid4().hex
+        )  # NOTE: this is not ideal but necessary to prevent file collisions... CHECK the size of the tmp files (results/UCE) and consider passing them directly in RAM
         self.nproc = nproc
 
         super().__init__(**kwargs)
@@ -100,10 +103,17 @@ class UCETranscriptomeProcessor(ProcessorMixin):
         )
 
         # Save to the temp dict
-        torch.save({self.name: pe_row_idxs}, get_path(["uce_paths", "tmp_pe_idx_path"], name=self.name))
-        with open(get_path(["uce_paths", "tmp_chroms_path"], name=self.name), "wb+") as f:
+        torch.save(
+            {self.name: pe_row_idxs},
+            get_path(["uce_paths", "tmp_pe_idx_path"], name=self.name),
+        )
+        with open(
+            get_path(["uce_paths", "tmp_chroms_path"], name=self.name), "wb+"
+        ) as f:
             pickle.dump({self.name: dataset_chroms}, f)
-        with open(get_path(["uce_paths", "tmp_starts_path"], name=self.name), "wb+") as f:
+        with open(
+            get_path(["uce_paths", "tmp_starts_path"], name=self.name), "wb+"
+        ) as f:
             pickle.dump({self.name: dataset_pos}, f)
 
     def __call__(self, adata, *args, **kwargs) -> dict:
@@ -153,11 +163,17 @@ class UCETranscriptomeProcessor(ProcessorMixin):
             dataset_to_protein_embeddings_path=get_path(
                 ["uce_paths", "tmp_pe_idx_path"], name=self.name
             ),
-            datasets_to_chroms_path=get_path(["uce_paths", "tmp_chroms_path"], name=self.name),
-            datasets_to_starts_path=get_path(["uce_paths", "tmp_starts_path"], name=self.name),
+            datasets_to_chroms_path=get_path(
+                ["uce_paths", "tmp_chroms_path"], name=self.name
+            ),
+            datasets_to_starts_path=get_path(
+                ["uce_paths", "tmp_starts_path"], name=self.name
+            ),
         )
 
-        multi_dataset_sentence_collator = MultiDatasetSentenceCollator(pad_length=1152)  # hard-code here to support joint training with cellxgene_census and archs4_metasra
+        multi_dataset_sentence_collator = MultiDatasetSentenceCollator(
+            pad_length=1152
+        )  # hard-code here to support joint training with cellxgene_census and archs4_metasra
 
         dataloader = DataLoader(
             dataset,
