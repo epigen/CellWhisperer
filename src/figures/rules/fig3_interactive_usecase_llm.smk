@@ -24,10 +24,16 @@ CONVERSATION_START = NUM_COMPLEX_SAMPLES + NUM_DETAILED_SAMPLES
 COMPLEX_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[:NUM_COMPLEX_SAMPLES]
 DETAILED_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[NUM_COMPLEX_SAMPLES:CONVERSATION_START]
 
+def top_genes_fn(wildcards):
+    if wildcards.dataset in ["main", "main_top50genes"]:
+        return [ancient(rules.compute_top_genes.output.top_genes.format(dataset=dataset)) for dataset in ["cellxgene_census", "archs4_geo"]]
+    else:
+        return [rules.compute_top_genes.output.top_genes.format(dataset=wildcards.dataset.replace("_top50genes", ""))]
+
 rule llava_evaluation_topgenes_dataset:
     input:
         dataset=lambda wildcards: str(PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"]).format(dataset=wildcards.dataset.replace("_top50genes", "")),
-        top_genes=[ancient(rules.compute_top_genes.output.top_genes.format(dataset=dataset)) for dataset in ["cellxgene_census", "archs4_geo"]]
+        top_genes=top_genes_fn
     output:
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
     params:
@@ -52,7 +58,7 @@ rule llava_evaluation_perplexity:
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
         # image_data=rules.process_full_dataset.output.model_outputs.format(dataset="{dataset}", model=config["model_name_path_map"]["cellwhisperer"]),
         image_data=rules.combine_processed_data.output.combined.format(model=config["model_name_path_map"]["cellwhisperer"]),
-        top_genes=[ancient(rules.compute_top_genes.output.top_genes.format(dataset=dataset)) for dataset in ["cellxgene_census", "archs4_geo"]] ,  # only required for `prompt_variation="with50topgenes"`. not sure if `ancient` is correct # lambda wildcards: rules.compute_top_genes.output.top_genes.format(dataset=wildcards.dataset) if wildcards.dataset != "main" else 
+        top_genes=top_genes_fn  # only required for `prompt_variation="with50topgenes"`. not sure if `ancient` is correct
     conda:
         "llava5"
     output:
