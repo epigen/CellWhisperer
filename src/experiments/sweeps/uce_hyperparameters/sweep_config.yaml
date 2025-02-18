@@ -1,0 +1,23 @@
+method: grid
+name: revision_hyperparameters_UCE
+metric:
+  goal: minimize
+  name: val/loss_epoch
+parameters:
+  data.train_fraction:
+    values:
+      - "archs4_geo"
+  model.lr_warmup:
+    values:
+      - 0.1
+      - 0.03
+      - 0.01
+  model.learning_rate:
+    values:
+      - 0.000001
+      - 0.00001
+      - 0.0001
+  model.model_config.text_model_type:
+    values:
+      - bert
+      - bert-large
