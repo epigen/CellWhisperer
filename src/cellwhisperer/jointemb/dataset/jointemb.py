@@ -73,7 +73,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
     def __init__(
         self,
-        tokenizer="biogpt",
+        tokenizer="bert-large",
         transcriptome_processor="geneformer",
         dataset_names="human_disease",
         batch_size=32,

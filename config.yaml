@@ -111,6 +111,8 @@ model_name_path_map:
 
   biogpt: microsoft/biogpt
   bert: dmis-lab/biobert-v1.1
+  bert-large: google-bert/bert-large-cased  # probably 'uncased' is better... what about biobert-large (it didn't work...)
+  bert-large-cased: google-bert/bert-large-cased
 
   llava_base_llm: Mistral-7B-Instruct-v0.2
 
