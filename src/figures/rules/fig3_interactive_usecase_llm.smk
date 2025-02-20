@@ -74,7 +74,7 @@ rule llava_evaluation_perplexity:
     resources:
         mem_mb=400000,
         slurm=lambda wildcards: "cpus-per-task=20 gres=gpu:{gpu_type}:1 qos={gpu_type} partition=gpu".format(
-            gpu_type={LLAVA_BASE_MODEL: "a100", "Llama-3.1-8B-Instruct": "a100", "Llama-3.3-8B-Instruct": "a100-sxm4-80gb"}[wildcards.base_model])
+            gpu_type={LLAVA_BASE_MODEL: "a100", "Llama-3.1-8B-Instruct": "a100", "Llama-3.3-70B-Instruct": "a100-sxm4-80gb"}[wildcards.base_model])
     log:
         notebook="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{prompt_variation}.ipynb",
         log="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{prompt_variation}.log"

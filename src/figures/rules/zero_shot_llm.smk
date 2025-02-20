@@ -2,7 +2,7 @@ rule zero_shot_llm_prediction:
     """
     GPT-4 zero-shot predictions, adapting prompt from Hou et al., 2024 (https://www.nature.com/articles/s41592-024-02235-4)
 
-    For Llama 3.3 and DeepSeek, run first `export OLLAMA_HOST=0.0.0.0:8080 ~/ollama/bin/ollama serve` (note that they might not operate well simulaneously)
+    For Llama 3.1 and 3.3 and Mistral, run first `export OLLAMA_HOST=0.0.0.0:8080 ~/ollama/bin/ollama serve` (note that they might not operate well simulaneously)
 
     """
     input:
@@ -18,7 +18,7 @@ rule zero_shot_llm_prediction:
         model=lambda wildcards: config["zero_shot_llms"][wildcards.model]["model_name"],
         average_by_class=lambda wildcards: wildcards.grouping == "by_class",
     resources:
-        mem_mb=120000,  # TODO check if really enough..
+        mem_mb=lambda wildcards: 300000 if wildcards.dataset == "tabula_sapiens" else 120000,
         slurm="cpus-per-task=2"
     conda:
         "cellwhisperer"

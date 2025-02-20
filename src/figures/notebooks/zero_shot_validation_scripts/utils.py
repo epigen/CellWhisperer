@@ -65,6 +65,7 @@ def umap_on_embedding(
     :return: adata with UMAP embedding stored in adata.obsm[umap_key].
     """
     import scanpy as sc
+
     sc.pp.neighbors(adata, use_rep=embedding_key, key_added=neighbors_key)
     adata.obsm[umap_key] = sc.tl.umap(
         adata, neighbors_key=neighbors_key, copy=True
@@ -94,7 +95,7 @@ def prepare_integration_df(result_metrics_dict: dict) -> pd.DataFrame:
     integration_scores_df = integration_scores_df[
         [
             "dataset_name",
-            "Method",
+            "method",
             "Batch integration score",
             "Cell type integration score (avg)",
             "Cell type integration score (ASW)",
@@ -102,7 +103,7 @@ def prepare_integration_df(result_metrics_dict: dict) -> pd.DataFrame:
     ]
     integration_scores_df = pd.melt(
         integration_scores_df,
-        id_vars=["dataset_name", "Method"],
+        id_vars=["dataset_name", "method"],
         value_vars=[
             "Batch integration score",
             "Cell type integration score (avg)",
