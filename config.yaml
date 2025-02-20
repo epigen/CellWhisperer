@@ -105,7 +105,7 @@ model_name_path_map:
   cellwhisperer: cellwhisperer_clip_v1  # wandb run ID t9kkor63
   cellwhisperer_geneformer: cellwhisperer_clip_v1  # wandb run ID t9kkor63
   cellwhisperer_uce: cellwhisperer_clip_v2_uce
-  cellwhisperer_scgpt: cellwhisperer_clip_v2_scgpt
+  cellwhisperer_scgpt: cellwhisperer_clip_v2_scgpt  # eejwiodj (4 epochs)
 
   geneformer: resources/geneformer-12L-30M
   scgpt: resources/scGPT_human
