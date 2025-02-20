@@ -176,7 +176,9 @@ class FrozenCachedModel(nn.Module):
 
         assert len(args) == 0, "not implemented for positional args"
 
-        device = [x for x in kwargs.values() if isinstance(x, torch.Tensor)][0].device
+        active_device = [x for x in kwargs.values() if isinstance(x, torch.Tensor)][
+            0
+        ].device
         batch_size = len([x for x in kwargs.values() if isinstance(x, torch.Tensor)][0])
 
         # First, we need to hash the inputs per sample (not per batch)
@@ -186,6 +188,17 @@ class FrozenCachedModel(nn.Module):
         logger.debug(
             f"The cache lacks {cache_misses}/{batch_size} of the batch samples."
         )
+        if cache_misses == 0 and self.model.device == active_device:
+            logger.warning(
+                f"Model {self.model.__class__.__name__} is loaded on GPU, but all samples are cached in this batch. Moving model back to CPU."
+            )
+            self.to(device=torch.device("cpu"))
+
+        if cache_misses > 0 and self.model.device == torch.device("cpu"):
+            logger.warning(
+                f"Loading model {self.model.__class__.__name__} into GPU. Consider precomputing all samples first to avoid model loading."
+            )
+            self.to(active_device)
 
         res_0_list = []
         res_1_list = []
@@ -201,11 +214,6 @@ class FrozenCachedModel(nn.Module):
                 res_0_list.append(cached_result[0])
                 res_1_list.append(cached_result[1])
             else:
-                if self.model.device == torch.device("cpu"):
-                    logger.warning(
-                        f"Loading model {self.model.__class__.__name__} into GPU. Consider precomputing all samples first to avoid model loading."
-                    )
-                    self.to(device)
                 with torch.no_grad():
                     model_output = self.model(
                         **{
@@ -229,7 +237,7 @@ class FrozenCachedModel(nn.Module):
                     self.cache[sample_hashes[i]] = entry
 
         res_0 = (
-            torch.stack(res_0_list).to(device=device)
+            torch.stack(res_0_list).to(device=active_device)
             if res_0_list is not None
             and len(res_0_list) > 0
             and res_0_list[0] is not None
@@ -237,7 +245,7 @@ class FrozenCachedModel(nn.Module):
         )
 
         res_1 = (
-            torch.stack(res_1_list).to(device=device)
+            torch.stack(res_1_list).to(device=active_device)
             if res_1_list is not None
             and len(res_1_list) > 0
             and res_1_list[0] is not None
