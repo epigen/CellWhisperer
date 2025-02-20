@@ -91,7 +91,7 @@ rule aggregate_scfm_evaluations:
     input:
         predictions=lambda wildcards: [
             rules.evaluate_scfm.output.performance.format(model=model, dataset=dataset, training_options=wildcards.training_options)
-            for model in SCFMS
+            for model in config["scfms"]
             for dataset in FINETUNE_EVAL_DATASETS]
             # for dataset in [d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]]
     output:
@@ -99,7 +99,7 @@ rule aggregate_scfm_evaluations:
         aggregated_predictions_plot=FINETUNE_RESULTS_DIR / "aggregated_predictions_{training_options}_{metric}.png"
     params:
         metric=lambda wildcards: wildcards.metric,
-        models=SCFMS,
+        models=config["scfms"],
         datasets=FINETUNE_EVAL_DATASETS,
         plot_title=lambda wildcards: f"{wildcards.metric} for celltype ({wildcards.training_options})"
     conda:

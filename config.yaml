@@ -103,6 +103,9 @@ retrieval_validation_sets:
 
 model_name_path_map:
   cellwhisperer: cellwhisperer_clip_v1  # wandb run ID t9kkor63
+  cellwhisperer_geneformer: cellwhisperer_clip_v1  # wandb run ID t9kkor63
+  cellwhisperer_uce: cellwhisperer_clip_v2_uce
+  cellwhisperer_scgpt: cellwhisperer_clip_v2_scgpt
 
   geneformer: resources/geneformer-12L-30M
   scgpt: resources/scGPT_human
@@ -134,6 +137,11 @@ uce_paths:
   tmp_chroms_path: results/UCE/{name}_chroms.pkl
   tmp_starts_path: results/UCE/{name}_starts.pkl
   tmp_feature_path: results/UCE
+
+scfms:
+  - "geneformer"
+  - "scgpt"
+  - "uce"
 
 genesets:
   - "Azimuth_2023"

@@ -28,7 +28,7 @@ rule process_full_dataset:
         model=ancient(PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt"),
         geneformer_model=ancient(PROJECT_DIR / "resources" / "geneformer-12L-30M" / "pytorch_model.bin")  # just making sure that geneformer is downloaded. 
     output:
-        model_outputs=protected(PROJECT_DIR / config["paths"]["model_processed_dataset"]),
+        model_outputs=protected(str(PROJECT_DIR / config["paths"]["model_processed_dataset"]).replace("{model}", "{model,cellwhisperer.*}")),
     resources:
         mem_mb=600000,  # could be made more efficient...
         slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
@@ -40,6 +40,24 @@ rule process_full_dataset:
         "cellwhisperer"
     notebook:
         "../notebooks/process_full_dataset.py.ipynb"
+
+rule scfm_processed_dataset:
+    """
+    Simply copy over `transcriptome_features` to `transcriptome_embeds`to be able to use the same code for the processed dataset.
+
+    """
+    input:
+        processed_dataset=lambda wildcards: str(PROJECT_DIR / config["paths"]["model_processed_dataset"]).format(model=config["model_name_path_map"][f"cellwhisperer_{wildcards.model}"], dataset=wildcards.dataset)
+    output:
+        model_outputs=protected(str(PROJECT_DIR / config["paths"]["model_processed_dataset"]).replace("{model}", "{model,%s}" % "|".join(config["scfms"]))),
+    resources:
+        mem_mb=100000,
+        slurm=f"cpus-per-task=1 partition=cpu"
+    threads: 1
+    conda:
+        "cellwhisperer"
+    notebook:
+        "../notebooks/scfm_processed_dataset.py.ipynb"
 
 rule combine_processed_data:
     """

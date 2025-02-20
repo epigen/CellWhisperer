@@ -1,6 +1,6 @@
 
 ZERO_SHOT_RESULTS = PROJECT_DIR / "results/plots/zero_shot_validation"
-ZERO_SHOT_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,cellwhisperer_clip_v1}"  # NOTE new CW models (e.g. v2) need to be added here
+ZERO_SHOT_CW_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,cellwhisperer_clip_v1}"  # NOTE new CW models (e.g. v2) need to be added here
 
 ZERO_SHOT_PREDICTORS = list(config["zero_shot_llms"].keys()) + ["cellwhisperer_clip_v1"]
 
@@ -9,14 +9,13 @@ include: "../../shared/rules/training_sample_weights.smk"
 # Computations
 rule compute_umap_neighbors:
     """
-    # TODO generalize towards others models (beyond cellwhisperer_clip_v1)
     # TODO might need to move to another include
     """
     input:
-        processed_dataset=rules.process_full_dataset.output.model_outputs,
+        processed_dataset=PROJECT_DIR / config["paths"]["model_processed_dataset"],
         raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"]
     output:
-        umap=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "X_umap_on_neighbors_{model}.npz"
+        umap=ZERO_SHOT_RESULTS / "{model}" / "datasets" / "{dataset,[^/]+}" / "X_umap_on_neighbors_{model}.npz"
     conda:
         "cellwhisperer"
     resources:
@@ -39,14 +38,13 @@ rule zero_shot_cellwhisperer_prediction:
     NOTE: could be used as template for few-shot learing with other embedding-based model zero shot predictions
     """
     input:
-        # no need to have seperate embeddings and read count tables for the tabula sapiens well studied cell types, can just use the full dataset and subset:
-        processed_dataset=rules.process_full_dataset.output.model_outputs,
+        processed_dataset=PROJECT_DIR / config["paths"]["model_processed_dataset"],
         raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",  # needed to embed the keywords
     output:
         # Using a directory here because the exact files produced depend on the dataset:
-        predictions=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv",  # NOTE: might be used as input for `plot_confusion_matrix` as well (and by extension `zero_shot_performance_macroavg`)
-        # scores=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping}.scores.csv",  # TODO refactor away since everything is in predictions anyways
+        predictions=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv",  # NOTE: might be used as input for `plot_confusion_matrix` as well (and by extension `zero_shot_performance_macroavg`)
+        # scores=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping}.scores.csv",  # TODO refactor away since everything is in predictions anyways
     params:
         use_prefix_suffix_version=True,
         average_by_class=lambda wildcards: wildcards.grouping == "by_class",
@@ -65,18 +63,19 @@ rule zero_shot_cellwhisperer_prediction:
 rule transcriptome_embedding_scib:
     """
     Embedding integration scores, computed using the `scib` package
+
+
     """
     input:
-        # no need to have seperate embeddings and read count tables for the tabula sapiens well studied cell types, can just use the full dataset and subset:
-        processed_dataset=rules.process_full_dataset.output.model_outputs,
+        processed_dataset=PROJECT_DIR / config["paths"]["model_processed_dataset"],
         raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         umap=rules.compute_umap_neighbors.output.umap,
         mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
     output:
     # /mnt/muwhpc/cellwhisperer_private/results/plots/zero_shot_validation/cellwhisperer_clip_v1/datasets/tabula_sapiens_well_studied_celltypes
-        embedding_plots_zero_shot_comparison_pdf=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "embedding_plots_zero_shot_comparison.pdf",
-        embedding_plots_zero_shot_comparison_png=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "embedding_plots_zero_shot_comparison.png",
-        integration_scores=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "embedding_scib_scores.json",
+        embedding_plots_zero_shot_comparison_pdf=ZERO_SHOT_RESULTS / "{model}" / "datasets" / "{dataset,[^/]+}" / "embedding_plots_zero_shot_comparison.pdf",
+        embedding_plots_zero_shot_comparison_png=ZERO_SHOT_RESULTS / "{model}" / "datasets" / "{dataset,[^/]+}" / "embedding_plots_zero_shot_comparison.png",
+        integration_scores=ZERO_SHOT_RESULTS / "{model}" / "datasets" / "{dataset,[^/]+}" / "embedding_scib_scores.json",
     conda:
         "cellwhisperer"
     resources:
@@ -90,14 +89,14 @@ rule transcriptome_embedding_scib:
 rule plot_joint_transcriptome_embedding_scib:
     """Bar plots of integration metrics for all methods."""
     input:
-        [rules.transcriptome_embedding_scib.output.integration_scores.replace("{model}", model) for model in SCFMS]
+        [rules.transcriptome_embedding_scib.output.integration_scores.replace("{model}", model) for model in ["geneformer", "cellwhisperer_clip_v1"]]  # config["scfms"] + ["cellwhisperer_clip_v1"]
     output:
         integration_scores=ZERO_SHOT_RESULTS / "integration_scores_{dataset}.csv",
         integration_scores_plot=ZERO_SHOT_RESULTS / "integration_scores_{dataset}.pdf"
     conda:
         "cellwhisperer"
     params:
-        models=SCFMS
+        models=config["scfms"]
     resources:
         mem_mb=2000,
         slurm="cpus-per-task=1"
@@ -115,7 +114,7 @@ rule cw_transcriptome_term_scores:
         - Use processed dataset and get cos_sim between each cell and each term
     """
     input:
-        processed_dataset=rules.process_full_dataset.output.model_outputs,  # PROJECT_DIR / config["paths"]["model_processed_dataset"],
+        processed_dataset=PROJECT_DIR / config["paths"]["model_processed_dataset"],  # PROJECT_DIR / config["paths"]["model_processed_dataset"],
         gsva_results=PROJECT_DIR / config["paths"]["gsva"]["result"],
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",  # needed for the keywords
     output:
@@ -166,16 +165,14 @@ rule plot_confidence_distributions:
 
     """
     input:
-        processed_dataset=rules.process_full_dataset.output.model_outputs,
+        processed_dataset=PROJECT_DIR / config["paths"]["model_processed_dataset"],
         raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         predictions=rules.zero_shot_cellwhisperer_prediction.output.predictions.replace("{grouping}", "by_cell"),
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
-        plot_dir=directory(ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "confidence_distribution_plots")  # NOTE: could be disentangled as well
+        plot_dir=directory(ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "confidence_distribution_plots")  # NOTE: could be disentangled as well
     conda:
         "cellwhisperer"
-    params:
-        transcriptome_model_name = "geneformer"
     resources:
         mem_mb=500000,
         slurm="cpus-per-task=2"
@@ -189,17 +186,16 @@ rule plot_zero_shot_predictions_on_umap:
     Generate a series of plots that summarize the zero-shot validation results
     """
     input:
-        processed_dataset=rules.process_full_dataset.output.model_outputs,
+        processed_dataset=PROJECT_DIR / config["paths"]["model_processed_dataset"],
         raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         predictions=rules.zero_shot_cellwhisperer_prediction.output.predictions.replace("{grouping}", "by_cell"),
         umap=rules.compute_umap_neighbors.output.umap,
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
-        result_dir=directory(ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "other_plots"),
+        result_dir=directory(ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "other_plots"),
     conda:
         "cellwhisperer"
     params:
-        transcriptome_model_name = "geneformer",
         use_prefix_suffix_version=True
     resources:
         mem_mb=400000,
@@ -215,17 +211,16 @@ rule plot_confusion_matrix:
     """
     input:
         predictions=rules.zero_shot_cellwhisperer_prediction.output.predictions.replace("{grouping}", "by_cell"),
-        processed_dataset=rules.process_full_dataset.output.model_outputs,
+        processed_dataset=PROJECT_DIR / config["paths"]["model_processed_dataset"],
         raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt"
     output:
-        confusion_matrix_plot=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "confusion_matrix_{normed}.pdf",
-        confusion_matrix_table=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "confusion_matrix_{normed}.xlsx",
-        performance_metrics=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "performance_metrics_{normed}.csv",  # note that this is the same for normed and unnormed (would be better to split the rule once more actually)
-        performance_metrics_per_metadata=ZERO_SHOT_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "performance_metrics_per_metadata_{normed}.csv",
+        confusion_matrix_plot=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "confusion_matrix_{normed}.pdf",
+        confusion_matrix_table=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "confusion_matrix_{normed}.xlsx",
+        performance_metrics=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "performance_metrics_{normed}.csv",  # note that this is the same for normed and unnormed (would be better to split the rule once more actually)
+        performance_metrics_per_metadata=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "performance_metrics_per_metadata_{normed}.csv",
     params:
-        transcriptome_model_name = "geneformer",
         normed=lambda wildcards: wildcards.normed == "normed",
         use_prefix_suffix_version=True
     resources:
@@ -241,22 +236,20 @@ rule plot_term_search_results:
     Plot the ground truth celltype and the keyword search results on the UMAP (Fig 2a)
     """
     input:
-        # no need to have seperate embeddings and read count tables for the tabula sapiens well studied cell types, can just use the full dataset and subset:
-        processed_dataset=lambda wildcards: rules.process_full_dataset.output.model_outputs.format(dataset="tabula_sapiens", model=wildcards.model),
+        processed_dataset=lambda wildcards: PROJECT_DIR / config["paths"]["model_processed_dataset"].format(dataset="tabula_sapiens", model=wildcards.model),
         raw_read_count_table=str(PROJECT_DIR / config["paths"]["read_count_table"]).format(dataset="tabula_sapiens"),
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",  # needed to embed the keywords
         mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
         umap=rules.compute_umap_neighbors.output.umap.replace("{dataset}", "tabula_sapiens")
     output:
         # Using a directory here because the exact files produced depend on the dataset:
-        umap_on_neighbors_celltype=ZERO_SHOT_MODEL_RESULTS / "datasets" / "tabula_sapiens" / "umap_on_neighbors_cellwhisperer.true_celltype_{celltype}.{file_suffix}",
-        colorscale_symmetrical=ZERO_SHOT_MODEL_RESULTS / "datasets" / "tabula_sapiens" / "umap_on_neighbors_cellwhisperer.keyword_for_{celltype}.symmetrical_cmap.{file_suffix}",
-        colorscale_asymmetrical=ZERO_SHOT_MODEL_RESULTS / "datasets" / "tabula_sapiens" / "umap_on_neighbors_cellwhisperer.keyword_for_{celltype}.asymmetrical_cmap.{file_suffix}",
+        umap_on_neighbors_celltype=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "tabula_sapiens" / "umap_on_neighbors_cellwhisperer.true_celltype_{celltype}.{file_suffix}",
+        colorscale_symmetrical=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "tabula_sapiens" / "umap_on_neighbors_cellwhisperer.keyword_for_{celltype}.symmetrical_cmap.{file_suffix}",
+        colorscale_asymmetrical=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "tabula_sapiens" / "umap_on_neighbors_cellwhisperer.keyword_for_{celltype}.asymmetrical_cmap.{file_suffix}",
     params:
         celltype_terms_dict=CELLTYPE_TERMS_DICT,
         suffix_prefix_dict=SUFFIX_PREFIX_DICT,
         dataset = "tabula_sapiens",
-        transcriptome_model_name = "geneformer"
     conda:
         "cellwhisperer"
     resources:
@@ -288,7 +281,7 @@ rule zero_shot_performance_macroavg:
                                  ),
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
-        macroavg_summary_plot=ZERO_SHOT_MODEL_RESULTS / "performance_metrics.selected_datasets.rocauc_and_accuracy.pdf",
+        macroavg_summary_plot=ZERO_SHOT_CW_MODEL_RESULTS / "performance_metrics.selected_datasets.rocauc_and_accuracy.pdf",
     conda:
         "cellwhisperer"
     params:
@@ -323,7 +316,7 @@ rule zero_shot_performance_examples:
 
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
-        per_class_examples_plot=ZERO_SHOT_MODEL_RESULTS / "performance_metrics.selected_classes_and_datasets.pdf",
+        per_class_examples_plot=ZERO_SHOT_CW_MODEL_RESULTS / "performance_metrics.selected_classes_and_datasets.pdf",
     conda:
         "cellwhisperer"
     params:  # matching to dataset inputs
