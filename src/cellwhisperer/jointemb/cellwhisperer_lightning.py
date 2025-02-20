@@ -247,7 +247,8 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
     def on_fit_start(self):
         # freeze for first epoch to train only the projection layer
-        self.model.freeze_models()
+        if self.frozen_warmup_steps > 0:
+            self.model.freeze_models()
 
     def on_validation_epoch_end(self):
         # For convenience (speed), I disable this when "fast_dev_run" is enabled
