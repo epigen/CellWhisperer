@@ -106,5 +106,5 @@ best_model_path: null
 log_level: INFO
 dap_debug: false
 batch_size: 512
-wandb: 'revision_hyperparameters'
+wandb: 'revision_hyperparameters_uce2'
 ckpt_path: null
