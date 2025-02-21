@@ -179,19 +179,19 @@ zero_shot_llms:
     api_key_env: OPENAI_API_KEY
     base_url: https://api.openai.com/v1/
     model_name: gpt-4o-2024-11-20
-  llama33:
-    api_key_env: OLLAMA_API_KEY
-    base_url: http://s0-n00.hpc.meduniwien.ac.at:8080/v1/  # Internal server
-    model_name: llama3.3:70b
   claudesonnet:
     api_key_env: ANTHROPIC_API_KEY
     base_url: null
     model_name: claude-3-5-sonnet-20241022
+  llama33:
+    api_key_env: OLLAMA_API_KEY
+    base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
+    model_name: llama3.3:70b
   llama31:
     api_key_env: OLLAMA_API_KEY
-    base_url: http://s0-n00.hpc.meduniwien.ac.at:8080/v1/  # Internal server
+    base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
     model_name: llama3.1:8b
   mistral7b:
     api_key_env: OLLAMA_API_KEY
-    base_url: http://s0-n00.hpc.meduniwien.ac.at:8080/v1/  # Internal server
+    base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
     model_name: mistral:7b-instruct-v0.2-fp16

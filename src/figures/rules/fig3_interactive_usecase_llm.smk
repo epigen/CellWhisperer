@@ -65,16 +65,17 @@ rule llava_evaluation_perplexity:
         all_perplexities=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "all_perplexities.csv",
     params:
         num_projector_tokens=int(config["llava_projector_type"].split("_")[1].strip("t")),
-        background_shuffle="transcriptome",
+        background_shuffle=lambda wildcards: "genesshuffled" if wildcards.prompt_variation == "with50topgenesshuffled" else "transcriptome",
         num_negatives=30,
         model_layer_selector=lambda wildcards: {"cellwhisperer_clip_v1": -1, "geneformer": -2, "NONE": -1}[wildcards.model],  # NOTE would be better if we could use `None` instead of -1
-        pre_prompt_topgenes=lambda wildcards: {"with50topgenes": config["llava_eval"]["pre_prompt_topgenes"], "without50topgenes": None}[wildcards.prompt_variation],
+        pre_prompt_topgenes=lambda wildcards: {"with50topgenes": config["llava_eval"]["pre_prompt_topgenes"], "with50topgenesshuffled": config["llava_eval"]["pre_prompt_topgenes"], "without50topgenes": None}[wildcards.prompt_variation],
         top_n_genes=50,
         is_multimodal=lambda wildcards: wildcards.model != "NONE"
     resources:
         mem_mb=400000,
-        slurm=lambda wildcards: "cpus-per-task=20 gres=gpu:{gpu_type}:1 qos={gpu_type} partition=gpu".format(
-            gpu_type={LLAVA_BASE_MODEL: "a100", "Llama-3.1-8B-Instruct": "a100", "Llama-3.3-70B-Instruct": "a100-sxm4-80gb"}[wildcards.base_model])
+        slurm=lambda wildcards: "cpus-per-task=20 gres=gpu:{gpu_type}:{num_gpus} qos={gpu_type} partition=gpu".format(
+            gpu_type={LLAVA_BASE_MODEL: "a100", "Llama-3.1-8B-Instruct": "a100", "Llama-3.3-70B-Instruct": "a100"}[wildcards.base_model],  # needs 2x 80gb or 4x 40gb
+            num_gpus={LLAVA_BASE_MODEL: "1", "Llama-3.1-8B-Instruct": "1", "Llama-3.3-70B-Instruct": "5"}[wildcards.base_model])
     log:
         notebook="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{prompt_variation}.ipynb",
         log="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{prompt_variation}.log"

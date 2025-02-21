@@ -52,8 +52,8 @@ rule all:
 
         # LLM prediction
         expand(rules.aggregate_zero_shot_llm_property_predictions.output.aggregated_predictions,
-               # metadata_col=list(set([v for l in config["metadata_cols_per_zero_shot_validation_dataset"].values() for v in l])),
-               metadata_col=["Tissue", "celltype"],  # NOTE For cost-reasons we restricted to two properties for now.
+               metadata_col=list(set([v for l in config["metadata_cols_per_zero_shot_validation_dataset"].values() for v in l])),
+               # metadata_col=["Tissue", "celltype", "organ_tissue", "Disease_subtype"],  # same same TODO delete
                grouping=["by_cell", "by_class"]
                ),
         expand(rules.zero_shot_performance_macroavg.output.macroavg_summary_plot, model=CLIP_MODEL),
@@ -75,9 +75,9 @@ rule all:
         expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
                plot_name=["detailed", "perplexity_quantile"],
                dataset=["main", "tabula_sapiens_100_cells_per_type"],  # NOTE: these are evaluation datasets
-               base_model=[LLAVA_BASE_MODEL, "Llama-3.1-8B-Instruct"],  # TODO add "Llama-3.3-70B-Instruct"
+               base_model=[LLAVA_BASE_MODEL, "Llama-3.1-8B-Instruct", "Llama-3.3-70B-Instruct"],
                model=["NONE"],
-               prompt_variation=["with50topgenes"],
+               prompt_variation=["with50topgenes", "with50topgenesshuffled"],
                ),
 
         # Figure 4
