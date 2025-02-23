@@ -102,20 +102,18 @@ retrieval_validation_sets:
   - human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
 
 model_name_path_map:
-  cellwhisperer: cellwhisperer_clip_v1  # wandb run ID t9kkor63
+  cellwhisperer: cellwhisperer_clip_v2_uce
   cellwhisperer_geneformer: cellwhisperer_clip_v1  # wandb run ID t9kkor63
-  cellwhisperer_uce: cellwhisperer_clip_v2_uce
-  cellwhisperer_scgpt: cellwhisperer_clip_v2_scgpt  # eejwiodj (4 epochs)
+  cellwhisperer_uce: cellwhisperer_clip_v2_uce  # a57mxh0e (4 epochs)
+  cellwhisperer_scgpt: cellwhisperer_clip_v2_scgpt  #  eejwiodj (4 epochs)
 
   geneformer: resources/geneformer-12L-30M
   scgpt: resources/scGPT_human
-  uce: resources/UCE/33layer_model.torch  # TODO switch
-  # uce4layer: resources/UCE/4layer_model.torch
+  uce: resources/UCE/33layer_model.torch
+  uce4layer: resources/UCE/4layer_model.torch
 
   biogpt: microsoft/biogpt
-  bert: dmis-lab/biobert-v1.1
-  bert-large: google-bert/bert-large-cased  # probably 'uncased' is better... what about biobert-large (it didn't work...)
-  bert-large-cased: google-bert/bert-large-cased
+  bert: dmis-lab/biobert-v1.1  # Big limitation in our code: `text_model.config.model_type` will always be `bert` because that's the architecture. Thus, the two below are set up for failure -.-. Thus I can only use this one key here
 
   llava_base_llm: Mistral-7B-Instruct-v0.2
 

@@ -2,6 +2,7 @@
 seed_everything: 0
 trainer:
   accelerator: auto
+  strategy: auto
   devices: auto
   num_nodes: 1
   precision: bf16-mixed
@@ -24,7 +25,7 @@ trainer:
       entity: single-cellm
       reinit: null
       tags: null
-      group: 
+      group: null
       notes: null
       magic: null
       config_exclude_keys: null
@@ -43,7 +44,7 @@ trainer:
   min_epochs: null
   max_steps: -1
   min_steps: null
-  max_time: null
+  max_time: "02:40:00:00"
   limit_train_batches: null
   limit_val_batches: null
   limit_test_batches: null
@@ -72,26 +73,25 @@ trainer:
   default_root_dir: results/model_training
 model:
   model_config:
-    projection_dim: 2048
-    transcriptome_model_type: scgpt
     transcriptome_config: {}
-    text_model_type: bert
     text_config: {}
-    locking_mode: LU
     unlocked_fp16: false
+    text_model_type: bert
+    transcriptome_model_type: uce
+    projection_dim: 2048
+    locking_mode: LU
   loss_config:
-    clip_lambda: 1.0
-    clip_lite_lambda: 0.0
     clip_lite_type: dot
     clip_lite_prior_weight: 0.1
     clip_lite_transcriptome_prior: false
     clip_lite_text_prior: false
-    sample_weighting: true
+    clip_lambda: 1.0
+    clip_lite_lambda: 0.0
   val_batch_size: 32
   gauss_noise_std: 0.0
-  learning_rate: 0.00001
-  lr_warmup: 0.03
-  frozen_warmup: 0.03
+  learning_rate: 0.000003
+  lr_warmup: 0.1
+  frozen_warmup: null
 data:
   use_replicates: false
   dataset_names: archs4_geo,cellxgene_census
@@ -100,11 +100,11 @@ data:
   tokenizer_kwargs:
     model_max_length: 128
   min_genes: 100
-  train_fraction: 0.99
+  train_fraction: 1.0
 model_ckpt: null
 best_model_path: null
 log_level: INFO
 dap_debug: false
 batch_size: 512
-wandb: 'cellwhisperer_clip_v2_scgpt'
+wandb: 'cellwhisperer_clip_v2_uce'
 ckpt_path: null
