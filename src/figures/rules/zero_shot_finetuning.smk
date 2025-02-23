@@ -27,7 +27,7 @@ rule finetune_scfm:
         freeze_fm=lambda wildcards: "unfrozen" not in wildcards.training_options,
     resources:
         mem_mb=lambda wildcards: 800000 if wildcards.model == "uce" else 350000,
-        slurm=f"cpus-per-task=5 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
+        slurm=slurm_gres("large")
     conda:
         "cellwhisperer"
     log:
@@ -75,7 +75,7 @@ rule evaluate_scfm:
         label_col="celltype",
     resources:
         mem_mb=lambda wildcards: 450000 if wildcards.model == "uce" else 300000,
-        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"  # TODO exchange for a100 again
+        slurm=slurm_gres()
     conda:
         "cellwhisperer"
     log:

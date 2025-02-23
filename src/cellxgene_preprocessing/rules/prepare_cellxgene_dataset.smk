@@ -38,7 +38,7 @@ rule llava_annotate_clusters:
     threads: 64
     resources:
         mem_mb=40000,
-        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
+        slurm=slurm_gres()
     log:
         notebook="../log/llava_annotate_clusters_{dataset}_{model}.py.ipynb"
     notebook:
@@ -76,7 +76,7 @@ rule mixtral_curate_llava_annotations:
     threads: 64
     resources:
         mem_mb=40000,
-        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
+        slurm=slurm_gres()
     conda:
         "llama_cpp"
     notebook:
@@ -99,7 +99,7 @@ rule cellwhisperer_cluster_keywords:
     threads: 64
     resources:
         mem_mb=40000,
-        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
+        slurm=slurm_gres()
     log:
         notebook="../log/cellwhisperer_annotate_clusters_{dataset}_{model}.py.ipynb"
     notebook:

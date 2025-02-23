@@ -1,17 +1,8 @@
 """
 This root Snakefile downloads the models and all evaluation datasets and then runs all analyses leading to the final figure plots.
 """
+include: "shared/config.smk"
 
-from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
-from pathlib import Path
-import subprocess
-
-PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
-configfile: PROJECT_DIR / "config.yaml"
-
-CW_CLIP_MODELS = [model_path for model_name, model_path in config["model_name_path_map"].items() if "cellwhisperer" in model_name]
-
-HTTP = HTTPRemoteProvider()
 
 module datasets:
     snakefile: "datasets/Snakefile"

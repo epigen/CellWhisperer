@@ -19,7 +19,7 @@ rule train:
         "cellwhisperer_fixed"
     resources:
         mem_mb=lambda wildcards: 1000000 if wildcards.config == "scgpt" else 120000,
-        slurm="cpus-per-task=20 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
+        slurm=slurm_gres("large", num_cpus=20)
     shell: """
         cellwhisperer fit --config {input.base_config} --config {input.delta_config} --seed_everything {wildcards.seed} --model.learning_rate {wildcards.lr} --last_model_path {output} --wandb {wildcards.config}_{wildcards.seed}_{wildcards.lr}
     """

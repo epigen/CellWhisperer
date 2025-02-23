@@ -50,8 +50,8 @@ rule process_annotation_local:
         study_specific_fields="treatment_protocol series_summary series_design growth_protocol sample_type mapped_ontology_terms study_description study_title".split(" ")
     resources:
         mem_mb=100000,
-        slurm="cpus-per-task=25 gres=gpu:a100:1 qos=a100 partition=gpu"
-        # slurm="cpus-per-task=25 gres=gpu:a100:1 qos=a100 partition=gpu"
+        slurm=slurm_gres(num_cpus=20)
+        # slurm=slurm_gres(num_cpus=20)
     conda: "llama_cpp"
     script: "../scripts/process_annotations_local.py"
 

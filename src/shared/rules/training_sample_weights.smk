@@ -34,7 +34,7 @@ rule annotation_representation:
         "cellwhisperer"
     resources:
         mem_mb=400000,
-        slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
+        slurm=slurm_gres()
     script:
         "../scripts/annotation_representation.py"
 

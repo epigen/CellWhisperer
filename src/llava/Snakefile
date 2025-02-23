@@ -1,21 +1,9 @@
 """
 """
 
-# snakemake remote HTTP object
-from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
-import glob
+include: "../shared/config.smk"
+
 import pandas as pd
-import subprocess
-
-
-PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
-configfile: PROJECT_DIR / "config.yaml"
-
-HTTP = HTTPRemoteProvider()
-
-GPU_TYPE = "a100"
-# GPU_TYPE = "a100-sxm4-80gb"  # used for the data_processing and conversation generation rules
-CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
 
 # For snakemake efficiency, extract the samples once and store them
 if not os.path.exists("./gsva_samples.csv"):

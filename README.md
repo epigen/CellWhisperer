@@ -94,6 +94,12 @@ Note that this container mounts the project directory as volume (`--volume .:/op
 
 ## Run
 
+You'll need `snakemake` (v7) to run our pipelines. Install via
+
+```bash
+conda install -c bioconda -n base snakemake=7
+```
+
 ### Reproduce manuscript analyses and plots
 
 We provide all our validations and analyses in a single pipeline, (re)producing all (*) plots in our paper.
@@ -175,6 +181,10 @@ Note 1: The pipelines includes code to generate the datasets. Since this takes a
 Note 2: You might be requested to login to huggingface to be able to download the Mistral-7B model. Simply follow the instructions printed in the command line. The `huggingface-cli` tool is installed in the `cellwhisperer` environment. 
 
 <a name="structure"/>
+
+### SLURM clusters
+
+`snakemake` supports job deployment to HPC clusters such as SLURM. Follow [the snakemake docs](https://snakemake.readthedocs.io/en/v7.7.0/executing/cluster.html) to set up a config profile for your cluster. You'll likely need to modify the `slurm_gres` function defined in `src/shared/config.smk` to reflect your cluster's resource identifiers.
 
 ## Folder structure
 

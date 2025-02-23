@@ -24,8 +24,8 @@ rule pretrain_llava:
         output_dir=protected(directory(PROJECT_DIR / config["paths"]["llava"]["pretrained_model_dir"])),
     resources:
         mem_mb=300000,
-        # slurm="cpus-per-task=40 gres=gpu:a100:5 qos=a100 partition=gpu"
-        slurm="cpus-per-task=40 gres=gpu:a100-sxm4-80gb:4 qos=a100-sxm4-80gb partition=gpu"
+        # slurm=slurm_gres(num_gpus=5, num_cpus=40)
+        slurm=slurm_gres("large", num_gpus=4, num_cpus=40)
     log:
         "logs/pretrain_llava_{base_model}_{model}.log"
     threads: 16
@@ -97,8 +97,8 @@ rule finetune_llava:
         output_dir=protected(directory(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"])),
     resources:
         mem_mb=300000,
-        slurm="cpus-per-task=40 gres=gpu:a100-sxm4-80gb:4 qos=a100-sxm4-80gb partition=gpu"
-        # slurm="cpus-per-task=40 gres=gpu:a100:6 qos=a100 partition=gpu"
+        slurm=slurm_gres("large", num_gpus=4, num_cpus=40)
+        # slurm=slurm_gres(num_gpus=6, num_cpus=40)
     log:
         "logs/finetune_llava_{base_model}_{model}.log"
     threads: 16

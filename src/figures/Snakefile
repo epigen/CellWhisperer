@@ -1,13 +1,11 @@
-import subprocess
+include: "../shared/config.smk"
+include: "../shared/rules/dataset_processing.smk"
+include: "rules/fig1_landscape_validation_ablation.smk"
+include: "rules/fig2_embedding_validations.smk"
+include: "rules/fig3_interactive_usecase_llm.smk"
+include: "rules/fig4_colonic_epithelium.smk"
 
-PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
-configfile: PROJECT_DIR / "config.yaml"
-
-CW_CLIP_MODELS = [model_path for model_name, model_path in config["model_name_path_map"].items() if "cellwhisperer" in model_name]
-CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
-LLAVA_BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
-
-CELLTYPE_TERMS_DICT={  # consider moving to config
+CELLTYPE_TERMS_DICT={  # TODO move to config
     "erythrocyte": "red blood cells",
     "erythrocyte": "erythrocyte",
     "nk cell": "Natural killer cells",
@@ -16,17 +14,9 @@ CELLTYPE_TERMS_DICT={  # consider moving to config
     "platelet": "blood platelets",
 }
 
-from notebooks.zero_shot_validation_scripts.utils import SUFFIX_PREFIX_DICT  # consider moving to config
+from notebooks.zero_shot_validation_scripts.utils import SUFFIX_PREFIX_DICT  # consider moving to config  # TODO can delete?
 
 
-GPU_TYPE = "a100"
-# GPU_TYPE = "a100-sxm4-80gb"
-
-include: "../shared/rules/dataset_processing.smk"
-include: "rules/fig1_landscape_validation_ablation.smk"
-include: "rules/fig2_embedding_validations.smk"
-include: "rules/fig3_interactive_usecase_llm.smk"
-include: "rules/fig4_colonic_epithelium.smk"
 rule all:
     input:
         # Figure 1

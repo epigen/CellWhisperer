@@ -73,9 +73,9 @@ rule llava_evaluation_perplexity:
         is_multimodal=lambda wildcards: wildcards.model != "NONE"
     resources:
         mem_mb=400000,
-        slurm=lambda wildcards: "cpus-per-task=20 gres=gpu:{gpu_type}:{num_gpus} qos={gpu_type} partition=gpu".format(
-            gpu_type={LLAVA_BASE_MODEL: "a100", "Llama-3.1-8B-Instruct": "a100", "Llama-3.3-70B-Instruct": "a100"}[wildcards.base_model],  # needs 2x 80gb or 4x 40gb
-            num_gpus={LLAVA_BASE_MODEL: "1", "Llama-3.1-8B-Instruct": "1", "Llama-3.3-70B-Instruct": "5"}[wildcards.base_model])
+        slurm=lambda wildcards: slurm_gres(
+            num_gpus={LLAVA_BASE_MODEL: 1, "Llama-3.1-8B-Instruct": 1, "Llama-3.3-70B-Instruct": 4}[wildcards.base_model]
+        )
     log:
         notebook="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{prompt_variation}.ipynb",
         log="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{prompt_variation}.log"

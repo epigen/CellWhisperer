@@ -52,7 +52,7 @@ rule zero_shot_cellwhisperer_prediction:
         "cellwhisperer"
     resources:
         mem_mb=350000,
-        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
+        slurm=slurm_gres()
     log:
         notebook="../logs/zero_shot_cellwhisperer_prediction_{model}_{dataset}_{metadata_col}_{grouping}.ipynb"
     notebook:
@@ -122,7 +122,7 @@ rule cw_transcriptome_term_scores:
         "cellwhisperer"
     resources:
         mem_mb=40000,
-        slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
+        slurm=slurm_gres()
     log:
         notebook="../logs/gsva_correlation_{model}_{dataset}.log"
     notebook:
@@ -224,7 +224,7 @@ rule plot_confusion_matrix:
         use_prefix_suffix_version=True
     resources:
         mem_mb=350000,
-        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
+        slurm=slurm_gres()
     log:
         notebook="../logs/plot_confusion_matrix_{model}_{dataset}_{metadata_col}_{normed}.ipynb"
     notebook:
@@ -253,7 +253,7 @@ rule plot_term_search_results:
         "cellwhisperer"
     resources:
         mem_mb=350000,
-        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
+        slurm=slurm_gres()
     log:
         notebook="../logs/plot_term_search_results_{model}_{celltype}_tabula_sapiens_{file_suffix}.ipynb"
     notebook:

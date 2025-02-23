@@ -16,7 +16,7 @@ rule bowel_disease_stem_cell_contribution:
         "cellwhisperer"
     resources:
         mem_mb=50000,
-        slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
+        slurm=slurm_gres()
     params:
         search_term="stem cells",
     notebook:

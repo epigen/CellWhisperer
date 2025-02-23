@@ -99,7 +99,7 @@ rule generate_llava_stage2_conversations:
         prompt_reminder= "\nMake sure to ignore any patient- or donor-specific information, like in your last responses."
     resources:
         mem_mb=100000,
-        slurm=f"cpus-per-task=25 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
+        slurm=slurm_gres(num_cpus=25)
     conda: "llama_cpp"
     notebook: "../notebooks/llava_stage2_dataset.py.ipynb"
 
