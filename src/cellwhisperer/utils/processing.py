@@ -2,6 +2,7 @@ import numpy as np
 from scipy import sparse
 import anndata
 import torch
+import logging
 from transformers import AutoTokenizer
 from typing import Union, List
 from cellwhisperer.jointemb.model import TranscriptomeTextDualEncoderModel
@@ -65,6 +66,6 @@ def ensure_raw_counts_adata(adata):
         try:
             adata.X = adata.layers["counts"]
         except KeyError:
-            raise ValueError(
-                'adata.X contains normalized counts, but raw counts are not provided in adata.layers["counts"].'
+            logging.error(
+                "adata.X contains non-integer (probably normalized) counts, but raw counts are not provided in adata.layers['counts']."
             )
