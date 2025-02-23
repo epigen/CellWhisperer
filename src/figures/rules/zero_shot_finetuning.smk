@@ -30,7 +30,6 @@ rule finetune_scfm:
         slurm=f"cpus-per-task=5 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
     conda:
         "cellwhisperer"
-        # lambda wildcards: "cellwhisperer" if wildcards.model in ["geneformer", "scgpt"] else "../../envs/uce.yaml"
     log:
         notebook="logs/finetune_scfm_{model}_{training_options}.ipynb"
     notebook:

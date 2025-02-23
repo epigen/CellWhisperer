@@ -9,6 +9,8 @@ import subprocess
 PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
 configfile: PROJECT_DIR / "config.yaml"
 
+CW_CLIP_MODELS = [model_path for model_name, model_path in config["model_name_path_map"].items() if "cellwhisperer" in model_name]
+
 HTTP = HTTPRemoteProvider()
 
 module datasets:
@@ -53,13 +55,12 @@ rule all:
     input:
         rules.datasets_all.input,
         rules.figures_all.input,
-        rules.download_cellwhisperer_embedding_model.output,  # Download included through
+        expand(rules.download_cellwhisperer_embedding_model.output, cw_model=[CW_CLIP_MODELS]),  # Download included through
         rules.download_cellwhisperer_llm.output,
 
 rule models:
     input:
-        rules.download_cellwhisperer_embedding_model.output,  # Download included through
+        expand(rules.download_cellwhisperer_embedding_model.output, cw_model=[CW_CLIP_MODELS]),  # Download included through
         rules.download_cellwhisperer_llm.output,
         rules.download_mixtral.output,
         rules.download_geneformer.output,
-        rules.download_uce.output

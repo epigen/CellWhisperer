@@ -34,7 +34,7 @@ DETAILED_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[NUM_COMPLEX_SAMPLES:CONVERSATIO
 scattergather:
     split=128
 
-MODELS = [config["model_name_path_map"]["cellwhisperer"]]
+MODELS = [model_path for model_name, model_path in config["model_name_path_map"].items() if "cellwhisperer" in model_name]
 BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
 
 

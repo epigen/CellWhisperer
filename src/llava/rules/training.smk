@@ -11,14 +11,14 @@ rule pretrain_llava:
     """
     input:
         data_path=rules.llava_stage1_dataset.output["train_set"],
-        image_data=rules.combine_processed_data.output.combined.format(model="cellwhisperer_clip_v1"),  # hard-coding model since it generates both for CW and for Geneformer
+        image_data=rules.combine_processed_data.output.combined,
     conda:
         "llava"
     params:
         deepspeed=True,  # debug if False
         projector_type=config["llava_projector_type"],
         hf_model_name=lambda wildcards: ("BioMistral/" if "Bio" in wildcards.base_model else "mistralai/") +  wildcards.base_model,
-        model_layer_selector=lambda wildcards: {"cellwhisperer_clip_v1": -1, "geneformer": -2}[wildcards.model]
+        model_layer_selector=-1
     output:
         projector=PROJECT_DIR / config["paths"]["llava"]["pretrained_model_dir"] / "mm_projector.bin",
         output_dir=protected(directory(PROJECT_DIR / config["paths"]["llava"]["pretrained_model_dir"])),
@@ -84,7 +84,7 @@ rule finetune_llava:
     """
     input:
         data_path=rules.aggregate_llava_stage2_dataset.output["llava_stage2_dataset"],
-        image_data=rules.combine_processed_data.output.combined.format(model="cellwhisperer_clip_v1"),  # hard-coding model since it generates both for CW and for Geneformer
+        image_data=rules.combine_processed_data.output.combined,
         pretrained_projector=rules.pretrain_llava.output.projector
     conda:
         "llava"
@@ -92,7 +92,7 @@ rule finetune_llava:
         deepspeed=True,
         projector_type=config["llava_projector_type"],
         hf_model_name=lambda wildcards: ("BioMistral/" if "Bio" in wildcards.base_model else "mistralai/") +  wildcards.base_model,
-        model_layer_selector=lambda wildcards: {"cellwhisperer_clip_v1": -1, "geneformer": -2}[wildcards.model]
+        model_layer_selector=-1
     output:
         output_dir=protected(directory(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"])),
     resources:

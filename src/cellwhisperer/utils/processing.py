@@ -7,13 +7,16 @@ from typing import Union, List
 from cellwhisperer.jointemb.model import TranscriptomeTextDualEncoderModel
 from cellwhisperer.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
 from cellwhisperer.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
+from cellwhisperer.jointemb.uce_model import UCETranscriptomeProcessor
 
 
 def adata_to_embeds(
     adata: anndata.AnnData,
     model: TranscriptomeTextDualEncoderModel,
     transcriptome_processor: Union[
-        GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor
+        GeneformerTranscriptomeProcessor,
+        ScGPTTranscriptomeProcessor,
+        UCETranscriptomeProcessor,
     ],
     batch_size: int = 32,
 ) -> torch.Tensor:
@@ -23,7 +26,7 @@ def adata_to_embeds(
     Compute the transcriptome embeddings for each cell in the adata object.
     :param adata: anndata.AnnData instance.
     :param model: TranscriptomeTextDualEncoderModel instance. Used to compute the transcriptome embeddings.
-    :param transcriptome_processor: GeneformerTranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to prepare/tokenize the transcriptome.
+    :param transcriptome_processor: GeneformerTranscriptomeProcessor, UCETranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to prepare/tokenize the transcriptome.
     :return: torch.tensor of transcriptome embeddings. Shape: n_transcriptomes_in_adata * embedding_size (e.g. 512)
     """
 

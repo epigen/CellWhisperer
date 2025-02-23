@@ -3,6 +3,7 @@ import subprocess
 PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
 configfile: PROJECT_DIR / "config.yaml"
 
+CW_CLIP_MODELS = [model_path for model_name, model_path in config["model_name_path_map"].items() if "cellwhisperer" in model_name]
 CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
 LLAVA_BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
 
@@ -41,7 +42,7 @@ rule all:
                dataset=["tabula_sapiens", "tabula_sapiens_well_studied_celltypes"],  # TODO pancreas?
                metadata_col="celltype",
                normed=["normed", "raw"]),
-        expand(rules.plot_term_search_results.output.umap_on_neighbors_celltype, celltype=CELLTYPE_TERMS_DICT.keys(), file_suffix=["png"], model="cellwhisperer_clip_v1"),
+        expand(rules.plot_term_search_results.output.umap_on_neighbors_celltype, celltype=CELLTYPE_TERMS_DICT.keys(), file_suffix=["png"], model=CW_CLIP_MODELS),
         [
             base_fn.format(dataset=dataset, model=CLIP_MODEL, metadata_col=metadata_col)
             for base_fn in [rules.plot_zero_shot_predictions_on_umap.output.result_dir, rules.plot_confidence_distributions.output.plot_dir]
@@ -69,7 +70,7 @@ rule all:
                plot_name=["detailed", "perplexity_quantile"],
                dataset=["main", "main_top50genes", "tabula_sapiens_100_cells_per_type", "tabula_sapiens_100_cells_per_type_top50genes"],  # NOTE: these are evaluation datasets
                base_model=[LLAVA_BASE_MODEL],  # NOTE could test as well: "BioMistral-7B", "BioMistral-7B-DARE",
-               model=[CLIP_MODEL, "geneformer"],
+               model=[config["model_name_path_map"]["cellwhisperer_geneformer"], config["model_name_path_map"]["cellwhisperer_uce"], "geneformer", "uce"],
                prompt_variation=["with50topgenes", "without50topgenes"],
                ),
         expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",

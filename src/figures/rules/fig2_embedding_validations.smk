@@ -1,8 +1,8 @@
 
 ZERO_SHOT_RESULTS = PROJECT_DIR / "results/plots/zero_shot_validation"
-ZERO_SHOT_CW_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,cellwhisperer_clip_v1}"  # NOTE new CW models (e.g. v2) need to be added here
+ZERO_SHOT_CW_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,cellwhisperer_clip_.*}"
 
-ZERO_SHOT_PREDICTORS = list(config["zero_shot_llms"].keys()) + ["cellwhisperer_clip_v1"]
+ZERO_SHOT_PREDICTORS = list(config["zero_shot_llms"].keys()) + CW_CLIP_MODELS
 
 include: "../../shared/rules/training_sample_weights.smk"
 
@@ -72,7 +72,6 @@ rule transcriptome_embedding_scib:
         umap=rules.compute_umap_neighbors.output.umap,
         mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
     output:
-    # /mnt/muwhpc/cellwhisperer_private/results/plots/zero_shot_validation/cellwhisperer_clip_v1/datasets/tabula_sapiens_well_studied_celltypes
         embedding_plots_zero_shot_comparison_pdf=ZERO_SHOT_RESULTS / "{model}" / "datasets" / "{dataset,[^/]+}" / "embedding_plots_zero_shot_comparison.pdf",
         embedding_plots_zero_shot_comparison_png=ZERO_SHOT_RESULTS / "{model}" / "datasets" / "{dataset,[^/]+}" / "embedding_plots_zero_shot_comparison.png",
         integration_scores=ZERO_SHOT_RESULTS / "{model}" / "datasets" / "{dataset,[^/]+}" / "embedding_scib_scores.json",
@@ -89,7 +88,7 @@ rule transcriptome_embedding_scib:
 rule plot_joint_transcriptome_embedding_scib:
     """Bar plots of integration metrics for all methods."""
     input:
-        [rules.transcriptome_embedding_scib.output.integration_scores.replace("{model}", model) for model in ["geneformer", "cellwhisperer_clip_v1"]]  # config["scfms"] + ["cellwhisperer_clip_v1"]
+        [rules.transcriptome_embedding_scib.output.integration_scores.replace("{model}", model) for model in config["scfms"] + CW_CLIP_MODELS],
     output:
         integration_scores=ZERO_SHOT_RESULTS / "integration_scores_{dataset}.csv",
         integration_scores_plot=ZERO_SHOT_RESULTS / "integration_scores_{dataset}.pdf"

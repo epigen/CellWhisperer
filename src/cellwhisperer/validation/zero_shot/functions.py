@@ -5,6 +5,7 @@ from cellwhisperer.utils.inference import score_transcriptomes_vs_texts
 from cellwhisperer.jointemb.model import TranscriptomeTextDualEncoderModel
 from cellwhisperer.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
 from cellwhisperer.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
+from cellwhisperer.jointemb.uce_model import UCETranscriptomeProcessor
 from transformers import AutoTokenizer
 import anndata
 from typing import Tuple, Union, List, Dict, Optional
@@ -22,7 +23,7 @@ def get_performance_metrics_transcriptome_vs_text(
     average_mode: Optional[str] = "embeddings",
     grouping_keys: Optional[List[str]] = None,
     transcriptome_processor: Optional[
-        Union[GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor]
+        Union[GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor, UCETranscriptomeProcessor]
     ] = None,
     batch_size: int = 128,
     score_norm_method: Optional[str] = None,
@@ -41,7 +42,7 @@ def get_performance_metrics_transcriptome_vs_text(
         If "embeddings", first tokenize and embed each cell, then average the embeddings. If None, don't average, report results at the single-transcriptome level. NOTE "cells" is not implemented at the moment but would work by first averaging the transcriptome data across all cells of same celltype, then tokenize and embed. \
     :param grouping_keys: A list with group indicators (one for each transcriptome in transcriptome_input). If average_mode is not None, this must be provided and will be used to split the transciptome_input into groups that will be averaged separately.
           Will also be used to label the rows in the result dataframe. If None, just use numbers.
-    :param transcriptome_processor: GeneformerTranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to prepare/tokenize the transcriptome. Can be None if transcriptome_input is a torch.tensor.
+    :param transcriptome_processor: GeneformerTranscriptomeProcessor, UCETranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to prepare/tokenize the transcriptome. Can be None if transcriptome_input is a torch.tensor.
     :param batch_size: int. Model processing in batches (to avoid OOM)
     :param score_norm_method: "zscore", "softmax", "01norm" or None. How to normalize the logits \
             (similarity to the transcriptome). "zscore" will zscore the logits across all terms. "softmax" will apply softmax to the logits.\

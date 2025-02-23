@@ -8,6 +8,7 @@ import torch
 from transformers import AutoTokenizer
 from cellwhisperer.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
 from cellwhisperer.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
+from cellwhisperer.jointemb.uce_model import UCETranscriptomeProcessor
 from scipy import stats
 import os
 import json
@@ -24,7 +25,11 @@ def score_transcriptomes_vs_texts(
     average_mode: Optional[str] = "embeddings",
     grouping_keys: Optional[List[str]] = None,
     transcriptome_processor: Optional[
-        Union[GeneformerTranscriptomeProcessor, ScGPTTranscriptomeProcessor]
+        Union[
+            GeneformerTranscriptomeProcessor,
+            ScGPTTranscriptomeProcessor,
+            UCETranscriptomeProcessor,
+        ]
     ] = None,
     batch_size: int = 128,
     score_norm_method: Optional[str] = None,
@@ -41,7 +46,7 @@ def score_transcriptomes_vs_texts(
     :param average_mode: "embeddings" or None. \
         If "embeddings", first tokenize and embed each cell, then average the embeddings. If None, don't average, report results at the single-transcriptome level. NOTE "cells" is not implemented at the moment but would work by first averaging the transcriptome data across all cells of same celltype, then tokenize and embed. \
     :param grouping_keys: A list with group indicators (one for each transcriptome in transcriptome_input). If this is None, while average_mode is not None, all transcriptomes are treated as a single group.
-    :param transcriptome_processor: GeneformerTranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to prepare/tokenize the transcriptome. Can be None if transcriptome_input is a torch.tensor.
+    :param transcriptome_processor: GeneformerTranscriptomeProcessor, UCETranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to prepare/tokenize the transcriptome. Can be None if transcriptome_input is a torch.tensor.
     :param batch_size: int. Model processing in batches (to avoid OOM)
     :param score_norm_method: "zscore", "softmax", "01norm" or None. How to normalize the logits \
             (similarity to the transcriptome). "zscore" will zscore the logits across all terms. "softmax" will apply softmax to the logits.\
@@ -68,14 +73,16 @@ def score_transcriptomes_vs_texts(
             sorted_unique_annotations = sorted(list(set(grouping_keys)))
             averaged_transcriptome_inputs = []
             for annotation in sorted_unique_annotations:
-                avg_input_this_value = transcriptome_input[
-                    [annotation == x for x in grouping_keys]
-                ].X.mean(
-                    axis=0
-                ).A1  # 512
+                avg_input_this_value = (
+                    transcriptome_input[[annotation == x for x in grouping_keys]]
+                    .X.mean(axis=0)
+                    .A1
+                )  # 512
                 averaged_transcriptome_inputs.append(avg_input_this_value)
-                
-            averaged_transcriptome_inputs = np.stack(averaged_transcriptome_inputs) # n_celltypes * n_genes
+
+            averaged_transcriptome_inputs = np.stack(
+                averaged_transcriptome_inputs
+            )  # n_celltypes * n_genes
             grouping_keys = sorted_unique_annotations
 
             # rebulid adata

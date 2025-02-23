@@ -57,7 +57,7 @@ rule llava_evaluation_perplexity:
             ancient(PROJECT_DIR / "resources" / wildcards.base_model),
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
         # image_data=rules.process_full_dataset.output.model_outputs.format(dataset="{dataset}", model=config["model_name_path_map"]["cellwhisperer"]),
-        image_data=rules.combine_processed_data.output.combined.format(model=config["model_name_path_map"]["cellwhisperer"]),
+        image_data=rules.combine_processed_data.output.combined,
         top_genes=top_genes_fn  # only required for `prompt_variation="with50topgenes"`. not sure if `ancient` is correct
     conda:
         "llava5"
@@ -67,7 +67,7 @@ rule llava_evaluation_perplexity:
         num_projector_tokens=int(config["llava_projector_type"].split("_")[1].strip("t")),
         background_shuffle=lambda wildcards: "genesshuffled" if wildcards.prompt_variation == "with50topgenesshuffled" else "transcriptome",
         num_negatives=30,
-        model_layer_selector=lambda wildcards: {"cellwhisperer_clip_v1": -1, "geneformer": -2, "NONE": -1}[wildcards.model],  # NOTE would be better if we could use `None` instead of -1
+        model_layer_selector=-1,
         pre_prompt_topgenes=lambda wildcards: {"with50topgenes": config["llava_eval"]["pre_prompt_topgenes"], "with50topgenesshuffled": config["llava_eval"]["pre_prompt_topgenes"], "without50topgenes": None}[wildcards.prompt_variation],
         top_n_genes=50,
         is_multimodal=lambda wildcards: wildcards.model != "NONE"

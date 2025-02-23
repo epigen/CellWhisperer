@@ -2,7 +2,6 @@ from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
 HTTP = HTTPRemoteProvider()
 
 BASE_URL = "https://medical-epigenomics.org/papers/schaefer2024/data"
-CLIP_MODEL_FN = config["model_name_path_map"]["cellwhisperer"] + ".ckpt"
 
 rule download_mixtral:
     input:
@@ -58,9 +57,9 @@ rule download_uce:
 
 rule download_cellwhisperer_embedding_model:
     input:
-        HTTP.remote(f"{BASE_URL}/models/{CLIP_MODEL_FN}")[0]
+        HTTP.remote(f"{BASE_URL}/models/{{cw_model}}.ckpt")[0]
     output:
-        PROJECT_DIR / config["paths"]["jointemb_models"] / CLIP_MODEL_FN
+        PROJECT_DIR / config["paths"]["jointemb_models"] / "{cw_model}.ckpt"
     shell: """
         cp {input} {output}
         """
