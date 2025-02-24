@@ -49,22 +49,16 @@ Sun Mar 31 17:36:31 2024
 ```
 
 2. Install the environments
-  ```
-  mamba env create -f envs/main.yaml  # name: cellwhisperer    this already includes `pip install -e .`
-  mamba env create -f envs/llava.yaml  # name: llava    this already includes `pip install -e ../modules/LLaVA/[train]`
-  mamba env create -f envs/llama_cpp.yaml  # name: llama_cpp
 
-  conda activate cellwhisperer
-  ```
+
+```bash
+./envs/setup.sh
+```
+
+NOTE: requires `mamba` (which is faster)
+
 3. Run the app or analyze your datasets :)
 
-#### Optional: Installing scGPT
-
-If you want to use scGPT instead of Geneformer (default), install `scgpt` and `flash-attn` (they need pip installation flags to be installed properly) via this script.
-
-```
-bash envs/install_scgpt_after_env_creation.sh
-```
 
 Then manually download the scGPT model, as indicated in the shell script.
 
