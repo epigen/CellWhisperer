@@ -19,7 +19,6 @@ rule download_data:
         wget -O 43480497.zip https://ndownloader.figshare.com/files/43480497
         unzip -p -j 43480497.zip data/datasets/pancreas_scib.h5ad > {output.read_count_table}
         rm 43480497.zip
-        # open with adata and run     adata.X = adata.layers["counts"]
-        python -c "import scanpy as sc; adata = sc.read_h5ad('{output.read_count_table}'); adata.X = adata.layers['counts']; adata.write_h5ad('{output.read_count_table}')"
-
+        # open with adata and format according to requirements. (NOTE: overwriting X with counts is not necessary anymore)
+        python -c "import scanpy as sc; adata = sc.read_h5ad('{output.read_count_table}'); adata.X = adata.layers['counts']; adata.var['gene_name'] = adata.var.index; adata.write_h5ad('{output.read_count_table}')"
     """

@@ -2,7 +2,7 @@ anndata_label_name: natural_language_annotation
 num_replicates: 5
 llava_projector_type: mlp2x_8t_gelu # NOTE fails if > 8 because we use a fully connected layer between all 8 tokens (i.e. having too many params)
 precomputing_base_url: https://medical-epigenomics.org/papers/schaefer2024/data
-cluster_name: "lustre"  # used within `config.smk` to define SLURM resources for snakemake jobs
+cluster_name: "muwhpc"  # used within `config.smk` to define SLURM resources for snakemake jobs
 
 paths:
   read_count_table: resources/{dataset}/read_count_table.h5ad
@@ -172,6 +172,14 @@ top20_lung_liver_blood_celltypes:
   - "memory b cell"
   - "respiratory goblet cell"
   - "basophil"
+
+celltype_terms:
+  "erythrocyte": "red blood cells"
+  "erythrocyte": "erythrocyte"
+  "nk cell": "Natural killer cells"
+  "t cell": "T cells"
+  "b cell": "B cells"
+  "platelet": "blood platelets"
 
 zero_shot_llms:
   gpt4:

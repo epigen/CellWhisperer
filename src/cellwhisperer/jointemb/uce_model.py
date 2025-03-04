@@ -243,14 +243,16 @@ class UCEModel(PreTrainedModel):
 
     def forward(
         self,
-        expression_tokens: torch.Tensor,  # ignored, but needed for compatibility with other models
-        expression_token_lengths: torch.Tensor,  # ignored, but needed for compatibility with other models
-        expression_gene: torch.Tensor,
         expression_expr: torch.Tensor,
         expression_key_padding_mask: torch.Tensor,
+        expression_tokens: Optional[torch.Tensor] = None,  # ignored, but needed for compatibility with other models
+        expression_token_lengths: Optional[torch.Tensor] = None,  # ignored, but needed for compatibility with other models
+        expression_gene: Optional[torch.Tensor] = None,  # ignored, but needed for compatibility with other models
         return_dict: Optional[bool] = None,
         **kwargs,
     ):
+        """
+        """
         batch_sentences, mask = (
             expression_expr,  # batch[0],
             expression_key_padding_mask,  # batch[1],

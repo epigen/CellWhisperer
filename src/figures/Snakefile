@@ -5,17 +5,6 @@ include: "rules/fig2_embedding_validations.smk"
 include: "rules/fig3_interactive_usecase_llm.smk"
 include: "rules/fig4_colonic_epithelium.smk"
 
-CELLTYPE_TERMS_DICT={  # TODO move to config
-    "erythrocyte": "red blood cells",
-    "erythrocyte": "erythrocyte",
-    "nk cell": "Natural killer cells",
-    "t cell": "T cells",
-    "b cell": "B cells",
-    "platelet": "blood platelets",
-}
-
-from notebooks.zero_shot_validation_scripts.utils import SUFFIX_PREFIX_DICT  # consider moving to config  # TODO can delete?
-
 
 rule all:
     input:
@@ -32,7 +21,7 @@ rule all:
                dataset=["tabula_sapiens", "tabula_sapiens_well_studied_celltypes"],  # TODO pancreas?
                metadata_col="celltype",
                normed=["normed", "raw"]),
-        expand(rules.plot_term_search_results.output.umap_on_neighbors_celltype, celltype=CELLTYPE_TERMS_DICT.keys(), file_suffix=["png"], model=CW_CLIP_MODELS),
+        expand(rules.plot_term_search_results.output.umap_on_neighbors_celltype, celltype=config["celltype_terms"].keys(), file_suffix=["png"], model=CW_CLIP_MODELS),
         [
             base_fn.format(dataset=dataset, model=CLIP_MODEL, metadata_col=metadata_col)
             for base_fn in [rules.plot_zero_shot_predictions_on_umap.output.result_dir, rules.plot_confidence_distributions.output.plot_dir]

@@ -4,6 +4,8 @@ ZERO_SHOT_CW_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,cellwhisperer_clip_.*}"
 
 ZERO_SHOT_PREDICTORS = list(config["zero_shot_llms"].keys()) + CW_CLIP_MODELS
 
+from notebooks.zero_shot_validation_scripts.utils import SUFFIX_PREFIX_DICT  # TODO consider moving to config
+
 include: "../../shared/rules/training_sample_weights.smk"
 
 # Computations
@@ -246,7 +248,7 @@ rule plot_term_search_results:
         colorscale_symmetrical=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "tabula_sapiens" / "umap_on_neighbors_cellwhisperer.keyword_for_{celltype}.symmetrical_cmap.{file_suffix}",
         colorscale_asymmetrical=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "tabula_sapiens" / "umap_on_neighbors_cellwhisperer.keyword_for_{celltype}.asymmetrical_cmap.{file_suffix}",
     params:
-        celltype_terms_dict=CELLTYPE_TERMS_DICT,
+        celltype_terms_dict=config["celltype_terms"],
         suffix_prefix_dict=SUFFIX_PREFIX_DICT,
         dataset = "tabula_sapiens",
     conda:
