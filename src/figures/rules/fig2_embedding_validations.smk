@@ -19,7 +19,7 @@ rule compute_umap_neighbors:
     conda:
         "cellwhisperer"
     resources:
-        mem_mb=200000,
+        mem_mb=400000,
         slurm="cpus-per-task=2"
     log:
         notebook="../logs/compute_umap_neighbors_{dataset}_{model}.ipynb"

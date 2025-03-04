@@ -35,7 +35,7 @@ rule llava_annotate_clusters:
     params:
         request="<s>[INST] Help me analyzing this sample of cells. Always respond in proper english sentences and in a tone of uncertainty. [/INST] Sure thing. What do you want to know? </s> [INST] Describe the biological state of these cells\n<image> [/INST]",
         num_beams=10
-    threads: 64
+    threads: 8  # NOTE increase this without GPU
     resources:
         mem_mb=40000,
         slurm=slurm_gres()
@@ -73,7 +73,7 @@ rule mixtral_curate_llava_annotations:
         curated_labels=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_curated_annotated_clusters_mixtral.csv"
     params:
         request="Condense the information below into a short title (using normal sentence case) of maximum 8 words. Focus on the biological state, rather than the source or any specific perturbations of the sample and generate nothing but the title (no quotes or additional information, using sentence case).\n\n",
-    threads: 64
+    threads: 8  # NOTE increase this without GPU
     resources:
         mem_mb=40000,
         slurm=slurm_gres()

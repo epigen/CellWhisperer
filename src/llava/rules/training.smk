@@ -25,7 +25,7 @@ rule pretrain_llava:
     resources:
         mem_mb=300000,
         # slurm=slurm_gres(num_gpus=5, num_cpus=40)
-        slurm=slurm_gres("large", num_gpus=4, num_cpus=40)
+        slurm=slurm_gres("large", num_gpus=1, num_cpus=40)
     log:
         "logs/pretrain_llava_{base_model}_{model}.log"
     threads: 16

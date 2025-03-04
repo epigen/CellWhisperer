@@ -12,8 +12,8 @@ rule compute_gene_normalizers:
         gene_mean_log1ps=PROJECT_DIR / "results" / "gene_normalizers" / "{dataset}.pickle"
     resources:
         mem_mb=500000,
-        slurm="cpus-per-task=64"
-    threads: 64
+        slurm="cpus-per-task=32"
+    threads: 32
     conda:
         "cellwhisperer"
     script:
@@ -32,7 +32,7 @@ rule process_full_dataset:
     resources:
         mem_mb=600000,  # could be made more efficient...
         slurm=slurm_gres()
-    threads: 64
+    threads: 8  # NOTE increase this without GPU
     log:
         notebook="../logs/notebooks/process_full_dataset_{dataset}_{model}.py.ipynb",
         log_file="../logs/process_full_dataset_{dataset}_{model}.log"
