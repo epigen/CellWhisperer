@@ -52,6 +52,7 @@ rule all:
                model=[config["model_name_path_map"]["cellwhisperer_geneformer"], config["model_name_path_map"]["cellwhisperer_uce"], "geneformer", "uce"],
                prompt_variation=["with50topgenes", "without50topgenes"],
                ),
+        # text-only (non-finetuned) LLMs
         expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
                plot_name=["detailed", "perplexity_quantile"],
                dataset=["main", "tabula_sapiens_100_cells_per_type"],  # NOTE: these are evaluation datasets

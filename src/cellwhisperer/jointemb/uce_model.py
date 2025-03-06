@@ -252,21 +252,25 @@ class UCEModel(PreTrainedModel):
         **kwargs,
     ):
         """
-        """
-        batch_sentences, mask = (
-            expression_expr,  # batch[0],
-            expression_key_padding_mask,  # batch[1],
+        Adapted from UCE. Vars were renamed according to our naming schema
+
+        expression_expr = batch[0] = batch_sentences
+        expression_key_padding_mask = batch[1] = mask;
         )
+        """
         assert (
             expression_key_padding_mask.sum(dim=1) > 10
         ).all(), f"Num over 10: {(expression_key_padding_mask.sum(dim=1) > 10).sum()}"
 
-        batch_sentences = batch_sentences.permute(1, 0)
-        batch_sentences = self.uce_model.pe_embedding(batch_sentences.long())
-        batch_sentences = torch.nn.functional.normalize(
-            batch_sentences, dim=2
+        if isinstance(self.uce_model.pe_embedding, torch.nn.Embedding):
+            expression_expr = expression_expr.long()  # Don't call, if captum (`InputEmbedding` wrapper class)
+
+        expression_expr = self.uce_model.pe_embedding(expression_expr)
+        expression_expr = expression_expr.permute(1, 0, 2)
+        expression_expr = torch.nn.functional.normalize(
+            expression_expr, dim=2
         )  # Normalize token outputs now
-        return self.uce_model.forward(batch_sentences, mask=mask)
+        return self.uce_model.forward(expression_expr, mask=expression_key_padding_mask)
 
     @classmethod
     def from_pretrained(
