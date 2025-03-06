@@ -3,6 +3,7 @@ ZERO_SHOT_RESULTS = PROJECT_DIR / "results/plots/zero_shot_validation"
 ZERO_SHOT_CW_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,cellwhisperer_clip_.*}"
 
 ZERO_SHOT_PREDICTORS = list(config["zero_shot_llms"].keys()) + CW_CLIP_MODELS
+TRANSCRIPTOME_MODELS = config["scfms"] + CW_CLIP_MODELS
 
 from notebooks.zero_shot_validation_scripts.utils import SUFFIX_PREFIX_DICT  # TODO consider moving to config
 
@@ -90,14 +91,14 @@ rule transcriptome_embedding_scib:
 rule plot_joint_transcriptome_embedding_scib:
     """Bar plots of integration metrics for all methods."""
     input:
-        [rules.transcriptome_embedding_scib.output.integration_scores.replace("{model}", model) for model in config["scfms"] + CW_CLIP_MODELS],
+        [rules.transcriptome_embedding_scib.output.integration_scores.replace("{model}", model) for model in TRANSCRIPTOME_MODELS],
     output:
         integration_scores=ZERO_SHOT_RESULTS / "integration_scores_{dataset}.csv",
         integration_scores_plot=ZERO_SHOT_RESULTS / "integration_scores_{dataset}.pdf"
     conda:
         "cellwhisperer"
     params:
-        models=config["scfms"]
+        models=TRANSCRIPTOME_MODELS
     resources:
         mem_mb=2000,
         slurm="cpus-per-task=1"

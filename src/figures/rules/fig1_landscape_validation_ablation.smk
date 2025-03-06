@@ -3,6 +3,7 @@ HTTP = HTTPRemoteProvider()
 
 rule geo_umap_plots:
     """
+    TODO would still need to be updated for UCE-style model
     """
     input:
         adata=HTTP.remote(f"{config['precomputing_base_url']}/datasets/archs4_geo/cellxgene.h5ad", keep_local=True)[0],
