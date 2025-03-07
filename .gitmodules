@@ -10,7 +10,7 @@
 	
 [submodule "modules/LLaVA"]
 	path = modules/LLaVA
-	url = git@github.com:epigen/LLaVA
+	url = https://github.com/moritzschaefer/LLaVA_cellwhisperer_develop
 [submodule "modules/UCE"]
 	path = modules/UCE
 	url = git@github.com:epigen/UCE.git
