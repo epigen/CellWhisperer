@@ -20,4 +20,4 @@ conda activate llava
 
 # Install packages that fail to directly install
 pip install flash-attn==2.5.3  # required for training
-pip install protobuf==3.20.1  # failed 
+pip install protobuf==3.20.1  # failed also (within pip (pyproject.toml) requirements)
