@@ -83,11 +83,9 @@ rule llava_evaluation_perplexity:
     notebook:
         "../notebooks/llava_evaluation_perplexity.py.ipynb"
 
-
 rule llava_evaluation_perplexity_plots:
     """
     """
-
     input:
         all_perplexities=rules.llava_evaluation_perplexity.output.all_perplexities,
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
@@ -106,3 +104,34 @@ rule llava_evaluation_perplexity_plots:
         notebook="logs/llava_evaluation_perplexity_plots/{dataset}_{base_model}_{model}_{prompt_variation}.ipynb"
     notebook:
         "../notebooks/llava_evaluation_perplexity_plots.py.ipynb"
+
+COMPARISON_SEQUENCE = [{"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},
+                       {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenes"},
+                       {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "without50topgenes"},
+                       {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "with50topgenes"},
+                       {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
+                       {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},
+                       ]
+# Mistral (text-only, no top 50 genes as baseline) < Mistral (text-only, top 50 genes as baseline) < Mistral (geneformer) < Mistral(cellwhisperer)]
+rule llava_comparative_perplexity_plots:
+    """
+    See notebook for additional plots
+    """
+    input:
+        perplexities=lambda wildcards: [
+            rules.llava_evaluation_perplexity.output.all_perplexities.format(**x, dataset=wildcards.dataset)
+            for x in COMPARISON_SEQUENCE
+        ],
+        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
+    output:
+        PROJECT_DIR / "results/plots/llava/{dataset}/model_comparison_ratios.svg",
+    params:
+        comparison_sequence=COMPARISON_SEQUENCE,
+        plot_celltypes=config["top20_lung_liver_blood_celltypes"],
+        response_prefix=lambda wildcards: config["llava_eval"]["response_prefix_{}".format(
+            "topgenes" if "_top50genes" in wildcards.dataset else "celltype")]
+    conda:
+        "llava"
+    notebook:
+        "../notebooks/llava_comparative_perplexity_plots.py.ipynb"
