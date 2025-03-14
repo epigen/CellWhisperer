@@ -116,12 +116,13 @@ model_name_path_map:
   biogpt: microsoft/biogpt
   bert: dmis-lab/biobert-v1.1  # Big limitation in our code: `text_model.config.model_type` will always be `bert` because that's the architecture. Thus, the two below are set up for failure -.-. Thus I can only use this one key here
 
-  llava_base_llm: Mistral-7B-Instruct-v0.2
+  llava_base_llm: Mistral-7B-Instruct-v0.2  # NOTE: could load from `resources` as well
 
   mixtral: resources/mixtral-8x7b-instruct-v0.1.Q5_K_M.gguf
 
   # manually downloaded with `git clone` (requires license agreement)
   mistral: resources/Mistral-7B-Instruct-v0.2
+  llama31orig: resources/Llama-3.1-8B-Instruct_orig
   llama31: resources/Llama-3.1-8B-Instruct
   llama33: resources/Llama-3.3-70B-Instruct
 

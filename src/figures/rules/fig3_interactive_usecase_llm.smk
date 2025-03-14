@@ -60,15 +60,15 @@ rule llava_evaluation_perplexity:
         image_data=rules.combine_processed_data.output.combined,
         top_genes=top_genes_fn  # only required for `prompt_variation="with50topgenes"`. not sure if `ancient` is correct
     conda:
-        "llava5"
+        "llava"
     output:
         all_perplexities=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "all_perplexities.csv",
     params:
         num_projector_tokens=int(config["llava_projector_type"].split("_")[1].strip("t")),
-        background_shuffle=lambda wildcards: "genesshuffled" if wildcards.prompt_variation == "with50topgenesshuffled" else "transcriptome",
+        background_shuffle=lambda wildcards: {"with50topgenesshuffled": "genesshuffled", "with50topgenesresponsepermuted": "responsepermuted", "without50topgenesresponsepermuted": "responsepermuted"}.get(wildcards.prompt_variation, "transcriptome"),
         num_negatives=30,
         model_layer_selector=-1,
-        pre_prompt_topgenes=lambda wildcards: {"with50topgenes": config["llava_eval"]["pre_prompt_topgenes"], "with50topgenesshuffled": config["llava_eval"]["pre_prompt_topgenes"], "without50topgenes": None}[wildcards.prompt_variation],
+        pre_prompt_topgenes=lambda wildcards: {"with50topgenes": config["llava_eval"]["pre_prompt_topgenes"], "with50topgenesshuffled": config["llava_eval"]["pre_prompt_topgenes"],  "with50topgenesresponsepermuted": config["llava_eval"]["pre_prompt_topgenes"], "without50topgenes": None, "without50topgenesresponsepermuted": None}[wildcards.prompt_variation],
         top_n_genes=50,
         is_multimodal=lambda wildcards: wildcards.model != "NONE"
     resources:
@@ -101,7 +101,7 @@ rule llava_evaluation_perplexity_plots:
         response_prefix=lambda wildcards: config["llava_eval"]["response_prefix_{}".format(
             "topgenes" if "_top50genes" in wildcards.dataset else "celltype")]
     conda:
-        "llava5"  # newer version of pandas in this env
+        "llava"  # newer version of pandas in this env
     log:
         notebook="logs/llava_evaluation_perplexity_plots/{dataset}_{base_model}_{model}_{prompt_variation}.ipynb"
     notebook:

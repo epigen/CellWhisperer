@@ -30,7 +30,7 @@ rule all:
             for metadata_col in config["metadata_cols_per_zero_shot_validation_dataset"][dataset]
         ],
 
-        # LLM prediction
+        # Text-only LLM prediction
         expand(rules.aggregate_zero_shot_llm_property_predictions.output.aggregated_predictions,
                metadata_col=list(set([v for l in config["metadata_cols_per_zero_shot_validation_dataset"].values() for v in l])),
                # metadata_col=["Tissue", "celltype", "organ_tissue", "Disease_subtype"],  # same same TODO delete
@@ -44,18 +44,27 @@ rule all:
         expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["human_disease"], model=CLIP_MODEL),  # NOTE: Can also be run for tabula_sapiens and for archs4_geo
         expand(rules.plot_joint_transcriptome_embedding_scib.output.integration_scores, dataset=["tabula_sapiens", "pancreas"]),
 
-        # Figure S3 (LLM validations)
+        # Figure S3 (Llava evaluations)
         expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
                plot_name=["detailed", "perplexity_quantile"],
-               dataset=["main", "main_top50genes", "tabula_sapiens_100_cells_per_type", "tabula_sapiens_100_cells_per_type_top50genes"],  # NOTE: these are evaluation datasets
-               base_model=[LLAVA_BASE_MODEL],  # NOTE could test as well: "BioMistral-7B", "BioMistral-7B-DARE",
-               model=[config["model_name_path_map"]["cellwhisperer_geneformer"], config["model_name_path_map"]["cellwhisperer_uce"], "geneformer", "uce"],
-               prompt_variation=["with50topgenes", "without50topgenes"],
+               dataset=["main", "tabula_sapiens_100_cells_per_type"],  # NOTE: these are llava evaluation datasets
+               base_model=[LLAVA_BASE_MODEL],
+               model=[config["model_name_path_map"]["cellwhisperer_geneformer"], "geneformer"],  # config["model_name_path_map"]["cellwhisperer_uce"], "uce"
+               prompt_variation=["with50topgenes", "without50topgenes", "with50topgenesshuffled"],
+               ),
+
+        # top 50 genes prediction
+        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
+               plot_name=["detailed", "perplexity_quantile"],
+               dataset=["main_top50genes", "tabula_sapiens_100_cells_per_type_top50genes"],
+               base_model=[LLAVA_BASE_MODEL],
+               model=[config["model_name_path_map"]["cellwhisperer_geneformer"], "geneformer"],  # config["model_name_path_map"]["cellwhisperer_uce"], "uce"],
+               prompt_variation=["without50topgenes", "without50topgenesresponsepermuted"],
                ),
         # text-only (non-finetuned) LLMs
         expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
                plot_name=["detailed", "perplexity_quantile"],
-               dataset=["main", "tabula_sapiens_100_cells_per_type"],  # NOTE: these are evaluation datasets
+               dataset=["main", "tabula_sapiens_100_cells_per_type"],
                base_model=[LLAVA_BASE_MODEL, "Llama-3.1-8B-Instruct", "Llama-3.3-70B-Instruct"],
                model=["NONE"],
                prompt_variation=["with50topgenes", "with50topgenesshuffled"],

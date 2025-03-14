@@ -1,3 +1,18 @@
+rule prepare_llama31:
+    """
+    """
+    input:
+        PROJECT_DIR / config["model_name_path_map"]["llama31orig"]  # downloaded manually
+    output:
+        PROJECT_DIR / config["model_name_path_map"]["llama31"]
+    resources:
+        mem_mb=300000
+    conda:
+        "llava"
+    notebook:
+        "../notebooks/prepare_llama31.py.ipynb"
+
+
 rule pretrain_llava:
     """
     Based on /home/moritz/Projects/cellwhisperer/modules/LLaVA/scripts/v1_5/pretrain.sh
@@ -12,12 +27,11 @@ rule pretrain_llava:
     input:
         data_path=rules.llava_stage1_dataset.output["train_set"],
         image_data=rules.combine_processed_data.output.combined,
-    conda:
-        "llava"
+        base_model_path="/msc/home/mschae83/cellwhisperer_private/resources/{base_model}"
     params:
         deepspeed=True,  # debug if False
         projector_type=config["llava_projector_type"],
-        hf_model_name=lambda wildcards: ("BioMistral/" if "Bio" in wildcards.base_model else "mistralai/") +  wildcards.base_model,
+        hf_model_name=lambda wildcards: "/msc/home/mschae83/cellwhisperer_private/resources/" + wildcards.base_model, # ("BioMistral/" if "Bio" in wildcards.base_model else "mistralai/") +  wildcards.base_model,  # 
         model_layer_selector=-1
     output:
         projector=PROJECT_DIR / config["paths"]["llava"]["pretrained_model_dir"] / "mm_projector.bin",
@@ -25,7 +39,9 @@ rule pretrain_llava:
     resources:
         mem_mb=300000,
         # slurm=slurm_gres(num_gpus=5, num_cpus=40)
-        slurm=slurm_gres("large", num_gpus=1, num_cpus=40)
+        slurm=slurm_gres("medium", num_gpus=3, num_cpus=40)
+    conda:
+        "llava"
     log:
         "logs/pretrain_llava_{base_model}_{model}.log"
     threads: 16
@@ -34,7 +50,8 @@ rule pretrain_llava:
         if [[ {params.deepspeed} == True ]]; then
             CMD="deepspeed $PYTHON_SCRIPT --deepspeed ../../modules/LLaVA/scripts/zero2.json"
         else
-            CMD="CUDA_LAUNCH_BLOCKING=1 python -m ipdb $PYTHON_SCRIPT"
+            export CUDA_LAUNCH_BLOCKING=1
+            CMD="python -m pdb $PYTHON_SCRIPT"
         fi
 
         # NOTE for faster debugging try facebook/opt-125m
@@ -42,7 +59,7 @@ rule pretrain_llava:
             --data_path {input.data_path} \
             --image_data {input.image_data} \
             --output_dir {output.output_dir} \
-            --model_name_or_path {params.hf_model_name} \
+            --model_name_or_path {input.base_model_path} \
             --version plain \
             --mm_projector_type {params.projector_type} \
             --tune_mm_mlp_adapter True \
@@ -85,19 +102,21 @@ rule finetune_llava:
     input:
         data_path=rules.aggregate_llava_stage2_dataset.output["llava_stage2_dataset"],
         image_data=rules.combine_processed_data.output.combined,
-        pretrained_projector=rules.pretrain_llava.output.projector
+        pretrained_projector=rules.pretrain_llava.output.projector,
+        base_model_path="/msc/home/mschae83/cellwhisperer_private/resources/{base_model}"
     conda:
         "llava"
     params:
         deepspeed=True,
         projector_type=config["llava_projector_type"],
-        hf_model_name=lambda wildcards: ("BioMistral/" if "Bio" in wildcards.base_model else "mistralai/") +  wildcards.base_model,
+        hf_model_name=lambda wildcards: "/msc/home/mschae83/cellwhisperer_private/resources/" + wildcards.base_model, #  ("BioMistral/" if "Bio" in wildcards.base_model else "mistralai/") +  wildcards.base_model,
         model_layer_selector=-1
+        template_version=lambda wildcards: "llama3_instruct" if "llama-3" in wildcards.base_model.lower() else "mistral_instruct"
     output:
         output_dir=protected(directory(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"])),
     resources:
         mem_mb=300000,
-        slurm=slurm_gres("large", num_gpus=4, num_cpus=40)
+        slurm=slurm_gres("medium", num_gpus=7, num_cpus=40)
         # slurm=slurm_gres(num_gpus=6, num_cpus=40)
     log:
         "logs/finetune_llava_{base_model}_{model}.log"
@@ -107,7 +126,8 @@ rule finetune_llava:
         if [[ {params.deepspeed} == True ]]; then
             CMD="deepspeed $PYTHON_SCRIPT --deepspeed ../../modules/LLaVA/scripts/zero3.json"
         else
-            CMD="python $PYTHON_SCRIPT"
+            export CUDA_LAUNCH_BLOCKING=1
+            CMD="python -m pdb $PYTHON_SCRIPT"
         fi
 
         # NOTE for faster debugging try facebook/opt-125m
@@ -115,8 +135,8 @@ rule finetune_llava:
             --data_path {input.data_path} \
             --image_data {input.image_data} \
             --output_dir {output.output_dir} \
-            --model_name_or_path {params.hf_model_name} \
-            --version mistral_instruct \
+            --model_name_or_path {input.base_model_path} \
+            --version {params.template_version} \
             --pretrain_mm_mlp_adapter {input.pretrained_projector} \
             --mm_projector_type {params.projector_type} \
             --mm_vision_select_layer {params.model_layer_selector} \
