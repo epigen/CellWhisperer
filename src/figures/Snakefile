@@ -4,7 +4,7 @@ include: "rules/fig1_landscape_validation_ablation.smk"
 include: "rules/fig2_embedding_validations.smk"
 include: "rules/fig3_interactive_usecase_llm.smk"
 include: "rules/fig4_colonic_epithelium.smk"
-
+include: "rules/reviewer_response.smk"
 
 rule all:
     input:
@@ -72,5 +72,8 @@ rule all:
 
         # Figure 4
         expand(rules.bowel_disease_stem_cell_contribution.output.plot, target_cluster=["", "Cycling ileal epithelial precursor cells"]),
+
+        # Reviewer response letter
+        rules.plot_query_variant_cell_matching.output.plot.format(model=config["model_name_path_map"]["cellwhisperer_geneformer"]),
 
     default_target: True
