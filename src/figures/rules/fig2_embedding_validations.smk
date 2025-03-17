@@ -341,3 +341,59 @@ rule zero_shot_performance_examples:
         notebook="../logs/zero_shot_performance_examples_{model}.ipynb"
     notebook:
         "../notebooks/zero_shot_performance_examples.py.ipynb"
+
+rule zero_shot_performance_suppl_table:
+    """
+    Create an xlsx file with one sheet per dataset, containing per-label performance values and the predicted classes (confusion matrix)
+    """
+    input:
+        datasets_perlabel=expand(rules.plot_confusion_matrix.output.performance_metrics_per_metadata, zip,
+                                 dataset=["tabula_sapiens","tabula_sapiens", "tabula_sapiens_well_studied_celltypes", "pancreas", "immgen", "human_disease",  "human_disease"],
+                                 metadata_col=["celltype","organ_tissue","celltype","celltype","celltype","Disease_subtype","Tissue"],
+                                 model=["{model}", "{model}", "{model}", "{model}", "{model}", "{model}", "{model}"],
+                                 normed=["raw", "raw", "raw", "raw", "raw", "raw", "raw"]  # normed/raw are the same :|
+                                 ),
+    output:
+        confusion_mtx_table=ZERO_SHOT_CW_MODEL_RESULTS / "performance_metrics_and_confusion_matrix_per_label.xlsx",
+    conda:
+        "cellwhisperer"
+    params:
+        label_cols=[
+            "celltype",
+            "organ_tissue",
+            "celltype",
+            "celltype",
+            "celltype",
+            "Disease_subtype",
+            "Tissue",],
+        label_cols_pretty = [
+            "Cell Type",
+            "Organ,Tissue",
+            "Cell Type",
+            "Cell Type",
+            "Cell Type",
+            "Disease Subtype",
+            "Tissue"],
+        datasets=[
+            "tabula_sapiens",
+            "tabula_sapiens",
+            "tabula_sapiens_well_studied_celltypes",
+            "pancreas",
+            "immgen",
+            "human_disease",
+            "human_disease"],
+        dataset_names_pretty = [
+            "Tabula Sapiens",
+            "Tabula Sapiens",
+            "Tab. Sap. 20 common",
+            "Pancreas",
+            "ImmGen",
+            "Human Disease",
+            "Human Disease"],
+    resources:
+        mem_mb=2000,
+        slurm="cpus-per-task=1"
+    log:
+        notebook="../logs/zero_shot_performance_create_xlsx_{model}.ipynb"
+    notebook:
+        "../notebooks/zero_shot_performance_create_xlsx.py.ipynb"

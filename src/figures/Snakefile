@@ -21,6 +21,7 @@ rule all:
                dataset=["tabula_sapiens", "tabula_sapiens_well_studied_celltypes"],  # TODO pancreas?
                metadata_col="celltype",
                normed=["normed", "raw"]),
+        expand(rules.zero_shot_performance_suppl_table.output.confusion_mtx_table, model=CLIP_MODEL),
         expand(rules.plot_term_search_results.output.umap_on_neighbors_celltype, celltype=config["celltype_terms"].keys(), file_suffix=["png"], model=CW_CLIP_MODELS),
         [
             base_fn.format(dataset=dataset, model=CLIP_MODEL, metadata_col=metadata_col)
@@ -72,6 +73,7 @@ rule all:
 
         # Figure 4
         expand(rules.bowel_disease_stem_cell_contribution.output.plot, target_cluster=["", "Cycling ileal epithelial precursor cells"]),
+
 
         # Reviewer response letter
         rules.plot_query_variant_cell_matching.output.plot.format(model=config["model_name_path_map"]["cellwhisperer_geneformer"]),
