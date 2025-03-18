@@ -1,6 +1,3 @@
-from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
-HTTP = HTTPRemoteProvider()
-
 rule geo_umap_plots:
     """
     TODO would still need to be updated for UCE-style model

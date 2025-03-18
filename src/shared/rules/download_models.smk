@@ -1,6 +1,3 @@
-from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
-HTTP = HTTPRemoteProvider()
-
 BASE_URL = "https://medical-epigenomics.org/papers/schaefer2024/data"
 
 rule download_mixtral:

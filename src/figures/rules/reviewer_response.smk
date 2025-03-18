@@ -1,1 +1,1 @@
-include: "rules/prompt_sensitivity.smk"
+include: "prompt_sensitivity.smk"

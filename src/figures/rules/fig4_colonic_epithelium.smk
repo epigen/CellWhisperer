@@ -1,6 +1,3 @@
-from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
-HTTP = HTTPRemoteProvider()
-
 rule bowel_disease_stem_cell_contribution:
     """
     leads to p < 1e-37

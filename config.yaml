@@ -103,7 +103,7 @@ retrieval_validation_sets:
   - human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
 
 model_name_path_map:
-  cellwhisperer: cellwhisperer_clip_v2_uce
+  cellwhisperer: cellwhisperer_clip_v1
   cellwhisperer_geneformer: cellwhisperer_clip_v1  # wandb run ID t9kkor63
   cellwhisperer_uce: cellwhisperer_clip_v2_uce  # a57mxh0e (4 epochs)
   cellwhisperer_scgpt: cellwhisperer_clip_v2_scgpt  #  eejwiodj (4 epochs)
