@@ -1,0 +1,85 @@
+import subprocess
+from pathlib import Path
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+GPU_TYPE="a100"
+configfile: PROJECT_DIR / "config.yaml"
+
+include: "../../shared/rules/dataset_processing.smk"
+
+SAMPLE_IDS = [
+    "TCGA_SKCM/FFPE/TCGA-BF-A5EO-01Z-00-DX1.1BA74189-485E-4ABF-8314-1E7F6BFF77EA.h5ad.gz",
+    "TCGA_SKCM/FFPE/TCGA-EB-A3XC-01Z-00-DX1.F50679D7-D525-4F20-980F-AF43D7E9EBE6.h5ad.gz",
+    "TCGA_SKCM/FFPE/TCGA-EE-A3JA-06Z-00-DX1.616ADF60-1EBE-4082-97D8-25AFEF393429.h5ad.gz",
+    "TCGA_SKCM/FFPE/TCGA-EB-A1NK-01Z-00-DX1.655D7734-ADAD-4F3E-A82B-0C24EB6C9E79.h5ad.gz",
+    "TCGA_SKCM/FFPE/TCGA-D3-A8GD-06Z-00-DX1.77C57515-41B8-4ACF-A205-6199D568AC19.h5ad.gz",
+    "TCGA_SKCM/FFPE/TCGA-EB-A431-01Z-00-DX1.9D1E5A19-63AE-48C4-B478-357DCCC1EB70.h5ad.gz",
+    "TCGA_SKCM/FFPE/TCGA-EB-A5SE-01Z-00-DX1.2E10E7EF-B902-479F-ACBF-E852836FF7B9.h5ad.gz",
+    "TCGA_SKCM/FFPE/TCGA-D3-A8GL-06Z-00-DX1.B99BBB77-08A8-4B5C-B1DF-7CB5416CEFF1.h5ad.gz",
+    "TCGA_SKCM/FFPE/TCGA-D3-A8GK-06Z-00-DX1.EB94CDEC-CA59-4901-B979-0B22132BCA0E.h5ad.gz",
+    "TCGA_SKCM/FFPE/TCGA-D3-A5GO-06Z-00-DX1.DF1F3837-B866-40F4-B2E7-244F94DD0065.h5ad.gz",
+    "TCGA_SKCM/FFPE/TCGA-D3-A5GS-06Z-00-DX1.CA7E245E-86F6-4FB4-9BF9-BD8846FB023A.h5ad.gz",
+    "TCGA_SKCM/FFPE/TCGA-D3-A2JL-06Z-00-DX1.3258F79C-866E-4AC5-BB16-F4DF65E9DFC2.h5ad.gz",
+]
+
+rule download_data:
+    output:
+        download_dir=temporary(directory(PROJECT_DIR / "resources" / "tcga_skcm_tmp_download")),
+        dataset_small=PROJECT_DIR / "resources" / "tcga_skcm_small" / "read_count_table.h5ad"
+        # combined_dataset_medium=PROJECT_DIR / "resources" / "tcga_skcm_medium" / "read_count_table.h5ad"
+    params:
+        huggingface_token=os.getenv("HUGGINGFACE_TOKEN"),
+        sample_id_small="TCGA_SKCM/FFPE/TCGA-D9-A3Z3-06Z-00-DX1.C4820632-C64D-4661-94DD-9F27F75519C3.h5ad.gz",
+        # sample_ids_medium=SAMPLE_IDS
+    conda:
+        "cellwhisperer"
+    script:
+        "scripts/download_data.py"
+
+
+rule compute_umap_neighbors:
+    """
+    # copied from fig2...smk (TODO DRY-refactor)
+    """
+    input:
+        processed_dataset=PROJECT_DIR / config["paths"]["model_processed_dataset"],
+        raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"]
+    output:
+        umap=PROJECT_DIR / "results" / "{dataset,[^/]+}" / "{model}" / "X_umap_on_neighbors.npz"
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=200000,
+        slurm="cpus-per-task=2"
+    log:
+        notebook="logs/compute_umap_neighbors_{dataset}_{model}.ipynb"
+    notebook:
+        "../../figures/notebooks/compute_umap_neighbors.py.ipynb"
+
+
+rule plot_umap_with_label:
+    """
+    """
+    input:
+        processed_dataset=PROJECT_DIR / config["paths"]["model_processed_dataset"],
+        raw_read_count_table=str(PROJECT_DIR / config["paths"]["read_count_table"]),
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
+        umap=rules.compute_umap_neighbors.output.umap
+    output:
+        plot=PROJECT_DIR / "results" / "plots" / "umap" / "{dataset}" / "{model}" / "plot.png",
+    params:
+        label="predicted_label",
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=350000,
+        slurm="cpus-per-task=2"
+    log:
+        notebook="logs/plot_term_search_results_{dataset}_{model}.ipynb"
+    notebook:
+        "notebooks/plot_umap_with_label.py.ipynb"
+
+rule all:
+    input:
+        expand(rules.plot_umap_with_label.output.plot, dataset=["tcga_skcm_small"], model=[config["model_name_path_map"]["cellwhisperer_geneformer"], config["model_name_path_map"]["cellwhisperer_uce"]])
+    default_target: True

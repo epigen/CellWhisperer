@@ -1,3 +1,4 @@
+import logging
 import scanpy as sc
 import anndata
 from cellwhisperer.config import get_path
@@ -5,6 +6,27 @@ import numpy as np
 import pandas as pd
 from zero_shot_validation_scripts.utils import TABSAP_WELLSTUDIED_COLORMAPPING
 from typing import Optional, Mapping, Tuple
+
+logger = logging.getLogger(__name__)
+
+
+def preprocess_generic(
+    adata: anndata.AnnData, celltype_column="celltype", batch_column="batch"
+) -> anndata.AnnData:
+    """Preprocess a generic dataset. NOTE: `pancreas` and other datasets could be DRY-ed to use this function."""
+    try:
+        adata.obs["celltype"] = adata.obs[celltype_column].astype("category")
+    except KeyError:
+        logger.warning(
+            f"No celltype column found in the dataset (provided: {celltype_column})."
+        )
+    if batch_column in adata.obs.columns:
+        adata.obs["batch"] = adata.obs[batch_column]
+    else:
+        adata.obs["batch"] = "1"
+    if "counts" in adata.layers.keys():
+        adata.X = adata.layers["counts"]
+    return adata.copy()
 
 
 def preprocess_aida(adata: anndata.AnnData, level=1) -> anndata.AnnData:
@@ -14,48 +36,46 @@ def preprocess_aida(adata: anndata.AnnData, level=1) -> anndata.AnnData:
 
     adata.obs["full_cell_type_name"] = adata.obs["cell_type"].copy()
 
-
     if level == 1:
         cell_type_dict = {
-            'B': 'B cell',
-            'CD34_HSPC': 'CD34-positive hematopoietic stem and progenitor cell',
-            'DC': 'dendritic cell',
-            'ILC': 'innate lymphoid cell',
-            'Myeloid': 'myeloid cell',
-            'NK': 'natural killer cell',
-            'Plasma_Cell': 'plasma cell',
-            'Platelet': 'platelet',
-            'T': 'T cell',
+            "B": "B cell",
+            "CD34_HSPC": "CD34-positive hematopoietic stem and progenitor cell",
+            "DC": "dendritic cell",
+            "ILC": "innate lymphoid cell",
+            "Myeloid": "myeloid cell",
+            "NK": "natural killer cell",
+            "Plasma_Cell": "plasma cell",
+            "Platelet": "platelet",
+            "T": "T cell",
         }
         level_name = "Annotation_Level1"
     elif level == 2:
         cell_type_dict = {
-            'B': 'B cell',
-            'CD16+_NK': 'CD16-positive natural killer cell',
-            'CD34_HSPC': 'CD34-positive hematopoietic stem and progenitor cell',
-            'CD4+_T': 'CD4-positive T cell',
-            'CD56+_NK': 'CD56-positive natural killer cell',
-            'CD8+_T': 'CD8-positive T cell',
-            'DC': 'dendritic cell',
-            'ILC': 'innate lymphoid cell',
-            'Monocyte': 'monocyte',
-            'Myeloid': 'myeloid cell',
-            'NK': 'natural killer cell',
-            'Plasma_Cell': 'plasma cell',
-            'Platelet': 'platelet',
-            'T': 'T cell',
-            'atypical_B': 'atypical B cell',
-            'cDC': 'conventional dendritic cell',
-            'dnT': 'double-negative T cell',
-            'qdT': 'quadruple-negative T cell',
-            'memory_B': 'memory B cell',
-            'naive_B': 'naive B cell',
-            'pDC': 'plasmacytoid dendritic cell',
+            "B": "B cell",
+            "CD16+_NK": "CD16-positive natural killer cell",
+            "CD34_HSPC": "CD34-positive hematopoietic stem and progenitor cell",
+            "CD4+_T": "CD4-positive T cell",
+            "CD56+_NK": "CD56-positive natural killer cell",
+            "CD8+_T": "CD8-positive T cell",
+            "DC": "dendritic cell",
+            "ILC": "innate lymphoid cell",
+            "Monocyte": "monocyte",
+            "Myeloid": "myeloid cell",
+            "NK": "natural killer cell",
+            "Plasma_Cell": "plasma cell",
+            "Platelet": "platelet",
+            "T": "T cell",
+            "atypical_B": "atypical B cell",
+            "cDC": "conventional dendritic cell",
+            "dnT": "double-negative T cell",
+            "qdT": "quadruple-negative T cell",
+            "memory_B": "memory B cell",
+            "naive_B": "naive B cell",
+            "pDC": "plasmacytoid dendritic cell",
         }
         level_name = "Annotation_Level2"
     else:
         raise ValueError("level must be 1 or 2")
-
 
     adata.obs["celltype"] = adata.obs[level_name].map(cell_type_dict)
 
@@ -83,9 +103,7 @@ def preprocess_immgen(adata: anndata.AnnData) -> anndata.AnnData:
     return adata.copy()
 
 
-def preprocess_tabula_sapiens(
-    adata: anndata.AnnData, min_100=False
-) -> anndata.AnnData:
+def preprocess_tabula_sapiens(adata: anndata.AnnData, min_100=False) -> anndata.AnnData:
     """Preprocess the tabula_sapiens_100_cells_per_type or the full tabula_sapiens dataset."""
     adata.obs["celltype"] = adata.obs["cell_ontology_class"]
 
@@ -185,20 +203,20 @@ def preprocess_pancreas(adata: anndata.AnnData) -> anndata.AnnData:
     adata.var["gene_name"] = adata.var.index
 
     celltype_dict = {
-    'gamma': 'gamma cell',
-    'acinar': 'acinar cell',
-    'alpha': 'alpha cell',
-    'delta': 'delta cell',
-    'beta': 'beta cell',
-    'ductal': 'ductal cell',
-    'endothelial': 'endothelial cell',
-    'activated_stellate': 'activated stellate cell',
-    'schwann': 'schwann cell',
-    'mast': 'mast cell',
-    'macrophage': 'macrophage',
-    'epsilon': 'epsilon cell',
-    'quiescent_stellate': 'quiescent stellate cell',
-    't_cell': 'T cell'
+        "gamma": "gamma cell",
+        "acinar": "acinar cell",
+        "alpha": "alpha cell",
+        "delta": "delta cell",
+        "beta": "beta cell",
+        "ductal": "ductal cell",
+        "endothelial": "endothelial cell",
+        "activated_stellate": "activated stellate cell",
+        "schwann": "schwann cell",
+        "mast": "mast cell",
+        "macrophage": "macrophage",
+        "epsilon": "epsilon cell",
+        "quiescent_stellate": "quiescent stellate cell",
+        "t_cell": "T cell",
     }
 
     adata.obs["celltype"] = [celltype_dict[x] for x in adata.obs["celltype"]]
@@ -244,9 +262,11 @@ def load_and_preprocess_dataset(
         adata = preprocess_immgen(adata)
     elif dataset_name == "aida":
         adata = preprocess_aida(adata)
-
+    elif dataset_name.startswith("tcga_skcm"):
+        adata = preprocess_generic(adata, celltype_column="predicted_label")
     else:
-        raise ValueError(f"Unknown dataset name: {dataset_name}")
+        logger.warning(f"Unknown dataset name: {dataset_name}. Processing generically.")
+        adata = preprocess_generic(adata)
 
     # Very basic QC (as in zero-shot paper) NOTE: this could clash with the orig_ids check later
     sc.pp.filter_cells(adata, min_genes=10)
