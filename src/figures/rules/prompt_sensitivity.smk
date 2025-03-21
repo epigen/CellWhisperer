@@ -83,7 +83,7 @@ rule plot_query_variants:
         query_variants=rules.generate_query_variants.output.query_variants,
         text_embeddings=rules.compute_text_embeddings.output.text_embeddings,
     output:
-        plot=PROJECT_DIR / "results" / "plots" / "prompt_sensitivity" / "{model}" /  "query_variants.png"
+        plot=PROJECT_DIR / "results" / "plots" / "prompt_sensitivity" / "{model}" /  "query_variants.svg"
     conda:
         "cellwhisperer"
     log:
@@ -100,7 +100,7 @@ rule plot_query_variant_cell_matching:
         text_embeddings=rules.compute_text_embeddings.output.text_embeddings,
         dataset=PROJECT_DIR / config["paths"]["model_processed_dataset"].format(dataset="development3s", model="{model}")
     output:
-        plot=PROJECT_DIR / "results" / "plots" / "prompt_sensitivity" / "{model}" / "query_variant_cell_matching.png"
+        plot=PROJECT_DIR / "results" / "plots" / "prompt_sensitivity" / "{model}" / "query_variant_cell_matching.svg"
     params:
         carnegie_stages=QUERIES,
     resources:
