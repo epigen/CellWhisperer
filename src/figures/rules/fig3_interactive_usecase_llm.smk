@@ -105,17 +105,25 @@ rule llava_evaluation_perplexity_plots:
     notebook:
         "../notebooks/llava_evaluation_perplexity_plots.py.ipynb"
 
-COMPARISON_SEQUENCE = [{"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},
-                       {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenes"},
-                       {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "without50topgenes"},
-                       {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "with50topgenes"},
-                       {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
-                       {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},
-                       ]
-# Mistral (text-only, no top 50 genes as baseline) < Mistral (text-only, top 50 genes as baseline) < Mistral (geneformer) < Mistral(cellwhisperer)]
+COMPARISON_SEQUENCE = [
+    # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},  # TODO delete
+    # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenes"},  # TODO delete
+    {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "without50topgenes"},
+    {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "with50topgenes"},
+    {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "without50topgenesresponsepermuted"},
+    {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
+    {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},
+    {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},
+]
+
 rule llava_comparative_perplexity_plots:
     """
-    See notebook for additional plots
+    # TODO delete the mistral-only
+    (Mistral (text-only, no top 50 genes as baseline) <) Mistral (text-only, top 50 genes as baseline) < Mistral (geneformer) < Mistral(cellwhisperer)]
+
+    Relative plots: compare pairwise and show which one is better how often (matrix)
+
+    See notebook for by-celltype plot (only TabSap)
     """
     input:
         perplexities=lambda wildcards: [
@@ -125,12 +133,17 @@ rule llava_comparative_perplexity_plots:
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
         mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
     output:
-        PROJECT_DIR / "results/plots/llava/{dataset}/model_comparison_ratios.svg",
+        ratios=PROJECT_DIR / "results/plots/llava/{dataset}/ppl_model_comparison/ratios.svg",
+        correct=PROJECT_DIR / "results/plots/llava/{dataset}/ppl_model_comparison/correct.svg",
+        relative_ratios=PROJECT_DIR / "results/plots/llava/{dataset}/ppl_model_comparison/relative_ratios.svg",
+        relative_correct=PROJECT_DIR / "results/plots/llava/{dataset}/ppl_model_comparison/relative_correct.svg",
     params:
         comparison_sequence=COMPARISON_SEQUENCE,
         plot_celltypes=config["top20_lung_liver_blood_celltypes"],
         response_prefix=lambda wildcards: config["llava_eval"]["response_prefix_{}".format(
             "topgenes" if "_top50genes" in wildcards.dataset else "celltype")]
+    resources:
+        mem_mb=50000,
     conda:
         "llava"
     notebook:

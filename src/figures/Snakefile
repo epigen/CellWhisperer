@@ -70,7 +70,7 @@ rule all:
                model=["NONE"],
                prompt_variation=["with50topgenes", "with50topgenesshuffled"],
                ),
-        expand(rules.llava_comparative_perplexity_plots.output, dataset=["main", "tabula_sapiens_100_cells_per_type"])  # NOTE: these don't work for now, because they rely on some data that was computed 'by scfm'  , "main_top50genes", "tabula_sapiens_100_cells_per_type_top50genes"]),
+        expand(rules.llava_comparative_perplexity_plots.output, dataset=["main", "tabula_sapiens_100_cells_per_type", "main_top50genes", "tabula_sapiens_100_cells_per_type_top50genes"]),
 
         # Figure 4
         expand(rules.bowel_disease_stem_cell_contribution.output.plot, target_cluster=["", "Cycling ileal epithelial precursor cells"]),
