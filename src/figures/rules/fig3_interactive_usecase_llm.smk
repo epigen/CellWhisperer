@@ -57,7 +57,7 @@ rule llava_evaluation_perplexity:
             ancient(PROJECT_DIR / "resources" / wildcards.base_model),
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
         # image_data=rules.process_full_dataset.output.model_outputs.format(dataset="{dataset}", model=config["model_name_path_map"]["cellwhisperer"]),
-        image_data=rules.combine_processed_data.output.combined,
+        image_data=lambda wildcards: rules.combine_processed_data.output.combined.format(model=wildcards.model.replace("NONE", "cellwhisperer_clip_v1")),  # For NONE, we don't need any image_data
         top_genes=top_genes_fn  # only required for `prompt_variation="with50topgenes"`. not sure if `ancient` is correct
     conda:
         "llava"
@@ -105,46 +105,121 @@ rule llava_evaluation_perplexity_plots:
     notebook:
         "../notebooks/llava_evaluation_perplexity_plots.py.ipynb"
 
-COMPARISON_SEQUENCE = [
-    # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},  # TODO delete
-    # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenes"},  # TODO delete
-    {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "without50topgenes"},
-    {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "with50topgenes"},
-    {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "without50topgenesresponsepermuted"},
-    {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
-    {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},
-    {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},
-]
+
+def input_configurations(wildcards):
+    if wildcards.plot_type == "llava_cw_vs_geneformer":
+        return [
+            {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "without50topgenes"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "with50topgenes"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "without50topgenesresponsepermuted"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},
+        ]
+    if wildcards.plot_type == "gene_predictability":
+        if not wildcards.dataset.endswith("top50genes"):
+            print("gene_predictability is only well-defined for top_50gene dataset")
+
+        return [
+            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},  #  negative control
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},  # positive control
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},  # normal performance
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},  # different background distribution
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenesshuffled"},  # confusing the model with wrong input gene order
+        ]
+    if wildcards.plot_type == "text_only_vs_cw":
+        if wildcards.dataset.endswith("top50genes"):
+            print("text_only_vs_cw doesn't make sense with top50genes datasets")
+        return [
+            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenes"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesshuffled"},
+
+            # only these two make sense really
+            {"base_model": "Llama-3.1-8B-Instruct", "model": "NONE", "prompt_variation": "with50topgenes"},  # TODO make sure that this leads to swapping of preprompt (i.e. top50 genes)
+            {"base_model": "Llama-3.3-70B-Instruct", "model": "NONE", "prompt_variation": "with50topgenes"},
+
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenesshuffled"},
+        ]
+    if wildcards.plot_type == "cw_preprompt_useless":
+        if wildcards.dataset.endswith("top50genes"):
+            print("text_only_vs_cw doesn't make sense with top50genes datasets")
+        return [
+            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenes"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesshuffled"},
+
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenesshuffled"},
+        ]
+
 
 rule llava_comparative_perplexity_plots:
     """
-    # TODO delete the mistral-only
-    (Mistral (text-only, no top 50 genes as baseline) <) Mistral (text-only, top 50 genes as baseline) < Mistral (geneformer) < Mistral(cellwhisperer)]
+    General comparative plots for llava perplexity analysis
 
     Relative plots: compare pairwise and show which one is better how often (matrix)
+
+    TODO: llava_cw_vs_geneformer -- relative_performances: stacked barplot (Geneformer-better, cw-better) (other grouping, same as above)
+
+    plot_type == "gene_predictability" datasets: top50genes. (TODO make sure to subselect the comparison sequences!)
+        correct & ratios:
+            # TODO filter out other LLMs (except one or two Mistral-ones for the negative/positive controls)
+            sns.barplot|boxplot|violinplot(x="{model}_{prompt_variation}", y="ppl_ratio|correct_ppl")
+        relative: blank (for now)
+
+    plot_type == "text_only_vs_cw": datasets: main, tabsap
+        TODO: re-select which prompt_variations make sense for comparison
+        correct & ratios: sns.barplot|boxplot|violinplot(x="{model}_{prompt_variation}", y="ppl_ratio|correct_ppl")
+        relative: heatmap as before.
+
+    plot_type == "cw_preprompt_useless": datasets: main, tabsap
+        # TODO filter out llama models
+        sns.boxplot(x="{model}_{prompt_variation}", y="ppl_ratio|correct_ppl")
 
     See notebook for by-celltype plot (only TabSap)
     """
     input:
         perplexities=lambda wildcards: [
             rules.llava_evaluation_perplexity.output.all_perplexities.format(**x, dataset=wildcards.dataset)
-            for x in COMPARISON_SEQUENCE
+            for x in input_configurations(wildcards)
         ],
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
         mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
     output:
-        ratios=PROJECT_DIR / "results/plots/llava/{dataset}/ppl_model_comparison/ratios.svg",
-        correct=PROJECT_DIR / "results/plots/llava/{dataset}/ppl_model_comparison/correct.svg",
-        relative_ratios=PROJECT_DIR / "results/plots/llava/{dataset}/ppl_model_comparison/relative_ratios.svg",
-        relative_correct=PROJECT_DIR / "results/plots/llava/{dataset}/ppl_model_comparison/relative_correct.svg",
+        individual_performances=PROJECT_DIR / "results/plots/llava/{dataset}/ppl_model_comparison/{plot_type}/{plot_metric}_individual.svg",
+        relative_performances=PROJECT_DIR / "results/plots/llava/{dataset}/ppl_model_comparison/{plot_type}/{plot_metric}_relative.svg",
     params:
-        comparison_sequence=COMPARISON_SEQUENCE,
+        comparison_sequence=input_configurations,
         plot_celltypes=config["top20_lung_liver_blood_celltypes"],
         response_prefix=lambda wildcards: config["llava_eval"]["response_prefix_{}".format(
-            "topgenes" if "_top50genes" in wildcards.dataset else "celltype")]
+            "topgenes" if "_top50genes" in wildcards.dataset else "celltype")],
     resources:
         mem_mb=50000,
     conda:
         "llava"
     notebook:
         "../notebooks/llava_comparative_perplexity_plots.py.ipynb"
+
+rule fig3_llava_ppl_all:
+    # TODO also copy-paste the stuff from `main` here
+    input:
+        expand(
+            rules.llava_comparative_perplexity_plots.output.individual_performances,
+            plot_metric=["log2_correct_ppl", "log2_ppl_ratio"],
+            plot_type=["llava_cw_vs_geneformer", "text_only_vs_cw", "cw_preprompt_useless"],
+            dataset=["main", "tabula_sapiens_100_cells_per_type"],  # only 'normal' datasets
+        ),
+        expand(
+            rules.llava_comparative_perplexity_plots.output.individual_performances,
+            plot_metric=["log2_correct_ppl", "log2_ppl_ratio"],
+            plot_type=["llava_cw_vs_geneformer", "gene_predictability"],
+            dataset=["main_top50genes", "tabula_sapiens_100_cells_per_type_top50genes"],  # only top50 datasets
+        ),
