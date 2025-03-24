@@ -54,7 +54,7 @@ rule llava_evaluation_perplexity:
         llava_model=lambda wildcards:
             ancient(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"].format(base_model=wildcards.base_model, model=wildcards.model))
             if wildcards.model != "NONE" else
-            ancient(PROJECT_DIR / "resources" / wildcards.base_model),
+            PROJECT_DIR / "resources" / wildcards.base_model,
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
         # image_data=rules.process_full_dataset.output.model_outputs.format(dataset="{dataset}", model=config["model_name_path_map"]["cellwhisperer"]),
         image_data=lambda wildcards: rules.combine_processed_data.output.combined.format(model=wildcards.model.replace("NONE", "cellwhisperer_clip_v1")),  # For NONE, we don't need any image_data
@@ -131,33 +131,32 @@ def input_configurations(wildcards):
         if wildcards.dataset.endswith("top50genes"):
             print("text_only_vs_cw doesn't make sense with top50genes datasets")
         return [
-            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenes"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesshuffled"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},  # neg control
 
-            # only these two make sense really
-            {"base_model": "Llama-3.1-8B-Instruct", "model": "NONE", "prompt_variation": "with50topgenes"},  # TODO make sure that this leads to swapping of preprompt (i.e. top50 genes)
+            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenes"},  # pos control
+            {"base_model": "Llama-3.1-8B-Instruct", "model": "NONE", "prompt_variation": "with50topgenes"},
             {"base_model": "Llama-3.3-70B-Instruct", "model": "NONE", "prompt_variation": "with50topgenes"},
-
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
+
+            # TODO put this into a second axis (due to shifted value range)
+            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
+            {"base_model": "Llama-3.1-8B-Instruct", "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
+            {"base_model": "Llama-3.3-70B-Instruct", "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenesshuffled"},
         ]
     if wildcards.plot_type == "cw_preprompt_useless":
         if wildcards.dataset.endswith("top50genes"):
-            print("text_only_vs_cw doesn't make sense with top50genes datasets")
+            print("cw_preprompt_useless doesn't make sense with top50genes datasets")
         return [
-            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenes"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesshuffled"},
-
+            # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},  # neg control
+            # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesshuffled"},  # semi-neg control
+            # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenes"},  # pos control
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenesshuffled"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},  # show that adding 50 top genes doesn't help
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenesshuffled"},  # But, it's possible to confuse the model
+
+            # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
+            # {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},
         ]
 
 
