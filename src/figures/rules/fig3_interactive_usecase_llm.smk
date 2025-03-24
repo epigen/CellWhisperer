@@ -166,23 +166,6 @@ rule llava_comparative_perplexity_plots:
 
     Relative plots: compare pairwise and show which one is better how often (matrix)
 
-    TODO: llava_cw_vs_geneformer -- relative_performances: stacked barplot (Geneformer-better, cw-better) (other grouping, same as above)
-
-    plot_type == "gene_predictability" datasets: top50genes. (TODO make sure to subselect the comparison sequences!)
-        correct & ratios:
-            # TODO filter out other LLMs (except one or two Mistral-ones for the negative/positive controls)
-            sns.barplot|boxplot|violinplot(x="{model}_{prompt_variation}", y="ppl_ratio|correct_ppl")
-        relative: blank (for now)
-
-    plot_type == "text_only_vs_cw": datasets: main, tabsap
-        TODO: re-select which prompt_variations make sense for comparison
-        correct & ratios: sns.barplot|boxplot|violinplot(x="{model}_{prompt_variation}", y="ppl_ratio|correct_ppl")
-        relative: heatmap as before.
-
-    plot_type == "cw_preprompt_useless": datasets: main, tabsap
-        # TODO filter out llama models
-        sns.boxplot(x="{model}_{prompt_variation}", y="ppl_ratio|correct_ppl")
-
     See notebook for by-celltype plot (only TabSap)
     """
     input:
@@ -208,7 +191,6 @@ rule llava_comparative_perplexity_plots:
         "../notebooks/llava_comparative_perplexity_plots.py.ipynb"
 
 rule fig3_llava_ppl_all:
-    # TODO also copy-paste the stuff from `main` here
     input:
         expand(
             rules.llava_comparative_perplexity_plots.output.individual_performances,
@@ -222,3 +204,29 @@ rule fig3_llava_ppl_all:
             plot_type=["llava_cw_vs_geneformer", "gene_predictability"],
             dataset=["main_top50genes", "tabula_sapiens_100_cells_per_type_top50genes"],  # only top50 datasets
         ),
+
+        # Pre-revision
+        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
+               plot_name=["detailed", "perplexity_quantile"],
+               dataset=["main", "tabula_sapiens_100_cells_per_type"],  # NOTE: these are llava evaluation datasets
+               base_model=[LLAVA_BASE_MODEL],
+               model=[config["model_name_path_map"]["cellwhisperer_geneformer"], "geneformer"],  # config["model_name_path_map"]["cellwhisperer_uce"], "uce"
+               prompt_variation=["with50topgenes", "without50topgenes", "with50topgenesshuffled"],
+               ),
+
+        # top 50 genes prediction
+        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
+               plot_name=["detailed", "perplexity_quantile"],
+               dataset=["main_top50genes", "tabula_sapiens_100_cells_per_type_top50genes"],
+               base_model=[LLAVA_BASE_MODEL],
+               model=[config["model_name_path_map"]["cellwhisperer_geneformer"], "geneformer"],  # config["model_name_path_map"]["cellwhisperer_uce"], "uce"],
+               prompt_variation=["without50topgenes", "without50topgenesresponsepermuted"],
+               ),
+        # text-only (non-finetuned) LLMs
+        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
+               plot_name=["detailed", "perplexity_quantile"],
+               dataset=["main", "tabula_sapiens_100_cells_per_type"],
+               base_model=[LLAVA_BASE_MODEL, "Llama-3.1-8B-Instruct", "Llama-3.3-70B-Instruct"],
+               model=["NONE"],
+               prompt_variation=["with50topgenes", "with50topgenesshuffled"],
+               ),
