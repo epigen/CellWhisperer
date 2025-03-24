@@ -4,7 +4,7 @@ rule prepare_llama31:
     input:
         PROJECT_DIR / config["model_name_path_map"]["llama31orig"]  # downloaded manually
     output:
-        PROJECT_DIR / config["model_name_path_map"]["llama31"]
+        directory(PROJECT_DIR / config["model_name_path_map"]["llama31"])
     resources:
         mem_mb=300000
     conda:
@@ -110,7 +110,7 @@ rule finetune_llava:
         deepspeed=True,
         projector_type=config["llava_projector_type"],
         hf_model_name=lambda wildcards: "/msc/home/mschae83/cellwhisperer_private/resources/" + wildcards.base_model, #  ("BioMistral/" if "Bio" in wildcards.base_model else "mistralai/") +  wildcards.base_model,
-        model_layer_selector=-1
+        model_layer_selector=-1,
         template_version=lambda wildcards: "llama3_instruct" if "llama-3" in wildcards.base_model.lower() else "mistral_instruct"
     output:
         output_dir=protected(directory(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"])),
