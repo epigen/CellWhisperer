@@ -130,6 +130,14 @@ def score_transcriptomes_vs_texts(
         torch.matmul(text_embeds.cpu(), transcriptome_embeds.t().cpu()) * logit_scale
     ).detach()  # n_text * n_adatas
 
+    # Check for normalization
+    assert (
+        (torch.norm(text_embeds, dim=1, keepdim=True) - 1) < 1e-3
+    ).all(), "Text embeddings are not normalized"
+    assert (
+        (torch.norm(transcriptome_embeds, dim=1, keepdim=True) - 1) < 1e-3
+    ).all(), "Transcriptome embeddings are not normalized"
+
     if score_norm_method == "softmax":
         logits_per_text = torch.softmax(logits_per_text, dim=0)
     elif score_norm_method == "01norm":
