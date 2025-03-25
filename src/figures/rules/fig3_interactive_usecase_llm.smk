@@ -24,6 +24,9 @@ CONVERSATION_START = NUM_COMPLEX_SAMPLES + NUM_DETAILED_SAMPLES
 COMPLEX_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[:NUM_COMPLEX_SAMPLES]
 DETAILED_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[NUM_COMPLEX_SAMPLES:CONVERSATION_START]
 
+
+include: "llm_judge.smk"
+
 def top_genes_fn(wildcards):
     if wildcards.dataset in ["main", "main_top50genes"]:
         return [ancient(rules.compute_top_genes.output.top_genes.format(dataset=dataset)) for dataset in ["cellxgene_census", "archs4_geo"]]
@@ -72,7 +75,7 @@ rule llava_evaluation_perplexity:
         top_n_genes=50,
         is_multimodal=lambda wildcards: wildcards.model != "NONE"
     resources:
-        mem_mb=400000,
+        mem_mb=100000,
         slurm=lambda wildcards: slurm_gres(
             num_gpus={LLAVA_BASE_MODEL: 1, "Llama-3.1-8B-Instruct": 1, "Llama-3.3-70B-Instruct": 4}[wildcards.base_model]
         )
@@ -167,6 +170,8 @@ rule llava_comparative_perplexity_plots:
     Relative plots: compare pairwise and show which one is better how often (matrix)
 
     See notebook for by-celltype plot (only TabSap)
+
+    TODO make sure they have all been regenerated at some point..
     """
     input:
         perplexities=lambda wildcards: [
@@ -230,3 +235,6 @@ rule fig3_llava_ppl_all:
                model=["NONE"],
                prompt_variation=["with50topgenes", "with50topgenesshuffled"],
                ),
+
+        # judge
+        rules.llava_eval_gpt4_review_summarize.output.overview_plot.format(base_model=LLAVA_BASE_MODEL, model=CLIP_MODEL, prompt_variation="llm_judge", dataset="main")

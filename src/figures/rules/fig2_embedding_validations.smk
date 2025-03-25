@@ -2,7 +2,7 @@
 ZERO_SHOT_RESULTS = PROJECT_DIR / "results/plots/zero_shot_validation"
 ZERO_SHOT_CW_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,cellwhisperer_clip_.*}"
 
-ZERO_SHOT_PREDICTORS = list(config["zero_shot_llms"].keys()) + CW_CLIP_MODELS
+ZERO_SHOT_PREDICTORS = list(config["llm_apis"].keys()) + CW_CLIP_MODELS
 TRANSCRIPTOME_MODELS = config["scfms"] + CW_CLIP_MODELS
 
 from notebooks.zero_shot_validation_scripts.utils import SUFFIX_PREFIX_DICT  # TODO consider moving to config

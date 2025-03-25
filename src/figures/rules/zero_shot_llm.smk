@@ -11,11 +11,11 @@ rule zero_shot_llm_prediction:
     output:
         predictions=protected(ZERO_SHOT_RESULTS / "{model,gpt4|llama33|claudesonnet|deepseek|llama31|mistral7b}" / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv"),
     params:
-        api_key=lambda wildcards: os.getenv(config["zero_shot_llms"][wildcards.model]["api_key_env"]),
-        api_base_url=lambda wildcards: config["zero_shot_llms"][wildcards.model]["base_url"],
+        api_key=lambda wildcards: os.getenv(config["llm_apis"][wildcards.model]["api_key_env"]),
+        api_base_url=lambda wildcards: config["llm_apis"][wildcards.model]["base_url"],
         prompt=lambda wildcards: f"Identify the {wildcards.metadata_col} for a given set of markers. Only provide the name of the {wildcards.metadata_col}. Do not show numbers before the name. \n{wildcards.metadata_col} candidates: {{candidates}}\n\nMarkers: {{markers}}",
         top_n_genes=50,
-        model=lambda wildcards: config["zero_shot_llms"][wildcards.model]["model_name"],
+        model=lambda wildcards: config["llm_apis"][wildcards.model]["model_name"],
         average_by_class=lambda wildcards: wildcards.grouping == "by_class",
     resources:
         mem_mb=lambda wildcards: 300000 if wildcards.dataset == "tabula_sapiens" else 120000,

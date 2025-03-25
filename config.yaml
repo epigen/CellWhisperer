@@ -182,7 +182,7 @@ celltype_terms:
   "b cell": "B cells"
   "platelet": "blood platelets"
 
-zero_shot_llms:
+llm_apis:
   gpt4:
     api_key_env: OPENAI_API_KEY
     base_url: https://api.openai.com/v1/
@@ -203,3 +203,21 @@ zero_shot_llms:
     api_key_env: OLLAMA_API_KEY
     base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
     model_name: mistral:7b-instruct-v0.2-fp16
+
+llm_judge:
+  request_template: " Sample annotation: {annotation}
+
+  Top expressed normalized genes: {top_genes}
+  "
+
+
+
+
+  instruction_prompt: "Help me analyzing this sample of cells. Respond in proper english in a tone of uncertainty and focus on the biology of the sample rather than any potential donor or patient information (e.g. do not mention age and sex). Start by listing the top genes in this sample."
+  instruction_response: "Sure. The top normalized genes are {top_genes}. Note that are strongly expressed genes beyond the ones I just listed."
+  instruction_prompt_text_only: "Respond to my request regarding a sample of cells characterized by their top-expressed genes. Respond directly and concisely without much contemplation and in less than 3 sentences with a tone of uncertainty and a focus on the biology of the sample.
+
+  Top genes: {top_genes}
+
+  Request: {question}
+  "
