@@ -135,14 +135,13 @@ def input_configurations(wildcards):
         if wildcards.dataset.endswith("top50genes"):
             print("text_only_vs_cw doesn't make sense with top50genes datasets")
         return [
-            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},  # neg control
+            # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},  # neg control
 
             {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenes"},  # pos control
             {"base_model": "Llama-3.1-8B-Instruct", "model": "NONE", "prompt_variation": "with50topgenes"},
             {"base_model": "Llama-3.3-70B-Instruct", "model": "NONE", "prompt_variation": "with50topgenes"},
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
 
-            # TODO put this into a second axis (due to shifted value range)
             {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
             {"base_model": "Llama-3.1-8B-Instruct", "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
             {"base_model": "Llama-3.3-70B-Instruct", "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
@@ -172,8 +171,6 @@ rule llava_comparative_perplexity_plots:
     Relative plots: compare pairwise and show which one is better how often (matrix)
 
     See notebook for by-celltype plot (only TabSap)
-
-    TODO make sure they have all been regenerated at some point..
     """
     input:
         perplexities=lambda wildcards: [
