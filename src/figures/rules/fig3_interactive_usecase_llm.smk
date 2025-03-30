@@ -60,7 +60,7 @@ rule llava_evaluation_perplexity:
             PROJECT_DIR / "resources" / wildcards.base_model,
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
         # image_data=rules.process_full_dataset.output.model_outputs.format(dataset="{dataset}", model=config["model_name_path_map"]["cellwhisperer"]),
-        image_data=lambda wildcards: rules.combine_processed_data.output.combined.format(model=wildcards.model.replace("NONE", "cellwhisperer_clip_v1")),  # For NONE, we don't need any image_data
+        image_data=lambda wildcards: rules.combine_processed_data.output.combined.format(model=wildcards.model.replace("NONE", "cellwhisperer_clip_v1")),  # For NONE, we don't need any image_data, but we do need to provide a file
         top_genes=top_genes_fn  # only required for `prompt_variation="with50topgenes"`. not sure if `ancient` is correct
     conda:
         "llava"
@@ -71,13 +71,14 @@ rule llava_evaluation_perplexity:
         background_shuffle=lambda wildcards: {"with50topgenesshuffled": "genesshuffled", "with50topgenesresponsepermuted": "responsepermuted", "without50topgenesresponsepermuted": "responsepermuted"}.get(wildcards.prompt_variation, "transcriptome"),
         num_negatives=30,
         model_layer_selector=-1,
-        pre_prompt_topgenes=lambda wildcards: {"with50topgenes": config["llava_eval"]["pre_prompt_topgenes"], "with50topgenesshuffled": config["llava_eval"]["pre_prompt_topgenes"],  "with50topgenesresponsepermuted": config["llava_eval"]["pre_prompt_topgenes"], "without50topgenes": None, "without50topgenesresponsepermuted": None}[wildcards.prompt_variation],
+        pre_prompt_topgenes=lambda wildcards: config["llava_eval"]["pre_prompt_topgenes"] if "with50topgenes" in wildcards.prompt_variation else None,
         top_n_genes=50,
-        is_multimodal=lambda wildcards: wildcards.model != "NONE"
+        is_multimodal=lambda wildcards: not (wildcards.model == "NONE" or "noembedding" in wildcards.prompt_variation)
     resources:
         mem_mb=100000,
         slurm=lambda wildcards: slurm_gres(
-            num_gpus={LLAVA_BASE_MODEL: 1, "Llama-3.1-8B-Instruct": 1, "Llama-3.3-70B-Instruct": 4}[wildcards.base_model]
+            "large",
+            num_gpus={LLAVA_BASE_MODEL: 1, "Llama-3.1-8B-Instruct": 1, "Llama-3.3-70B-Instruct": 3}[wildcards.base_model]
         )
     log:
         notebook="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{prompt_variation}.ipynb",
@@ -154,9 +155,10 @@ def input_configurations(wildcards):
             # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},  # neg control
             # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesshuffled"},  # semi-neg control
             # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenes"},  # pos control
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenesnoembedding"},  # Baseline: CW with only top 50 genes
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},  # show that adding 50 top genes doesn't help
-            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenesshuffled"},  # But, it's possible to confuse the model
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},  # show that adding 50 top genes doesn't help (much)
+            # {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenesshuffled"},  # no negative effect by shuffling the genes <- could show this alone
 
             # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
             # {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},
@@ -188,6 +190,7 @@ rule llava_comparative_perplexity_plots:
         plot_celltypes=config["top20_lung_liver_blood_celltypes"],
         response_prefix=lambda wildcards: config["llava_eval"]["response_prefix_{}".format(
             "topgenes" if "_top50genes" in wildcards.dataset else "celltype")],
+        plot_type="violin",
     resources:
         mem_mb=50000,
     conda:
