@@ -1,38 +1,14 @@
-
 """
 #569
 """
 
-QUERIES = {
-    "Carnegie stage 01": "Embryonic stage defined by a fertilized oocyte and presence of pronuclei.",
-    "Carnegie stage 02": "Embryonic stage during which cell division occurs with reduction in cytoplasmic volume, and formation of inner and outer cell mass.",
-    "Carnegie stage 03": "Blastula stage with the loss of the zona pellucida and the definition of a free blastocyst.",
-    "Carnegie stage 04": "Blastula stage during which the blastocyst becomes attached.",
-    "Carnegie stage 05": "Blastula stage during which implantation occurs.",
-    "Carnegie stage 06": "Gastrula stage during which the extraembryonic mesoderm and primitive streak appear.",
-    "Carnegie stage 07": "Neurula stage during which the notochordal process appears, and gastrulation is continuing.",
-    "Carnegie stage 08": "Neurula stage during which the primitive pit and the notochordal canal appear.",
-    "Carnegie stage 09": "Organogenesis stage during which somites 1-3 appear, and neural folds, cardiac primordium, and head fold are present.",
-    "Carnegie stage 10": "Organogenesis stage during which somites 4-12 appear, and the neural fold fuses.",
-    "Carnegie stage 11": "Organogenesis stage during which somites 13-20 appear, and the rostral neuropore closes.",
-    "Carnegie stage 12": "Organogenesis stage during which somites 21-29 appear, and the caudal neuropore closes.",
-    "Carnegie stage 13": "Organogenesis developmental stage during which somite 30 appears, and leg buds, lens placode, pharyngeal arches are present.",
-    "Carnegie stage 14": "Organogenesis stage during which lens pit and optic cup appear.",
-    "Carnegie stage 15": "Organogenesis stage during which lens vesicle, nasal pit, and hand plate appear.",
-    "Carnegie stage 16": "Organogenesis stage during which nasal pits moved ventrally, and features are auricular hillocks, and foot plate.",
-    "Carnegie stage 17": "Organogenesis stage during which finger rays become visible.",
-    "Carnegie stage 18": "Organogenesis stage during which ossification commences.",
-    "Carnegie stage 19": "Organogenesis stage during which the straightening of the trunk starts.",
-    "Carnegie stage 20": "Organogenesis stage during which upper limbs are longer and bent at elbow.",
-    "Carnegie stage 21": "Organogenesis stage during which hands and feet turned inward.",
-    "Carnegie stage 22": "Organogenesis stage during which eyelids and external ears appear.",
-    "Carnegie stage 23": "Organogenesis stage during which the head, the body, and the limbs are rounded structures.",
-    # "Carnegie stage 05a": "Blastula stage during which implantation occurs and defined by a solid trophoblast.",  # NOTE adjusted
-    # "Carnegie stage 05b": "Blastula stage during which implantation occurs and defined by a trophoblastic lacunae.",  # NOTE adjusted
-    # "Carnegie stage 05c": "Blastula stage during which implantation occurs and defined by a lacunar vascular circle.",  # NOTE adjusted
-    # "Carnegie stage 06a": "Gastrula stage during which the extraembryonic mesoderm and primitive streak as well as the chorionic villi appear.",  # NOTE adjusted
-    # "Carnegie stage 06b": "Gastrula stage during which the extraembryonic mesoderm and primitive streak as well as the primitive streak appear."  # NOTE adjusted
-}
+# Carnegie stages, condensed with GPT-4o
+QUERIES = {}
+QUERIES['Zygote_Carnegie_Derived'] = "The embryonic stage begins with a fertilized oocyte containing pronuclei. It progresses with cell division, reducing cytoplasmic volume and forming inner and outer cell masses."  # CS1,2
+QUERIES['Blastula_Carnegie_Derived'] = "The blastula stage begins with the loss of the zona pellucida, forming a free blastocyst. It progresses as the blastocyst attaches and implants into the uterine lining."  # CS3, 4, 5
+QUERIES['Gastrula_Carnegie_Derived'] = "During the gastrula stage, the extraembryonic mesoderm and primitive streak form. In the neurula stage, gastrulation continues with the appearance of the notochordal process, primitive pit, and notochordal canal."  # CS6, 7, 8
+QUERIES['Organogenesis_Carnegie_Derived'] = "During organogenesis, somites progressively form, neural folds fuse, and the rostral and caudal neuropores close. As development continues, limb buds, sensory structures, and facial features emerge, followed by ossification, trunk straightening, and the rounding of the head, body, and limbs."  # CS 9-23
+
 
 rule generate_query_variants:
     """
@@ -67,8 +43,8 @@ rule compute_text_embeddings:
     conda:
         "cellwhisperer"
     resources:
-        mem_mb=100000,
-        slurm=f"cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
+        mem_mb=40000,
+        slurm=f"cpus-per-task=5 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
     log:
         progress="../logs/compute_text_embeddings_{model}.log",
         notebook="../logs/compute_text_embeddings_{model}.ipynb"
@@ -105,7 +81,8 @@ rule plot_query_variant_cell_matching:
         carnegie_stages=QUERIES,
     resources:
         mem_mb=100000,
-        slurm=f"cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
+        # slurm=f"cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
+        slurm=f"cpus-per-task=5 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
     conda:
         "cellwhisperer"
     log:
