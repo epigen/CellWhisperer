@@ -115,10 +115,8 @@ def input_configurations(wildcards):
         return [
             {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "without50topgenes"},
             {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "with50topgenes"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "without50topgenesresponsepermuted"},
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},
         ]
     if wildcards.plot_type == "gene_predictability":
         if not wildcards.dataset.endswith("top50genes"):
@@ -126,21 +124,14 @@ def input_configurations(wildcards):
 
         return [
             {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},  #  negative control
-            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},  # positive control
-            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},  # normal performance
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},  # normal performance (consider hiding this)
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},  # different background distribution
-            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenesshuffled"},  # confusing the model with wrong input gene order
         ]
     if wildcards.plot_type == "text_only_vs_cw":
         if wildcards.dataset.endswith("top50genes"):
             print("text_only_vs_cw doesn't make sense with top50genes datasets")
         return [
             # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},  # neg control
-
-            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenes"},  # pos control
-            {"base_model": "Llama-3.1-8B-Instruct", "model": "NONE", "prompt_variation": "with50topgenes"},
-            {"base_model": "Llama-3.3-70B-Instruct", "model": "NONE", "prompt_variation": "with50topgenes"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
 
             {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
             {"base_model": "Llama-3.1-8B-Instruct", "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
@@ -187,7 +178,7 @@ rule llava_comparative_perplexity_plots:
         plot_celltypes=config["top20_lung_liver_blood_celltypes"],
         response_prefix=lambda wildcards: config["llava_eval"]["response_prefix_{}".format(
             "topgenes" if "_top50genes" in wildcards.dataset else "celltype")],
-        plot_type="violin",
+        plot_type="violin"  # lambda wildcards: "violin" if wildcards.dataset.startswith("tabula_sapiens") else "violinstrip",
     resources:
         mem_mb=50000,
     conda:
