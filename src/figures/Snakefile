@@ -47,9 +47,7 @@ rule all:
 
         rules.fig3_llava_ppl_all.input,
 
-        # Figure 4
-        expand(rules.bowel_disease_stem_cell_contribution.output.plot, target_cluster=["", "Cycling ileal epithelial precursor cells"]),
-
+        rules.fig4_all.input,
 
         # Reviewer response letter
         rules.plot_query_variant_cell_matching.output.plot.format(model=config["model_name_path_map"]["cellwhisperer_geneformer"]),
