@@ -1,0 +1,32 @@
+import os
+from huggingface_hub import login, hf_hub_download
+
+huggingface_token = snakemake.params.huggingface_token
+uni_model_dir = snakemake.params.uni_model_dir
+
+# Login to Hugging Face if token is provided
+if huggingface_token:
+    login(token=huggingface_token)
+
+# Download the model files
+model_repo = "MahmoodLab/UNI"
+
+# Download pytorch_model.bin
+hf_hub_download(
+    repo_id=model_repo,
+    filename="pytorch_model.bin",
+    local_dir=uni_model_dir,
+    force_download=True,
+    token=huggingface_token
+)
+
+# Download config.json
+hf_hub_download(
+    repo_id=model_repo,
+    filename="config.json",
+    local_dir=uni_model_dir,
+    force_download=True,
+    token=huggingface_token
+)
+
+print(f"Downloaded UNI model files to {uni_model_dir}")

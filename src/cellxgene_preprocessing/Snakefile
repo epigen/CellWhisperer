@@ -8,6 +8,7 @@ include: "../shared/rules/download_models.smk"
 include: "../shared/rules/genesets.smk"
 include: "../shared/rules/dataset_processing.smk"
 include: "rules/prepare_cellxgene_dataset.smk"
+include: "rules/deepspot.smk"
 
 
 rule all:

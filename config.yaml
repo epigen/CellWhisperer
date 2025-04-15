@@ -43,6 +43,7 @@ paths:
   ablations:
     models: results/models/ablations/
     plots: results/plots/ablations/
+  
 
 plot_style: "src/plot_style/main.style"
 
@@ -61,6 +62,7 @@ datasets:
   - hcaorganoids_normal__organoid
   - hcaorganoids_cancer__primary
   - hcaorganoids_cancer__organoid
+  - deepspot_test
 
 metadata_cols_per_zero_shot_validation_dataset:
   immgen:
@@ -117,6 +119,12 @@ model_name_path_map:
   # manually downloaded with `git clone` (requires license agreement)
   mistral: resources/Mistral-7B-Instruct-v0.2
   llama33: resources/Llama-3.3-70B-Instruct
+
+  # Deepspot related model paths
+  deepspot_pretrained: resources/deepspot_pretrained
+  uni: resources/UNI
+  hoptimus0: resources/hoptimus
+
 
 uce_paths:
   protein_embeddings_dir: resources/UCE/protein_embeddings

@@ -348,3 +348,35 @@ For questions or additional information, please contact the authors of the paper
 - GitHub Issues: https://github.com/epigen/CellWhisperer/issues
 
 We welcome feedback and contributions to improve CellWhisperer!
+
+
+# SpotWhisperer
+
+### Using DeepSpot for spatial transcriptomics predictions
+
+CellWhisperer can leverage DeepSpot to predict gene expression from histological images. Follow these steps to process your image data:
+
+1. Create a folder in `resources` named after your dataset (e.g., `<dataset_name>`)
+2. Place your histology image inside this folder and name it `image.jpg`
+3. Create a configuration file named `config.json` in the same folder with the following structure:
+   ```json
+   {
+     "model_name": "Colon_HEST1K",
+     "white_cutoff": 200,
+     "downsample_factor": 10
+   }
+   ```
+
+`model_name`: Choose one of the available DeepSpot models: `Colon_HEST1K`, `Kidney_HEST1K`, `Kidney_Lung_USZ`, or `Melanoma_TuPro`
+`white_cutoff`: Threshold to identify and exclude blank areas in the image. Recommended value `200`
+`downsample_factor`: Factor to resize the image for processing
+
+4. Run the pipeline with your dataset name:
+```bash
+cd cellwhisperer/src/cellxgene_preprocessing
+snakemake -c 48 --use-conda --config 'datasets=["<dataset_name>"]'
+```
+
+The pipeline will use DeepSpot to predict gene expression patterns from your histology image and integrate these predictions with CellWhisperer for interactive analysis.
+
+You can see an example configuration in the resources/deepspot_test/config.json file provided with CellWhisperer.

@@ -11,5 +11,8 @@
         path = modules/LLaVA
         url = https://github.com/epigen/llava
 [submodule "modules/UCE"]
-        path = modules/UCE
-        url = https://github.com/epigen/UCE
+				path = modules/UCE
+				url = https://github.com/epigen/UCE
+[submodule "modules/DeepSpot"]
+				path = modules/DeepSpot
+				url = https://github.com/ratschlab/DeepSpot

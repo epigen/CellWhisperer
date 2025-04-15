@@ -1,4 +1,5 @@
-BASE_URL = "https://medical-epigenomics.org/papers/schaefer2025cellwhisperer/data"
+BASE_URL = "https://medical-epigenomics.org/papers/schaefer2024/data"
+DEESPOT_MODELS_DIR = PROJECT_DIR / config["model_name_path_map"]["deepspot_pretrained"]
 
 rule download_mixtral:
     input:
@@ -108,4 +109,64 @@ rule download_cellwhisperer_llms:
         tar -xzvf {input} -C {output} --no-same-owner
     """
 
+# download DeepSpot related models
 
+rule download_pretrained_deepspot:
+    """
+    Download the pre-trained DeepSpot model from Zenodo and unzip it
+    """
+    input:
+        HTTP.remote("https://zenodo.org/records/14638865/files/DeepSpot_pretrained_model_weights.zip", keep_local=False)
+    output:
+        Colon_HEST1K_pretrained = DEESPOT_MODELS_DIR / "Colon_HEST1K/final_model.pkl",
+        Kidney_HEST1K_pretrained = DEESPOT_MODELS_DIR /  "Kidney_HEST1K/final_model.pkl",
+        Kidney_Lung_USZ_pretrained = DEESPOT_MODELS_DIR / "Kidney_Lung_USZ/final_model.pkl",
+        Melanoma_TuPro_pretrained = DEESPOT_MODELS_DIR / "Melanoma_TuPro/final_model.pkl",
+    params: 
+        deepspot_pretrained_dir = DEESPOT_MODELS_DIR,
+    resources:
+        mem_mb=16000,
+        slurm="cpus-per-task=1 qos=cpu partition=cpu"
+    shell:
+        """
+        unzip -o {input} -d {params.deepspot_pretrained_dir}
+        mv -f {params.deepspot_pretrained_dir}/DeepSpot_pretrained_model_weights/* {params.deepspot_pretrained_dir}/
+        rmdir {params.deepspot_pretrained_dir}/DeepSpot_pretrained_model_weights
+        echo "DeepSpot pretrained model downloaded and extracted to {params.deepspot_pretrained_dir}"
+        """
+
+rule download_uni:
+    """
+    Download the UNI pathology foundation model from HuggingFace
+    """
+    output:
+        PROJECT_DIR / config["model_name_path_map"]["uni"] / "pytorch_model.bin",
+        PROJECT_DIR / config["model_name_path_map"]["uni"] / "config.json",
+    params: 
+        uni_model_dir = PROJECT_DIR / config["model_name_path_map"]["uni"],
+        huggingface_token = os.getenv("HUGGINGFACE_TOKEN"),
+    resources:
+        mem_mb=16000,
+        slurm="cpus-per-task=1 qos=cpu partition=cpu"
+    conda:
+        "deepspot"
+    script:
+       "../scripts/download_uni.py" 
+
+rule download_hoptimus:
+    """
+    Download the Hoptimus foundation model from HuggingFace
+    """
+    output:
+        PROJECT_DIR / config["model_name_path_map"]["hoptimus0"] / "pytorch_model.bin",
+        PROJECT_DIR / config["model_name_path_map"]["hoptimus0"] / "config.json",
+    params: 
+        hoptimus_model_dir = PROJECT_DIR / config["model_name_path_map"]["hoptimus0"],
+        huggingface_token = os.getenv("HUGGINGFACE_TOKEN"),
+    resources:
+        mem_mb=16000,
+        slurm="cpus-per-task=1 qos=cpu partition=cpu"
+    conda:
+        "deepspot"
+    script:
+       "../scripts/download_hoptimus.py" 
