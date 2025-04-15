@@ -12,10 +12,11 @@
 cd "$(dirname "$0")"
 
 # Make sure that the network filesystem is mounted
-if ! timeout 200 bash -c 'until [ -d /nobackup/lab_bock/projects/cellwhisperer/ ]; do sleep 1; done'; then
-  echo "Error: Directory /nobackup/lab_bock/projects/cellwhisperer/ not found after 200 seconds."
+if ! timeout 100 bash -c 'until [ -d /nobackup/lab_bock/projects/cellwhisperer/ ]; do sleep 1; done'; then
+  echo "Error: Directory /nobackup/lab_bock/projects/cellwhisperer/ not found after 100 seconds."
   exit 1
 fi
+
 
 # First stop any running cell whisperer containers
 docker compose down
@@ -25,7 +26,8 @@ podman network prune -f
 
 # Create a new network for this cycle of cellwhisperer.
 export PODMAN_NETWORK_NAME=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 10;)
-podman network create ${PODMAN_NETWORK_NAME}
+podman network create --subnet 10.89.1.1/24 ${PODMAN_NETWORK_NAME} # --ipam-driver="dhcp"
 
 # Start the cellwhisperer containers.
 docker compose up -d --remove-orphans
+#podman-compose --in-pod cellwhisperer_group --pod-args='--infra=true' up -d

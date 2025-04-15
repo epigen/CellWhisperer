@@ -2,10 +2,11 @@
 # - ./docker_conda:/opt/miniconda3
 # - ~/cellwhisperer:/opt/cellwhisperer
 
-
+name: cellwhisperer_group
 version: '3.8'
 services:
   cellwhisperer_clip:
+    container_name: cellwhisperer_clip
     build:
       context: ../..
     image: cellwhisperer
@@ -26,9 +27,9 @@ services:
       HF_CACHE: /cache/transformers
       CELLWHISPERER_CACHE: /cache/cellwhisperer
     devices:
-        - "nvidia.com/gpu=all"
-    security_opt:
-        - label=type:nvidia_container_t
+        - "nvidia.com/gpu=0"
+          #security_opt:
+          # - label=type:nvidia_container_t
     deploy:
       resources:
         reservations:
@@ -40,6 +41,7 @@ services:
         - whisper
 
   cellwhisperer_llava_controller:  &llava-service
+    container_name: cellwhisperer_llava_controller
     stdin_open: true
     tty: true
     runtime: nvidia
@@ -56,6 +58,7 @@ services:
   cellwhisperer_llava_model:
     <<: *llava-service
     command: python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 --controller https://cellwhisperer.cemm.at/llava-controller --port 40000 --worker https://cellwhisperer.cemm.at/llava-model-worker --model-path /Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1/
+    container_name: cellwhisperer_llava_model
     deploy:
       resources:
         reservations:
@@ -67,9 +70,9 @@ services:
       - /nobackup/lab_bock/projects/cellwhisperer/results/llava/finetuned/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1:/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1:ro  # the name is important
       - cache:/cache/:Z
     devices:
-      - "nvidia.com/gpu=all"
-    security_opt:
-      - label=type:nvidia_container_t
+      - "nvidia.com/gpu=0"
+        #security_opt:
+        #- label=type:nvidia_container_t
     environment:
       CONDA_ENV: llava
       HF_CACHE: /cache/transformers
@@ -77,6 +80,7 @@ services:
       - whisper
 
   cellxgene_tabsap: &cellxgene-service
+    container_name: cellxgene_tabsap
     build:
       context: ../..
     image: cellwhisperer
@@ -105,10 +109,11 @@ services:
       - cellwhisperer_llava_model
       - cellwhisperer_llava_controller
     networks:
-        - whisper
+        whisper
 
   cellxgene_car_t:
     <<: *cellxgene-service
+    container_name: cellxgene_car_t
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/car_t/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
@@ -116,6 +121,7 @@ services:
 
   cellxgene_bowel_disease:
     <<: *cellxgene-service
+    container_name: cellxgene_bowerl_disease
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/bowel_disease/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
@@ -123,6 +129,7 @@ services:
 
   cellxgene_gbusslinger:
     <<: *cellxgene-service
+    container_name: cellxgene_gbusslinger
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/gbusslinger/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
@@ -130,6 +137,7 @@ services:
       
   cellxgene_human_disease:
     <<: *cellxgene-service
+    container_name: cellxgene_human_disease
     volumes:
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - /nobackup/lab_bock/projects/cellwhisperer/results/human_disease/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
@@ -137,6 +145,7 @@ services:
       
   cellxgene_geo:
     <<: *cellxgene-service
+    container_name: cellxgene_geo
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/archs4_geo/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
@@ -144,6 +153,7 @@ services:
 
   cellxgene_hcaorganoids_cancer__organoid:
     <<: *cellxgene-service
+    container_name: cellxgene_hcaorganoids_cancer__organoid
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_cancer__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
@@ -151,6 +161,7 @@ services:
       
   cellxgene_hcaorganoids_cancer__primary:
     <<: *cellxgene-service
+    container_name: cellxgene_hcaorganoids_cancer__primary
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_cancer__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
@@ -158,6 +169,7 @@ services:
       
   cellxgene_hcaorganoids_normal__primary:
     <<: *cellxgene-service
+    container_name: cellxgene_hcaorganoids_normal__primary
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_normal__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
@@ -165,6 +177,7 @@ services:
 
   cellxgene_hcaorganoids_normal__organoid:
     <<: *cellxgene-service
+    container_name: cellxgene_hcaorganoids_normal__organoid
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_normal__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
@@ -172,6 +185,7 @@ services:
 
   cellxgene_gut_cell_atlas:
     <<: *cellxgene-service
+    container_name: cellxgene_gut_cell_atlas
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/gut_cell_atlas/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
@@ -179,13 +193,23 @@ services:
 
   cellxgene_hcaorganoids:
     <<: *cellxgene-service
+    container_name: cellxgene_hcaorganoids
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/hcaorganoids/:/logs/:Z
 
+  cellxgene_development:
+    <<: *cellxgene-service
+    container_name: cellxgene_development
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/results/development3s/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/development3s/:/logs/:Z
+
   cellxgene_hca_olo:
     <<: *cellxgene-service
+    container_name: cellxgene_hca_olo
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/hca_olo/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
@@ -193,6 +217,7 @@ services:
 
   # certificate renewal is run through my nixos configuration
   nginx:
+    container_name: nginx
     image: nginx:latest
     volumes:
         - ./htpasswd:/etc/nginx/.htpasswd:ro,Z
