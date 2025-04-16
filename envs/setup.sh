@@ -6,6 +6,7 @@ conda env create -f envs/llama_cpp.yaml  # name: llama_cpp
 
 # Some package need to be installed after conda -.-
 conda activate cellwhisperer
+source activate cellwhisperer  # in docker, the `conda activate` does not workk
 
 pip install "flash-attn<1.0.5" --no-build-isolation
 
@@ -17,6 +18,7 @@ pip install --no-deps scgpt==0.1.9
 echo "If you want to use scGPT with CellWhisperer, download the model file from https://drive.google.com/drive/folders/1oWh_-ZRdhtoGQ2Fw24HP41FgLoomVo-y and place it into resources/scGPT_human (as indicated in config.yaml)"
 
 conda activate llava
+source activate llava  # in docker, the `conda activate` does not workk
 
 # Install packages that fail to directly install
 pip install flash-attn==2.5.3  # required for training
