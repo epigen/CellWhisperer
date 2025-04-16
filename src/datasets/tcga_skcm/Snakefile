@@ -5,6 +5,7 @@ PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shel
 GPU_TYPE="a100"
 configfile: PROJECT_DIR / "config.yaml"
 
+include: "../../shared/config.smk"
 include: "../../shared/rules/dataset_processing.smk"
 
 SAMPLE_IDS = [
@@ -33,6 +34,8 @@ rule download_data:
         # sample_ids_medium=SAMPLE_IDS
     conda:
         "cellwhisperer"
+    resources:
+        mem_mb=50000,
     script:
         "scripts/download_data.py"
 
