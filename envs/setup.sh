@@ -1,8 +1,8 @@
 #!/bin/bash
 
-mamba env create -f envs/main.yaml  # name: cellwhisperer    this already includes `pip install -e .`
-mamba env create -f envs/llava.yaml  # name: llava    this already includes `pip install -e ../modules/LLaVA/[train]`
-mamba env create -f envs/llama_cpp.yaml  # name: llama_cpp
+conda env create -f envs/main.yaml  # name: cellwhisperer    this already includes `pip install -e .`
+conda env create -f envs/llava.yaml  # name: llava    this already includes `pip install -e ../modules/LLaVA/[train]`
+conda env create -f envs/llama_cpp.yaml  # name: llama_cpp
 
 # Some package need to be installed after conda -.-
 conda activate cellwhisperer

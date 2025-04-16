@@ -67,22 +67,18 @@ WORKDIR /opt/cellwhisperer
 # Ignore SSL issues arising from proxy-ing (also for wget)
 RUN npm config set strict-ssl false
 
-# Install the dependencies
-RUN conda env create -f envs/main.yaml
-RUN conda env create -f envs/llava.yaml
-RUN conda env create -f envs/llama_cpp.yaml
 
 # Activate the environment
 COPY entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 
+# Install the dependencies
+RUN /entrypoint.sh bash envs/setup.sh
+
 # Build the web app
 RUN git config --global --add safe.directory /opt/cellwhisperer/modules/cellxgene
 RUN git config --global --add safe.directory /opt/cellwhisperer
 RUN cd modules/cellxgene && CONDA_ENV=cellwhisperer /entrypoint.sh make build-for-server-dev
-
-# [Optional] Install scgpt
-# RUN CONDA_ENV=cellwhisperer /entrypoint.sh bash envs/install_scgpt_after_env_creation.sh
 
 # Initialize an empty git repo (the original one is ignored by .dockerignore), such that all the `git rev-parse` commands works
 RUN git init
