@@ -34,7 +34,6 @@ rule curate_marker_database:
 
 rule cell_assign:
     """
-    NOTE: for pancreas dataset, the `epsilon` cell type is removed as no overlap was found
     """
     input:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
