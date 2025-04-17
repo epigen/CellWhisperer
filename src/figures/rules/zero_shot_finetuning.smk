@@ -6,7 +6,6 @@ PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shel
 FINETUNE_RESULTS_DIR = PROJECT_DIR / "results" / "finetuning_eval"
 GPU_TYPE = "a100-sxm4-80gb"  # we actually need 80gb for `unfrozen` (at least for UCE) and more
 TRAINING_OPTIONS=["frozen", "frozen_singlecells", "unfrozen"]
-FINETUNE_EVAL_DATASETS = ["tabula_sapiens", "pancreas", "immgen"]  # optionally: [d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]
 
 rule finetune_scfm:
     """
@@ -75,7 +74,7 @@ rule evaluate_scfm:
         label_col="celltype",
     resources:
         mem_mb=lambda wildcards: 450000 if wildcards.model == "uce" else 300000,
-        slurm=slurm_gres()
+        slurm=slurm_gres("large")
     conda:
         "cellwhisperer"
     log:
@@ -91,7 +90,7 @@ rule aggregate_scfm_evaluations:
         predictions=lambda wildcards: [
             rules.evaluate_scfm.output.performance.format(model=model, dataset=dataset, training_options=wildcards.training_options)
             for model in config["scfms"]
-            for dataset in FINETUNE_EVAL_DATASETS]
+            for dataset in CELLTYPE_EVAL_DATASETS]
             # for dataset in [d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]]
     output:
         aggregated_predictions=FINETUNE_RESULTS_DIR / "aggregated_predictions_{training_options}_{metric}.csv",
@@ -99,7 +98,7 @@ rule aggregate_scfm_evaluations:
     params:
         metric=lambda wildcards: wildcards.metric,
         models=config["scfms"],
-        datasets=FINETUNE_EVAL_DATASETS,
+        datasets=CELLTYPE_EVAL_DATASETS,
         plot_title=lambda wildcards: f"{wildcards.metric} for celltype ({wildcards.training_options})"
     conda:
         "cellwhisperer"

@@ -4,6 +4,7 @@ ZERO_SHOT_CW_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,cellwhisperer_clip_.*}"
 
 ZERO_SHOT_PREDICTORS = list(config["llm_apis"].keys()) + CW_CLIP_MODELS
 TRANSCRIPTOME_MODELS = config["scfms"] + CW_CLIP_MODELS
+CELLTYPE_EVAL_DATASETS = ["tabula_sapiens", "pancreas", "immgen"]  # optionally: [d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]
 
 from notebooks.zero_shot_validation_scripts.utils import SUFFIX_PREFIX_DICT  # TODO consider moving to config
 
@@ -31,6 +32,7 @@ rule compute_umap_neighbors:
 
 include: "zero_shot_llm.smk"
 include: "zero_shot_finetuning.smk"
+include: "marker_based_celltypes.smk"
 
 rule zero_shot_cellwhisperer_prediction:
     """
@@ -397,3 +399,40 @@ rule zero_shot_performance_suppl_table:
         notebook="../logs/zero_shot_performance_create_xlsx_{model}.ipynb"
     notebook:
         "../notebooks/zero_shot_performance_create_xlsx.py.ipynb"
+
+rule fig2_main:
+    input:
+        expand(rules.plot_confusion_matrix.output.confusion_matrix_plot,
+               model=CLIP_MODEL,
+               dataset=["tabula_sapiens", "tabula_sapiens_well_studied_celltypes"],  # TODO pancreas?
+               metadata_col="celltype",
+               normed=["normed", "raw"]),
+        expand(rules.zero_shot_performance_suppl_table.output.confusion_mtx_table, model=CLIP_MODEL),
+        expand(rules.plot_term_search_results.output.umap_on_neighbors_celltype, celltype=config["celltype_terms"].keys(), file_suffix=["png"], model=CW_CLIP_MODELS),
+        [
+            base_fn.format(dataset=dataset, model=CLIP_MODEL, metadata_col=metadata_col)
+            for base_fn in [rules.plot_zero_shot_predictions_on_umap.output.result_dir, rules.plot_confidence_distributions.output.plot_dir]
+            for dataset in ["tabula_sapiens", "pancreas"]  # TODO config["metadata_cols_per_zero_shot_validation_dataset"].keys()
+            for model in [CLIP_MODEL]
+            for metadata_col in config["metadata_cols_per_zero_shot_validation_dataset"][dataset]
+        ],
+
+        # Text-only LLM prediction
+        expand(rules.aggregate_zero_shot_llm_property_predictions.output.aggregated_predictions,
+               metadata_col=list(set([v for l in config["metadata_cols_per_zero_shot_validation_dataset"].values() for v in l])),
+               # metadata_col=["Tissue", "celltype", "organ_tissue", "Disease_subtype"],  # same same TODO delete
+               grouping=["by_cell", "by_class"]
+               ),
+        expand(rules.zero_shot_performance_macroavg.output.macroavg_summary_plot, model=CLIP_MODEL),
+        expand(rules.zero_shot_performance_examples.output.per_class_examples_plot, model=CLIP_MODEL),
+        expand(rules.aggregate_scfm_evaluations.output, training_options=TRAINING_OPTIONS, metric=["accuracy", "f1", "auroc"]),
+
+        # Figure S2 (extended: embedding and gene set correlation analyses)
+        expand(PROJECT_DIR / config["paths"]["gsva"]["correlation"], dataset=["human_disease"], model=CLIP_MODEL),  # NOTE: Can also be run for tabula_sapiens and for archs4_geo
+        expand(rules.plot_joint_transcriptome_embedding_scib.output.integration_scores, dataset=["tabula_sapiens", "pancreas"]),
+
+        # Marker-based analysis
+        expand(
+            rules.cell_assign.output.performance,
+            dataset=CELLTYPE_EVAL_DATASETS + ["tabula_sapiens_well_studied_celltypes"],
+        )
