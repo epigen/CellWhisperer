@@ -32,12 +32,16 @@ module pancreas:
     snakefile: "pancreas/Snakefile"
     config: config
 
+module aida:
+    snakefile: "aida/Snakefile"
+    config: config
 
 use rule * from tabula_sapiens as tabula_sapiens_*
 use rule * from immgen as immgen_*
 use rule * from bowel_disease as bowel_disease_*
 use rule * from human_disease as human_disease_*
 use rule * from pancreas as pancreas_*
+use rule * from aida as aida_*
 
 BASE_URL = config["precomputing_base_url"]
 
@@ -97,4 +101,5 @@ rule all:
         rules.archs4_geo.output,
         rules.cellxgene_census.output,
         rules.download_conversation_datasets.output,
+        rules.aida_all.input,
     default_target: True

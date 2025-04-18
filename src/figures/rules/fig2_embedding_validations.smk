@@ -350,10 +350,10 @@ rule zero_shot_performance_suppl_table:
     """
     input:
         datasets_perlabel=expand(rules.plot_confusion_matrix.output.performance_metrics_per_metadata, zip,
-                                 dataset=["tabula_sapiens","tabula_sapiens", "tabula_sapiens_well_studied_celltypes", "pancreas", "immgen", "human_disease",  "human_disease"],
-                                 metadata_col=["celltype","organ_tissue","celltype","celltype","celltype","Disease_subtype","Tissue"],
-                                 model=["{model}", "{model}", "{model}", "{model}", "{model}", "{model}", "{model}"],
-                                 normed=["raw", "raw", "raw", "raw", "raw", "raw", "raw"]  # normed/raw are the same :|
+                                 dataset=["tabula_sapiens","tabula_sapiens", "tabula_sapiens_well_studied_celltypes", "pancreas", "immgen", "human_disease",  "human_disease", "aida"],
+                                 metadata_col=["celltype","organ_tissue","celltype","celltype","celltype","Disease_subtype","Tissue","celltype"],
+                                 model=["{model}"]*8,
+                                 normed=["raw"]*8  # normed/raw are the same :|
                                  ),
     output:
         confusion_mtx_table=ZERO_SHOT_CW_MODEL_RESULTS / "performance_metrics_and_confusion_matrix_per_label.xlsx",
@@ -367,7 +367,8 @@ rule zero_shot_performance_suppl_table:
             "celltype",
             "celltype",
             "Disease_subtype",
-            "Tissue",],
+            "Tissue",
+            "celltype"],
         label_cols_pretty = [
             "Cell Type",
             "Organ,Tissue",
@@ -375,7 +376,8 @@ rule zero_shot_performance_suppl_table:
             "Cell Type",
             "Cell Type",
             "Disease Subtype",
-            "Tissue"],
+            "Tissue",
+            "Cell Type"],
         datasets=[
             "tabula_sapiens",
             "tabula_sapiens",
@@ -383,7 +385,8 @@ rule zero_shot_performance_suppl_table:
             "pancreas",
             "immgen",
             "human_disease",
-            "human_disease"],
+            "human_disease",
+            "aida"],
         dataset_names_pretty = [
             "Tabula Sapiens",
             "Tabula Sapiens",
@@ -391,7 +394,8 @@ rule zero_shot_performance_suppl_table:
             "Pancreas",
             "ImmGen",
             "Human Disease",
-            "Human Disease"],
+            "Human Disease",
+            "AIDA"],
     resources:
         mem_mb=2000,
         slurm="cpus-per-task=1"
@@ -404,9 +408,9 @@ rule fig2_main:
     input:
         expand(rules.plot_confusion_matrix.output.confusion_matrix_plot,
                model=CLIP_MODEL,
-               dataset=["tabula_sapiens", "tabula_sapiens_well_studied_celltypes"],  # TODO pancreas?
+               dataset=["tabula_sapiens", "tabula_sapiens_well_studied_celltypes","aida"],  # TODO pancreas?
                metadata_col="celltype",
-               normed=["normed", "raw"]),
+               normed=["normed", "raw","normed"]),
         expand(rules.zero_shot_performance_suppl_table.output.confusion_mtx_table, model=CLIP_MODEL),
         expand(rules.plot_term_search_results.output.umap_on_neighbors_celltype, celltype=config["celltype_terms"].keys(), file_suffix=["png"], model=CW_CLIP_MODELS),
         [

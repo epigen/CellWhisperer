@@ -7,6 +7,61 @@ from zero_shot_validation_scripts.utils import TABSAP_WELLSTUDIED_COLORMAPPING
 from typing import Optional, Mapping, Tuple
 
 
+def preprocess_aida(adata: anndata.AnnData, level=1) -> anndata.AnnData:
+    """
+    Translate cell type names from abbreviations to proper names (based on GPT4o)
+    """
+
+    adata.obs["full_cell_type_name"] = adata.obs["cell_type"].copy()
+
+
+    if level == 1:
+        cell_type_dict = {
+            'B': 'B cell',
+            'CD34_HSPC': 'CD34-positive hematopoietic stem and progenitor cell',
+            'DC': 'dendritic cell',
+            'ILC': 'innate lymphoid cell',
+            'Myeloid': 'myeloid cell',
+            'NK': 'natural killer cell',
+            'Plasma_Cell': 'plasma cell',
+            'Platelet': 'platelet',
+            'T': 'T cell',
+        }
+        level_name = "Annotation_Level1"
+    elif level == 2:
+        cell_type_dict = {
+            'B': 'B cell',
+            'CD16+_NK': 'CD16-positive natural killer cell',
+            'CD34_HSPC': 'CD34-positive hematopoietic stem and progenitor cell',
+            'CD4+_T': 'CD4-positive T cell',
+            'CD56+_NK': 'CD56-positive natural killer cell',
+            'CD8+_T': 'CD8-positive T cell',
+            'DC': 'dendritic cell',
+            'ILC': 'innate lymphoid cell',
+            'Monocyte': 'monocyte',
+            'Myeloid': 'myeloid cell',
+            'NK': 'natural killer cell',
+            'Plasma_Cell': 'plasma cell',
+            'Platelet': 'platelet',
+            'T': 'T cell',
+            'atypical_B': 'atypical B cell',
+            'cDC': 'conventional dendritic cell',
+            'dnT': 'double-negative T cell',
+            'qdT': 'quadruple-negative T cell',
+            'memory_B': 'memory B cell',
+            'naive_B': 'naive B cell',
+            'pDC': 'plasmacytoid dendritic cell',
+        }
+        level_name = "Annotation_Level2"
+    else:
+        raise ValueError("level must be 1 or 2")
+
+
+    adata.obs["celltype"] = adata.obs[level_name].map(cell_type_dict)
+
+    return adata.copy()
+
+
 def preprocess_immgen(adata: anndata.AnnData) -> anndata.AnnData:
     """Preprocess the immgen dataset."""
 
@@ -169,6 +224,9 @@ def load_and_preprocess_dataset(
         adata = preprocess_human_disease(adata)
     elif dataset_name == "immgen":
         adata = preprocess_immgen(adata)
+    elif dataset_name == "aida":
+        adata = preprocess_aida(adata)
+
     else:
         raise ValueError(f"Unknown dataset name: {dataset_name}")
 
