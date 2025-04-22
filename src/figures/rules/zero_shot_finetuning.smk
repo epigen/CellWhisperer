@@ -70,11 +70,11 @@ rule evaluate_scfm:
         predictions=FINETUNE_RESULTS_DIR / "{model}" / "{dataset}" / "predictions_{training_options}.csv",
         performance=FINETUNE_RESULTS_DIR / "{model}" / "{dataset}" / "performance_{training_options}.csv",
     params:
-        batch_size=64,
+        batch_size=32,
         label_col="celltype",
     resources:
         mem_mb=lambda wildcards: 450000 if wildcards.model == "uce" else 300000,
-        slurm=slurm_gres("large")
+        slurm=slurm_gres()
     conda:
         "cellwhisperer"
     log:

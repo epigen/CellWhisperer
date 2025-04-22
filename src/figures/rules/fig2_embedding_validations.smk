@@ -4,7 +4,7 @@ ZERO_SHOT_CW_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,cellwhisperer_clip_.*}"
 
 ZERO_SHOT_PREDICTORS = list(config["llm_apis"].keys()) + CW_CLIP_MODELS
 TRANSCRIPTOME_MODELS = config["scfms"] + CW_CLIP_MODELS
-CELLTYPE_EVAL_DATASETS = ["tabula_sapiens", "pancreas", "immgen"]  # optionally: [d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]
+CELLTYPE_EVAL_DATASETS = ["tabula_sapiens", "pancreas", "immgen", "aida"]  # optionally: [d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]
 
 from notebooks.zero_shot_validation_scripts.utils import SUFFIX_PREFIX_DICT  # TODO consider moving to config
 

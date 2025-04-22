@@ -63,13 +63,6 @@ datasets:
   - hcaorganoids_cancer__primary
   - hcaorganoids_cancer__organoid
 
-zero_shot_validation_datasets:
-  - immgen
-  - human_disease
-  - tabula_sapiens
-  - pancreas
-  - tabula_sapiens_well_studied_celltypes
-
 metadata_cols_per_zero_shot_validation_dataset:
   immgen:
     - celltype
@@ -77,6 +70,8 @@ metadata_cols_per_zero_shot_validation_dataset:
     - Disease_subtype
     - Tissue
   pancreas:
+    - celltype
+  aida:
     - celltype
   tabula_sapiens:
     - celltype
