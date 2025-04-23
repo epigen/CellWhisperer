@@ -60,7 +60,7 @@ rule gpt4transcriptome_baseline:
     input:
         transcriptome_text_features=rules.llava_evaluation_generation_preparation.output.formatted_questions_text_only,
     output:
-        protected(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4transcriptome_responses.jsonl")
+        response=protected(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4transcriptome_responses.jsonl")
     params:
         api_key=lambda wildcards: os.getenv(config["llm_apis"]["gpt4"]["api_key_env"]),
         api_base_url=lambda wildcards: config["llm_apis"]["gpt4"]["base_url"],
@@ -68,7 +68,7 @@ rule gpt4transcriptome_baseline:
     conda:
         "llava"
     notebook:
-        "../notebooks/gpt4transcriptome_baseline.ipynb"
+        "../notebooks/gpt4transcriptome_baseline.py.ipynb"
 
 rule llava_eval_gpt4_review:
     """
@@ -82,7 +82,7 @@ rule llava_eval_gpt4_review:
         questions=rules.llava_evaluation_generation_preparation.output.formatted_questions,  # Contains 'reference' data (top genes, gene sets, caption), the question ('text') and the transcriptome ID ('image')
         reference_responses=rules.llava_evaluation_generation_preparation.output.reference_responses,
         llava_responses=expand(rules.llava_evaluation_generation.output.llava_responses, input_features=["", "_text_only"], allow_missing=True),
-        gpt4transcriptome_baseline_responses=rules.gpt4transcriptome_baseline.output,
+        gpt4transcriptome_baseline_responses=rules.gpt4transcriptome_baseline.output.response,
         rule=ancient("../llava/prompts/gpt_evaluation_prompts.json")  # Alternative prompt (leading to similar results: ../llava/prompts/gpt_evaluation_prompts_alternative.json)
     output:
         evaluation=protected(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4_review.jsonl")
@@ -101,6 +101,7 @@ rule llava_eval_gpt4_review:
 rule llava_eval_gpt4_review_summarize:
     """
     # - compare (group by normal, complex, detailed, cellxgene/archs4)
+    TODO drop the complex vs detailed comparison
     """
 
     input:
@@ -108,7 +109,7 @@ rule llava_eval_gpt4_review_summarize:
         archs4_data=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="archs4_geo"),  # provides the option to exclude single cells.
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
-        overview_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4_review_summary.svg"
+        overview_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_gpt4_review_summary.svg",
     conda:
         "llava"
     params:
@@ -119,6 +120,26 @@ rule llava_eval_gpt4_review_summarize:
     notebook:
         "../notebooks/llava_eval_gpt4_review_summarize.py.ipynb"
 
+rule llava_eval_table:
+    """
+    Take all the jsonl output files and add them to an excel table
+    """
+    input:
+        questions=rules.llava_evaluation_generation_preparation.output.formatted_questions,  # Contains 'reference' data (top genes, gene sets, caption), the question ('text') and the transcriptome ID ('image')
+        reference_responses=rules.llava_evaluation_generation_preparation.output.reference_responses,
+        llava_responses=expand(rules.llava_evaluation_generation.output.llava_responses, input_features=["", "_text_only"], allow_missing=True),    # TODO careful the notebook indexes them with [0], [1]
+        gpt4transcriptome_baseline_responses=rules.gpt4transcriptome_baseline.output.response,
+        llava_eval_gpt4_review=rules.llava_eval_gpt4_review.output.evaluation,
+    output:
+        llava_eval_table=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_llava_eval_table.xlsx",
+    conda:
+        "cellwhisperer"
+    notebook:
+        "../notebooks/llava_eval_table.py.ipynb"
+
+
+
 rule llm_judge_all:
     input:
-        rules.llava_eval_gpt4_review_summarize.output.overview_plot.format(base_model=LLAVA_BASE_MODEL, model=CLIP_MODEL, prompt_variation="llm_judge", dataset="main")
+        rules.llava_eval_gpt4_review_summarize.output.overview_plot.format(base_model=LLAVA_BASE_MODEL, model=CLIP_MODEL, prompt_variation="llm_judge", dataset="main"),
+        rules.llava_eval_table.output.llava_eval_table.format(base_model=LLAVA_BASE_MODEL, model=CLIP_MODEL, prompt_variation="llm_judge", dataset="main"),
