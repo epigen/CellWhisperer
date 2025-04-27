@@ -178,12 +178,30 @@ def preprocess_tabula_sapiens(
 
 
 def preprocess_pancreas(adata: anndata.AnnData) -> anndata.AnnData:
-    """Preprocess the pancreas dataset."""
+    """Preprocess the pancreas dataset (manually curate cell type labels)."""
     # NOTE data does not actually contain raw counts.
     adata.obs["batch"] = adata.obs["tech"]
     adata.X = adata.layers["counts"]
     adata.var["gene_name"] = adata.var.index
-    adata.obs["celltype"] = [x.replace("_", " ") for x in adata.obs["celltype"]]
+
+    celltype_dict = {
+    'gamma': 'gamma cell',
+    'acinar': 'acinar cell',
+    'alpha': 'alpha cell',
+    'delta': 'delta cell',
+    'beta': 'beta cell',
+    'ductal': 'ductal cell',
+    'endothelial': 'endothelial cell',
+    'activated_stellate': 'activated stellate cell',
+    'schwann': 'schwann cell',
+    'mast': 'mast cell',
+    'macrophage': 'macrophage',
+    'epsilon': 'epsilon cell',
+    'quiescent_stellate': 'quiescent stellate cell',
+    't_cell': 'T cell'
+    }
+
+    adata.obs["celltype"] = [celltype_dict[x] for x in adata.obs["celltype"]]
     adata.obs["celltype"] = adata.obs["celltype"].astype("category")
     return adata.copy()
 

@@ -408,9 +408,9 @@ rule fig2_main:
     input:
         expand(rules.plot_confusion_matrix.output.confusion_matrix_plot,
                model=CLIP_MODEL,
-               dataset=["tabula_sapiens", "tabula_sapiens_well_studied_celltypes","aida"],  # TODO pancreas?
+               dataset=["tabula_sapiens", "tabula_sapiens_well_studied_celltypes","aida","pancreas"],
                metadata_col="celltype",
-               normed=["normed", "raw","normed"]),
+               normed=["normed", "raw","normed","normed"]),
         expand(rules.zero_shot_performance_suppl_table.output.confusion_mtx_table, model=CLIP_MODEL),
         expand(rules.plot_term_search_results.output.umap_on_neighbors_celltype, celltype=config["celltype_terms"].keys(), file_suffix=["png"], model=CW_CLIP_MODELS),
         [

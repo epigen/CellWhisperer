@@ -32,21 +32,21 @@ TABSAP_WELLSTUDIED_COLORMAPPING = {
     "basal cell": "tomato",
     "hepatocyte": "goldenrod",
 }
-PANCREAS_ORDER = [
-    "alpha",
-    "beta",
-    "gamma",
-    "delta",
-    "epsilon",
-    "acinar",
-    "ductal",
-    "endothelial",
-    "activated stellate",
-    "quiescent stellate",
-    "schwann",
-    "macrophage",
-    "mast",
-    "t cell",
+PANCREAS_ORDER=[
+    'alpha cell',
+    'beta cell',
+    'gamma cell',
+    'delta cell',
+    'epsilon cell',
+    'acinar cell',
+    'ductal cell',
+    'endothelial cell',
+    'activated stellate cell',
+    'quiescent stellate cell',
+    'schwann cell',
+    'macrophage',
+    'mast cell',
+    'T cell'
 ]
 
 
