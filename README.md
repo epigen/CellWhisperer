@@ -166,7 +166,7 @@ The config used to train is located at `src/cellwhisperer_clip_v1.yaml`
 
 To run sweeps, refer to [this README](./src/experiments/sweeps/README.md). You can run sweeps with the `single_cell_sweeping` tool
 
-### Train CellWhisperer LLM
+### Train CellWhisperer chat model
 
 1. Go to `src/llava`
 2. Run `snakemake`
@@ -200,7 +200,7 @@ Under the hood, the main python package (`cellwhisperer`) and a series of pipeli
 - `cellwhisperer`: CellWhisperer embedding model python package including model, training and inference code
 - `datasets`: retrieval/preparation of training and validation datasets (transcriptomes as well as annotations)
 - `pre_training_processing`: Generation of natural language captions and other preparations to obtain final datasets for multimodal contrastive training
-- `llava`: Pipeline for training and validation of the CellWhisperer LLM model
+- `llava`: Pipeline for training and validation of the CellWhisperer chat model
 - `ablation`: Pipeline for embedding model ablation and evaluation
 - `hosting`: Hosting infrastructure source code
 
@@ -212,7 +212,7 @@ We use `blacken` for automated code formatting.
 
 CellWhisperer builds atop three projects that are integrated via git submodules. These were forked from original repositories on GitHub, in order to retain transparency on our code contributions as well as the option to feed back code into the upstream repository (in case of `cellxgene`).
 
-- `llava`: CellWhisperer LLM model python package including model, training and inference code
+- `llava`: CellWhisperer chat model python package including model, training and inference code
 - `cellxgene`: CELLxGENE Explorer browser package, modified to integrate UI and API elements for CellWhisperer integration
 - `Geneformer`: The transcriptome model used for the CellWhisperer embedding model
 
@@ -235,8 +235,8 @@ For "latent-free" data analysis in the web browser with CellWhisperer (CELLxGENE
 
 For your convenience, the CellWhisperer-integrated `cellxgene` server will access our API for AI functionalities. If you instead want to run the AI models locally follow these instructions:
 
-- for the CLIP model, simply provide the command line argument `--cellwhisperer-clip-model cellwhisperer/results/models/jointemb/cellwhisperer_clip_v1.ckpt` to the `cellxgene` command.
-- for the LLM model:
+- for the embedding model, simply provide the command line argument `--cellwhisperer-clip-model cellwhisperer/results/models/jointemb/cellwhisperer_clip_v1.ckpt` to the `cellxgene` command.
+- for the chat model:
   - run a controller with command `python -m llava.serve.controller --host 0.0.0.0 --port 10000` in the `llava` environment
   - run a worker with the command `python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 --controller localhost:10000 --port 40000 --worker localhost:40000 --model-path /path/to/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1/`
   - adjust the variable `CONTROLLER_URL` in `cellwhisperer/modules/cellxgene/server/common/compute/llava_utils.py` to your locally running LLM service.
