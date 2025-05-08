@@ -1,10 +1,12 @@
 
 ZERO_SHOT_RESULTS = PROJECT_DIR / "results/plots/zero_shot_validation"
 ZERO_SHOT_CW_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,cellwhisperer_clip_.*}"
+ZERO_SHOT_CW_MODEL_RESULTS_ESCAPED = ZERO_SHOT_RESULTS / "{{model,cellwhisperer_clip_.*}}" # The "*" causes issues otherwise
 
 ZERO_SHOT_PREDICTORS = list(config["llm_apis"].keys()) + CW_CLIP_MODELS
 TRANSCRIPTOME_MODELS = config["scfms"] + CW_CLIP_MODELS
 CELLTYPE_EVAL_DATASETS = ["tabula_sapiens", "pancreas", "immgen", "aida", "tabula_sapiens_well_studied_celltypes"]  # optionally: [d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]
+METRICS = ["accuracy", "f1", "auroc"]
 
 from notebooks.zero_shot_validation_scripts.utils import SUFFIX_PREFIX_DICT  # TODO consider moving to config
 
@@ -48,7 +50,7 @@ rule zero_shot_cellwhisperer_prediction:
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",  # needed to embed the keywords
     output:
         # Using a directory here because the exact files produced depend on the dataset:
-        predictions=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv",  # NOTE: might be used as input for `plot_confusion_matrix` as well (and by extension `zero_shot_performance_macroavg`)
+        predictions=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv",  # NOTE: might be used as input for `plot_confusion_matrix_and_get_performance_metrics` as well (and by extension `zero_shot_performance_macroavg`)
         # scores=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping}.scores.csv",  # TODO refactor away since everything is in predictions anyways
     params:
         use_prefix_suffix_version=True,
@@ -209,31 +211,32 @@ rule plot_zero_shot_predictions_on_umap:
     notebook:
         "../notebooks/plot_zero_shot_predictions_on_umap.py.ipynb"
 
-rule plot_confusion_matrix:
+
+rule plot_confusion_matrix_and_get_performance_metrics:
     """
     NOTE: could probably use `scores` computed by `zero_shot_cellwhisperer_prediction`. This would work by refactoring the bloated function `get_performance_metrics_transcriptome_vs_text`, such that it takes as input only the scores and then computes the metrics.
     """
     input:
-        predictions=rules.zero_shot_cellwhisperer_prediction.output.predictions.replace("{grouping}", "by_cell"),
+       # predictions=rules.zero_shot_cellwhisperer_prediction.output.predictions.replace("{grouping}", "by_cell"), # Not actually used
         processed_dataset=PROJECT_DIR / config["paths"]["model_processed_dataset"],
         raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
-        model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt"
+        model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
     output:
-        confusion_matrix_plot=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "confusion_matrix_{normed}.pdf",
-        confusion_matrix_table=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "confusion_matrix_{normed}.xlsx",
-        performance_metrics=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "performance_metrics_{normed}.csv",  # note that this is the same for normed and unnormed (would be better to split the rule once more actually)
-        performance_metrics_per_metadata=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "performance_metrics_per_metadata_{normed}.csv",
+        confusion_matrix_plot=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "confusionmatrix{normed}.pdf",
+        confusion_matrix_table=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "confusionmatrix{normed}.xlsx",
+        performance_metrics=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "performancemetrics{normed}.csv",  # note that this is the same for normed and unnormed (would be better to split the rule once more actually)
+        performance_metrics_per_metadata=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "performance_metrics_permetadata{normed}.csv",
     params:
         normed=lambda wildcards: wildcards.normed == "normed",
-        use_prefix_suffix_version=True
+        use_prefix_suffix_version=True,
     resources:
         mem_mb=350000,
         slurm=slurm_gres()
     log:
-        notebook="../logs/plot_confusion_matrix_{model}_{dataset}_{metadata_col}_{normed}.ipynb"
+        notebook="../logs/plot_confusion_matrix_and_get_performance_metrics_{model}_{dataset}_{metadata_col}_{normed}.ipynb"
     notebook:
-        "../notebooks/plot_confusion_matrix.py.ipynb"
+        "../notebooks/plot_confusion_matrix_and_get_performance_metrics.py.ipynb"
 
 rule plot_term_search_results:
     """
@@ -264,60 +267,61 @@ rule plot_term_search_results:
     notebook:
         "../notebooks/plot_term_search_results.py.ipynb"
 
-rule zero_shot_performance_macroavg:
+rule cw_vs_basemodel_macroavg_comparisons:
     """
-    Aggregated performance metrics (barplots) across multiple datasets and metadata columns
-
-    Ugly but results are correct
+    Compare macroaverage celltype prediction performance of CellWhisperer (with a given transcriptome base model) vs. that basemodel (fine-tuned) 
+    and vs a marker-based method (CellAssign)
     """
     input:
-        datasets_macroavg=expand(rules.plot_confusion_matrix.output.performance_metrics, zip,
-                                 dataset=["tabula_sapiens", "tabula_sapiens_well_studied_celltypes", "pancreas", "immgen", "human_disease", "tabula_sapiens", "human_disease"],
-                                 metadata_col=["celltype", "celltype", "celltype", "celltype", "Disease_subtype", "organ_tissue", "Tissue"],
-                                 model=["{model}", "{model}", "{model}", "{model}", "{model}", "{model}", "{model}"],
-                                 normed=["raw", "raw", "raw", "raw", "raw", "raw", "raw"] # normed/raw are the same :|
+        cw_macroaverages=expand(rules.plot_confusion_matrix_and_get_performance_metrics.output.performance_metrics, zip,
+                                 dataset=CELLTYPE_EVAL_DATASETS,
+                                 metadata_col=["celltype"]*(len(CELLTYPE_EVAL_DATASETS)),
+                                 normed=["raw"]*(len(CELLTYPE_EVAL_DATASETS)),  # normed/raw are the same :|
+                                 allow_missing=True,
                                  ),
-        datasets_perlabel=expand(rules.plot_confusion_matrix.output.performance_metrics_per_metadata, zip,
-                                 dataset=["tabula_sapiens", "tabula_sapiens_well_studied_celltypes", "pancreas", "immgen", "human_disease", "tabula_sapiens", "human_disease"],
-                                 metadata_col=["celltype", "celltype", "celltype", "celltype", "Disease_subtype", "organ_tissue", "Tissue"],
-                                 model=["{model}", "{model}", "{model}", "{model}", "{model}", "{model}", "{model}"],
-                                 normed=["raw", "raw", "raw", "raw", "raw", "raw", "raw"]  # normed/raw are the same :|
-                                 ),
+        aggregated_predictions_finetuned_models=expand(rules.aggregate_scfm_evaluations.output.aggregated_predictions,
+                                 metric=METRICS,
+                                 training_options=TRAINING_OPTIONS, ),
+        marker_based_method_performances = expand(rules.cell_assign.output.performance, dataset=CELLTYPE_EVAL_DATASETS),
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
-        macroavg_summary_plot=ZERO_SHOT_CW_MODEL_RESULTS / "performance_metrics.selected_datasets.rocauc_and_accuracy.pdf",
+        scores_across_training_options = expand(ZERO_SHOT_CW_MODEL_RESULTS_ESCAPED / "CW_vs_finetuned_base_model_macroavg_{metric}.csv",
+                                 metric=METRICS),
+        barplots_across_training_options = expand(ZERO_SHOT_CW_MODEL_RESULTS_ESCAPED / "CW_vs_finetuned_base_model_macroavg_{metric}.barplot.pdf",
+                                    metric=METRICS),
+        barplots_across_training_options_across_metrics = ZERO_SHOT_CW_MODEL_RESULTS / "CW_vs_finetuned_base_model_macroavg_all_metrics.barplot.pdf",
     conda:
         "cellwhisperer"
     params:
-        label_cols=[
-            "celltype",
-            "celltype",
-            "celltype",
-            "celltype",
-            "Disease_subtype",
-            "organ_tissue",
-            "Tissue",],
-        datasets=["tabula_sapiens", "tabula_sapiens_well_studied_celltypes", "pancreas", "immgen", "human_disease", "tabula_sapiens", "human_disease"]
+        label_cols=["celltype"]*len(CELLTYPE_EVAL_DATASETS),
+        datasets=CELLTYPE_EVAL_DATASETS,
+        metrics=METRICS,
+        training_options=TRAINING_OPTIONS,
     resources:
         mem_mb=2000,
         slurm="cpus-per-task=1"
     log:
-        notebook="../logs/zero_shot_performance_macroavg_{model}.ipynb"
+        notebook="../logs/cw_vs_basemodel_macroavg_comparisons_{model}.ipynb"
     notebook:
-        "../notebooks/zero_shot_performance_macroavg.py.ipynb"
+        "../notebooks/cw_vs_basemodel_macroavg_comparisons.py.ipynb"
 
 rule zero_shot_performance_examples:
     """
     Example accuracies for zero-shot cell type property predictions
     """
     input:
-        datasets_perlabel=expand(rules.plot_confusion_matrix.output.performance_metrics_per_metadata, zip,
-                                 dataset=["tabula_sapiens", "tabula_sapiens", "human_disease"],
-                                 metadata_col=["celltype", "organ_tissue", "Disease_subtype"],
+        per_class_performance=expand(rules.plot_confusion_matrix_and_get_performance_metrics.output.performance_metrics_per_metadata, zip,
+                                 dataset=[ "tabula_sapiens", "human_disease", "human_disease"],
+                                 metadata_col=["organ_tissue", "Tissue","Disease_subtype",],
                                  model=["{model}", "{model}", "{model}"],
-                                 normed=["raw", "raw", "raw"]  # normed/raw are the same :|
+                                 normed=["raw", "raw", "raw"],  # normed/raw are the same :|,
                                  ),
-
+        macroavg_performance=expand(rules.plot_confusion_matrix_and_get_performance_metrics.output.performance_metrics, zip,
+                                 dataset=["tabula_sapiens", "human_disease", "human_disease"],
+                                 metadata_col=["organ_tissue", "Tissue","Disease_subtype",],
+                                 model=["{model}", "{model}", "{model}"],
+                                 normed=["raw", "raw", "raw"],  # normed/raw are the same :|,
+                                 ),
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
         per_class_examples_plot=ZERO_SHOT_CW_MODEL_RESULTS / "performance_metrics.selected_classes_and_datasets.pdf",
@@ -325,16 +329,19 @@ rule zero_shot_performance_examples:
         "cellwhisperer"
     params:  # matching to dataset inputs
         label_cols=[
-            "celltype",
             "organ_tissue",
+            "Tissue",
             "Disease_subtype",
         ],
         selected_sample_lists=[
-            ["kidney epithelial cell", "erythrocyte","plasma cell"],
+            # ["Kidney", "Lung", "Tongue"],
+            # ["Heart","Bowel","Liver"],
+            # ["Dilated cardiomyopathy","Melanoma","Hepatocellular carcinoma"],
             ["Kidney", "Lung", "Tongue"],
-            ["Dilated cardiomyopathy","Melanoma","Hepatocellular carcinoma"],
+            ["Heart","Ovary","Liver"],
+            ["Dilated cardiomyopathy","Meningioma","Hepatocellular carcinoma"],
         ],
-        datasets=["tabula_sapiens", "tabula_sapiens", "human_disease"],
+        datasets=["tabula_sapiens",  "human_disease","human_disease"],
         suffix_prefix_dict=SUFFIX_PREFIX_DICT,
     resources:
         mem_mb=2000,
@@ -349,7 +356,7 @@ rule zero_shot_performance_suppl_table:
     Create an xlsx file with one sheet per dataset, containing per-label performance values and the predicted classes (confusion matrix)
     """
     input:
-        datasets_perlabel=expand(rules.plot_confusion_matrix.output.performance_metrics_per_metadata, zip,
+        datasets_perlabel=expand(rules.plot_confusion_matrix_and_get_performance_metrics.output.performance_metrics_per_metadata, zip,
                                  dataset=["tabula_sapiens","tabula_sapiens", "tabula_sapiens_well_studied_celltypes", "pancreas", "immgen", "human_disease",  "human_disease", "aida"],
                                  metadata_col=["celltype","organ_tissue","celltype","celltype","celltype","Disease_subtype","Tissue","celltype"],
                                  model=["{model}"]*8,
@@ -406,7 +413,7 @@ rule zero_shot_performance_suppl_table:
 
 rule fig2_main:
     input:
-        expand(rules.plot_confusion_matrix.output.confusion_matrix_plot,
+        expand(rules.plot_confusion_matrix_and_get_performance_metrics.output.confusion_matrix_plot,
                model=CLIP_MODEL,
                dataset=["tabula_sapiens", "tabula_sapiens_well_studied_celltypes","aida","pancreas"],
                metadata_col="celltype",
@@ -427,7 +434,8 @@ rule fig2_main:
                # metadata_col=["Tissue", "celltype", "organ_tissue", "Disease_subtype"],  # same same TODO delete
                grouping=["by_cell", "by_class"]
                ),
-        expand(rules.zero_shot_performance_macroavg.output.macroavg_summary_plot, model=CLIP_MODEL),
+
+        expand(rules.cw_vs_basemodel_macroavg_comparisons.output.barplots_across_training_options_across_metrics, model=CLIP_MODEL),
         expand(rules.zero_shot_performance_examples.output.per_class_examples_plot, model=CLIP_MODEL),
         expand(rules.aggregate_scfm_evaluations.output, training_options=TRAINING_OPTIONS, metric=["accuracy", "f1", "auroc"]),
 
