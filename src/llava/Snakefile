@@ -38,10 +38,19 @@ rule all:
         expand(rules.finetune_llava.output.output_dir,
                base_model=[BASE_MODEL],
                model=["uce",
+                      "scgpt",
                       "geneformer",
                       config["model_name_path_map"]["cellwhisperer_uce"],
+                      config["model_name_path_map"]["cellwhisperer_scgpt"],
                       config["model_name_path_map"]["cellwhisperer_geneformer"]
                       ],
+               llava_dataset=["_celltype", "_default"]
+               ),
+        expand(rules.finetune_llava.output.output_dir,
+               base_model=[BASE_MODEL],
+               model=["uce",  # doesn't matter which one, as it is unused..
+                      ],
+               llava_dataset=["_top50genescelltype"]
                )
 
     default_target: True

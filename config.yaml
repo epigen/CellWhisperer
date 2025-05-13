@@ -31,14 +31,14 @@ paths:
     plots: results/plots/gsva_correlation/{dataset}/{model}
 
   llava:
-    root: results/llava/
-    pretrain_text_dataset: results/llava/pretrain_texts.json
-    finetune_text_dataset: results/llava/finetune_conversations.json
-    evaluation_text_dataset: results/llava/evaluation/{dataset}_conversations.json
-    combined_processed_data: results/llava/combined_processed_data/{model}.npz
-    pretrained_model_dir: results/llava/pretrained/{base_model}__{model}/
-    finetuned_model_dir: results/llava/finetuned/{base_model}__{model}/
-    evaluation_results:  results/plots/llava/{dataset}/{base_model}__{model}/{prompt_variation}/
+    root: results/llava{llava_dataset}/
+    pretrain_text_dataset: results/llava{llava_dataset}/pretrain_texts.json
+    finetune_text_dataset: results/llava{llava_dataset}/finetune_conversations.json
+    evaluation_text_dataset: results/llava{llava_dataset}/evaluation/{dataset}_conversations.json  # note: for the LLM-benchmark, we set them to all-lowercase
+    combined_processed_data: results/llava_any/combined_processed_data/{model}.npz
+    pretrained_model_dir: results/llava{llava_dataset}/pretrained/{base_model}__{model}/
+    finetuned_model_dir: results/llava{llava_dataset}/finetuned/{base_model}__{model}/
+    evaluation_results:  results/plots/llava{llava_dataset}/{dataset}/{base_model}__{model}/{prompt_variation}/
   geo_umap: results/plots/geo_umap/{model}/
   ablations:
     models: results/models/ablations/
@@ -190,10 +190,10 @@ llm_apis:
     api_key_env: OLLAMA_API_KEY
     base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
     model_name: llama3.3:70b
-  llama31:
-    api_key_env: OLLAMA_API_KEY
-    base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
-    model_name: llama3.1:8b
+  # llama31:  # TODO perhaps delete here
+  #   api_key_env: OLLAMA_API_KEY
+  #   base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
+  #   model_name: llama3.1:8b
   mistral7b:
     api_key_env: OLLAMA_API_KEY
     base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server

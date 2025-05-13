@@ -3,7 +3,6 @@ ZERO_SHOT_RESULTS = PROJECT_DIR / "results/plots/zero_shot_validation"
 ZERO_SHOT_CW_MODEL_RESULTS = ZERO_SHOT_RESULTS / "{model,cellwhisperer_clip_.*}"
 ZERO_SHOT_CW_MODEL_RESULTS_ESCAPED = ZERO_SHOT_RESULTS / "{{model,cellwhisperer_clip_.*}}" # The "*" causes issues otherwise
 
-ZERO_SHOT_PREDICTORS = list(config["llm_apis"].keys()) + CW_CLIP_MODELS
 TRANSCRIPTOME_MODELS = config["scfms"] + CW_CLIP_MODELS
 CELLTYPE_EVAL_DATASETS = ["tabula_sapiens", "pancreas", "immgen", "aida", "tabula_sapiens_well_studied_celltypes"]  # optionally: [d for d, cols in config["metadata_cols_per_zero_shot_validation_dataset"].items() if "celltype" in cols]
 METRICS = ["accuracy", "f1", "auroc"]
@@ -11,6 +10,7 @@ METRICS = ["accuracy", "f1", "auroc"]
 from notebooks.zero_shot_validation_scripts.utils import SUFFIX_PREFIX_DICT  # TODO consider moving to config
 
 include: "../../shared/rules/training_sample_weights.smk"
+include: "prompt_sensitivity.smk"
 
 # Computations
 rule compute_umap_neighbors:
@@ -32,7 +32,6 @@ rule compute_umap_neighbors:
     notebook:
         "../notebooks/compute_umap_neighbors.py.ipynb"
 
-include: "zero_shot_llm.smk"
 include: "zero_shot_finetuning.smk"
 include: "marker_based_celltypes.smk"
 
@@ -428,13 +427,7 @@ rule fig2_main:
             for metadata_col in config["metadata_cols_per_zero_shot_validation_dataset"][dataset]
         ],
 
-        # Text-only LLM prediction
-        expand(rules.aggregate_zero_shot_llm_property_predictions.output.aggregated_predictions,
-               metadata_col=list(set([v for l in config["metadata_cols_per_zero_shot_validation_dataset"].values() for v in l])),
-               # metadata_col=["Tissue", "celltype", "organ_tissue", "Disease_subtype"],  # same same TODO delete
-               grouping=["by_cell", "by_class"]
-               ),
-
+        expand(rules.zero_shot_performance_macroavg.output.macroavg_summary_plot, model=CLIP_MODEL),
         expand(rules.cw_vs_basemodel_macroavg_comparisons.output.barplots_across_training_options_across_metrics, model=CLIP_MODEL),
         expand(rules.zero_shot_performance_examples.output.per_class_examples_plot, model=CLIP_MODEL),
         expand(rules.aggregate_scfm_evaluations.output, training_options=TRAINING_OPTIONS, metric=["accuracy", "f1", "auroc"]),
@@ -448,3 +441,5 @@ rule fig2_main:
             rules.cell_assign.output.performance,
             dataset=CELLTYPE_EVAL_DATASETS,
         )
+
+        rules.plot_query_variant_cell_matching.output.plot.format(model=config["model_name_path_map"]["cellwhisperer_geneformer"]),

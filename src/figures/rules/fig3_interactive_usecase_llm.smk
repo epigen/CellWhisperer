@@ -33,12 +33,38 @@ def top_genes_fn(wildcards):
     else:
         return [rules.compute_top_genes.output.top_genes.format(dataset=wildcards.dataset.replace("_top50genes", ""))]
 
+
+rule celltype_evaluation_dataset:
+    """
+    TODO rename to llava_?
+
+    _celltype is lower case to avoid confusing the model
+    """
+    input:
+        dataset=PROJECT_DIR / config["paths"]["read_count_table"],
+    output:
+        _default=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="{dataset}", llava_dataset="_default"),
+        _celltype=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="{dataset}", llava_dataset="_celltype"),
+        _top50genescelltype=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="{dataset}", llava_dataset="_top50genescelltype"),
+    params:
+        num_cells_per_celltype=None,  # `None` corresponds to *all* cells. The input dataset is already downsampled to 100 cells per cell type.
+        question=config["llava_eval"]["question_celltype"],
+        response_prefix=config["llava_eval"]["response_prefix_celltype"],
+    resources:
+        mem_mb=90000,
+    conda:
+        "cellwhisperer"
+    notebook:
+        "../notebooks/celltype_evaluation_dataset.py.ipynb"
+
+
+
 rule llava_evaluation_topgenes_dataset:
     input:
-        dataset=lambda wildcards: str(PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"]).format(dataset=wildcards.dataset.replace("_top50genes", "")),
+        dataset=lambda wildcards: str(PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"]).format(dataset=wildcards.dataset.replace("_top50genes", ""), llava_dataset=wildcards.llava_dataset),
         top_genes=top_genes_fn
     output:
-        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
+        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].replace("{dataset}", "{dataset,.+_top50genes}"),
     params:
         question=config["llava_eval"]["question_topgenes"],
         response_prefix=config["llava_eval"]["response_prefix_topgenes"],
@@ -52,10 +78,11 @@ rule llava_evaluation_topgenes_dataset:
 
 rule llava_evaluation_perplexity:
     """
+    NOTE: slight limitation: When applying preprompts, we measure the perplexity of both the preprompt-response and the real response. This introduces a little bit of noise, but probably no bias.
     """
     input:
         llava_model=lambda wildcards:
-            ancient(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"].format(base_model=wildcards.base_model, model=wildcards.model))
+            (PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"].format(base_model=wildcards.base_model, model=wildcards.model, llava_dataset=wildcards.llava_dataset))
             if wildcards.model != "NONE" else
             PROJECT_DIR / "resources" / wildcards.base_model,
         evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
@@ -68,24 +95,34 @@ rule llava_evaluation_perplexity:
         all_perplexities=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "all_perplexities.csv",
     params:
         num_projector_tokens=int(config["llava_projector_type"].split("_")[1].strip("t")),
-        background_shuffle=lambda wildcards: {"with50topgenesshuffled": "genesshuffled", "with50topgenesresponsepermuted": "responsepermuted", "without50topgenesresponsepermuted": "responsepermuted"}.get(wildcards.prompt_variation, "transcriptome"),
-        num_negatives=30,
+        background_shuffle=lambda wildcards: ("responsepermuted" if "responsepermuted" in wildcards.prompt_variation
+                                              else (
+                                                      "llm-response" if "response" in wildcards.prompt_variation
+                                                      else (
+                                                              "genesshuffled" if "shuffled" in wildcards.prompt_variation
+                                                              else "transcriptome"
+                                                      )
+                                              )
+                                              ),
+        num_negatives=30,  # unused for `llm-response` to get all label-probabilities.
         model_layer_selector=-1,
         pre_prompt_topgenes=lambda wildcards: config["llava_eval"]["pre_prompt_topgenes"] if "with50topgenes" in wildcards.prompt_variation else None,
         top_n_genes=50,
         is_multimodal=lambda wildcards: not (wildcards.model == "NONE" or "noembedding" in wildcards.prompt_variation)
     resources:
-        mem_mb=100000,
+        mem_mb=200000,
         slurm=lambda wildcards: slurm_gres(
             "large",
-            num_gpus={LLAVA_BASE_MODEL: 1, "Llama-3.1-8B-Instruct": 1, "Llama-3.3-70B-Instruct": 3}[wildcards.base_model]
+            num_gpus={LLAVA_BASE_MODEL: 1, "Llama-3.1-8B-Instruct": 2, "Llama-3.3-70B-Instruct": 4}[wildcards.base_model]
         )
     log:
-        notebook="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{prompt_variation}.ipynb",
-        log="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{prompt_variation}.log"
+        notebook="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{llava_dataset}{prompt_variation}.ipynb",
+        log="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{llava_dataset}{prompt_variation}.log"
     threads: 16
     notebook:
         "../notebooks/llava_evaluation_perplexity.py.ipynb"
+
+
 
 rule llava_evaluation_perplexity_plots:
     """
@@ -97,7 +134,7 @@ rule llava_evaluation_perplexity_plots:
         log_perplexity_ratio=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "log_mean_perplexity.ratio",  # smaller is better log(ppl_real/ppl_neg_control)
         comparison_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "perplexity_quantile.svg",  # barplot
         detailed_plot=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "detailed.svg",  # barplot
-        full_supp_table=PROJECT_DIR / config["paths"]["llava"]["root"] / "{dataset}" / "{base_model}__{model}" / "quantile_stats_{prompt_variation}.xlsx"
+        full_supp_table=PROJECT_DIR / config["paths"]["llava"]["root"] / "{dataset}" / "{base_model}__{model}" / "quantile_stats_{prompt_variation}.xlsx",
     params:
         plot_celltypes=config["top20_lung_liver_blood_celltypes"],
         response_prefix=lambda wildcards: config["llava_eval"]["response_prefix_{}".format(
@@ -105,18 +142,38 @@ rule llava_evaluation_perplexity_plots:
     conda:
         "llava"  # newer version of pandas in this env
     log:
-        notebook="logs/llava_evaluation_perplexity_plots/{dataset}_{base_model}_{model}_{prompt_variation}.ipynb"
+        notebook="logs/llava_evaluation_perplexity_plots/{dataset}_{base_model}_{model}_{llava_dataset}{prompt_variation}.ipynb"
     notebook:
         "../notebooks/llava_evaluation_perplexity_plots.py.ipynb"
 
+rule llava_evaluation_prediction_scores:
+    """
+    Only works for `response` predictions, as we only have complete predictions for all possible labels for these. (hence the regex in the output rule)
+    """
+    input:
+        all_perplexities=rules.llava_evaluation_perplexity.output.all_perplexities,
+    output:
+        predictions_raw=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "predictions_raw.csv",  # probabilities.
+        predictions=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "predictions.csv",  # columns: `,predicted_labels,valid_prediction,label,is_correct` (len is len(dataset), e.g. 15159)
+        performance=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "performance.csv",
+    wildcard_constraints:
+        propmt_variation=".*response(?!permuted).*",
+    conda:
+        "llava"  # newer version of pandas in this env
+    log:
+        notebook="logs/llava_evaluation_prediction_scores/{dataset}_{base_model}_{model}_{llava_dataset}{prompt_variation}.ipynb"
+    notebook:
+        "../notebooks/llava_evaluation_prediction_scores.py.ipynb"
+
 
 def input_configurations(wildcards):
+    # TODO delete commented lines for brevity
     if wildcards.plot_type == "llava_cw_vs_geneformer":
         return [
             {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "without50topgenes"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "with50topgenes"},
+            # {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "with50topgenes"},
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},
+            # {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},
         ]
     if wildcards.plot_type == "gene_predictability":
         if not wildcards.dataset.endswith("top50genes"):
@@ -133,10 +190,15 @@ def input_configurations(wildcards):
         return [
             # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},  # neg control
 
-            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
-            {"base_model": "Llama-3.1-8B-Instruct", "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
-            {"base_model": "Llama-3.3-70B-Instruct", "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
-            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},
+            # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
+            # {"base_model": "Llama-3.1-8B-Instruct", "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
+            # {"base_model": "Llama-3.3-70B-Instruct", "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
+            # {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},
+
+            {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesresponse"},
+            {"base_model": "Llama-3.3-70B-Instruct", "model": "NONE", "prompt_variation": "with50topgenesresponse"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponse"},
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenesresponse"},  # just added this for curiosity
         ]
     if wildcards.plot_type == "cw_preprompt_useless":
         if wildcards.dataset.endswith("top50genes"):
@@ -145,6 +207,7 @@ def input_configurations(wildcards):
             # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},  # neg control
             # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesshuffled"},  # semi-neg control
             # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenes"},  # pos control
+            {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "noembedding"},  # Baseline: CW with no input at all
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenesnoembedding"},  # Baseline: CW with only top 50 genes
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},  # show that adding 50 top genes doesn't help (much)
@@ -165,14 +228,14 @@ rule llava_comparative_perplexity_plots:
     """
     input:
         perplexities=lambda wildcards: [
-            rules.llava_evaluation_perplexity.output.all_perplexities.format(**x, dataset=wildcards.dataset)
+            rules.llava_evaluation_perplexity.output.all_perplexities.format(**x, dataset=wildcards.dataset, llava_dataset="_default")
             for x in input_configurations(wildcards)
         ],
-        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"],
+        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(llava_dataset="_default", dataset="{dataset}"),
         mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
     output:
-        individual_performances=PROJECT_DIR / "results/plots/llava/{dataset}/ppl_model_comparison/{plot_type}/{plot_metric}_individual.svg",
-        relative_performances=PROJECT_DIR / "results/plots/llava/{dataset}/ppl_model_comparison/{plot_type}/{plot_metric}_relative.svg",
+        individual_performances=PROJECT_DIR / "results/plots/llava_default/{dataset}/ppl_model_comparison/{plot_type}/{plot_metric}_individual.svg",
+        relative_performances=PROJECT_DIR / "results/plots/llava_default/{dataset}/ppl_model_comparison/{plot_type}/{plot_metric}_relative.svg",
     params:
         comparison_sequence=input_configurations,
         plot_celltypes=config["top20_lung_liver_blood_celltypes"],
@@ -188,44 +251,20 @@ rule llava_comparative_perplexity_plots:
 
 rule fig3_llava_ppl_all:
     input:
+        # Evaluation compared to mismatched conversations
+        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
+               plot_name=["detailed", "perplexity_quantile"],
+               dataset=["main", "tabula_sapiens_100_cells_per_type"],  # these are llava evaluation datasets
+               base_model=[LLAVA_BASE_MODEL],
+               model=[config["model_name_path_map"]["cellwhisperer_geneformer"]],
+               prompt_variation=["without50topgenes"],  # default
+               llava_dataset=["_default"],
+               ),
+
+        # Comparison benchmark
         expand(
             rules.llava_comparative_perplexity_plots.output.individual_performances,
-            plot_metric=["log2_correct_ppl", "log2_ppl_ratio"],
-            plot_type=["llava_cw_vs_geneformer", "text_only_vs_cw", "cw_preprompt_useless"],
-            dataset=["main", "tabula_sapiens_100_cells_per_type"],  # only 'normal' datasets
+            plot_metric=["log2_correct_ppl"],
+            plot_type=["text_only_vs_cw"],
+            dataset=["main", "tabula_sapiens_100_cells_per_type"],  # these are llava evaluation datasets
         ),
-        expand(
-            rules.llava_comparative_perplexity_plots.output.individual_performances,
-            plot_metric=["log2_correct_ppl", "log2_ppl_ratio"],
-            plot_type=["llava_cw_vs_geneformer", "gene_predictability"],
-            dataset=["main_top50genes", "tabula_sapiens_100_cells_per_type_top50genes"],  # only top50 datasets
-        ),
-
-        # Pre-revision
-        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
-               plot_name=["detailed", "perplexity_quantile"],
-               dataset=["main", "tabula_sapiens_100_cells_per_type"],  # NOTE: these are llava evaluation datasets
-               base_model=[LLAVA_BASE_MODEL],
-               model=[config["model_name_path_map"]["cellwhisperer_geneformer"], "geneformer"],  # config["model_name_path_map"]["cellwhisperer_uce"], "uce"
-               prompt_variation=["with50topgenes", "without50topgenes", "with50topgenesshuffled"],
-               ),
-
-        # top 50 genes prediction
-        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
-               plot_name=["detailed", "perplexity_quantile"],
-               dataset=["main_top50genes", "tabula_sapiens_100_cells_per_type_top50genes"],
-               base_model=[LLAVA_BASE_MODEL],
-               model=[config["model_name_path_map"]["cellwhisperer_geneformer"], "geneformer"],  # config["model_name_path_map"]["cellwhisperer_uce"], "uce"],
-               prompt_variation=["without50topgenes", "without50topgenesresponsepermuted"],
-               ),
-        # text-only (non-finetuned) LLMs
-        expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",
-               plot_name=["detailed", "perplexity_quantile"],
-               dataset=["main", "tabula_sapiens_100_cells_per_type"],
-               base_model=[LLAVA_BASE_MODEL, "Llama-3.1-8B-Instruct", "Llama-3.3-70B-Instruct"],
-               model=["NONE"],
-               prompt_variation=["with50topgenes", "with50topgenesshuffled"],
-               ),
-
-        # judge
-        rules.llava_eval_gpt4_review_summarize.output.overview_plot.format(base_model=LLAVA_BASE_MODEL, model=CLIP_MODEL, prompt_variation="llm_judge", dataset="main")

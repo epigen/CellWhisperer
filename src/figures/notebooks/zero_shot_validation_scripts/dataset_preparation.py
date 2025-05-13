@@ -66,11 +66,11 @@ def preprocess_immgen(adata: anndata.AnnData) -> anndata.AnnData:
     """Preprocess the immgen dataset."""
 
     translation_dict = {
-        "B": "B cells",
-        "DC": "Dendritic cells",
-        "ILC": "Natural Killer cells",
-        "Mo": "Monocytes",
-        "T": "T cells",
+        "B": "B cell",
+        "DC": "dendritic cell",
+        "ILC": "natural killer cell",
+        "Mo": "monocyte",
+        "T": "T cell",
     }
 
     adata.obs["celltype"] = [

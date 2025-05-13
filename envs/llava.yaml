@@ -19,3 +19,4 @@ dependencies:
   - pip:
     - -e ../modules/LLaVA/[train]
     - anndata==0.10.7
+    - torchmetrics==1.7.1

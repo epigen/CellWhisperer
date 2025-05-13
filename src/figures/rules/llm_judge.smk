@@ -33,7 +33,7 @@ rule llava_evaluation_generation:
 
     input:
         llava_model=ancient(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"]),
-        image_data=rules.combine_processed_data.output.combined.format(model=config["model_name_path_map"]["cellwhisperer"]),
+        image_data=rules.combine_processed_data.output.combined.format(model=config["model_name_path_map"]["cellwhisperer"], llava_dataset="_default"),
         questions=lambda wildcards: rules.llava_evaluation_generation_preparation.output[f"formatted_questions{wildcards.input_features}"],
     output:
         llava_responses=PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "generation_llava_responses{input_features,[^/]*}.jsonl"
@@ -116,7 +116,7 @@ rule llava_eval_gpt4_review_summarize:
         complex_samples=COMPLEX_SAMPLES,  # for grouping
         detailed_samples=DETAILED_SAMPLES,  # for grouping
     log:
-        "logs/llava_eval_gpt4_review_summarize_{dataset}_{base_model}__{model}_{prompt_variation}.log"
+        "logs/llava_eval_gpt4_review_summarize_{dataset}_{base_model}__{model}_{llava_dataset}_{prompt_variation}.log"
     notebook:
         "../notebooks/llava_eval_gpt4_review_summarize.py.ipynb"
 
@@ -141,5 +141,5 @@ rule llava_eval_table:
 
 rule llm_judge_all:
     input:
-        rules.llava_eval_gpt4_review_summarize.output.overview_plot.format(base_model=LLAVA_BASE_MODEL, model=CLIP_MODEL, prompt_variation="llm_judge", dataset="main"),
-        rules.llava_eval_table.output.llava_eval_table.format(base_model=LLAVA_BASE_MODEL, model=CLIP_MODEL, prompt_variation="llm_judge", dataset="main"),
+        rules.llava_eval_gpt4_review_summarize.output.overview_plot.format(base_model=LLAVA_BASE_MODEL, model=CLIP_MODEL, prompt_variation="llm_judge", dataset="main", llava_dataset="_default"),
+        rules.llava_eval_table.output.llava_eval_table.format(base_model=LLAVA_BASE_MODEL, model=CLIP_MODEL, prompt_variation="llm_judge", dataset="main", llava_dataset="_default"),

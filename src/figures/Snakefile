@@ -21,7 +21,6 @@ rule all:
 
         rules.fig4_all.input,
 
-        # Reviewer response letter
-        rules.plot_query_variant_cell_matching.output.plot.format(model=config["model_name_path_map"]["cellwhisperer_geneformer"]),
+        rules.reviewer_response_all.input,
 
     default_target: True

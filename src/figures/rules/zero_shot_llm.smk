@@ -2,7 +2,7 @@ rule zero_shot_llm_prediction:
     """
     GPT-4 zero-shot predictions, adapting prompt from Hou et al., 2024 (https://www.nature.com/articles/s41592-024-02235-4)
 
-    For Llama 3.1 and 3.3 and Mistral, run first `export OLLAMA_HOST=0.0.0.0:8080 ~/ollama/bin/ollama serve` (note that they might not operate well simulaneously)
+    For Llama 3.1 and 3.3 and Mistral, run first `export OLLAMA_HOST=0.0.0.0:8080 ~/ollama/bin/ollama serve` (note that they might not operate well simultaneously)
 
     """
     input:
@@ -28,37 +28,97 @@ rule zero_shot_llm_prediction:
     notebook:
         "../notebooks/zero_shot_llm_prediction.py.ipynb"
 
+rule integrate_zero_shot_embedding_performance:
+    input:
+        predictions_raw=rules.zero_shot_cellwhisperer_prediction.output.predictions.replace("{grouping}", "by_cell"),
+    output:
+        predicted_labels=ZERO_SHOT_CW_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "predicted_labels" / "{metadata_col}.{grouping,by_cell|by_class}.csv",  # NOTE: might be used as input for `plot_confusion_matrix` as well (and by extension `zero_shot_performance_macroavg`)
+    resources:
+        mem_mb=50000,
+        slurm="cpus-per-task=2"
+    conda:
+        "cellwhisperer"
+    notebook:
+        "../notebooks/integrate_zero_shot_embedding_performance.py.ipynb"
 
-# dataset_selector=lambda wildcards:
-def dataset_selector(wildcards):
-    return [dataset for dataset, mcols in config["metadata_cols_per_zero_shot_validation_dataset"].items()
-                                    if wildcards.metadata_col in mcols
-                                    and (  # exclude some of the tabula_sapiens datasets (to save costs on the API)
-                                        (wildcards.grouping == "by_cell" and dataset not in ["tabula_sapiens", "tabula_sapiens_well_studied_celltypes"]) or
-                                        (wildcards.grouping == "by_class" and dataset != "tabula_sapiens_100_cells_per_type")
-                                    )]
+
+# llava_dataset, base_model, model, prompt_variation
+LLM_PPL_PREDS = [
+    ("_default", config['model_name_path_map']['llava_base_llm'], "NONE", "with50topgenesresponsenoembedding"),  # Vanilla Mistral  # `_default` works and is good for comparability to cellwhisperer_clip_v1
+    ("_top50genescelltype", config['model_name_path_map']['llava_base_llm'],  "uce", "with50topgenesresponsenoembedding"),  # this one was trained with "uce" in the path name, but it does not use the embedding in any case..
+    ("_celltype", config['model_name_path_map']['llava_base_llm'], "cellwhisperer_clip_v1", "without50topgenesresponse"),
+    ("_default", config['model_name_path_map']['llava_base_llm'], "cellwhisperer_clip_v1", "without50topgenesresponse"),
+
+]
+
+
+
 rule aggregate_zero_shot_llm_property_predictions:
     """
+    Only works for cell types
+
     Aggregate the zero-shot property predictions for all models and datasets
 
     grouping: indicate whether the feature matrix is grouped and mean-aggregated prior to prediction. Either "by_class" or "by_cell"
 
-    TODO organ_tissue not working
+    # pancreas does not work, presumably because its cell types are not very common. Same problem as the previous Ext. Data Fig 3b
+    NOTE: f1_score is macro-averaging
     """
     input:
         predictions=lambda wildcards: [
-            ZERO_SHOT_RESULTS / model / "datasets" / dataset / "predictions" / f"{wildcards.metadata_col}.{wildcards.grouping}.csv"
-            for model in ZERO_SHOT_PREDICTORS
-            for dataset in dataset_selector(wildcards)
+            ZERO_SHOT_RESULTS / model / "datasets" / "tabula_sapiens_100_cells_per_type" / "predictions" / f"{wildcards.metadata_col}.{wildcards.grouping}.csv"
+            for model in config["llm_apis"].keys()
+        ] + [
+            rules.llava_evaluation_prediction_scores.output.predictions.format(
+                llava_dataset=llava_dataset,
+                dataset="tabula_sapiens_100_cells_per_type",
+                base_model=base_model,
+                model=model,
+                prompt_variation=prompt_variation)
+            for llava_dataset, base_model, model, prompt_variation in LLM_PPL_PREDS
+        ] + [
+            # rules.integrate_zero_shot_embedding_performance.output.predicted_labels.format(
+            rules.zero_shot_cellwhisperer_prediction.output.predictions.replace("{grouping}", "by_cell").format(
+                dataset="tabula_sapiens_100_cells_per_type",
+                metadata_col="celltype",
+                model=model,
+                grouping="by_cell")
+            for model in ["cellwhisperer_clip_v1", "cellwhisperer_clip_v2_uce", "cellwhisperer_clip_v2_scgpt"]
         ]
     output:
         aggregated_predictions=ZERO_SHOT_RESULTS / "aggregated_predictions_{metadata_col}_{grouping,by_cell|by_class}.csv",
-        aggregated_predictions_plot=ZERO_SHOT_RESULTS / "aggregated_predictions_{metadata_col}_{grouping,by_cell|by_class}.png"
+        aggregated_predictions_plot=ZERO_SHOT_RESULTS / "aggregated_predictions_{metadata_col}_{grouping,by_cell|by_class}.svg"
     params:
-        metric="accuracy",
-        models=ZERO_SHOT_PREDICTORS,
-        datasets=dataset_selector,
-        plot_title=lambda wildcards: f"accuracy for {wildcards.metadata_col} ({wildcards.grouping})"
+        metric="accuracy",   # "f1_score" also works
+        models=list(config["llm_apis"].keys()) + ["__".join(v) for v in LLM_PPL_PREDS] + ["cellwhisperer_clip_v1", "cellwhisperer_clip_v2_uce", "cellwhisperer_clip_v2_scgpt"],
+        datasets=["tabula_sapiens_100_cells_per_type"],
+        plot_title=lambda wildcards: f"accuracy for {wildcards.metadata_col} ({wildcards.grouping})",
+        costs=[  # computed as in `cellwhisperer/src/experiments/702-cw_benefit_llm/README.md`
+            937.5,  # GPT-4o
+            750.0,  # Claude Sonnet
+            667.0,  # Llama 3.3 70B
+            66.7,  # Mistral 7B
+            13.3,  # Mistral 7B*
+            13.3,  # Mistral 7B* (cell type-focused)
+            6.0,  # CellWhisperer* (cell type-focused)
+            6.0,  # CellWhisperer*
+            0.6,  # CW embedding
+            3.3,  # CW embedding (UCE)
+            0.33,  # CW embedding (scGPT)
+        ],
+        labels=[
+            "GPT-4o",
+            "Claude Sonnet 3.5",
+            "Llama 3.3 70B",
+            "Mistral 7B",
+            "Mistral 7B",
+            "Mistral 7B (cell type fine-tuned)",
+            "CW chat (cell type fine-tuned)",
+            "CW chat",
+            "CW embed.",
+            "CW embed. (UCE)",
+            "CW embed. (scGPT)",
+        ]
     conda:
         "cellwhisperer"
     resources:

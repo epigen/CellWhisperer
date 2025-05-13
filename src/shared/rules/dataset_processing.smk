@@ -30,8 +30,8 @@ rule process_full_dataset:
     output:
         model_outputs=protected(str(PROJECT_DIR / config["paths"]["model_processed_dataset"]).replace("{model}", "{model,cellwhisperer.*}")),
     resources:
-        mem_mb=600000,  # could be made more efficient...
-        slurm=slurm_gres()
+        mem_mb=900000,  # could be made more efficient...
+        slurm=slurm_gres("large")
     threads: 8  # NOTE increase this without GPU
     log:
         notebook="../logs/notebooks/process_full_dataset_{dataset}_{model}.py.ipynb",
@@ -66,11 +66,12 @@ rule combine_processed_data:
     Since we use `orig_ids` to match the data, we can't simply concatenate the arrays.
     """
     input:
-        expand(rules.process_full_dataset.output.model_outputs, dataset=["archs4_geo", "tabula_sapiens", "cellxgene_census", "human_disease"], model="{model}"),
+        expand(rules.process_full_dataset.output.model_outputs, dataset=["archs4_geo", "tabula_sapiens", "cellxgene_census", "human_disease", "immgen", "pancreas"], model="{model}"),
     output:
         combined=PROJECT_DIR / config["paths"]["llava"]["combined_processed_data"]
     resources:
-        mem_mb=100000
+        mem_mb=100000,
+        slurm=slurm_gres("large", num_gpus=1, num_cpus=10)
     run:
         import numpy as np
         datas = [dict(np.load(dataset_fn, allow_pickle=True)) for dataset_fn in input]
