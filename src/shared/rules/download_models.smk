@@ -51,6 +51,15 @@ rule download_uce:
         with tarfile.open(output[2], "r:gz") as tar:
             tar.extractall(output[2].parent)
 
+rule download_llama33:
+    output:
+        directory(PROJECT_DIR / config["model_name_path_map"]["llama33"]
+    shell: """
+        echo "You'll need a huggingface token to download llama 3.3. You may also download it manually into {output}"
+        git lfs install
+        git clone https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct {output}
+    """
+
 
 rule download_cellwhisperer_embedding_model:
     input:

@@ -59,7 +59,7 @@ rule bowel_disease_conventional_analysis:
         "../notebooks/bowel_disease_conventional_analysis.py.ipynb"
     
 
-rule fig4_all:
+rule fig5_all:
     input:
         expand(rules.bowel_disease_stem_cell_contribution.output.plot, target_cluster=["", "Cycling ileal epithelial precursor cells"]),
         rules.bowel_disease_conventional_analysis.output.umap_raw,

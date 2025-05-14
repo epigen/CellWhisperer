@@ -4,9 +4,6 @@ Processing pipeline for generating cellxgene-ready datasets
 
 include: "../shared/config.smk"
 
-CLIP_MODEL = "cellwhisperer_clip_v1"  # (overwriting `config`-defined one) TODO delete
-LLAVA_BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
-
 include: "../shared/rules/download_models.smk"
 include: "../shared/rules/genesets.smk"
 include: "../shared/rules/dataset_processing.smk"

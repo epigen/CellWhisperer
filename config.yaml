@@ -93,7 +93,7 @@ llava_eval:
   question_topgenes: "Which are the 50 most strongly expressed genes in this sample of cells?"
   response_prefix_topgenes: "The 50 most strongly expressed genes are {}"
 
-retrieval_validation_sets:
+retrieval_deduplicated_sets:
   - immgen_deduplicated
   - human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
 
@@ -117,8 +117,6 @@ model_name_path_map:
 
   # manually downloaded with `git clone` (requires license agreement)
   mistral: resources/Mistral-7B-Instruct-v0.2
-  llama31orig: resources/Llama-3.1-8B-Instruct_orig
-  llama31: resources/Llama-3.1-8B-Instruct
   llama33: resources/Llama-3.3-70B-Instruct
 
 uce_paths:
@@ -190,29 +188,7 @@ llm_apis:
     api_key_env: OLLAMA_API_KEY
     base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
     model_name: llama3.3:70b
-  # llama31:  # TODO perhaps delete here
-  #   api_key_env: OLLAMA_API_KEY
-  #   base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
-  #   model_name: llama3.1:8b
   mistral7b:
     api_key_env: OLLAMA_API_KEY
     base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
     model_name: mistral:7b-instruct-v0.2-fp16
-
-llm_judge:
-  request_template: " Sample annotation: {annotation}
-
-  Top expressed normalized genes: {top_genes}
-  "
-
-
-
-
-  instruction_prompt: "Help me analyzing this sample of cells. Respond in proper english in a tone of uncertainty and focus on the biology of the sample rather than any potential donor or patient information (e.g. do not mention age and sex). Start by listing the top genes in this sample."
-  instruction_response: "Sure. The top normalized genes are {top_genes}. Note that are strongly expressed genes beyond the ones I just listed."
-  instruction_prompt_text_only: "Respond to my request regarding a sample of cells characterized by their top-expressed genes. Respond directly and concisely without much contemplation and in less than 3 sentences with a tone of uncertainty and a focus on the biology of the sample.
-
-  Top genes: {top_genes}
-
-  Request: {question}
-  "

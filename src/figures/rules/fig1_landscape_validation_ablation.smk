@@ -67,3 +67,11 @@ rule plot_ablation_wandb:
         "cellwhisperer"
     notebook:
         "../notebooks/plot_wandb.py.ipynb"
+
+rule fig1_main:
+    input:
+        rules.geo_umap_plots.output.cluster_labeled.format(model=CLIP_MODEL),
+        # Figure S1
+        rules.final_model_retrieval_scores.output.barplot,
+        rules.final_model_retrieval_scores.output.lineplot,
+        rules.plot_ablation_wandb.output.all_models_comparison,  # Ablation study

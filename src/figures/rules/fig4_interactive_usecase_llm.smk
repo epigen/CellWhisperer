@@ -25,8 +25,6 @@ COMPLEX_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[:NUM_COMPLEX_SAMPLES]
 DETAILED_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[NUM_COMPLEX_SAMPLES:CONVERSATION_START]
 
 
-include: "llm_judge.smk"
-
 def top_genes_fn(wildcards):
     if wildcards.dataset in ["main", "main_top50genes"]:
         return [ancient(rules.compute_top_genes.output.top_genes.format(dataset=dataset)) for dataset in ["cellxgene_census", "archs4_geo"]]
@@ -34,11 +32,9 @@ def top_genes_fn(wildcards):
         return [rules.compute_top_genes.output.top_genes.format(dataset=wildcards.dataset.replace("_top50genes", ""))]
 
 
-rule celltype_evaluation_dataset:
+rule llava_celltype_evaluation_dataset:
     """
-    TODO rename to llava_?
-
-    _celltype is lower case to avoid confusing the model
+    '_celltype' is lower-case to avoid confusing the model
     """
     input:
         dataset=PROJECT_DIR / config["paths"]["read_count_table"],
@@ -55,7 +51,7 @@ rule celltype_evaluation_dataset:
     conda:
         "cellwhisperer"
     notebook:
-        "../notebooks/celltype_evaluation_dataset.py.ipynb"
+        "../notebooks/llava_celltype_evaluation_dataset.py.ipynb"
 
 
 
@@ -113,7 +109,7 @@ rule llava_evaluation_perplexity:
         mem_mb=200000,
         slurm=lambda wildcards: slurm_gres(
             "large",
-            num_gpus={LLAVA_BASE_MODEL: 1, "Llama-3.1-8B-Instruct": 2, "Llama-3.3-70B-Instruct": 4}[wildcards.base_model]
+            num_gpus={LLAVA_BASE_MODEL: 1, "Llama-3.3-70B-Instruct": 4}[wildcards.base_model]
         )
     log:
         notebook="logs/llava_evaluation_perplexity/{dataset}_{base_model}_{model}_{llava_dataset}{prompt_variation}.ipynb",
@@ -167,13 +163,10 @@ rule llava_evaluation_prediction_scores:
 
 
 def input_configurations(wildcards):
-    # TODO delete commented lines for brevity
     if wildcards.plot_type == "llava_cw_vs_geneformer":
         return [
             {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "without50topgenes"},
-            # {"base_model": LLAVA_BASE_MODEL, "model": "geneformer", "prompt_variation": "with50topgenes"},
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
-            # {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},
         ]
     if wildcards.plot_type == "gene_predictability":
         if not wildcards.dataset.endswith("top50genes"):
@@ -188,13 +181,6 @@ def input_configurations(wildcards):
         if wildcards.dataset.endswith("top50genes"):
             print("text_only_vs_cw doesn't make sense with top50genes datasets")
         return [
-            # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},  # neg control
-
-            # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
-            # {"base_model": "Llama-3.1-8B-Instruct", "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
-            # {"base_model": "Llama-3.3-70B-Instruct", "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
-            # {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},
-
             {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesresponse"},
             {"base_model": "Llama-3.3-70B-Instruct", "model": "NONE", "prompt_variation": "with50topgenesresponse"},
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponse"},
@@ -204,17 +190,10 @@ def input_configurations(wildcards):
         if wildcards.dataset.endswith("top50genes"):
             print("cw_preprompt_useless doesn't make sense with top50genes datasets")
         return [
-            # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "without50topgenes"},  # neg control
-            # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesshuffled"},  # semi-neg control
-            # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenes"},  # pos control
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "noembedding"},  # Baseline: CW with no input at all
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenesnoembedding"},  # Baseline: CW with only top 50 genes
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenes"},
             {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenes"},  # show that adding 50 top genes doesn't help (much)
-            # {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "with50topgenesshuffled"},  # no negative effect by shuffling the genes <- could show this alone
-
-            # {"base_model": LLAVA_BASE_MODEL, "model": "NONE", "prompt_variation": "with50topgenesresponsepermuted"},
-            # {"base_model": LLAVA_BASE_MODEL, "model": "cellwhisperer_clip_v1", "prompt_variation": "without50topgenesresponsepermuted"},
         ]
 
 
@@ -249,7 +228,7 @@ rule llava_comparative_perplexity_plots:
     notebook:
         "../notebooks/llava_comparative_perplexity_plots.py.ipynb"
 
-rule fig3_llava_ppl_all:
+rule fig4_llava_ppl_all:
     input:
         # Evaluation compared to mismatched conversations
         expand(PROJECT_DIR / config["paths"]["llava"]["evaluation_results"] / "{plot_name}.svg",

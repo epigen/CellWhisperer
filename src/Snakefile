@@ -32,6 +32,18 @@ rule download_gsva_results:
         for fin, fout in zip(input, output):
             shutil.copy(fin, fout)
 
+rule download_deduplicated:
+    """
+    Download deduplicated datasets for meaningful loss-based performance analysis.
+    """
+    input:
+        [HTTP.remote(f"{config['precomputing_base_url']}/datasets/{dataset}/full_data.parquet", keep_local=False)[0] for dataset in config["retrieval_deduplicated_sets"]]
+    output:
+        gsva_results=expand(PROJECT_DIR / config["paths"]["full_dataset"], dataset=config["retrieval_deduplicated_sets"]),
+    run:
+        import shutil
+        for fin, fout in zip(input, output):
+            shutil.copy(fin, fout)
 
 # include: "shared/rules/gsva.smk"  # Alternatively compute them instead of downloading
 
@@ -48,6 +60,7 @@ rule all:
         rules.figures_all.input,
         expand(rules.download_cellwhisperer_embedding_model.output, cw_model=[CW_CLIP_MODELS]),  # Download included through
         rules.download_cellwhisperer_llm.output,
+        rules.download_deduplicated.output
 
 rule models:
     input:

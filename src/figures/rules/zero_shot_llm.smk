@@ -9,7 +9,7 @@ rule zero_shot_llm_prediction:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         gene_normalizers=rules.compute_gene_normalizers.output.gene_mean_log1ps,  # NOTE could also get the ones computed with `seurat_get_top_genes`
     output:
-        predictions=protected(ZERO_SHOT_RESULTS / "{model,gpt4|llama33|claudesonnet|deepseek|llama31|mistral7b}" / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv"),
+        predictions=protected(ZERO_SHOT_RESULTS / "{model,gpt4|llama33|claudesonnet|deepseek|mistral7b}" / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv"),
     params:
         api_key=lambda wildcards: os.getenv(config["llm_apis"][wildcards.model]["api_key_env"]),
         api_base_url=lambda wildcards: config["llm_apis"][wildcards.model]["base_url"],
@@ -50,7 +50,6 @@ LLM_PPL_PREDS = [
     ("_default", config['model_name_path_map']['llava_base_llm'], "cellwhisperer_clip_v1", "without50topgenesresponse"),
 
 ]
-
 
 
 rule aggregate_zero_shot_llm_property_predictions:

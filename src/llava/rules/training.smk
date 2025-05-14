@@ -1,18 +1,3 @@
-rule prepare_llama31:
-    """
-    """
-    input:
-        PROJECT_DIR / config["model_name_path_map"]["llama31orig"]  # downloaded manually
-    output:
-        directory(PROJECT_DIR / config["model_name_path_map"]["llama31"])
-    resources:
-        mem_mb=300000
-    conda:
-        "llava"
-    notebook:
-        "../notebooks/prepare_llama31.py.ipynb"
-
-
 rule pretrain_llava:
     """
     Based on /home/moritz/Projects/cellwhisperer/modules/LLaVA/scripts/v1_5/pretrain.sh
