@@ -53,7 +53,7 @@ rule download_uce:
 
 rule download_llama33:
     output:
-        directory(PROJECT_DIR / config["model_name_path_map"]["llama33"]
+        directory(PROJECT_DIR / config["model_name_path_map"]["llama33"])
     shell: """
         echo "You'll need a huggingface token to download llama 3.3. You may also download it manually into {output}"
         git lfs install
@@ -76,7 +76,9 @@ rule download_cellwhisperer_llm:
     input:
         HTTP.remote(f"{BASE_URL}/models/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1.tar.gz")
     output:
-        directory(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"].format(base_model=config["model_name_path_map"]["llava_base_llm"] , model=config["model_name_path_map"]["cellwhisperer"]))
+        directory(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"].format(base_model=config["model_name_path_map"]["llava_base_llm"],
+                                                                                       model=config["model_name_path_map"]["cellwhisperer"],
+                                                                                       llava_dataset="_default"))
     shell: """
         mkdir {output}
         tar -xzvf {input} -C {output} --no-same-owner

@@ -1,5 +1,5 @@
-include: "../shared/rules/download_models.smk"
 include: "../shared/config.smk"
+include: "../shared/rules/download_models.smk"
 include: "../shared/rules/dataset_processing.smk"
 include: "rules/fig1_landscape_validation_ablation.smk"
 include: "rules/fig2_embedding_validations.smk"
@@ -9,7 +9,7 @@ include: "rules/reviewer_response.smk"
 
 rule all:
     input:
-        rules.fig1_main.input
+        rules.fig1_main.input,
         rules.fig2_main.input,
         rules.fig4_llava_ppl_all.input,
         rules.fig5_all.input,

@@ -57,7 +57,6 @@ rule bowel_disease_conventional_analysis:
         notebook="../logs/bowel_disease_conventional_analysis.ipynb",
     notebook:
         "../notebooks/bowel_disease_conventional_analysis.py.ipynb"
-    
 
 rule fig5_all:
     input:

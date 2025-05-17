@@ -427,7 +427,6 @@ rule fig2_main:
             for metadata_col in config["metadata_cols_per_zero_shot_validation_dataset"][dataset]
         ],
 
-        expand(rules.zero_shot_performance_macroavg.output.macroavg_summary_plot, model=CLIP_MODEL),
         expand(rules.cw_vs_basemodel_macroavg_comparisons.output.barplots_across_training_options_across_metrics, model=CLIP_MODEL),
         expand(rules.zero_shot_performance_examples.output.per_class_examples_plot, model=CLIP_MODEL),
         expand(rules.aggregate_scfm_evaluations.output, training_options=TRAINING_OPTIONS, metric=["accuracy", "f1", "auroc"]),
@@ -440,6 +439,6 @@ rule fig2_main:
         expand(
             rules.cell_assign.output.performance,
             dataset=CELLTYPE_EVAL_DATASETS,
-        )
+        ),
 
         rules.plot_query_variant_cell_matching.output.plot.format(model=config["model_name_path_map"]["cellwhisperer_geneformer"]),
