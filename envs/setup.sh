@@ -8,6 +8,9 @@ conda env create -f envs/llama_cpp.yaml  # name: llama_cpp
 conda activate cellwhisperer
 source activate cellwhisperer  # in docker, the `conda activate` does not workk
 
+cd modules/cellxgene
+make build-for-server-dev
+
 pip install "flash-attn<1.0.5" --no-build-isolation
 
 # v0.1.9, but with fix suggested in here: https://github.com/bowang-lab/scGPT/issues/69

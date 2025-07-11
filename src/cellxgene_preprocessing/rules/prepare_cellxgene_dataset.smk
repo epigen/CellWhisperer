@@ -27,7 +27,7 @@ rule llava_annotate_clusters:
     input:
         embedding_adata=rules.leiden_umap_embeddings.output.adata,
         read_count_adata=PROJECT_DIR / config["paths"]["read_count_table"],  # needed for potential uns and obs fields
-        llava_model=ancient(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"].format(base_model=LLAVA_BASE_MODEL, model="{model}")),
+        llava_model=ancient(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"].format(llava_dataset="_default", base_model=LLAVA_BASE_MODEL, model="{model}")),
     output:
         csv=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_annotated_clusters.csv"
     conda:

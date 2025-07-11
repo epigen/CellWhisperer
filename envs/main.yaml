@@ -59,6 +59,7 @@ dependencies:
     - scvi-tools==0.20.3
     - cell-gears==0.0.2
     - umap-learn==0.5.5
+    - pybiomart==0.2.0
     - matplotlib_venn==0.11.10
     - -e ..
     - -e ../modules/cellxgene/
