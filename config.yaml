@@ -2,7 +2,7 @@ anndata_label_name: natural_language_annotation
 num_replicates: 5
 llava_projector_type: mlp2x_8t_gelu # NOTE fails if > 8 because we use a fully connected layer between all 8 tokens (i.e. having too many params)
 precomputing_base_url: https://medical-epigenomics.org/papers/schaefer2024/data
-cluster_name: "muwhpc"  # used within `config.smk` to define SLURM resources for snakemake jobs
+cluster_name: "sherlock"  # used within `config.smk` to define SLURM resources for snakemake jobs
 
 paths:
   read_count_table: resources/{dataset}/read_count_table.h5ad

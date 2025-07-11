@@ -27,6 +27,7 @@ def slurm_gres(
     """
 
     partition = "gpu"
+    qos = "qos=gpu"
     if cluster_name == "lustre":
         gpu_type = {
             "small": "l4_gpu",
@@ -34,14 +35,24 @@ def slurm_gres(
             "large": "h100pcie",
         }[gpu_size]
 
-        qos = "gpu"
+        gres = f"gres=gpu:{gpu_type}:{num_gpus}"
+
+    elif cluster_name == "sherlock":
+        gpu_type = {
+            "small": "GPU_MEM:16GB|GPU_MEM:24GB|GPU_MEM:32GB",
+            "medium": "GPU_MEM:48GB",
+            "large": "GPU_MEM:80GB",
+        }[gpu_size]
+        gres = f'gpus={num_gpus} constraint="{gpu_type}"'
+        qos = ""
     else:
         gpu_type = {"small": "3g.20gb", "medium": "a100", "large": "a100-sxm4-80gb"}[
             gpu_size
         ]
-        qos = gpu_type
+        qos = f"qos={gpu_type}"
+        gres = f"gres=gpu:{gpu_type}:{num_gpus}"
 
-    return f"cpus-per-task={num_cpus} gres=gpu:{gpu_type}:{num_gpus} qos={qos} partition={partition}"
+    return f"cpus-per-task={num_cpus} {gres} {qos} partition={partition}"
 
 
 HTTP = HTTPRemoteProvider()
