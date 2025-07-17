@@ -48,7 +48,7 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
         projection_dim: int = 1024,
         transcriptome_model_type: str = "geneformer",
         transcriptome_config: Dict = {},
-        text_model_type: str = "bert-large",
+        text_model_type: str = "bert",
         text_config: Dict = {},
         locking_mode: str = "LU",
         unlocked_fp16: bool = False,
