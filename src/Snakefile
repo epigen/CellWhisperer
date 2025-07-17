@@ -58,13 +58,17 @@ rule all:
     input:
         rules.datasets_all.input,
         rules.figures_all.input,
-        expand(rules.download_cellwhisperer_embedding_model.output, cw_model=[CW_CLIP_MODELS]),  # Download included through
+        expand(rules.download_cellwhisperer_embedding_model.output, cw_model=CW_CLIP_MODELS),  # Download included through
         rules.download_cellwhisperer_llm.output,
         rules.download_deduplicated.output
 
+rule figures:
+    input:
+        rules.figures_all.input,
+
 rule models:
     input:
-        expand(rules.download_cellwhisperer_embedding_model.output, cw_model=[CW_CLIP_MODELS]),  # Download included through
+        expand(rules.download_cellwhisperer_embedding_model.output, cw_model=CW_CLIP_MODELS),  # Download included through
         rules.download_cellwhisperer_llm.output,
         rules.download_mixtral.output,
         rules.download_geneformer.output,

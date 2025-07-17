@@ -1,5 +1,5 @@
 include: "../shared/config.smk"
-include: "../shared/rules/download_models.smk"
+# include: "../shared/rules/download_models.smk"  # covered by the main Snakefile
 include: "../shared/rules/dataset_processing.smk"
 include: "rules/fig1_landscape_validation_ablation.smk"
 include: "rules/fig2_embedding_validations.smk"

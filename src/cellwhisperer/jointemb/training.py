@@ -3,6 +3,7 @@
 """
 See https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html for documentation on usage
 """
+import pyarrow  # prevents failure later on
 from lightning.pytorch.tuner import Tuner
 from lightning.pytorch.strategies import FSDPStrategy
 from transformers.models.bert.modeling_bert import BertLayer
@@ -64,9 +65,11 @@ class CellWhispererCLI(LightningCLI):
         parser.add_argument(
             "--batch_size",
             default=32,
-            type=lambda x: int(x)
-            if int(x) > 1
-            else argparse.ArgumentTypeError("Batch size must be greater than 1"),
+            type=lambda x: (
+                int(x)
+                if int(x) > 1
+                else argparse.ArgumentTypeError("Batch size must be greater than 1")
+            ),
             help="Batch size for training and evaluation.",
         )
         parser.add_argument(
@@ -115,10 +118,8 @@ class CellWhispererCLI(LightningCLI):
         )
 
         # for development: if fast_dev_run is enabled, set batch_size to 2
-        batch_size_fn = (
-            lambda fast_dev_run, batch_size: 2  # 1 fails
-            if fast_dev_run or batch_size <= 0
-            else batch_size
+        batch_size_fn = lambda fast_dev_run, batch_size: (
+            2 if fast_dev_run or batch_size <= 0 else batch_size  # 1 fails
         )
         parser.link_arguments(
             ["trainer.fast_dev_run", "batch_size"],

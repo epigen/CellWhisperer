@@ -104,7 +104,7 @@ To run the pipeline, execute
 
 ```bash
 cd src
-snakemake --use-conda
+snakemake --use-conda  # optionally only download "models" or generate "figures"
 ```
 
 (*) Some interactive analyses/screenshots were performed directly in the CELLxGENE CellWhisperer browser integration and are not reproduced by the pipeline. Also note that some analyses (e.g. Extended Data Figure 3) depend on GPT-4 and the availability of an OpenAI API key.

@@ -83,8 +83,8 @@ rule download_conversation_datasets:
     output:
         llava_stage1_dataset=PROJECT_DIR / config["paths"]["llava"]["pretrain_text_dataset"],
         llava_stage2_dataset=PROJECT_DIR / config["paths"]["llava"]["finetune_text_dataset"],
-        evaluation_dataset_main=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="main"),
-        evaluation_dataset_tabula_sapiens=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="tabula_sapiens"),
+        evaluation_dataset_main=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="main", llava_dataset="{llava_dataset}"),
+        evaluation_dataset_tabula_sapiens=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="tabula_sapiens", llava_dataset="{llava_dataset}"),
     run:
         import shutil
         for in_file, out_file in zip(input, output):
