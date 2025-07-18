@@ -63,7 +63,7 @@ class FrozenCachedModel(nn.Module):
 
             self.model_hash = hash_object(self.model.parameters())
             logger.info(f"Initializing frozen model with hash {self.model_hash}")
-            logger.debug(f"Corresponding model config: {self.model.config}")
+            # logger.debug(f"Corresponding model config: {self.model.config}")
 
             self.cache_file = Path(get_cache_dir()) / f"{self.model_hash}.pkl"
             self.cache = self._load_cache()

@@ -5,6 +5,7 @@ from .geneformer_model import GeneformerConfig
 from cellwhisperer.config import model_path_from_name
 from .scgpt_model import ScGPTConfig
 from .uce_model import UCEConfig
+from .uni_model import UNIConfig
 from transformers.configuration_utils import PretrainedConfig
 from transformers.utils import logging
 from transformers.models.auto.configuration_auto import AutoConfig
@@ -50,7 +51,9 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
         transcriptome_config: Dict = {},
         text_model_type: str = "bert",
         text_config: Dict = {},
-        locking_mode: str = "LU",
+        image_model_type: str = "uni2",
+        image_config: Dict = {},
+        locking_mode: str = "LUL",
         unlocked_fp16: bool = False,
         **kwargs,
     ):
@@ -64,6 +67,7 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
 
         transcriptome_config = transcriptome_config.copy()
         text_config = text_config.copy()
+        image_config = image_config.copy()
 
         self.locking_mode = locking_mode
         self.unlocked_fp16 = unlocked_fp16
@@ -86,15 +90,24 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
             model_path_from_name(text_model_type), **text_config
         )
 
+        if image_model_type == "uni2":
+            self.image_config = UNIConfig(**image_config)
+        else:
+            raise ValueError(f"Unsupported image model type: {image_model_type}")
+            self.image_config = AutoConfig.from_pretrained(
+                model_path_from_name(image_model_type), **image_config
+            )
+
         self.projection_dim = int(
             projection_dim
         )  # workaround Lightning CLI not interpreting the string as int as expected
 
     @classmethod
-    def from_transcriptome_text_configs(
+    def from_transcriptome_text_image_configs(
         cls,
         transcriptome_config: PretrainedConfig,
         text_config: PretrainedConfig,
+        image_config: PretrainedConfig,
         **kwargs,
     ):
         r"""
@@ -111,10 +124,15 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
         text_config = text_config.to_dict()
         text_model_type = text_config.pop("model_type")
 
+        image_config = image_config.to_dict()
+        image_model_type = image_config.pop("model_type")
+
         return cls(
             transcriptome_model_type=transcriptome_model_type,
             transcriptome_config=transcriptome_config,
             text_model_type=text_model_type,
             text_config=text_config,
+            image_model_type=image_model_type,
+            image_config=image_config,
             **kwargs,
         )

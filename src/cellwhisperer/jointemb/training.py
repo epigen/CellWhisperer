@@ -165,6 +165,13 @@ class CellWhispererCLI(LightningCLI):
                     self.model.model.text_model.config.model_type
                 )
 
+            if self.model.model.config.locking_mode[2] == "u":
+                image_model_path = None
+            else:
+                image_model_path = model_path_from_name(
+                    self.model.model.image_model.config.model_type
+                )
+
             if (
                 self.model.model.config.locking_mode[0] != "L"
                 and self.model.model.transcriptome_model.config.model_type == "scgpt"
@@ -178,6 +185,7 @@ class CellWhispererCLI(LightningCLI):
                 self.model.load_pretrained_models(
                     transcriptome_model_path,
                     text_model_path,
+                    image_model_path,
                 )
             except FileNotFoundError:
                 logger.error(

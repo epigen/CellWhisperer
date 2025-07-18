@@ -45,7 +45,7 @@ rule convert_read_count_matrix:
         get_path(["paths", "full_dataset"], dataset=DATASET_NAME)
     params:
         extensive=False,  # TODO we could try this later
-        anndata_label_name=config["anndata_label_name"],
+        anndata_text_obs_label=config["anndata_text_obs_label"],
         embedding_sentence=EMBEDDING_SENTENCE,
     conda:
         CONDA_ENV_NAME

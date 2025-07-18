@@ -46,26 +46,41 @@ class MILinearBlock(nn.Module):
 
 
 class GlobalDiscriminatorDot(nn.Module):
-    def __init__(self, image_sz, text_sz, units=2048, bln=True):
+    def __init__(self, transcriptome_sz, text_sz, image_sz, units=2048, bln=True):
         super(GlobalDiscriminatorDot, self).__init__()
-        self.img_block = MILinearBlock(image_sz, units=units, bln=bln)
+        self.transcriptome_block = MILinearBlock(transcriptome_sz, units=units, bln=bln)
         self.text_block = MILinearBlock(text_sz, units=units, bln=bln)
+        self.image_block = MILinearBlock(image_sz, units=units, bln=bln)
         self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
         self.temperature = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
 
     def forward(
         self,
-        features1=None,
-        features2=None,
+        transcripome_features=None,
+        text_features=None,
+        image_features=None,
     ):
         """
-        Compute full matrix dot product (each vs each)
+        Compute cross modal loss, i.e. compute full matrix dot product (each vs each)
         """
-        # Computer cross modal loss
-        feat1 = self.img_block(features1)
-        feat2 = self.text_block(features2)
 
-        feat1, feat2 = map(lambda t: F.normalize(t, p=2, dim=-1), (feat1, feat2))
+        embeds = []
+        for fn, features in zip(
+            (self.transcriptome_block, self.text_block, self.image_block),
+            [transcripome_features, text_features, image_features],
+        ):
+            if features is not None:
+                embeds.append(fn(features))
+            else:
+                embeds.append(None)
+
+        assert (
+            len([e for e in embeds if e is not None]) == 2
+        ), "Exactly two modalities must be provided for the discriminator."
+
+        embed1 = [e for e in embeds if e is not None][0]
+        embed2 = [e for e in embeds if e is not None][1]
+        embed1, embed2 = map(lambda t: F.normalize(t, p=2, dim=-1), (embed1, embed2))
 
         # ## Method 1
         # # Dot product and sum
@@ -75,6 +90,6 @@ class GlobalDiscriminatorDot(nn.Module):
         # o = self.cos(feat1.unsqueeze(1), feat2.unsqueeze(0)) * self.temperature.exp()
 
         # Method 3
-        o = torch.einsum("nd,md->nm", [feat1, feat2]) * self.temperature.exp()
+        o = torch.einsum("nd,md->nm", [embed1, embed2]) * self.temperature.exp()
 
-        return o, feat1, feat2
+        return o, *embeds

@@ -66,7 +66,7 @@ dataset = anndata.AnnData(
 )
 
 # Two columns of the plates were dedicated to positive controls (dabrfenib and belinostat) and one column was dedicated to a negative control (DMSO="Dimethyl Sulfoxide").
-dataset.obs[snakemake.params.anndata_label_name] = dataset.obs.apply(
+dataset.obs[snakemake.params.anndata_text_obs_label] = dataset.obs.apply(
     (
         lambda row: snakemake.params.embedding_sentence.format(
             cell_type=row["cell_type"],

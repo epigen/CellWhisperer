@@ -113,10 +113,15 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             model.model.text_model.config.model_type
         )
 
+        image_model_name_or_path = model_path_from_name(
+            model.model.image_model.config.model_type
+        )
+
         # make sure that pretrained models are loaded
         model.load_pretrained_models(
             transcriptome_model_directory=transcriptome_model_directory,
             text_model_name_or_path=text_model_name_or_path,
+            image_model_name_or_path=image_model_name_or_path,
         )
 
         # Restore state_dict
@@ -128,6 +133,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         self,
         transcriptome_model_directory: Optional[str],
         text_model_name_or_path: Optional[str],
+        image_model_name_or_path: Optional[str],
     ):
         """
         This method exhibits an interface to load the pretrained models after initialization. This allows loading of pretrained weights from a checkpoint, without initializing these models..
@@ -140,10 +146,14 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         if text_model_name_or_path is None:
             kwargs["text_model"] = self.model.text_model
 
+        if image_model_name_or_path is None:
+            kwargs["image_model"] = self.model.image_model
+
         self.model = (
             TranscriptomeTextDualEncoderModel.from_transcriptome_text_pretrained(
                 transcriptome_model_name_or_path=transcriptome_model_directory,
                 text_model_name_or_path=text_model_name_or_path,
+                image_model_name_or_path=image_model_name_or_path,
                 **kwargs,
             )
         )
@@ -153,25 +163,29 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
     def forward(
         self,
-        input_ids: Optional[torch.LongTensor],
+        input_ids: Optional[torch.LongTensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
         expression_tokens: Optional[torch.FloatTensor] = None,
         expression_token_lengths: Optional[torch.LongTensor] = None,
         expression_gene: Optional[torch.LongTensor] = None,
         expression_expr: Optional[torch.LongTensor] = None,
         expression_key_padding_mask: Optional[torch.LongTensor] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        transcriptome_weights: Optional[torch.FloatTensor] = None,
+        patches: Optional[torch.FloatTensor] = None,
+        transcriptome_weights: Optional[
+            torch.FloatTensor
+        ] = None,  # TODO expand to images?
         annotation_weights: Optional[torch.FloatTensor] = None,
         **kwargs,  # token_type_ids
     ) -> CLIPOutput:
         output = self.model(
             input_ids=input_ids,
+            attention_mask=attention_mask,
             expression_tokens=expression_tokens,
             expression_token_lengths=expression_token_lengths,
             expression_gene=expression_gene,
             expression_expr=expression_expr,
             expression_key_padding_mask=expression_key_padding_mask,
-            attention_mask=attention_mask,
+            patches=patches,
             return_dict=True,
             **kwargs,
         )
@@ -233,6 +247,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             batch_size=self.val_batch_size,
             transcriptome_model_type=self.model.transcriptome_model.config.model_type,
             text_model_type=self.model.text_model.config.model_type,
+            image_model_type=self.model.image_model.config.model_type,
         )
         if stage == "fit":
             if isinstance(self.frozen_warmup, float):
@@ -341,6 +356,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                 and ".transcriptome_model." in name
             )
             or (self.model.config.locking_mode[1] == "u" and ".text_model." in name)
+            or (self.model.config.locking_mode[2] == "u" and ".image_model." in name)
         )
 
         weight_params = [

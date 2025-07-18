@@ -33,16 +33,16 @@ class LossConfig:
                 "fn": ClipLoss(),
                 "lambda": float(self.clip_lambda),
             },
-            {
-                "name": "clip_lite",
-                "fn": JSDInfoMaxLossCellWhisperer(
-                    discriminator=discriminator,
-                    prior_weight=self.clip_lite_prior_weight,
-                    image_prior=self.clip_lite_transcriptome_prior,
-                    text_prior=self.clip_lite_text_prior,
-                ),
-                "lambda": float(self.clip_lite_lambda),
-            },
+            # { # TODO Not fully implemented for 3 modalities
+            #     "name": "clip_lite",
+            #     "fn": JSDInfoMaxLossCellWhisperer(
+            #         discriminator=discriminator,
+            #         prior_weight=self.clip_lite_prior_weight,
+            #         image_prior=self.clip_lite_transcriptome_prior,
+            #         text_prior=self.clip_lite_text_prior,
+            #     ),
+            #     "lambda": float(self.clip_lite_lambda),
+            # },
         ]
 
         return loss_functions

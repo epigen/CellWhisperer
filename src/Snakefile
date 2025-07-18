@@ -60,6 +60,7 @@ rule models:
         rules.download_llama33.output,
         rules.download_mistral.output,
         rules.download_pretrained_deepspot.output,
+        rules.download_uni.output,  # there are others too
 
 rule all:
     input:

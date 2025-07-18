@@ -47,7 +47,7 @@ with open(snakemake.input.processed_annotations) as f:  # type: ignore [reportUn
 annotations = dataset.obs.index.map(annotations)
 
 # Load the first annotation into the correspoding field
-dataset.obs[snakemake.params.anndata_label_name] = [v[0] for v in annotations]  # type: ignore [reportUndefinedVariable]
+dataset.obs[snakemake.params.anndata_text_obs_label] = [v[0] for v in annotations]  # type: ignore [reportUndefinedVariable]
 
 # Create new dataframe with index `obs.index` and as many columns as there are replicates per annotations:
 annotation_replicates = pd.DataFrame(
@@ -56,7 +56,7 @@ annotation_replicates = pd.DataFrame(
     columns=[str(i) for i in range(1, len(annotations[0]))],
 )
 dataset.obsm[
-    snakemake.params.anndata_label_name + "_replicates"  # type: ignore [reportUndefinedVariable]
+    snakemake.params.anndata_text_obs_label + "_replicates"  # type: ignore [reportUndefinedVariable]
 ] = annotation_replicates
 
 # Store the sample weights
@@ -67,20 +67,20 @@ for modality_weight_key in ["transcriptome_weights", "annotation_weights"]:
     )
 
 # Workaround: need to reload unbacked to allow the copy
-if dataset.obs[snakemake.params.anndata_label_name].isna().any():  # type: ignore [reportUndefinedVariable]
+if dataset.obs[snakemake.params.anndata_text_obs_label].isna().any():  # type: ignore [reportUndefinedVariable]
     logging.warning(
         "Some cells are not annotated. Removing them from the dataset. This may lead to inconsistencies with the rest of the pipeline"
     )
     dataset = anndata.read_h5ad(snakemake.input.read_count_table)  # type: ignore [reportUndefinedVariable]
-    dataset.obs[snakemake.params.anndata_label_name] = dataset.obs.index.map(  # type: ignore [reportUndefinedVariable]
+    dataset.obs[snakemake.params.anndata_text_obs_label] = dataset.obs.index.map(  # type: ignore [reportUndefinedVariable]
         [v[0] for v in annotations]
     )
     dataset.obsm[
-        snakemake.params.anndata_label_name + "_replicates"  # type: ignore [reportUndefinedVariable]
+        snakemake.params.anndata_text_obs_label + "_replicates"  # type: ignore [reportUndefinedVariable]
     ] = annotation_replicates
 
     # Filter dataset to only contain annotated cells. need to copy to be able to write (bug)
-    dataset = dataset[dataset.obs[snakemake.params.anndata_label_name].notnull()].copy()  # type: ignore [reportUndefinedVariable]
+    dataset = dataset[dataset.obs[snakemake.params.anndata_text_obs_label].notnull()].copy()  # type: ignore [reportUndefinedVariable]
 
 # Save dataset
 dataset.write(snakemake.output[0])  # type: ignore [reportUndefinedVariable]

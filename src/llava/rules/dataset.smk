@@ -36,7 +36,7 @@ rule llava_stage1_dataset:
         annotation_replicate=1,
         questions=QUESTIONS,
         transcriptome_tag="<image>",  # we stick to <image> because of the llava code base
-        anndata_label_name=config["anndata_label_name"],
+        anndata_text_obs_label=config["anndata_text_obs_label"],
         test_ids=TEST_IDS
     conda:
         "cellwhisperer"

@@ -179,7 +179,7 @@ def deduplicate_dataset(
     adata = anndata.read_h5ad(get_path(["paths", "full_dataset"], dataset=dataset))
 
     if annotations is None:
-        annotations_text = adata.obs[config["anndata_label_name"]].values.to_list()
+        annotations_text = adata.obs[config["anndata_text_obs_label"]].values.to_list()
         annotations_sample_ids = adata.obs.index.to_list()
     else:
         annotations_text = list(annotations.values())

@@ -28,6 +28,7 @@ from transformers.tokenization_utils_base import BatchEncoding
 from .geneformer_model import GeneformerTranscriptomeProcessor
 from .scgpt_model import ScGPTTranscriptomeProcessor
 from .uce_model import UCETranscriptomeProcessor
+from .uni_model import UNIProcessor
 
 
 class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
@@ -46,21 +47,27 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
             The tokenizer is a required input.
     """
 
-    attributes = ["tokenizer", "transcriptome_processor"]  # "transcriptome_processor",
+    attributes = [
+        "tokenizer",
+        "transcriptome_processor",
+        "image_processor",
+    ]
     transcriptome_processor_class = "ProcessorMixin"
     tokenizer_class = "AutoTokenizer"
+    image_processor_class = "ProcessorMixin"
 
     def __init__(
         self,
         transcriptome_processor: Union[str, Any] = None,
         tokenizer: Union[str, Any] = None,
+        image_processor: Union[str, Any] = None,
         nproc: int = 8,
         **transcriptome_kwargs,
     ):
         if transcriptome_processor == "geneformer":
             transcriptome_processor = GeneformerTranscriptomeProcessor(
                 nproc=nproc,
-                emb_label="natural_language_annotation",  # config["anndata_label_name"]
+                emb_label="natural_language_annotation",  # config["anndata_text_obs_label"]
                 **transcriptome_kwargs,
             )
         elif transcriptome_processor == "scgpt":
@@ -79,17 +86,25 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
             ), "You have to specify a transcriptome processor."
             transcriptome_processor = transcriptome_processor
 
+        if image_processor == "uni2":
+            image_processor = UNIProcessor(
+                **transcriptome_kwargs,
+            )
+        elif image_processor is None:
+            image_processor = None
+
         if isinstance(tokenizer, str):
             tokenizer = AutoTokenizer.from_pretrained(tokenizer)
         if tokenizer is None:
             raise ValueError("You have to specify a tokenizer.")
 
-        super().__init__(tokenizer, transcriptome_processor)
+        super().__init__(tokenizer, transcriptome_processor, image_processor)
 
     def __call__(
         self,
         text=None,
         transcriptomes=None,
+        image=None,
         text_truncation=True,
         return_tensors=None,
         **kwargs,
@@ -131,64 +146,39 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
             - **expression_values** -- Pixel values to be fed to a model. Returned when `transcriptomes` is not `None`.
         """
 
-        if text is None and transcriptomes is None:
+        if text is None and transcriptomes is None and image is None:
             raise ValueError(
-                "You have to specify either text or transcriptomes. Both cannot be none."
+                "You have to specify either text, transcriptomes, or image. All cannot be none."
             )
+        encoding = {}
 
         if text is not None:
-            encoding = self.tokenizer(
-                text,
-                truncation=text_truncation,
-                return_tensors=return_tensors,
-                **kwargs,
+            encoding.update(
+                self.tokenizer(
+                    text,
+                    truncation=text_truncation,
+                    return_tensors=return_tensors,
+                    **kwargs,
+                )
             )
-        else:
-            encoding = {}
 
         if transcriptomes is not None:
-            transcriptome_processor_results = self.transcriptome_processor(
-                transcriptomes, return_tensors=return_tensors, **kwargs
+            encoding.update(
+                self.transcriptome_processor(
+                    transcriptomes, return_tensors=return_tensors, **kwargs
+                )
             )
 
-        if text is not None and transcriptomes is not None:
-            # NOTE this block could be refactored
-            if type(self.transcriptome_processor) == GeneformerTranscriptomeProcessor:
-                encoding["expression_tokens"] = transcriptome_processor_results[
-                    "expression_tokens"
-                ]
-                encoding["expression_token_lengths"] = transcriptome_processor_results[
-                    "expression_token_lengths"
-                ]
-            elif type(self.transcriptome_processor) == ScGPTTranscriptomeProcessor:
-                for key in transcriptome_processor_results.keys():
-                    encoding[key] = transcriptome_processor_results[key]
-            elif type(self.transcriptome_processor) == UCETranscriptomeProcessor:
-                for key in transcriptome_processor_results.keys():
-                    encoding[key] = transcriptome_processor_results[key]
-            else:
-                raise ValueError("Unsupported transcriptome processor type.")
-            return encoding
-        elif text is not None:
-            return encoding
-        else:
-            return BatchEncoding(
-                data=dict(**transcriptome_processor_results), tensor_type=return_tensors
+        if image is not None:
+            encoding.update(
+                self.image_processor(image, return_tensors=return_tensors, **kwargs)
             )
 
-    def batch_decode(self, *args, **kwargs):
-        """
-        This method forwards all its arguments to TranscriptomeTextDualEncoderTokenizer's
-        [`~PreTrainedTokenizer.batch_decode`]. Please refer to the docstring of this method for more information.
-        """
-        return self.tokenizer.batch_decode(*args, **kwargs)
+        return encoding
 
-    def decode(self, *args, **kwargs):
-        """
-        This method forwards all its arguments to TranscriptomeTextDualEncoderTokenizer's [`~PreTrainedTokenizer.decode`].
-        Please refer to the docstring of this method for more information.
-        """
-        return self.tokenizer.decode(*args, **kwargs)
+        # return BatchEncoding(  # NOTE this was previously run for transcriptome_processor_results only
+        #     data=dict(**transcriptome_processor_results), tensor_type=return_tensors
+        # )
 
     @property
     def model_input_names(self):
@@ -196,6 +186,15 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
         transcriptome_processor_input_names = (
             self.transcriptome_processor.model_input_names
         )
+        image_processor_input_names = (
+            self.image_processor.model_input_names
+            if self.image_processor is not None
+            else []
+        )
         return list(
-            dict.fromkeys(tokenizer_input_names + transcriptome_processor_input_names)
+            dict.fromkeys(
+                tokenizer_input_names
+                + transcriptome_processor_input_names
+                + image_processor_input_names
+            )
         )

@@ -85,39 +85,40 @@ def norm_and_dot(x, y, temp):
     return torch.dot(x, y) * temp
 
 
-class GlobalDiscriminatorDot(nn.Module):
-    def __init__(self, image_sz, text_sz, units=2048, bln=True):
-        super(GlobalDiscriminatorDot, self).__init__()
-        self.img_block = MILinearBlock(image_sz, units=units, bln=bln)
-        self.text_block = MILinearBlock(text_sz, units=units, bln=bln)
-        self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
-        self.temperature = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
+# TODO duplicate with discriminator.py (though there it is implemented for all modalities...)
+# class GlobalDiscriminatorDot(nn.Module):
+#     def __init__(self, image_sz, text_sz, units=2048, bln=True):
+#         super(GlobalDiscriminatorDot, self).__init__()
+#         self.img_block = MILinearBlock(image_sz, units=units, bln=bln)
+#         self.text_block = MILinearBlock(text_sz, units=units, bln=bln)
+#         self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+#         self.temperature = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
 
-    def forward(
-        self,
-        features1=None,
-        features2=None,
-    ):
-        """
-        Compute full matrix dot product (each vs each)
-        """
-        # Computer cross modal loss
-        feat1 = self.img_block(features1)
-        feat2 = self.text_block(features2)
+#     def forward(
+#         self,
+#         features1=None,
+#         features2=None,
+#     ):
+#         """
+#         Compute full matrix dot product (each vs each)
+#         """
+#         # Computer cross modal loss
+#         feat1 = self.img_block(features1)
+#         feat2 = self.text_block(features2)
 
-        feat1, feat2 = map(lambda t: F.normalize(t, p=2, dim=-1), (feat1, feat2))
+#         feat1, feat2 = map(lambda t: F.normalize(t, p=2, dim=-1), (feat1, feat2))
 
-        # ## Method 1
-        # # Dot product and sum
-        # o = torch.mm(feat1, feat2.t()) * self.temperature.exp()
+#         # ## Method 1
+#         # # Dot product and sum
+#         # o = torch.mm(feat1, feat2.t()) * self.temperature.exp()
 
-        # ## Method 2
-        # o = self.cos(feat1.unsqueeze(1), feat2.unsqueeze(0)) * self.temperature.exp()
+#         # ## Method 2
+#         # o = self.cos(feat1.unsqueeze(1), feat2.unsqueeze(0)) * self.temperature.exp()
 
-        # Method 3
-        o = torch.einsum("nd,md->nm", [feat1, feat2]) * self.temperature.exp()
+#         # Method 3
+#         o = torch.einsum("nd,md->nm", [feat1, feat2]) * self.temperature.exp()
 
-        return o, feat1, feat2
+#         return o, feat1, feat2
 
 
 class JSDInfoMaxLoss(nn.Module):

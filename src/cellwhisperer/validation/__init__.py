@@ -15,7 +15,9 @@ def initialize_validation_functions(
     batch_size: int,
     transcriptome_model_type: str,
     text_model_type: str,
+    image_model_type: Optional[str],
 ):
+    return {}
     tabsap_sc_dataset = SingleCellDataSetForValidationScoring(
         cell_number_threshold_per_celltype=100
     )

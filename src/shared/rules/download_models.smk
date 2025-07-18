@@ -138,20 +138,25 @@ rule download_pretrained_deepspot:
 rule download_uni:
     """
     Download the UNI pathology foundation model from HuggingFace
+
+    TODO make a real copy (follow symlink)
     """
     output:
-        PROJECT_DIR / config["model_name_path_map"]["uni"] / "pytorch_model.bin",
-        PROJECT_DIR / config["model_name_path_map"]["uni"] / "config.json",
-    params: 
-        uni_model_dir = PROJECT_DIR / config["model_name_path_map"]["uni"],
+        lambda wildcards: PROJECT_DIR / config["model_name_path_map"][model_name] / "pytorch_model.bin",
+        lambda wildcards: PROJECT_DIR / config["model_name_path_map"][model_name] / "config.json",
+    wildcard_constraints:
+        model_name="uni|uni2",
+    params:
+        uni_model_dir = lambda wildcards: PROJECT_DIR / config["model_name_path_map"][wildcards.model_name],
         huggingface_token = os.getenv("HUGGINGFACE_TOKEN"),
+        model_name = lambda wildcards: "MahmoodLab/UNI2-h" if wildcards.model_name == "uni2" else "MahmoodLab/UNI"
     resources:
         mem_mb=16000,
         slurm="cpus-per-task=1 qos=cpu partition=cpu"
     conda:
         "deepspot"
     script:
-       "../scripts/download_uni.py" 
+       "../scripts/download_uni.py"
 
 rule download_hoptimus:
     """

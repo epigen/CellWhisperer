@@ -9,24 +9,21 @@ if huggingface_token:
     login(token=huggingface_token)
 
 # Download the model files
-model_repo = "MahmoodLab/UNI"
 
 # Download pytorch_model.bin
 hf_hub_download(
-    repo_id=model_repo,
+    repo_id=snakemake.params.model_name,
     filename="pytorch_model.bin",
     local_dir=uni_model_dir,
     force_download=True,
-    token=huggingface_token
+    token=huggingface_token,
 )
 
 # Download config.json
 hf_hub_download(
-    repo_id=model_repo,
+    repo_id=snakemake.params.model_name,
     filename="config.json",
     local_dir=uni_model_dir,
     force_download=True,
-    token=huggingface_token
+    token=huggingface_token,
 )
-
-print(f"Downloaded UNI model files to {uni_model_dir}")

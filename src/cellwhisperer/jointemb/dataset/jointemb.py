@@ -75,6 +75,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self,
         tokenizer="bert",
         transcriptome_processor="geneformer",
+        image_processor="uni2",
         dataset_names="human_disease",
         batch_size=32,
         nproc=8,
@@ -107,6 +108,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.dataset_names = dataset_names.split(",")
         self.tokenizer = model_path_from_name(tokenizer)
         self.transcriptome_processor = transcriptome_processor
+        self.image_processor = image_processor
         self.nproc = nproc
         self.min_genes = min_genes
         self.train_fraction = train_fraction
@@ -123,6 +125,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 [
                     self.transcriptome_processor,
                     "" if not self.tokenizer else self.tokenizer.replace("/", "__"),
+                    self.image_processor,
                     str(self.min_genes),
                     str(self.use_replicates),
                     self.include_labels or "",
@@ -152,6 +155,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 if self.tokenizer
                 else None
             ),
+            self.image_processor,
         )
         adata = anndata.read_h5ad(
             (get_path(["paths", "full_dataset"], dataset=dataset_name))
@@ -161,10 +165,13 @@ class JointEmbedDataModule(pl.LightningDataModule):
         inputs = processor(
             text=(
                 list(adata.obs["natural_language_annotation"])
-                if self.tokenizer
+                if self.tokenizer and "natural_language_annotation" in adata.obs
                 else None
             ),
             transcriptomes=adata,
+            image=(
+                adata if "20x_slide" in adata.uns and self.image_processor else None
+            ),  # NOTE Could refactor API to only provide an adata, but not sure if the repository depends on this splitting..
             return_tensors="pt",
             padding="max_length",
         )
@@ -245,8 +252,10 @@ class JointEmbedDataModule(pl.LightningDataModule):
         This is not required per se (the dimensionalities could also vary from epoch to epoch), however, it feels cleaner to remain dimensionalities across epochs.
         We could also stack them into a single tensor, but I see little benefit at the moment
         Note that the first one is computed twice (redundantly)
-
         """
+        raise NotImplementedError(
+            "Not impelemented for images. not sure how much there is to be done."
+        )
 
         replicate_inputs = defaultdict(list)
 
@@ -300,17 +309,18 @@ class JointEmbedDataModule(pl.LightningDataModule):
         for dataset_name in self.dataset_names:
             (inputs, replicate_inputs) = torch.load(self._processed_path(dataset_name))
 
+            dataset_len = len(next(iter(inputs.values())))
             if isinstance(self.train_fraction, (int, float)):
                 # Assuming you want to split the data into train and val for simplicity
-                train_size = int(self.train_fraction * len(inputs["input_ids"]))
+                train_size = int(self.train_fraction * dataset_len)
                 # randomly sample train_size indices for train and use the rest for val
                 # fix the seed
                 random.seed(42)
-                total_ids = list(range(len(inputs["input_ids"])))
+                total_ids = list(range(dataset_len))
                 train_ids = random.sample(total_ids, train_size)
                 val_ids = sorted(list(set(total_ids) - set(train_ids)))
             elif isinstance(self.train_fraction, str):
-                total_ids = list(range(len(inputs["input_ids"])))
+                total_ids = list(range(dataset_len))
                 if dataset_name == self.train_fraction:
                     train_ids = total_ids
                     val_ids = []

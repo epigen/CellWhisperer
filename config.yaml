@@ -1,4 +1,4 @@
-anndata_label_name: natural_language_annotation
+anndata_text_obs_label: natural_language_annotation
 num_replicates: 5
 llava_projector_type: mlp2x_8t_gelu # NOTE fails if > 8 because we use a fully connected layer between all 8 tokens (i.e. having too many params)
 precomputing_base_url: https://medical-epigenomics.org/papers/schaefer2025cellwhisperer/data
@@ -43,7 +43,6 @@ paths:
   ablations:
     models: results/models/ablations/
     plots: results/plots/ablations/
-  
 
 plot_style: "src/plot_style/main.style"
 
@@ -119,6 +118,8 @@ model_name_path_map:
   # manually downloaded with `git clone` (requires license agreement)
   mistral: resources/Mistral-7B-Instruct-v0.2
   llama33: resources/Llama-3.3-70B-Instruct
+
+  uni2: resources/UNI2/
 
   # Deepspot related model paths
   deepspot_pretrained: resources/deepspot_pretrained
