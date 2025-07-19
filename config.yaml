@@ -13,6 +13,7 @@ paths:
   geneset_gmt: results/genesets/{library}.gmt
   model_processed_dataset: results/{dataset}/{model}/full_output.npz
   full_dataset: results/{dataset}/full_data.h5ad
+  full_dataset_multi: results/{dataset}/full_data_{i}.h5ad
   enrichr_terms_json: resources/enrichr_terms/terms.json
   ensembl_gene_symbol_map: resources/ensembl_gene_symbol_map.csv
   jointemb_models: results/models/jointemb

@@ -117,7 +117,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.use_replicates = use_replicates
         self.include_labels = include_labels
 
-    def _processed_path(self, dataset_name):
+    def _processed_path(self, dataset_name, i=None):
         return get_path(
             ["paths", "datamodule_prepared_path"],
             dataset=dataset_name,
@@ -133,22 +133,56 @@ class JointEmbedDataModule(pl.LightningDataModule):
             ),
         )
 
+    def get_paths(self, dataset_name):
+        """
+        Return all paths (adata and processed) for a given dataset
+        """
+
+        adata_paths = [get_path(["paths", "full_dataset"], dataset=dataset_name)]
+        processed_paths = self._processed_path(dataset_name)
+        if not adata_paths[0].exists():
+            adata_paths = []
+            i = 0
+            while (
+                path := get_path(
+                    ["paths", "full_dataset_multi"], dataset=dataset_name, i=i
+                )
+            ).exists():
+                adata_paths.append(path)
+                processed_paths.append(self._processed_path(dataset_name, i))
+                i += 1
+
+            if i == 0:
+                raise FileNotFoundError(
+                    f"Neither full_data.h5ad, nor full_data_{{i}}.h5ad were found for {dataset_name}"
+                )
+            else:
+                logging.info(f"Loading {i} adata files for {dataset_name}")
+        return adata_paths, processed_paths
+
     def prepare_data(self, force_prepare=False):
         # Generate all datasets
         for dataset_name in self.dataset_names:
-            self.prepare_data_single(dataset_name, force_prepare)
+            self.prepare_dataset(dataset_name, force_prepare)
 
-    def prepare_data_single(self, dataset_name, force_prepare):
-        processed_path = self._processed_path(dataset_name)
+    def prepare_dataset(self, dataset_name, force_prepare):
+        adata_paths, processed_paths = self.get_paths(dataset_name)
 
         # check whether data has already been prepared
-        if processed_path.exists() and not force_prepare:
+        if (
+            all(processed_path.exists() for processed_path in processed_paths)
+            and not force_prepare
+        ):
             logger.info("data already prepared")
             return
         logger.info("preparing data...")
 
+        for adata_path, processed_path in zip(adata_paths, processed_paths):
+            self.prepare_dataset_file(adata_path, processed_path)
+
+    def prepare_dataset_file(self, adata_path, processed_path):
         # Load data and processor
-        processor = TranscriptomeTextDualEncoderProcessor(
+        processor = TranscriptomeTextDualEncoderProcessor(  # TODO test moving this to constructor
             self.transcriptome_processor,
             (
                 AutoTokenizer.from_pretrained(self.tokenizer, **self.tokenizer_kwargs)
@@ -157,9 +191,8 @@ class JointEmbedDataModule(pl.LightningDataModule):
             ),
             self.image_processor,
         )
-        adata = anndata.read_h5ad(
-            (get_path(["paths", "full_dataset"], dataset=dataset_name))
-        )
+
+        adata = anndata.read_h5ad(adata_path)
 
         # Fixed size embedding (https://huggingface.co/docs/transformers/en/pad_truncation), as we combine multiple datasets
         inputs = processor(
@@ -303,11 +336,32 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
         return replicate_inputs
 
+    def _load_processed_dataset(self, dataset_name):
+        """aggregate and return"""
+        _, processed_paths = self.get_paths(dataset_name)
+        results = [torch.load(p) for p in processed_paths]
+
+        # TODO test
+        return (
+            {
+                key: torch.cat([result[0][key] for result in results], dim=0)
+                for key in results[0][0]
+            },
+            {
+                key: [
+                    torch.cat([result[1][key][i] for result in results], dim=0)
+                    for i in range(len(next(iter(results[0][1].values()))))
+                ]
+                for key in results[0][1]
+                if len(results[0][1][key]) > 0
+            },
+        )
+
     def setup(self, stage=None):
         self.train_datasets = []
         self.val_datasets = []
         for dataset_name in self.dataset_names:
-            (inputs, replicate_inputs) = torch.load(self._processed_path(dataset_name))
+            (inputs, replicate_inputs) = self._load_processed_dataset(dataset_name)
 
             dataset_len = len(next(iter(inputs.values())))
             if isinstance(self.train_fraction, (int, float)):
