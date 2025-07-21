@@ -29,3 +29,21 @@ in the repository root.
 ## Maintenance
 
 If the website needs to go offline for a larger amount of time due to maintenance, rename the file `static/maintenance.hidden.html` to `static/maintenance.html` and keep the nginx server running. Once maintenance is done, rename the file back to its original name again.
+
+## Rebuild *everything*
+
+0. Stop `podman`
+1. Remove the containers symlink from `/home/jburton/.local/share`
+`rm /home/jburton/.local/share/containers`
+2. Rename the real folder '/var/tmp/jburton/symlinked/containers'
+`mv /var/tmp/jburton/symlinked/containers /var/tmp/jburton/symlinked/containers-older/`
+3. Take control
+`chown -R jburton containers-older`
+`chmod -R 777 containers-older`
+4. Delete
+`rm -r containers-older`
+5. Recreate the symlink.
+`mkdir /var/tmp/jburton/symlinked/containers`
+`ln -s  /var/tmp/jburton/symlinked/containers /home/jburton/.local/share/containers`
+6. Run `podman` e.g. `docker compose up -d`
+
