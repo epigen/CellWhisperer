@@ -92,6 +92,7 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
         #     x.split(".")[0] for x in adata.obs["cell type"].values
         # ]
         adata_var = pd.DataFrame(adata.var)
+        adata_var.index = adata_var.index.astype(str).map(str.upper)
         # no need to re-gather ensembl_id if they are already present
         if adata.var.index[0].startswith("ENSG0") or "ensembl_id" in adata.var.columns:
             # No need to translate IDs
@@ -107,15 +108,17 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
             adata_var["ensembl_id"] = ensembl_ids
         else:
             if "gene_name" in adata.var.columns:
-                assert (
-                    len(VERY_COMMON_GENES & set(adata_var["gene_name"])) > 0
-                ), f"adata.var['gene_name] should contain gene symbols but none are found. (checking these: {VERY_COMMON_GENES})"
                 gene_names = adata_var["gene_name"]
             else:
-                assert (
-                    len(VERY_COMMON_GENES & set(adata_var.index)) > 0
-                ), f"adata.var.index should contain gene symbols but none are found. (checking these: {VERY_COMMON_GENES})"
                 gene_names = adata_var.index
+                if gene_names[0].startswith("GRCH38______"):
+                    # Some datasets have gene names prefixed with "GRCH38______"
+                    gene_names = gene_names.str.replace("GRCH38______", "", regex=False)
+
+            assert (
+                len(VERY_COMMON_GENES & set(gene_names))
+                > 0  # could use self.annot.index
+            ), f"gene_names should contain gene symbols but none are found. (checking these: {VERY_COMMON_GENES})"
 
             adata_var["ensembl_id"] = [
                 self.annot["ensembl_gene_id"].get(gene_name, "")
@@ -124,7 +127,7 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
 
         adata.var = adata_var
 
-        # Filter genes that don't have an ensembl_id (according to our mapping file)
+        # Filter genes that don"t have an ensembl_id (according to our mapping file)
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore", message=".*is_categorical_dtype is deprecated.*"
@@ -144,7 +147,7 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
         # elif isinstance(adata_w_id.X, anndata._core.views.SparseCSRView):
         #     X = adata_w_id.X.copy()
 
-        sc.pp.calculate_qc_metrics(adata_w_id, inplace=True)
+        sc.pp.calculate_qc_metrics(adata_w_id, inplace=True, percent_top=None)
         adata_w_id.obs["n_counts"] = adata_w_id.obs.total_counts
         if "sample_name" in adata_w_id.obs.columns:
             # rename column
@@ -362,7 +365,7 @@ class GeneformerModel(
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         bool_masked_pos (`torch.BoolTensor` of shape `(batch_size, num_patches)`, *optional*):
-            Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
+            Boolean masked positions. Indicates which patches are masked (1) and which aren"t (0).
         """
         assert not return_dict, f"No support for return_dict={return_dict}"
         layer_to_quant = quant_layers(self.geneformer_model) + self.config.emb_layer

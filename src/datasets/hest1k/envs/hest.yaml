@@ -1,0 +1,17 @@
+name: hest
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - python=3.10
+  - anndata
+  - scanpy
+  - pandas
+  - numpy
+  - datasets
+  - openslide
+  - pip
+  - pip:
+    - huggingface_hub
+    - git+https://github.com/mahmoodlab/hest.git

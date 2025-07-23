@@ -2,6 +2,7 @@ from torch.utils.data import Dataset, DataLoader
 import anndata
 from collections import defaultdict
 from itertools import zip_longest
+from pathlib import Path
 
 import torch
 import random
@@ -117,7 +118,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.use_replicates = use_replicates
         self.include_labels = include_labels
 
-    def _processed_path(self, dataset_name, i=None):
+    def _processed_path(self, dataset_name, i: Optional[str] = None):
         return get_path(
             ["paths", "datamodule_prepared_path"],
             dataset=dataset_name,
@@ -129,6 +130,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                     str(self.min_genes),
                     str(self.use_replicates),
                     self.include_labels or "",
+                    i or "",
                 ]
             ),
         )
@@ -139,25 +141,32 @@ class JointEmbedDataModule(pl.LightningDataModule):
         """
 
         adata_paths = [get_path(["paths", "full_dataset"], dataset=dataset_name)]
-        processed_paths = self._processed_path(dataset_name)
+        processed_paths = [self._processed_path(dataset_name)]
         if not adata_paths[0].exists():
-            adata_paths = []
-            i = 0
-            while (
-                path := get_path(
-                    ["paths", "full_dataset_multi"], dataset=dataset_name, i=i
-                )
-            ).exists():
-                adata_paths.append(path)
-                processed_paths.append(self._processed_path(dataset_name, i))
-                i += 1
+            adata_paths = list(
+                Path(adata_paths[0]).parent.glob("full_data_*.h5ad")
+            )  # corresponds to config["paths", "full_dataset_multi"]
 
-            if i == 0:
+            # if we are in test mode, then only use the first 2 datasets
+            if self.trainer and self.trainer.fast_dev_run:
+                adata_paths = adata_paths[:3]
+            adata_paths = adata_paths[:3]  # TODO use/test all :)
+
+            if not adata_paths:
                 raise FileNotFoundError(
                     f"Neither full_data.h5ad, nor full_data_{{i}}.h5ad were found for {dataset_name}"
                 )
             else:
-                logging.info(f"Loading {i} adata files for {dataset_name}")
+                logging.info(
+                    f"Loading {len(adata_paths)} adata files for {dataset_name}"
+                )
+                processed_paths = [
+                    self._processed_path(
+                        dataset_name=dataset_name, i=adata_path.stem.split("_")[-1]
+                    )
+                    for adata_path in adata_paths
+                ]
+
         return adata_paths, processed_paths
 
     def prepare_data(self, force_prepare=False):
@@ -239,13 +248,22 @@ class JointEmbedDataModule(pl.LightningDataModule):
             )
 
         # Filter for empty inputs (NOTE: empty inputs should be avoided)
-        if self.transcriptome_processor == "geneformer":
+        if (
+            self.transcriptome_processor == "geneformer"
+            and "expression_token_lengths" in inputs
+        ):
             n_genes_filter = inputs["expression_token_lengths"] >= self.min_genes
-        elif self.transcriptome_processor == "scgpt":
+        elif (
+            self.transcriptome_processor == "scgpt"
+            and "expression_key_padding_mask" in inputs
+        ):
             n_genes_filter = (inputs["expression_key_padding_mask"] == False).sum(
                 dim=1
             ) >= self.min_genes
-        elif self.transcriptome_processor == "uce":
+        elif (
+            self.transcriptome_processor == "uce"
+            and "expression_key_padding_mask" in inputs
+        ):
             n_genes_filter = (inputs["expression_key_padding_mask"] == False).sum(
                 dim=1
             ) >= 1  # self.min_genes  # NOTE the mask cannot be used unfortunately for filtering
@@ -254,21 +272,30 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 "Transcriptome processor {self.transcriptome_processor} not supported"
             )
 
-        if sum(n_genes_filter) == len(n_genes_filter):
+        valid_datapoints_filter = n_genes_filter
+
+        if self.image_processor == "uni2" and "patches" in inputs:
+            # Idenitfy all-zero patches
+            non_zero_patches = (
+                inputs["patches"].sum(dim=(1, 2, 3)) > 0
+            )  # sum over channels, height, width
+            valid_datapoints_filter = valid_datapoints_filter & non_zero_patches
+
+        if sum(valid_datapoints_filter) == len(valid_datapoints_filter):
             logger.info(
                 f"No samples were filtered out (All cells had >= {self.min_genes} genes)"
             )
-            inputs["orig_ids"] = adata.obs.index[n_genes_filter]
+            inputs["orig_ids"] = adata.obs.index[valid_datapoints_filter]
         else:
             logger.warning(
-                f"Filtering for {sum(n_genes_filter)} of {len(n_genes_filter)} samples with >={self.min_genes} genes."
+                f"Filtering for {sum(valid_datapoints_filter)} of {len(valid_datapoints_filter)} samples with >={self.min_genes} genes."
             )
-            inputs = {key: val[n_genes_filter] for key, val in inputs.items()}
-            inputs["orig_ids"] = adata.obs.index[n_genes_filter]
+            inputs = {key: val[valid_datapoints_filter] for key, val in inputs.items()}
+            inputs["orig_ids"] = adata.obs.index[valid_datapoints_filter]
             if len(replicate_inputs) > 0:
                 for key, rep_value in replicate_inputs.items():
                     replicate_inputs[key] = [
-                        value[n_genes_filter] for value in rep_value
+                        value[valid_datapoints_filter] for value in rep_value
                     ]
                     assert len(rep_value) > 0
 
@@ -341,19 +368,39 @@ class JointEmbedDataModule(pl.LightningDataModule):
         _, processed_paths = self.get_paths(dataset_name)
         results = [torch.load(p) for p in processed_paths]
 
-        # TODO test
+        if len(results[0][1]) > 0:
+            raise NotImplementedError("Currently, no 'replicates' are supported")
+
+        # pad the expression tokens to the maximum length
+        max_expression_length = (
+            torch.cat([result[0]["expression_token_lengths"] for result in results])
+            .max()
+            .item()
+        )
+        for result in results:
+            # pad the expression token lengths to the maximum length
+            result[0]["expression_tokens"] = torch.nn.functional.pad(
+                result[0]["expression_tokens"],
+                (0, max_expression_length - result[0]["expression_tokens"].shape[1]),
+                value=0,
+            )
+
         return (
             {
-                key: torch.cat([result[0][key] for result in results], dim=0)
+                key: (
+                    torch.cat([result[0][key] for result in results], dim=0)
+                    if key != "orig_ids"
+                    else pd.Index([v for result in results for v in result[0][key]])
+                )
                 for key in results[0][0]
             },
             {
-                key: [
-                    torch.cat([result[1][key][i] for result in results], dim=0)
-                    for i in range(len(next(iter(results[0][1].values()))))
-                ]
-                for key in results[0][1]
-                if len(results[0][1][key]) > 0
+                # key: [
+                #     torch.cat([result[1][key][i] for result in results], dim=0)
+                #     for i in range(len(next(iter(results[0][1].values()))))
+                # ]
+                # for key in results[0][1]
+                # if len(results[0][1][key]) > 0 and key != "orig_ids"
             },
         )
 

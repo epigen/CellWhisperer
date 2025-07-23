@@ -1,0 +1,73 @@
+import subprocess
+import os
+from pathlib import Path
+import pandas as pd
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+include: "../../shared/config.smk"
+include: "../../shared/rules/dataset_processing.smk"
+
+
+df = pd.read_csv("./HEST_v1_1_0.csv")
+df = df.query("st_technology == 'Visium' and species == 'Homo sapiens'")
+HEST_SAMPLE_IDS = df["id"].tolist()
+
+# HEST-1K sample configuration
+# Set to None to download all samples, or specify a list of sample IDs
+# HEST_SAMPLE_IDS = [
+#     # "TENX95",
+#     # "TENX99",
+#     # "TENX105",
+#     "TENX108",  # something is buggy with these because I deleted the metadata file
+#     "TENX109",
+# ]
+
+
+
+rule download_data:
+    """
+    Download individual HEST-1K sample from HuggingFace using the HEST library.
+    """
+    output:
+        download_flag=str(PROJECT_DIR / "resources" / "hest1k_cache" / "downloaded_{sample_id}.flag")
+    params:
+        huggingface_token=lambda w: os.getenv("HUGGINGFACE_TOKEN"),
+        sample_id="{sample_id}",
+        hest_cache_dir=str(PROJECT_DIR / "resources" / "hest1k_cache")
+    conda:
+        "envs/hest.yaml"
+    resources:  # short task, but needs some memory
+        mem_mb=100000,
+        slurm="cpus-per-task=2 time=00:30:00 partition=cmackall gpus=1"
+    threads: 2
+    script:
+        "scripts/download_data.py"
+
+rule process_data:
+    """
+    Process individual downloaded HEST-1K sample into adata file following full_dataset_multi pattern.
+    """
+    input:
+        download_flag=str(PROJECT_DIR / "resources" / "hest1k_cache" / "downloaded_{sample_id}.flag")
+    output:
+        full_data_file=str(PROJECT_DIR / config["paths"]["full_dataset_multi"]).format(dataset="hest1k", i="{sample_id}")
+    params:
+        sample_id="{sample_id}",
+        hest_cache_dir=str(PROJECT_DIR / "resources" / "hest1k_cache")
+    wildcard_constraints:
+        dataset="hest1k"
+    conda:
+        "envs/hest.yaml"
+    resources:
+        mem_mb=200000,  # HEST data can be large
+        slurm="cpus-per-task=2 time=00:30:00 partition=cmackall gpus=1"
+    threads: 2
+    script:
+        "scripts/process_data.py"
+
+rule all:
+    input:
+        expand(str(PROJECT_DIR / config["paths"]["full_dataset_multi"]), dataset="hest1k", i=HEST_SAMPLE_IDS)
+    default_target: True

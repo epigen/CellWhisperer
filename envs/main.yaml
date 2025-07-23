@@ -67,6 +67,7 @@ dependencies:
     - jax==0.4.38
     - jaxlib==0.4.38
     - git+https://github.com/mahmoodlab/UNI.git@42715efc11722a496e0a67f3369505a8f277206c
+    - git+https://github.com/mahmoodlab/hest.git
     - -e ..
     - -e ../modules/cellxgene/
     - -e ../modules/Geneformer/

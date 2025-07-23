@@ -33,7 +33,7 @@ class UNIProcessor(ProcessorMixin):
                 transforms.Resize(224),
                 transforms.CenterCrop(224),
                 transforms.ToTensor(),
-                transforms.Normalize(
+                transforms.Normalize(  # TODO understand
                     mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
                 ),
             ]
@@ -44,6 +44,9 @@ class UNIProcessor(ProcessorMixin):
     def __call__(
         self,
         adata,
+        return_tensors: Optional[str] = None,
+        *args: Any,
+        **kwargs: Any,
     ) -> Dict[str, Any]:
         """
         image: PIL.Image
@@ -63,26 +66,38 @@ class UNIProcessor(ProcessorMixin):
             raise NotImplementedError(
                 "Currently, only numpy arrays are supported for image input."
             )
-        X = torch.zeros(
-            len(barcodes),
-            3,
-            224,
-            224,
-            dtype=torch.float32,
-            device="cuda",
-        )
+        X = []
 
         for i, (b, x, y) in tqdm(enumerate(zip(barcodes, x_pixel, y_pixel))):
             main_tile = self._crop_tile(image, x, y, spot_diameter_fullres)  #
 
-            preprocess_main_tile = self.transform(
-                Image.fromarray(main_tile)
-            )  # transform is defined below below
-            X[i] = preprocess_main_tile.to("cuda")
+            try:
+                main_tile = self.transform(
+                    Image.fromarray(main_tile)
+                )  # transform is defined below below
+            except Exception as e:
+                logger.error(
+                    f"Error processing tile for barcode {b} at ({x}, {y}): {e}"
+                )
+                main_tile = np.zeros(
+                    (3, 224, 224), dtype=np.float32
+                )  # Fallback to zero tensor if transformation fails
+            X.append(main_tile)
 
-        return {
-            "patches": X,  # (n_patches, 3, 224, 224)
-        }
+        X = np.stack(X, axis=0)  # (n_patches, 3, 224, 224)
+
+        if return_tensors == "pt":
+            return {
+                "patches": torch.tensor(
+                    X, dtype=torch.float32
+                )  # (n_patches, 3, 224, 224)
+            }
+        elif return_tensors is None:
+            return {"patches": X}
+        else:
+            raise ValueError(
+                f"Unsupported return_tensors type: {return_tensors}. Use 'pt' or None."
+            )
 
     @property
     def model_input_names(self):
@@ -92,10 +107,10 @@ class UNIProcessor(ProcessorMixin):
         # NOTE: implementation for Image.Image is in test_uni.ipynb
         x = x_pixel - int(cell_diameter_pixels // 2)
         y = y_pixel - int(cell_diameter_pixels // 2)
-        cell = image[x : x + cell_diameter_pixels, y : y + cell_diameter_pixels]
-        tile = cell[:, :, :3]
-
-        return tile
+        cell = image[
+            y : y + int(cell_diameter_pixels), x : x + int(cell_diameter_pixels)
+        ]
+        return cell[:, :, :3]
 
 
 class UNIConfig(PretrainedConfig):
@@ -113,8 +128,6 @@ class UNIConfig(PretrainedConfig):
         mlp_ratio=2.66667 * 2,
         num_classes=0,
         no_embed_class=True,
-        mlp_layer=timm.layers.SwiGLUPacked,  # "SwiGLUPacked"
-        act_layer=torch.nn.SiLU,  # "SiLU"
         reg_tokens=8,
         dynamic_img_size=True,
         **kwargs,
@@ -130,8 +143,6 @@ class UNIConfig(PretrainedConfig):
         self.mlp_ratio = mlp_ratio
         self.num_classes = num_classes
         self.no_embed_class = no_embed_class
-        self.mlp_layer = mlp_layer
-        self.act_layer = act_layer
         self.reg_tokens = reg_tokens
         self.dynamic_img_size = dynamic_img_size
 
@@ -156,8 +167,8 @@ class UNIModel(PreTrainedModel):
             mlp_ratio=config.mlp_ratio,
             num_classes=config.num_classes,
             no_embed_class=config.no_embed_class,
-            mlp_layer=config.mlp_layer,
-            act_layer=config.act_layer,
+            mlp_layer=timm.layers.SwiGLUPacked,
+            act_layer=torch.nn.SiLU,
             reg_tokens=config.reg_tokens,
             dynamic_img_size=config.dynamic_img_size,
         )
