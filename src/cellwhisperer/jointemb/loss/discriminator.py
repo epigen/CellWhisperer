@@ -92,4 +92,4 @@ class GlobalDiscriminatorDot(nn.Module):
         # Method 3
         o = torch.einsum("nd,md->nm", [embed1, embed2]) * self.temperature.exp()
 
-        return o, *embeds
+        return o, embed1, embed2
