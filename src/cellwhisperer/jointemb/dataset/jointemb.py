@@ -18,9 +18,154 @@ from cellwhisperer.jointemb.processing import TranscriptomeTextDualEncoderProces
 
 from cellwhisperer.config import get_path, model_path_from_name
 
-from typing import Optional, Dict, Union
+from typing import Optional, Dict, Union, List, Any
 
 logger = logging.getLogger(__name__)
+
+
+def multi_modal_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Custom collate function for handling heterogeneous multi-modal data.
+
+    This function handles batches where some samples may have text data,
+    some may have image data, and some may have transcriptome data.
+    It creates zero-filled tensors for missing modalities and generates
+    modality masks to indicate which modalities are present.
+
+    Args:
+        batch: List of dictionaries containing sample data
+
+    Returns:
+        Dictionary containing:
+        - Collated data for each modality (with zeros for missing data)
+        - Modality masks: text_batch_mask, image_batch_mask, transcriptome_batch_mask
+    """
+    if not batch:
+        return {}
+
+    batch_size = len(batch)
+    collated_batch = {}
+
+    # Define modality keys for each type
+    text_keys = ["input_ids", "attention_mask", "token_type_ids"]
+    image_keys = ["patches"]
+    transcriptome_keys = [
+        "expression_tokens",
+        "expression_token_lengths",
+        "expression_gene",
+        "expression_expr",
+        "expression_key_padding_mask",
+    ]
+    # Additional keys that should be preserved but not used for modality detection
+    weight_keys = ["transcriptome_weights", "annotation_weights"]
+    other_keys = ["orig_ids", "labels"]
+
+    # Initialize modality masks
+    text_mask = torch.zeros(batch_size, dtype=torch.bool)
+    image_mask = torch.zeros(batch_size, dtype=torch.bool)
+    transcriptome_mask = torch.zeros(batch_size, dtype=torch.bool)
+
+    # Collect all keys present in the batch
+    all_keys = set()
+    for sample in batch:
+        all_keys.update(sample.keys())
+
+    # For each key, collate the values
+    for key in all_keys:
+        values = []
+        key_present = []
+
+        # Determine which modality this key belongs to
+        is_text_key = key in text_keys
+        is_image_key = key in image_keys
+        is_transcriptome_key = key in transcriptome_keys
+        is_weight_key = key in weight_keys
+        is_other_key = key in other_keys
+
+        for i, sample in enumerate(batch):
+            if key in sample and sample[key] is not None:
+                values.append(sample[key])
+                key_present.append(True)
+
+                # Update modality masks
+                if is_text_key:
+                    text_mask[i] = True
+                elif is_image_key:
+                    image_mask[i] = True
+                elif is_transcriptome_key:
+                    transcriptome_mask[i] = True
+            else:
+                key_present.append(False)
+
+        # Handle weight keys and other special keys differently
+        if is_weight_key or is_other_key:
+            # For weight/other keys, just collect all values (can be different types)
+            collated_values = []
+            for sample in batch:
+                if key in sample and sample[key] is not None:
+                    collated_values.append(sample[key])
+                else:
+                    # For weights, default to 1.0 tensor, for others use None
+                    if is_weight_key:
+                        collated_values.append(torch.ones(1))  # Default weight
+                    else:
+                        collated_values.append(None)
+
+            if is_weight_key and all(
+                torch.is_tensor(v) for v in collated_values if v is not None
+            ):
+                try:
+                    collated_batch[key] = torch.stack(
+                        [v if v is not None else torch.ones(1) for v in collated_values]
+                    )
+                except RuntimeError:
+                    collated_batch[key] = collated_values
+            else:
+                collated_batch[key] = collated_values
+            continue
+
+        if not values:
+            # No samples have this key, skip it
+            continue
+
+        # Get representative shape/dtype from first valid sample
+        if torch.is_tensor(values[0]):
+            representative_tensor = values[0]
+            dtype = representative_tensor.dtype
+            shape = representative_tensor.shape
+        else:
+            # Handle non-tensor values (shouldn't happen with our data but for safety)
+            collated_batch[key] = [sample.get(key) for sample in batch]
+            continue
+
+        # Create zero tensors for missing values and collate
+        collated_values = []
+        value_idx = 0
+
+        for i, has_key in enumerate(key_present):
+            if has_key:
+                collated_values.append(values[value_idx])
+                value_idx += 1
+            else:
+                # Create zero tensor with same shape and dtype
+                zero_tensor = torch.zeros(shape, dtype=dtype)
+                collated_values.append(zero_tensor)
+
+        # Stack the tensors
+        try:
+            collated_batch[key] = torch.stack(collated_values)
+        except RuntimeError as e:
+            # If tensors have different shapes, we need padding
+            logger.warning(f"Shape mismatch for key {key}, attempting padding: {e}")
+            # For now, just put the list - this might need more sophisticated handling
+            collated_batch[key] = collated_values
+
+    # Add modality masks to the batch
+    collated_batch["text_batch_mask"] = text_mask
+    collated_batch["image_batch_mask"] = image_mask
+    collated_batch["transcriptome_batch_mask"] = transcriptome_mask
+
+    return collated_batch
 
 
 class JointEmbedDataset(Dataset):
@@ -150,7 +295,6 @@ class JointEmbedDataModule(pl.LightningDataModule):
             # if we are in test mode, then only use the first 2 datasets
             if self.trainer and self.trainer.fast_dev_run:
                 adata_paths = adata_paths[:3]
-            adata_paths = adata_paths[:3]  # TODO use/test all :)
 
             if not adata_paths:
                 raise FileNotFoundError(
@@ -177,15 +321,23 @@ class JointEmbedDataModule(pl.LightningDataModule):
     def prepare_dataset(self, dataset_name, force_prepare):
         adata_paths, processed_paths = self.get_paths(dataset_name)
 
-        # check whether data has already been prepared
-        if (
-            all(processed_path.exists() for processed_path in processed_paths)
-            and not force_prepare
-        ):
-            logger.info("data already prepared")
-            return
-        logger.info("preparing data...")
+        if not force_prepare:
+            # check whether data has already been prepared
 
+            adata_paths = [
+                adata_path
+                for adata_path, processed_path in zip(adata_paths, processed_paths)
+                if not processed_path.exists()
+                or processed_path.stat().st_mtime < adata_path.stat().st_mtime
+            ]
+            processed_paths = [
+                processed_path
+                for adata_path, processed_path in zip(adata_paths, processed_paths)
+                if not processed_path.exists()
+                or processed_path.stat().st_mtime < adata_path.stat().st_mtime
+            ]
+
+        logger.info(f"preparing {len(adata_paths)} data files...")
         for adata_path, processed_path in zip(adata_paths, processed_paths):
             self.prepare_dataset_file(adata_path, processed_path)
 
@@ -469,6 +621,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             shuffle=True,
             num_workers=self.nproc,
             drop_last=True,  # drop last batch to avoid batch_size of 1, which fails due to batch-norm
+            collate_fn=multi_modal_collate_fn,  # Use custom collator for multi-modal data
         )
 
     def val_dataloader(self):
@@ -481,6 +634,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             num_workers=self.nproc,
             drop_last=False,  # more accurate if we don't drop the last
             shuffle=False,
+            collate_fn=multi_modal_collate_fn,  # Use custom collator for multi-modal data
         )
 
     def test_dataloader(self):

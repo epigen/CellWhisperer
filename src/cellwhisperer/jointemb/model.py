@@ -2,6 +2,7 @@
 """PyTorch TranscriptomeTextDualEncoder model."""
 
 from typing import Optional, Tuple, Union, Any, List
+from dataclasses import dataclass
 from cellwhisperer.config import model_path_from_name
 from cellwhisperer.jointemb.frozen_model import FrozenCachedModel
 from cellwhisperer.jointemb.processing import TranscriptomeTextDualEncoderProcessor
@@ -31,10 +32,13 @@ logger = logging.get_logger(__name__)
 
 
 @dataclass
+@dataclass
 class CLIPOutput(ModelOutput):  # TODO
     loss: Optional[torch.FloatTensor] = None
-    logits_per_transcriptome: torch.FloatTensor = None
-    logits_per_text: torch.FloatTensor = None
+    # Individual logits matrices for multi-modal pairs
+    logits_transcriptome_text: Optional[torch.FloatTensor] = None
+    logits_transcriptome_image: Optional[torch.FloatTensor] = None
+    logits_text_image: Optional[torch.FloatTensor] = None
     text_embeds: torch.FloatTensor = None
     transcriptome_embeds: torch.FloatTensor = None
     image_embeds: torch.FloatTensor = None
@@ -332,6 +336,9 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         expression_expr: Optional[torch.LongTensor] = None,
         expression_key_padding_mask: Optional[torch.LongTensor] = None,
         patches: Optional[torch.FloatTensor] = None,
+        text_batch_mask: Optional[torch.BoolTensor] = None,
+        image_batch_mask: Optional[torch.BoolTensor] = None,
+        transcriptome_batch_mask: Optional[torch.BoolTensor] = None,
         return_dict: Optional[bool] = True,
         **kwargs,
     ) -> Union[Tuple[torch.Tensor], CLIPOutput]:
@@ -362,17 +369,24 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             number of channels (3), H and W are image height and width (244, 244).
         """
 
-        # Assert that at least two (!) of the three modalities are provided
-        assert (
-            sum(
-                [
-                    input_ids is not None,
-                    expression_tokens is not None,
-                    patches is not None,
-                ]
-            )
-            == 2
-        ), "Exactly two of input_ids, expression_tokens or image must be provided"
+        # When using modality masks, we allow all modalities to be present
+        # as missing data is handled by zero-filling in the collator
+        # if (  # TODO delete
+        #     text_batch_mask is None
+        #     and image_batch_mask is None
+        #     and transcriptome_batch_mask is None
+        # ):
+        #     # Original behavior: assert that at least two (!) of the three modalities are provided
+        #     assert (
+        #         sum(
+        #             [
+        #                 input_ids is not None,
+        #                 expression_tokens is not None,
+        #                 patches is not None,
+        #             ]
+        #         )
+        #         == 2
+        #     ), "Exactly two of input_ids, expression_tokens or image must be provided"
         transcriptome_features, text_features, image_features = None, None, None
 
         if input_ids is not None:
@@ -403,29 +417,41 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                 return_dict=False,
             )[1]
 
-        (
-            logits_per_transcriptome,
-            transcriptome_embeds,
-            text_embeds,
-            image_embeds,
-        ) = self.discriminator(transcriptome_features, text_features, image_features)
-        logits_per_text = logits_per_transcriptome.T
+        discriminator_output = self.discriminator(
+            transcriptome_features,
+            text_features,
+            image_features,
+            text_batch_mask=text_batch_mask,
+            image_batch_mask=image_batch_mask,
+            transcriptome_batch_mask=transcriptome_batch_mask,
+        )
+
+        # Only support tuple format: (logits_transcriptome_text, logits_transcriptome_image, logits_text_image)
+        logits_tuple, transcriptome_embeds, text_embeds, image_embeds = (
+            discriminator_output
+        )
+        logits_transcriptome_text, logits_transcriptome_image, logits_text_image = (
+            logits_tuple
+        )
 
         if not return_dict:
             return (
-                logits_per_transcriptome,
-                logits_per_text,
                 text_embeds,
                 transcriptome_embeds,
                 image_embeds,
                 text_features,
                 transcriptome_features,
                 image_features,
+                # Include the new logits for loss computation
+                logits_transcriptome_text,
+                logits_transcriptome_image,
+                logits_text_image,
             )
 
         return CLIPOutput(
-            logits_per_transcriptome=logits_per_transcriptome,
-            logits_per_text=logits_per_text,
+            logits_transcriptome_text=logits_transcriptome_text,
+            logits_transcriptome_image=logits_transcriptome_image,
+            logits_text_image=logits_text_image,
             text_embeds=text_embeds,
             transcriptome_embeds=transcriptome_embeds,
             image_embeds=image_embeds,

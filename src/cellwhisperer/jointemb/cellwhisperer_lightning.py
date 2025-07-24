@@ -175,6 +175,9 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             torch.FloatTensor
         ] = None,  # TODO expand to images?
         annotation_weights: Optional[torch.FloatTensor] = None,
+        text_batch_mask: Optional[torch.BoolTensor] = None,
+        image_batch_mask: Optional[torch.BoolTensor] = None,
+        transcriptome_batch_mask: Optional[torch.BoolTensor] = None,
         **kwargs,  # token_type_ids
     ) -> CLIPOutput:
         output = self.model(
@@ -186,11 +189,20 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             expression_expr=expression_expr,
             expression_key_padding_mask=expression_key_padding_mask,
             patches=patches,
+            text_batch_mask=text_batch_mask,
+            image_batch_mask=image_batch_mask,
+            transcriptome_batch_mask=transcriptome_batch_mask,
             return_dict=True,
             **kwargs,
         )
         output["transcriptome_weights"] = transcriptome_weights
         output["annotation_weights"] = annotation_weights
+
+        # Add modality masks to output for use in loss functions
+        output["text_batch_mask"] = text_batch_mask
+        output["image_batch_mask"] = image_batch_mask
+        output["transcriptome_batch_mask"] = transcriptome_batch_mask
+
         return output
 
     def process_step(self, batch, batch_idx, step_type):

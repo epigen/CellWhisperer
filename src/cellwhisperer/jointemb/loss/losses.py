@@ -56,34 +56,70 @@ class ClipLoss(nn.Module):
 
     def forward(
         self,
-        logits_per_text: torch.Tensor,
+        logits_transcriptome_text: Optional[torch.Tensor] = None,
+        logits_transcriptome_image: Optional[torch.Tensor] = None,
+        logits_text_image: Optional[torch.Tensor] = None,
         transcriptome_weights: Optional[torch.Tensor] = None,
         annotation_weights: Optional[torch.Tensor] = None,
         *args,
         **kwargs,
     ) -> torch.Tensor:
         """
-        Computes the CLIP loss given a similarity matrix between two modalities, typically transcriptome and text embeddings.
+        Computes the CLIP loss given similarity matrices between different modalities.
 
-        This function calculates the contrastive loss for both the text and transcriptome embeddings using the provided similarity matrix. The similarity matrix is expected to contain cosine similarity scores between pairs of embeddings from the two modalities. The function then averages the losses from both modalities to compute the final CLIP loss.
-
-        The CLIP loss is a symmetric function and encourages the model to align the embeddings from different modalities closer in the embedding space, thereby improving the association between the modalities.
+        This function calculates the contrastive loss for available modality pairs.
+        When multiple logits matrices are provided (multi-modal case), it computes
+        the loss for each valid pair and returns their mean.
 
         Args:
-            logits_per_text (torch.Tensor): A 2D tensor representing the cosine similarity scores between pairs of embeddings wrt to the text embeddings. The tensor is expected to be square with dimensions [N, N], where N is the number of embeddings in each modality.
-            **kwargs: Additional keyword arguments (not currently used).
+            logits_transcriptome_text (torch.Tensor, optional): Similarity matrix between transcriptome and text.
+            logits_transcriptome_image (torch.Tensor, optional): Similarity matrix between transcriptome and image.
+            logits_text_image (torch.Tensor, optional): Similarity matrix between text and image.
+            transcriptome_weights (torch.Tensor, optional): Weights for transcriptome samples.
+            annotation_weights (torch.Tensor, optional): Weights for annotation/text samples.
 
         Returns:
             torch.Tensor: A scalar tensor representing the computed CLIP loss.
-
-        Note:
-            The function internally calls `ContrastiveLoss` twice, once with the similarity matrix (logits_per_text) as is, and once with its transpose (logits_per_transcriptome), to calculate the losses for both modalities (text and transcriptome).
         """
-        text_loss = contrastive_loss(logits_per_text, weight=annotation_weights)
-        transcriptome_loss = contrastive_loss(
-            logits_per_text.t(), weight=transcriptome_weights
-        )
-        return (text_loss + transcriptome_loss) / 2.0
+        # Determine device from the first available tensor
+        device = None
+        for tensor in [logits_transcriptome_text, logits_transcriptome_image, logits_text_image]:
+            if tensor is not None:
+                device = tensor.device
+                break
+        if device is None:
+            device = torch.device('cpu')
+            
+        total_loss = torch.tensor(0.0, device=device)
+        num_valid_pairs = 0
+        
+        # Handle the new multi-modal logits
+        if logits_transcriptome_text is not None:
+            text_loss = contrastive_loss(logits_transcriptome_text, weight=annotation_weights)
+            transcriptome_loss = contrastive_loss(logits_transcriptome_text.t(), weight=transcriptome_weights)
+            total_loss += (text_loss + transcriptome_loss) / 2.0
+            num_valid_pairs += 1
+            
+        if logits_transcriptome_image is not None:
+            # For transcriptome-image pairs, treat transcriptome as "text" and image as "transcriptome"
+            transcriptome_loss = contrastive_loss(logits_transcriptome_image, weight=transcriptome_weights)
+            image_loss = contrastive_loss(logits_transcriptome_image.t(), weight=None)  # No specific image weights
+            total_loss += (transcriptome_loss + image_loss) / 2.0
+            num_valid_pairs += 1
+            
+        if logits_text_image is not None:
+            # For text-image pairs
+            text_loss = contrastive_loss(logits_text_image, weight=annotation_weights)
+            image_loss = contrastive_loss(logits_text_image.t(), weight=None)  # No specific image weights
+            total_loss += (text_loss + image_loss) / 2.0
+            num_valid_pairs += 1
+        
+        # Return mean loss across all valid pairs
+        if num_valid_pairs > 0:
+            return total_loss / num_valid_pairs
+        else:
+            # No valid pairs found - this should not happen in practice
+            return torch.tensor(0.0, device=total_loss.device, requires_grad=True)
 
 
 ### The code below is unused and requires refactoring before use
