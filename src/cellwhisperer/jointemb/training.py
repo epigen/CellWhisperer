@@ -135,18 +135,19 @@ class CellWhispererCLI(LightningCLI):
         # )
 
     def before_instantiate_classes(self) -> None:
+
+        if "fit.dap_debug" in self.config and self.config["fit.dap_debug"]:
+            start_debugger(wait_for_client=True)
+        if "test.dap_debug" in self.config and self.config["test.dap_debug"]:
+            start_debugger(wait_for_client=True)
+
         if "fit.log_level" in self.config:
             log_level = self.config["fit.log_level"]
         elif "test.log_level" in self.config:
             log_level = self.config["test.log_level"]
         else:
             raise ValueError("No log level found")
-        logging.basicConfig(level=log_level.upper())
-
-        if "fit.dap_debug" in self.config and self.config["fit.dap_debug"]:
-            start_debugger(wait_for_client=True)
-        if "test.dap_debug" in self.config and self.config["test.dap_debug"]:
-            start_debugger(wait_for_client=True)
+        logging.getLogger("root").setLevel(level=log_level.upper())
 
     def before_fit(self) -> None:
         if not self.config["fit.ckpt_path"] and not self.config["fit.model_ckpt"]:
@@ -284,7 +285,8 @@ def cli_main(args: Optional[List] = None):
         config["PROJECT_ROOT"] / "results" / "model_training", os.getcwd()
     )
 
-    val_metric = "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_recall_at_5_macroAvg"
+    # val_metric = "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_recall_at_5_macroAvg"
+    val_metric = "val/loss_epoch"  # TODO
 
     # early_stop = EarlyStopping(
     #     monitor=val_metric, min_delta=1e-4, patience=10, verbose=False, mode="max"

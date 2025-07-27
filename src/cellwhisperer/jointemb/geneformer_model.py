@@ -111,9 +111,9 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
                 gene_names = adata_var["gene_name"]
             else:
                 gene_names = adata_var.index
-                if gene_names[0].startswith("GRCH38______"):
+                if gene_names[0].startswith("GRCH38_"):
                     # Some datasets have gene names prefixed with "GRCH38______"
-                    gene_names = gene_names.str.replace("GRCH38______", "", regex=False)
+                    gene_names = gene_names.str.replace("GRCH38_+", "", regex=True)
 
             assert (
                 len(VERY_COMMON_GENES & set(gene_names))

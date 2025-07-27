@@ -396,7 +396,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             )
         else:
             self.lr_warmup_steps = self.lr_warmup
-        logger.info("Using lr_warmup_steps: ", self.lr_warmup_steps)
+        logger.info(f"Using lr_warmup_steps: {self.lr_warmup_steps}")
 
         scheduler = CosineAnnealingLR(
             optimizer,

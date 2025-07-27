@@ -3,6 +3,7 @@ import anndata
 from collections import defaultdict
 from itertools import zip_longest
 from pathlib import Path
+from tqdm import tqdm
 
 import torch
 import random
@@ -156,9 +157,29 @@ def multi_modal_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
             collated_batch[key] = torch.stack(collated_values)
         except RuntimeError as e:
             # If tensors have different shapes, we need padding
-            logger.warning(f"Shape mismatch for key {key}, attempting padding: {e}")
-            # For now, just put the list - this might need more sophisticated handling
-            collated_batch[key] = collated_values
+            if key == "expression_tokens":
+                # Handle variable-length expression tokens by padding to max length in batch
+                max_length = max(
+                    tensor.shape[0] for tensor in collated_values if tensor.numel() > 0
+                )
+                padded_values = []
+                for tensor in collated_values:
+                    if tensor.numel() == 0:
+                        # Handle empty tensors
+                        padded_tensor = torch.zeros(max_length, dtype=tensor.dtype)
+                    else:
+                        current_length = tensor.shape[0]
+                        if current_length < max_length:
+                            padded_tensor = torch.nn.functional.pad(
+                                tensor, (0, max_length - current_length), value=0
+                            )
+                        else:
+                            padded_tensor = tensor
+                    padded_values.append(padded_tensor)
+                collated_batch[key] = torch.stack(padded_values)
+            else:
+                logger.error(f"Shape mismatch for key {key}: {e}")
+                raise ValueError(f"Cannot handle shape mismatch for key {key}: {e}")
 
     # Add modality masks to the batch
     collated_batch["text_batch_mask"] = text_mask
@@ -210,6 +231,38 @@ class JointEmbedDataset(Dataset):
                 self.inputs[key] = feature_data[replicate_i - 1]
 
 
+class JointEmbedDatasetDisk(Dataset):
+    """
+    Dataset that loads samples from individual .pt files on disk.
+    This is designed to handle large datasets that cannot fit in RAM.
+    """
+
+    def __init__(self, dataset_name: str, orig_ids, i: Optional[str] = None):
+        self.dataset_name = dataset_name
+        self.orig_ids = orig_ids
+        self.i = i if i is not None else ""
+        self.base_path = get_path(
+            ["paths", "data_loading_individual_samples"],
+            dataset_name=dataset_name,
+            i=self.i,
+        )
+
+    def __len__(self):
+        return len(self.orig_ids)
+
+    def __getitem__(self, idx):
+        orig_id = self.orig_ids[idx]
+        # Construct the path to the individual .pt file
+        sample_path = self.base_path / f"{orig_id}.pt"
+
+        if not sample_path.exists():
+            raise FileNotFoundError(f"Sample file not found: {sample_path}")
+
+        # Load the sample from disk
+        sample = torch.load(sample_path, map_location="cpu")
+        return sample
+
+
 class JointEmbedDataModule(pl.LightningDataModule):
     """
     Generates training/validation datasets containing matching transcriptome-annotation pairs.
@@ -233,6 +286,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         train_fraction: Union[str, float] = 0.95,
         use_replicates: bool = True,
         include_labels: Optional[str] = None,
+        use_disk_loading: bool = False,
     ):
         """
 
@@ -248,6 +302,8 @@ class JointEmbedDataModule(pl.LightningDataModule):
             train_fraction: fraction of the data to use for training. The rest will be used for validation.
             use_replicates: whether to use replicates for the transcriptome and annotation data.
             include_labels: name of the column in the AnnData object to use as labels. If None, no labels will be included
+            use_disk_loading: whether to use disk-based loading (JointEmbedDatasetDisk) instead of loading all data into RAM.
+                             Recommended for large datasets that cannot fit in memory.
         """
         super().__init__()
         self.batch_size = batch_size
@@ -262,6 +318,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.tokenizer_kwargs = tokenizer_kwargs.copy()
         self.use_replicates = use_replicates
         self.include_labels = include_labels
+        self.use_disk_loading = use_disk_loading
 
     def _processed_path(self, dataset_name, i: Optional[str] = None):
         return get_path(
@@ -282,11 +339,13 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
     def get_paths(self, dataset_name):
         """
-        Return all paths (adata and processed) for a given dataset
+        Return all paths (adata and processed) for a given dataset, along with sample_ids
         """
 
         adata_paths = [get_path(["paths", "full_dataset"], dataset=dataset_name)]
         processed_paths = [self._processed_path(dataset_name)]
+        sample_ids = [""]  # Default empty sample_id for single file
+
         if not adata_paths[0].exists():
             adata_paths = list(
                 Path(adata_paths[0]).parent.glob("full_data_*.h5ad")
@@ -301,17 +360,16 @@ class JointEmbedDataModule(pl.LightningDataModule):
                     f"Neither full_data.h5ad, nor full_data_{{i}}.h5ad were found for {dataset_name}"
                 )
             else:
-                logging.info(
-                    f"Loading {len(adata_paths)} adata files for {dataset_name}"
-                )
+                # Extract sample_ids from full_data_{i}.h5ad pattern
+                sample_ids = [
+                    adata_path.stem.split("_", 2)[-1] for adata_path in adata_paths
+                ]
                 processed_paths = [
-                    self._processed_path(
-                        dataset_name=dataset_name, i=adata_path.stem.split("_")[-1]
-                    )
-                    for adata_path in adata_paths
+                    self._processed_path(dataset_name=dataset_name, i=sample_id)
+                    for sample_id in sample_ids
                 ]
 
-        return adata_paths, processed_paths
+        return adata_paths, processed_paths, sample_ids
 
     def prepare_data(self, force_prepare=False):
         # Generate all datasets
@@ -319,29 +377,40 @@ class JointEmbedDataModule(pl.LightningDataModule):
             self.prepare_dataset(dataset_name, force_prepare)
 
     def prepare_dataset(self, dataset_name, force_prepare):
-        adata_paths, processed_paths = self.get_paths(dataset_name)
+        adata_paths, processed_paths, sample_ids = self.get_paths(dataset_name)
 
         if not force_prepare:
             # check whether data has already been prepared
 
-            adata_paths = [
-                adata_path
-                for adata_path, processed_path in zip(adata_paths, processed_paths)
+            # TODO I need to check as well whether the individual files have been generated (because they are deleted in /scratch)
+            # TODO or maybe even better, I should create the processed files in scratch as well...
+
+            filtered_paths = [
+                (adata_path, processed_path, sample_id)
+                for adata_path, processed_path, sample_id in zip(
+                    adata_paths, processed_paths, sample_ids
+                )
                 if not processed_path.exists()
                 or processed_path.stat().st_mtime < adata_path.stat().st_mtime
             ]
-            processed_paths = [
-                processed_path
-                for adata_path, processed_path in zip(adata_paths, processed_paths)
-                if not processed_path.exists()
-                or processed_path.stat().st_mtime < adata_path.stat().st_mtime
-            ]
+            try:
+                adata_paths, processed_paths, sample_ids = list(zip(*filtered_paths))
+            except ValueError:
+                # If no files to process, return early
+                logger.info(
+                    f"No new data to prepare for {dataset_name}. Skipping preparation."
+                )
+                return
 
-        logger.info(f"preparing {len(adata_paths)} data files...")
-        for adata_path, processed_path in zip(adata_paths, processed_paths):
-            self.prepare_dataset_file(adata_path, processed_path)
+        logger.info(f"Preparing {len(adata_paths)} data files for {dataset_name}...")
+        for adata_path, processed_path, sample_id in zip(
+            adata_paths, processed_paths, sample_ids
+        ):
+            self.prepare_dataset_file(
+                adata_path, processed_path, dataset_name, sample_id
+            )
 
-    def prepare_dataset_file(self, adata_path, processed_path):
+    def prepare_dataset_file(self, adata_path, processed_path, dataset_name, sample_id):
         # Load data and processor
         processor = TranscriptomeTextDualEncoderProcessor(  # TODO test moving this to constructor
             self.transcriptome_processor,
@@ -367,7 +436,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 adata if "20x_slide" in adata.uns and self.image_processor else None
             ),  # NOTE Could refactor API to only provide an adata, but not sure if the repository depends on this splitting..
             return_tensors="pt",
-            padding="max_length",
+            padding="max_length",  # TODO maybe better to in collator in the future?
         )
 
         # Add weights tensors (if available)
@@ -380,8 +449,8 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 # add 1 if no weights are available
                 inputs[modality_weights_key] = torch.ones(len(adata.obs))
 
-        logging.info("Preparing replicates")
         if self.use_replicates:
+            logging.info("Preparing replicates")
             replicate_inputs = self._prepare_replicate_inputs(inputs, adata, processor)
         else:
             replicate_inputs = {}
@@ -451,8 +520,12 @@ class JointEmbedDataModule(pl.LightningDataModule):
                     ]
                     assert len(rep_value) > 0
 
-        # save the inputs dict to a file using torch
+        # process/generate the individual files
+        self._generate_individual_sample_files(inputs, dataset_name, sample_id)
+
+        # save the inputs dict to a file using torch (NOTE: This is partially redundant as we only need the orig_ids)
         processed_path.parent.mkdir(parents=True, exist_ok=True)
+
         torch.save(
             (inputs, replicate_inputs),
             processed_path,
@@ -515,9 +588,60 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
         return replicate_inputs
 
-    def _load_processed_dataset(self, dataset_name):
-        """aggregate and return"""
-        _, processed_paths = self.get_paths(dataset_name)
+    def _generate_individual_sample_files(self, inputs, dataset_name, sample_id):
+        logging.info(
+            f"Generating individual sample files for {dataset_name} - {sample_id}"
+        )
+
+        # Create directory for individual sample files
+        individual_samples_dir = get_path(
+            ["paths", "data_loading_individual_samples"],
+            dataset_name=dataset_name,
+            i=sample_id,
+        )
+        individual_samples_dir.mkdir(parents=True, exist_ok=True)
+
+        # Extract orig_ids for this batch
+        orig_ids = inputs["orig_ids"]
+
+        # Create individual .pt files for each sample (without global padding)
+        for j, orig_id in enumerate(tqdm(orig_ids)):
+            sample_file = individual_samples_dir / f"{orig_id}.pt"
+
+            # Create individual sample dict
+            sample = {}
+            for key, tensor in inputs.items():
+                if key == "orig_ids":
+                    continue  # Skip orig_ids as it's metadata
+
+                # Get the data for this specific sample (no padding applied here). Need to clone to prevent storing full tensors in case of views
+                sample[key] = tensor[j].clone()
+
+            # Save individual sample
+            torch.save(sample, sample_file)
+
+    def _load_disk_datasets(self, dataset_name):
+        """Generate individual .pt files for each sample and return disk datasets"""
+        _, processed_paths, sample_ids = self.get_paths(dataset_name)
+        disk_datasets = []
+
+        # Process each file individually to avoid loading all into memory
+        for processed_path, sample_id in zip(processed_paths, sample_ids):
+
+            # Load only this specific processed file
+            result = torch.load(str(processed_path), mmap=True)
+
+            # Create JointEmbedDatasetDisk for this batch
+            disk_dataset = JointEmbedDatasetDisk(
+                dataset_name=dataset_name, orig_ids=result[0]["orig_ids"], i=sample_id
+            )
+            disk_datasets.append(disk_dataset)
+
+        return disk_datasets
+
+    def _load_processed_dataset_memory(self, dataset_name):
+        """Original memory-based loading - aggregate and return"""
+        _, processed_paths, _ = self.get_paths(dataset_name)
         results = [torch.load(p) for p in processed_paths]
 
         if len(results[0][1]) > 0:
@@ -559,61 +683,114 @@ class JointEmbedDataModule(pl.LightningDataModule):
     def setup(self, stage=None):
         self.train_datasets = []
         self.val_datasets = []
+
         for dataset_name in self.dataset_names:
-            (inputs, replicate_inputs) = self._load_processed_dataset(dataset_name)
+            if self.use_disk_loading:
+                # Generate individual sample files and get disk datasets
+                disk_datasets = self._load_disk_datasets(dataset_name)
 
-            dataset_len = len(next(iter(inputs.values())))
-            if isinstance(self.train_fraction, (int, float)):
-                # Assuming you want to split the data into train and val for simplicity
-                train_size = int(self.train_fraction * dataset_len)
-                # randomly sample train_size indices for train and use the rest for val
-                # fix the seed
-                random.seed(42)
-                total_ids = list(range(dataset_len))
-                train_ids = random.sample(total_ids, train_size)
-                val_ids = sorted(list(set(total_ids) - set(train_ids)))
-            elif isinstance(self.train_fraction, str):
-                total_ids = list(range(dataset_len))
-                if dataset_name == self.train_fraction:
-                    train_ids = total_ids
-                    val_ids = []
-                else:
-                    train_ids = []
-                    val_ids = total_ids
+                # For each disk dataset, split into train/val based on train_fraction
+                for disk_dataset in disk_datasets:
+                    dataset_len = len(disk_dataset.orig_ids)
+
+                    if isinstance(self.train_fraction, (int, float)):
+                        # Assuming you want to split the data into train and val for simplicity
+                        train_size = int(self.train_fraction * dataset_len)
+                        # randomly sample train_size indices for train and use the rest for val
+                        # fix the seed
+                        random.seed(42)
+                        total_ids = list(range(dataset_len))
+                        train_ids = random.sample(total_ids, train_size)
+                        val_ids = sorted(list(set(total_ids) - set(train_ids)))
+                    elif isinstance(self.train_fraction, str):
+                        total_ids = list(range(dataset_len))
+                        if dataset_name == self.train_fraction:
+                            train_ids = total_ids
+                            val_ids = []
+                        else:
+                            train_ids = []
+                            val_ids = total_ids
+                    else:
+                        raise ValueError(
+                            "train_fraction must be either a float or string"
+                        )
+
+                    # Create train dataset if we have train samples
+                    if train_ids:
+                        train_disk_dataset = JointEmbedDatasetDisk(
+                            dataset_name=disk_dataset.dataset_name,
+                            orig_ids=disk_dataset.orig_ids[train_ids],
+                            i=disk_dataset.i,
+                        )
+                        self.train_datasets.append(train_disk_dataset)
+
+                    # Create val dataset if we have val samples
+                    if val_ids:
+                        val_disk_dataset = JointEmbedDatasetDisk(
+                            dataset_name=disk_dataset.dataset_name,
+                            orig_ids=disk_dataset.orig_ids[val_ids],
+                            i=disk_dataset.i,
+                        )
+                        self.val_datasets.append(val_disk_dataset)
             else:
-                raise ValueError("train_fraction must be either a float or string")
+                # Use original memory-based loading
+                (inputs, replicate_inputs) = self._load_processed_dataset_memory(
+                    dataset_name
+                )
 
-            self.train_datasets.append(
-                JointEmbedDataset(
-                    {
-                        key: value[train_ids]
-                        for key, value in inputs.items()
-                        if key != "orig_ids"
-                    },
-                    orig_ids=inputs["orig_ids"][train_ids],
-                    replicate_inputs={
-                        key: [value[i][train_ids] for i in range(len(value))]
-                        for key, value in replicate_inputs.items()
-                        if len(value) > 0
-                    },
+                dataset_len = len(next(iter(inputs.values())))
+                if isinstance(self.train_fraction, (int, float)):
+                    # Assuming you want to split the data into train and val for simplicity
+                    train_size = int(self.train_fraction * dataset_len)
+                    # randomly sample train_size indices for train and use the rest for val
+                    # fix the seed
+                    random.seed(42)
+                    total_ids = list(range(dataset_len))
+                    train_ids = random.sample(total_ids, train_size)
+                    val_ids = sorted(list(set(total_ids) - set(train_ids)))
+                elif isinstance(self.train_fraction, str):
+                    total_ids = list(range(dataset_len))
+                    if dataset_name == self.train_fraction:
+                        train_ids = total_ids
+                        val_ids = []
+                    else:
+                        train_ids = []
+                        val_ids = total_ids
+                else:
+                    raise ValueError("train_fraction must be either a float or string")
+
+                self.train_datasets.append(
+                    JointEmbedDataset(
+                        {
+                            key: value[train_ids]
+                            for key, value in inputs.items()
+                            if key != "orig_ids"
+                        },
+                        orig_ids=inputs["orig_ids"][train_ids],
+                        replicate_inputs={
+                            key: [value[i][train_ids] for i in range(len(value))]
+                            for key, value in replicate_inputs.items()
+                            if len(value) > 0
+                        },
+                    )
                 )
-            )
-            self.val_datasets.append(
-                JointEmbedDataset(
-                    {
-                        key: value[val_ids]
-                        for key, value in inputs.items()
-                        if key != "orig_ids"
-                    },
-                    orig_ids=inputs["orig_ids"][val_ids],
+                self.val_datasets.append(
+                    JointEmbedDataset(
+                        {
+                            key: value[val_ids]
+                            for key, value in inputs.items()
+                            if key != "orig_ids"
+                        },
+                        orig_ids=inputs["orig_ids"][val_ids],
+                    )
                 )
-            )
 
     def train_dataloader(self):
-        # Update the current epoch to sample the replicates
-        if self.use_replicates:
+        # Update the current epoch to sample the replicates (only for memory-based loading)
+        if self.use_replicates and not self.use_disk_loading:
             for dataset in self.train_datasets:
-                dataset.set_epoch(self.trainer.current_epoch)
+                if hasattr(dataset, "set_epoch"):  # JointEmbedDataset has this method
+                    dataset.set_epoch(self.trainer.current_epoch)
 
         return DataLoader(
             ConcatDataset(self.train_datasets),
