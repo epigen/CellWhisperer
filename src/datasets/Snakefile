@@ -81,10 +81,10 @@ rule download_conversation_datasets:
     input:
         downloads=[HTTP.remote(f"{BASE_URL}/datasets/cellwhisperer_llava_conversations/{fn}")[0] for fn in ["pretrain_texts.json", "finetune_conversations.json", "main_conversations.json", "tabula_sapiens_conversations.json"]]
     output:
-        llava_stage1_dataset=PROJECT_DIR / config["paths"]["llava"]["pretrain_text_dataset"],
-        llava_stage2_dataset=PROJECT_DIR / config["paths"]["llava"]["finetune_text_dataset"],
-        evaluation_dataset_main=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="main", llava_dataset="{llava_dataset}"),
-        evaluation_dataset_tabula_sapiens=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="tabula_sapiens", llava_dataset="{llava_dataset}"),
+        llava_stage1_dataset=PROJECT_DIR / config["paths"]["llava"]["pretrain_text_dataset"].format(llava_dataset="_default"),
+        llava_stage2_dataset=PROJECT_DIR / config["paths"]["llava"]["finetune_text_dataset"].format(llava_dataset="_default"),
+        evaluation_dataset_main=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="main", llava_dataset="_default"),
+        evaluation_dataset_tabula_sapiens=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="tabula_sapiens", llava_dataset="_default"),
     run:
         import shutil
         for in_file, out_file in zip(input, output):
