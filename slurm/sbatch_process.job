@@ -4,9 +4,8 @@
 #SBATCH -c 5      # cores requested per task (=per gpu)
 #SBATCH --mem=40GB  # memory in Mb
 #SBATCH -t 72:00:00  # max time requested in hour:minute:second
-#SBATCH -q a100
-#SBATCH --partition gpu
-#SBATCH --gres gpu:a100:1
+#SBATCH --partition cmackall
+#SBATCH -G 1
 #SBATCH --ntasks-per-node=1
 #SBATCH -o slurm_logs/slurm-%j.out
 # #SBATCH --mail-type=BEGIN,END
@@ -18,4 +17,4 @@
 # export NCCL_DEBUG=INFO
 # export PYTHONFAULTHANDLER=1
 
-srun /msc/home/mschae83/cellwhisperer_private/slurm/conda_env_process.sh $*
+srun /home/users/moritzs/cellwhisperer_private/slurm/conda_env_process.sh $*

@@ -96,7 +96,7 @@ model:
   frozen_warmup: null
 data:
   image_processor: uni2
-  dataset_names: hest1k,cellxgene_census
+  dataset_names: archs4_geo,hest1k,cellxgene_census
   nproc: 2
   transcriptome_processor_kwargs: {}
   tokenizer_kwargs:
