@@ -29,12 +29,12 @@ rule download_geneformer:
 
 rule download_uce:
     input:
-        HTTP.remote("https://figshare.com/ndownloader/files/42706576", keep_local=False),
-        HTTP.remote("https://figshare.com/ndownloader/files/43423236", keep_local=False),
-        HTTP.remote("https://figshare.com/ndownloader/files/42715213", keep_local=False),
-        HTTP.remote("https://figshare.com/ndownloader/files/42706555", keep_local=False),
-        HTTP.remote("https://figshare.com/ndownloader/files/42706558", keep_local=False),
-        HTTP.remote("https://figshare.com/ndownloader/files/42706585", keep_local=False),
+        HTTP.remote("https://figshare.com/ndownloader/files/42706576", keep_local=False, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36'}),
+        HTTP.remote("https://figshare.com/ndownloader/files/43423236", keep_local=False, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36'}),
+        HTTP.remote("https://figshare.com/ndownloader/files/42715213", keep_local=False, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36'}),
+        HTTP.remote("https://figshare.com/ndownloader/files/42706555", keep_local=False, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36'}),
+        HTTP.remote("https://figshare.com/ndownloader/files/42706558", keep_local=False, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36'}),
+        HTTP.remote("https://figshare.com/ndownloader/files/42706585", keep_local=False, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36'}),
     output:
         PROJECT_DIR / config["model_name_path_map"]["uce4layer"],
         PROJECT_DIR / config["model_name_path_map"]["uce"],

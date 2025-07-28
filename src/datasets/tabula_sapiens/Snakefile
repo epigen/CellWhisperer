@@ -23,7 +23,7 @@ rule download_data:
     conda: "../../../envs/unzip.yaml"
     shell:
         """
-        wget -O {output[0]}.zip {params.url}
+        wget --user-agent="Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36" -O {output[0]}.zip {params.url}
         unzip {output[0]}.zip
         rm {output[0]}.zip
         """
