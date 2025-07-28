@@ -96,7 +96,6 @@ model:
   lr_warmup: 0.03
   frozen_warmup: null
 data:
-  image_processor: uni2
   dataset_names: hest1k,cellxgene_census
   nproc: 0
   transcriptome_processor_kwargs: {}

@@ -18,6 +18,7 @@ class SingleCellIntegrationScoreCalculator:
         transcriptome_tokenizer_type: str = "geneformer",
         tokenizer_name: str = "biogpt",
         transcriptome_processor_kwargs: Optional[Dict[str, Any]] = None,
+        image_processor: str = "uni2",
     ):
         """
         Class to calculate integration scores for a single-cell dataset.
@@ -39,6 +40,7 @@ class SingleCellIntegrationScoreCalculator:
         self.processor = TranscriptomeTextDualEncoderProcessor(
             transcriptome_tokenizer_type,
             tokenizer_path,
+            image_processor=image_processor,  # No image processor needed for this task, but needed for framework
             **transcriptome_processor_kwargs,
         )
 

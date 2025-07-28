@@ -109,6 +109,7 @@ class SingleCellZeroshotValidationScoreCalculator:
         tokenizer_name: str = "biogpt",
         transcriptome_tokenizer_type: str = "geneformer",
         transcriptome_processor_kwargs: Optional[Dict[str, Any]] = None,
+        image_processor: str = "uni2",
         batch_size: int = 32,
         average_mode: Optional[str] = "embeddings",
     ):
@@ -123,6 +124,7 @@ class SingleCellZeroshotValidationScoreCalculator:
             transcriptome_tokenizer_type: type of tokenizer to use for the transcriptome. Must be one of "geneformer", "scgpt" or "uce".
             transcriptome_processor_kwargs: kwargs to pass to the transcriptome processor. Default: None for geneformer and "scgpt", \
                 {"gene_col":"gene_name"} for scgpt.
+            image_processor: image processor to use. Default: "uni2". Needed only due to `transformers` library requirements
             batch_size: batch size to use for the forward pass through the model and for the score calculation.
             average_mode: how to average the transcriptome embeddings. Must be one of "cells", "embeddings", or None.
         """
@@ -154,6 +156,7 @@ class SingleCellZeroshotValidationScoreCalculator:
         self.processor = TranscriptomeTextDualEncoderProcessor(
             transcriptome_tokenizer_type,
             tokenizer_path,
+            image_processor,  # No image processor needed for this task
             nproc=nproc_transcriptome_processor,
             **transcriptome_processor_kwargs,
         )

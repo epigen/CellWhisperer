@@ -8,7 +8,6 @@ pandas.read_csv(PATH_TO_GCT_FILE, sep='\t',skiprows=2)
 
 """
 
-
 from typing import Optional
 from cellwhisperer.jointemb.dataset import JointEmbedDataset
 from lightning import LightningDataModule
@@ -199,6 +198,7 @@ class CancerGeneEssentialityDataModule(LightningDataModule):
         self.processor = TranscriptomeTextDualEncoderProcessor(
             self.transcriptome_processor,
             AutoTokenizer.from_pretrained(self.tokenizer),
+            self.image_processor,
             **self.transcriptome_processor_kwargs,
         )
         adata = self.prepare_adata(df_essent)

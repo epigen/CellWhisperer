@@ -654,6 +654,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         processor = TranscriptomeTextDualEncoderProcessor(
             self.transcriptome_model.config.model_type,
             model_path_from_name(self.text_model.config.model_type),
+            self.image_model.config.model_type,
         )
 
         tokenizer = processor.tokenizer

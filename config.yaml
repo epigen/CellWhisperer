@@ -96,9 +96,9 @@ llava_eval:
   question_topgenes: "Which are the 50 most strongly expressed genes in this sample of cells?"
   response_prefix_topgenes: "The 50 most strongly expressed genes are {}"
 
-retrieval_deduplicated_sets:
-  - immgen_deduplicated
-  - human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
+retrieval_deduplicated_sets: {}
+  # - immgen_deduplicated
+  # - human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
 
 model_name_path_map:
   cellwhisperer: cellwhisperer_clip_v1

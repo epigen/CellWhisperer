@@ -15,9 +15,8 @@ def initialize_validation_functions(
     batch_size: int,
     transcriptome_model_type: str,
     text_model_type: str,
-    image_model_type: Optional[str],
+    image_model_type: str,
 ):
-    return {}
     tabsap_sc_dataset = SingleCellDataSetForValidationScoring(
         cell_number_threshold_per_celltype=100
     )
@@ -34,12 +33,14 @@ def initialize_validation_functions(
             batch_size=batch_size,
             transcriptome_tokenizer_type=transcriptome_model_type,
             tokenizer_name=text_model_type,
+            image_processor=image_model_type,
         ),
         "zshot_TabSapWellStudied_celltype_lvl": SingleCellZeroshotValidationScoreCalculator(
             sc_dataset=tabsap_wellstudied_sc_dataset,
             batch_size=batch_size,
             tokenizer_name=text_model_type,
             transcriptome_tokenizer_type=transcriptome_model_type,
+            image_processor=image_model_type,
         ),
         "zshot_TabSap_cell_lvl": SingleCellZeroshotValidationScoreCalculator(
             sc_dataset=tabsap_sc_dataset,
@@ -47,6 +48,7 @@ def initialize_validation_functions(
             transcriptome_tokenizer_type=transcriptome_model_type,
             tokenizer_name=text_model_type,
             average_mode=None,
+            image_processor=image_model_type,
         ),
         "zshot_TabSapWellStudied_cell_lvl": SingleCellZeroshotValidationScoreCalculator(
             sc_dataset=tabsap_wellstudied_sc_dataset,
@@ -54,16 +56,19 @@ def initialize_validation_functions(
             tokenizer_name=text_model_type,
             transcriptome_tokenizer_type=transcriptome_model_type,
             average_mode=None,
+            image_processor=image_model_type,
         ),
         "integration_TabSapWellStudied": SingleCellIntegrationScoreCalculator(
             sc_dataset=tabsap_wellstudied_sc_dataset,
             tokenizer_name=text_model_type,
             transcriptome_tokenizer_type=transcriptome_model_type,
+            image_processor=image_model_type,
         ),
         "integration_TabSap": SingleCellIntegrationScoreCalculator(
             sc_dataset=tabsap_sc_dataset,
             tokenizer_name=text_model_type,
             transcriptome_tokenizer_type=transcriptome_model_type,
+            image_processor=image_model_type,
         ),
     }
 
