@@ -496,11 +496,31 @@ class JointEmbedDataModule(pl.LightningDataModule):
         valid_datapoints_filter = n_genes_filter
 
         if self.image_processor == "uni2" and "patches" in inputs:
-            # Idenitfy all-zero patches
-            non_zero_patches = (
-                inputs["patches"].sum(dim=(1, 2, 3)) > 0
-            )  # sum over channels, height, width
-            valid_datapoints_filter = valid_datapoints_filter & non_zero_patches
+            # Check if the 1.0 scale patch (original resolution) is all zeros
+            # Find the index of 1.0 in scale_factors, default to index 1 if not found
+            try:
+                # For now, assume default scale_factors [0.6, 1.0, 4.0] where 1.0 is at index 1
+                # TODO: Make this more robust by getting actual scale_factors from processor config
+                original_scale_idx = (
+                    1  # Index of 1.0 scale factor in default scale_factors
+                )
+                # Tensor shape is (n_patches, n_scales, 3, 224, 224)
+                non_zero_original_patches = (
+                    inputs["patches"][:, original_scale_idx, :, :, :].sum(dim=(1, 2, 3))
+                    > 0
+                )  # Check only the 1.0 scale patches
+                valid_datapoints_filter = (
+                    valid_datapoints_filter & non_zero_original_patches
+                )
+            except IndexError:
+                # Fallback to checking all scales if indexing fails
+                logger.warning(
+                    "Could not find 1.0 scale patch, falling back to checking all scales"
+                )
+                non_zero_patches = (
+                    inputs["patches"].sum(dim=(1, 2, 3, 4)) > 0
+                )  # sum over all scales, channels, height, width
+                valid_datapoints_filter = valid_datapoints_filter & non_zero_patches
 
         if sum(valid_datapoints_filter) == len(valid_datapoints_filter):
             logger.info(

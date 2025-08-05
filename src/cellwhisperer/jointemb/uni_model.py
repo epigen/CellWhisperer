@@ -26,8 +26,9 @@ MODEL_INPUT_SIZE = 2048
 class UNIProcessor(ProcessorMixin):
     attributes = []
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         self.fallback_spot_diameter_fullres = 100
+        self.config = config or UNIConfig()  # Use default config if none provided
         self.transform = transforms.Compose(
             [
                 transforms.Resize(224),
@@ -67,33 +68,46 @@ class UNIProcessor(ProcessorMixin):
                 "Currently, only numpy arrays are supported for image input."
             )
         X = []
+        # Use scale factors from config
+        scale_factors = self.config.scale_factors
 
         for i, (b, x, y) in tqdm(enumerate(zip(barcodes, x_pixel, y_pixel))):
-            main_tile = self._crop_tile(image, x, y, spot_diameter_fullres)  #
+            multi_scale_tiles = []
 
-            try:
-                main_tile = self.transform(
-                    Image.fromarray(main_tile)
-                )  # transform is defined below below
-            except Exception as e:
-                logger.error(
-                    f"Error processing tile for barcode {b} at ({x}, {y}): {e}"
-                )
-                main_tile = np.zeros(
-                    (3, 224, 224), dtype=np.float32
-                )  # Fallback to zero tensor if transformation fails
-            X.append(main_tile)
+            for scale_factor in scale_factors:
+                try:
+                    tile = self._crop_tile(
+                        image, x, y, spot_diameter_fullres, scale_factor
+                    )
+                    tile = self.transform(
+                        Image.fromarray(tile)
+                    )  # transform is defined below
+                except Exception as e:
+                    logger.error(
+                        f"Error processing tile for barcode {b} at ({x}, {y}) with scale {scale_factor}: {e}"
+                    )
+                    tile = torch.zeros(
+                        (3, 224, 224), dtype=torch.float32
+                    )  # Fallback to zero tensor if transformation fails
 
-        X = np.stack(X, axis=0)  # (n_patches, 3, 224, 224)
+                multi_scale_tiles.append(tile)
+
+            # Stack the scales for this patch
+            multi_scale_patch = torch.stack(
+                multi_scale_tiles, dim=0
+            )  # (n_scales, 3, 224, 224)
+            X.append(multi_scale_patch)
+
+        X = torch.stack(
+            X, dim=0
+        )  # (n_patches, n_scales, 3, 224, 224) - first dim: patches, second: scale levels, third: RGB channels
 
         if return_tensors == "pt":
             return {
-                "patches": torch.tensor(
-                    X, dtype=torch.float32
-                )  # (n_patches, 3, 224, 224)
+                "patches": X  # Already a torch tensor (n_patches, n_scales, 3, 224, 224)
             }
         elif return_tensors is None:
-            return {"patches": X}
+            return {"patches": X.numpy()}
         else:
             raise ValueError(
                 f"Unsupported return_tensors type: {return_tensors}. Use 'pt' or None."
@@ -103,13 +117,63 @@ class UNIProcessor(ProcessorMixin):
     def model_input_names(self):
         return ["patches"]
 
-    def _crop_tile(self, image: np.ndarray, x_pixel, y_pixel, cell_diameter_pixels):
-        # NOTE: implementation for Image.Image is in test_uni.ipynb
-        x = x_pixel - int(cell_diameter_pixels // 2)
-        y = y_pixel - int(cell_diameter_pixels // 2)
-        cell = image[
-            y : y + int(cell_diameter_pixels), x : x + int(cell_diameter_pixels)
-        ]
+    def _crop_tile(
+        self,
+        image: np.ndarray,
+        x_pixel,
+        y_pixel,
+        cell_diameter_pixels,
+        scale_factor=1.0,
+    ) -> np.ndarray:
+        scaled_diameter = int(cell_diameter_pixels * scale_factor)
+        x = x_pixel - int(scaled_diameter // 2)
+        y = y_pixel - int(scaled_diameter // 2)
+
+        img_h, img_w = image.shape[:2]
+
+        if scale_factor != 1.0:
+            # For non-1.0 scale factors, move the crop to stay within image bounds
+            # while retaining the size
+
+            # Adjust x coordinates to stay within bounds
+            if x < 0:
+                x = 0
+            elif x + scaled_diameter > img_w:
+                x = img_w - scaled_diameter
+
+            # Adjust y coordinates to stay within bounds
+            if y < 0:
+                y = 0
+            elif y + scaled_diameter > img_h:
+                y = img_h - scaled_diameter
+
+            # Final bounds check - if the scaled diameter is larger than the image,
+            # we still need to crop what we can
+            x_start = max(0, x)
+            y_start = max(0, y)
+            x_end = min(img_w, x + scaled_diameter)
+            y_end = min(img_h, y + scaled_diameter)
+
+            cell = image[y_start:y_end, x_start:x_end]
+
+            # If the crop is still smaller than expected, return None to indicate zero tensor needed
+            actual_h, actual_w = cell.shape[:2]
+            if actual_h < scaled_diameter or actual_w < scaled_diameter:
+                raise ValueError("scaled patch is larger than image bounds")
+        else:
+            # For scale_factor == 1.0, return zero tensor if patch is not fully within image
+            # Calculate the bounds
+            y_start, y_end = y, y + scaled_diameter
+            x_start, x_end = x, x + scaled_diameter
+
+            # Check if patch is fully within the image
+            if y_start < 0 or y_end > img_h or x_start < 0 or x_end > img_w:
+                # Return None to indicate zero tensor needed
+                raise ValueError("Patch (scale factor=1.0) is out of image bounds")
+            else:
+                # Crop the image (patch is fully within bounds)
+                cell = image[y_start:y_end, x_start:x_end]
+
         return cell[:, :, :3]
 
 
@@ -130,6 +194,7 @@ class UNIConfig(PretrainedConfig):
         no_embed_class=True,
         reg_tokens=8,
         dynamic_img_size=True,
+        scale_factors=[0.6, 1.0, 4.0],
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -145,6 +210,10 @@ class UNIConfig(PretrainedConfig):
         self.no_embed_class = no_embed_class
         self.reg_tokens = reg_tokens
         self.dynamic_img_size = dynamic_img_size
+        self.scale_factors = scale_factors
+
+        # Ensure one of the scale factors is 1.0
+        assert 1.0 in scale_factors, "One of the scale factors must be 1.0"
 
 
 class UNIModel(PreTrainedModel):
@@ -180,21 +249,39 @@ class UNIModel(PreTrainedModel):
         patches: torch.Tensor,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
-        # patches: (n_patches, 3, 224, 224)
+        # patches: (n_patches, n_scales, 3, 224, 224) - first dim: patches, second: scale levels, third: RGB channels
+        n_scales = len(self.config.scale_factors)
         assert (
-            patches.ndim == 4
-            and patches.shape[1] == 3
-            and patches.shape[2:] == (224, 224)
-        ), f"Expected input shape (n_patches, 3, 224, 224), but got {patches.shape}"
+            patches.ndim == 5
+            and patches.shape[1] == n_scales  # number of scales
+            and patches.shape[2] == 3  # RGB channels
+            and patches.shape[3:] == (224, 224)
+        ), f"Expected input shape (n_patches, {n_scales}, 3, 224, 224), but got {patches.shape}"
 
-        outputs = self.model(patches)
+        n_patches, n_scales, channels, height, width = patches.shape
+
+        # Process each scale separately
+        scale_embeddings = []
+        for scale_idx in range(n_scales):
+            # Extract patches for this scale: (n_patches, 3, 224, 224)
+            scale_patches = patches[:, scale_idx, :, :, :]
+
+            # Process through UNI model
+            scale_outputs = self.model(scale_patches)
+            scale_embeddings.append(scale_outputs)
+
+        # Concatenate embeddings from all scales
+        # Each scale_outputs has shape (n_patches, embed_dim), so concat along embed_dim
+        concatenated_outputs = torch.cat(
+            scale_embeddings, dim=-1
+        )  # (n_patches, n_scales * embed_dim)
 
         if return_dict:
             raise NotImplementedError(
                 "Return dict is not implemented yet. Please use return_dict=False for now."
             )
         else:
-            return (None, outputs)
+            return (None, concatenated_outputs)
 
     @classmethod
     def from_pretrained(

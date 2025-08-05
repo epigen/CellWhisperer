@@ -125,7 +125,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         except AttributeError:  # UCE
             self.transcriptome_embed_dim = config.transcriptome_config.output_dim
         self.text_embed_dim = config.text_config.hidden_size
-        self.image_embed_dim = config.image_config.embed_dim
+        # Multi-scaling: UNI embeddings are concatenated from multiple scales
+        self.image_embed_dim = config.image_config.embed_dim * len(config.image_config.scale_factors)
         self.projection_dim = config.projection_dim
 
         self.discriminator = GlobalDiscriminatorDot(
