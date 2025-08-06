@@ -231,6 +231,10 @@ For "latent-free" data analysis in the web browser with CellWhisperer (CELLxGENE
 4. Use the newly created file `/path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad` to host a CELLxGENE Explorer instance:
   - `cellxgene launch -p 5005  --debug --host 0.0.0.0 --max-category-items 500 --var-names gene_name /path/to/cellwhisperer/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad`
 
+### Use AI reliably
+
+CellWhisperer represents a proof-of-concept for biomedical data analysis. Its strength lies in the fast initial exploration of scRNA-seq datasets. Like other AI systems however, CellWhisperer makes mistakes and can produce misleading results. We therefore advise to cross-check any conclusions drawn from CellWhisperer-based analyses using established bioinformatics methods.
+
 ### Self-host the AI models (GPU with 24GB VRAM highly recommended)
 
 For your convenience, the CellWhisperer-integrated `cellxgene` server will access our API for AI functionalities. If you instead want to run the AI models locally follow these instructions:
