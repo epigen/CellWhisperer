@@ -84,5 +84,6 @@ rule plot_umap_with_label:
 
 rule all:
     input:
-        expand(rules.plot_umap_with_label.output.plot, dataset=["tcga_skcm_small"], model=[config["model_name_path_map"]["cellwhisperer_geneformer"]])
+        expand(rules.plot_umap_with_label.output.plot, dataset=["tcga_skcm_small"], model=[config["model_name_path_map"]["cellwhisperer_geneformer"], config["model_name_path_map"]["cellwhisperer_uce"]])
+
     default_target: True

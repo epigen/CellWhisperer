@@ -27,6 +27,20 @@ Models can be fetched using `snakemake`:
 1. Ensure `snakemake` is installed: `mamba install -c bioconda snakemake=7.15.2`
 2. Fetch required models: `snakemake -j1 models` (run from the `src` folder in the repository root)
 
+## Docker Hub
+
+The cellwhisperer/spotwhisperer image is backed up to docker hub, and can respectively be restored from there. In order to do so you need to be logged in to docker hub, *not* the red hat registry which podman auto-logs you into.
+
+`docker login docker.io`
+username: jburto26
+token: dckr_pat_wNFKfvpc9B_d2235P-vCxnj3P1s
+
+This is just a public access token. If it doesn't work see #782 for how to regenerate.
+
+## `/var` Size
+
+If `/var/` becomes too full, e.g., because of image building, everything will fail. How does this happen, well, because of the cellwhisp setup, /home is too small for building and so `/home/jburton/.local/share` is symlinked to `/var/tmp/jburton/symlinked/containers`. Thus container storage ends up on var. The easist way to free space is to `mv` the containers folder to something else and then set up the sylinks again. Everything will be rebuilt. You may have to `chown` and `chmod` the previous containers directory to get it into shape where you can delete it. Time often helps here.
+
 ## Maintenance
 
 If the website needs to go offline for a larger amount of time due to maintenance, rename the file `static/maintenance.hidden.html` to `static/maintenance.html` and keep the nginx server running. Once maintenance is done, rename the file back to its original name again.

@@ -45,6 +45,7 @@ paths:
   ablations:
     models: results/models/ablations/
     plots: results/plots/ablations/
+  
 
 plot_style: "src/plot_style/main.style"
 
@@ -63,7 +64,6 @@ datasets:
   - hcaorganoids_normal__organoid
   - hcaorganoids_cancer__primary
   - hcaorganoids_cancer__organoid
-  - deepspot_test
   - hest1k
 
 metadata_cols_per_zero_shot_validation_dataset:
@@ -123,7 +123,6 @@ model_name_path_map:
   llama33: resources/Llama-3.3-70B-Instruct
 
   uni2: resources/UNI2/
-
   # Deepspot related model paths
   deepspot_pretrained: resources/deepspot_pretrained
   uni: resources/UNI

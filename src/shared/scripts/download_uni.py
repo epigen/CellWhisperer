@@ -19,8 +19,7 @@ hf_hub_download(
     token=huggingface_token,
 )
 
-# Download config.json
-hf_hub_download(
+
     repo_id=snakemake.params.model_name,
     filename="config.json",
     local_dir=uni_model_dir,

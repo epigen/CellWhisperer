@@ -142,8 +142,8 @@ rule download_uni:
     TODO make a real copy (follow symlink)
     """
     output:
-        lambda wildcards: PROJECT_DIR / config["model_name_path_map"][model_name] / "pytorch_model.bin",
-        lambda wildcards: PROJECT_DIR / config["model_name_path_map"][model_name] / "config.json",
+        lambda wildcards: PROJECT_DIR / config["model_name_path_map"][wildcards.model_name] / "pytorch_model.bin",
+        lambda wildcards: PROJECT_DIR / config["model_name_path_map"][wildcards.model_name] / "config.json",
     wildcard_constraints:
         model_name="uni|uni2",
     params:
@@ -156,7 +156,7 @@ rule download_uni:
     conda:
         "deepspot"
     script:
-       "../scripts/download_uni.py"
+       "../scripts/download_uni.py" 
 
 rule download_hoptimus:
     """

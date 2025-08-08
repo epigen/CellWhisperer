@@ -1,0 +1,275 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>SpotWhisperer: Molecularly informed analysis of histopathology images using natural language</title>
+      <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+      <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css">
+      <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+      <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap-theme.min.css">
+      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css">
+      <style>
+         .justified-text { text-align: justify; }
+         .sidebar { position: fixed; }
+         .page-header h1 { font-size: 28px; }
+         .caption h4 { margin-top: 0; }
+         .image-container {
+		  display: flex;             
+		  justify-content: center;  
+		  align-items: center;       
+		  gap: 20px;                 
+		}
+		
+		.image-container img {
+		  max-width: 45%;   
+		  height: auto;
+		}
+      </style>
+      <script async="" src="https://www.google-analytics.com/analytics.js"></script><script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.5.1.js"></script>
+      <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script>
+   </head>
+   <body>
+      <div class="container-fluid">
+         <div class="row">
+            <div class="col-sm-2 sidebar">
+               <ul class="nav nav-sidebar">
+                  <li><a href="#home">Overview</a></li>
+                  <li><a href="#video">Video</a></li>
+                  <li><a href="#data">Dataset</a></li>
+                  <li><a href="#citation">Citation</a></li>
+               </ul>
+               <hr>
+            </div>
+            <div class="col-sm-10 col-sm-offset-2">
+               <div class="page-header">
+                  <h1><a name="home"></a>Molecularly informed analysis of histopathology images using natural language</h1>
+                  <h1><small>Supplementary Website</small></h1>
+               </div>
+               <h3><a name="overview"></a>Study Overview</h3>
+               <div class="container-fluid">
+                  <div class="row">
+                     <div class="col-xs-12 col-md-12 col-lg-12">
+                        <div class="thumbnail">
+                           <img src="img/sw_poster_headline.png" style="width: 50%; display: block;" alt="SpotWhisperer Poster Overview">
+                        </div>
+                     </div>
+                     <div class="col-xs-12 col-md-12 col-lg-12">
+                        <p class="justified-text">
+                           Histopathology refers to the microscopic examination of diseased tissues and routinely guides treatment decisions for cancer and other diseases. Currently, this analysis focuses on morphological features but rarely considers gene expression information, which can add an important molecular dimension.
+                           We introduce SpotWhisperer, an AI method that links histopathological images to spatial gene expression profiles and their text annotations, enabling molecularly grounded histopathology analysis through natural language. Our method outperforms pathology vision-language models on a newly curated benchmark dataset, dedicated to spatially resolved H&E annotation.
+                           Integrated into a web interface, SpotWhisperer enables interactive exploration of cell types and disease mechanisms using free-text queries with access to inferred spatial gene expression profiles.
+                           SpotWhisperer analyzes cost-effective pathology images with spatial gene expression and natural-language AI, demonstrating a path for routine integration of microscopic molecular information into histopathology.
+                        </p>
+                     </div>
+                  </div>
+               </div>
+                      
+                  <div class="row">
+                      <div class="col-xs-12">
+                          <div class="thumbnail">
+                              <div class="image-container"><img src="img/sw_web_text.png" width="33%" alt="Free-text querying">
+                              	<img src="img/sw_web_genes.png" width="33%" alt="Inferred gene expression">
+                              </div>
+                  
+                              <div class="caption">
+                                  <div class="row">
+                                      <div class="col-md-6">
+                                          <h4>Web interface for free-text querying</h4>
+                           					<p class="justified-text">The web interface allows users to search for cellular features like "T cells" and visualizes the matching regions, which align with expert annotations of Tertiary Lymphoid Structures.</p>
+                        			  </div>
+                                      <div class="col-md-6">
+                                          <h4>Web interface for inferred gene expression</h4>
+                          				<p class="justified-text">The underlying molecular representation allows for exploring the inferred expression of specific genes, such as LTB, which is a known marker for lymphoid structures.</p>
+                        			</div>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+               <!-- <div class="row">
+                  <div class="col-xs-12 col-md-6">
+                     <div class="thumbnail">
+                        <img src="img/sw_web_text.png" width="25%" alt="Free-text querying">
+                        <div class="caption">
+                           <h4>Web interface for free-text querying</h4>
+                           <p class="justified-text">The web interface allows users to search for cellular features like "T cells" and visualizes the matching regions, which align with expert annotations of Tertiary Lymphoid Structures.</p>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="col-xs-12 col-md-6">
+                     <div class="thumbnail">
+                        <img src="img/sw_web_genes.png" width="25%" alt="Inferred gene expression">
+                        <div class="caption">
+                           <h4>Web interface for inferred gene expression</h4>
+                           <p class="justified-text">The underlying molecular representation allows for exploring the inferred expression of specific genes, such as LTB, which is a known marker for lymphoid structures.</p>
+                        </div>
+                     </div>
+                  </div>
+               </div> -->
+               <h3><a name="video"></a>SpotWhisperer in Action</h3>
+               <div class="row">
+                  <div class="col-xs-12 col-md-12 col-lg-12">
+                     <p class="justified-text" style="margin-bottom:20px;">
+                        This video demonstrates the core functionality of the SpotWhisperer web application. It showcases how users can load a histopathology sample, perform natural language queries to identify cellular regions like "T cells," and explore the underlying inferred gene expression data that drives these predictions. The demonstration highlights the intuitive, interactive, and molecularly-grounded approach of our method.
+                     </p>
+                     <div class="thumbnail">
+                        <video controls style="width: 100%; display: block;">
+                           <source src="img/spotwhisperer_show.mp4" type="video/mp4">
+                           Your browser does not support the video tag.
+                        </video>
+                     </div>
+                  </div>
+               </div>
+               <h3><a id="data"></a>Dataset</h3>
+               <div class="row">
+                  <div class="col-xs-12 col-md-12 col-lg-12">
+                     <h3><a name="dataset"></a>Spot-level H&E annotation benchmark</h3>
+                     <p>This benchmark dataset consists of H&E images from five lung cancer samples (<a href="https://doi.org/10.5281/zenodo.14620362" target="_blank">Dawo et al., 2025</a>), annotated with cell types and with pathologically relevant labels at spot-level resolution. We refer to our publication (<a href="https://openreview.net/forum?id=Ej9zvGxbva" target="_blank">Schaefer et al., 2025</a>) for the methodology of annotation generation.</p>
+                     <h4>Dataset Files</h4>
+                     <p>The dataset contains the following compressed h5ad files:</p>
+                     <li><code><a href="data/LC1.h5ad.gz">LC1.h5ad.gz</a></code> - Lung cancer sample 1</li>
+                     <li><code><a href="data/LC2.h5ad.gz">LC2.h5ad.gz</a></code> - Lung cancer sample 2</li>
+                     <li><code><a href="data/LC3.h5ad.gz">LC3.h5ad.gz</a></code> - Lung cancer sample 3</li>
+                     <li><code><a href="data/LC4.h5ad.gz">LC4.h5ad.gz</a></code> - Lung cancer sample 4</li>
+                     <li><code><a href="data/LC5.h5ad.gz">LC5.h5ad.gz</a></code> - Lung cancer sample 5</li>
+                     <p>and can also be <a href="data/spotwhisperer-complete-dataset.tar.gz">downloaded as a complete (compressed) tar archive</a>.</p>
+                     <hr>
+                     <h4>Usage Instructions</h4>
+                     <h5>Loading and Basic Analysis</h5>
+                     <pre><code class="language-python">import scanpy as sc
+
+# Read the curated file
+file_path = 'LC1.h5ad.gz'
+adata = sc.read_h5ad(file_path)
+
+# Display basic information
+print(adata)
+
+# Quick data summary
+print(f"\nSummary:")
+
+# Basic statistics
+print(f"Dataset shape: {adata.shape}")
+print(f"In-tissue spots: {adata.obs['in_tissue'].sum()}")
+
+# Annotation distributions
+print("\nRegion annotations:")
+print(adata.obs['region_type_expert_annotation'].value_counts())
+
+print("\nCell type annotations:")
+print(adata.obs['cell_type_annotations'].value_counts())
+
+# Gene information
+print(f"\nGenes available: {adata.n_vars}")
+print(f"Sample gene names: {adata.var['gene_name'].head().tolist()}")
+
+# Spatial coordinates
+print(f"\nSpatial coordinates shape: {adata.obsm['spatial'].shape}")
+
+# Available expression layers
+print(f"\nExpression layers: {list(adata.layers.keys())}")</code></pre>
+                     <hr>
+                     <h4>Key Data Components</h4>
+                     <p>Below is a summary of the essential data components for the curated data:</p>
+                     <h5>Gene Expression Data</h5>
+                     <ul>
+                        <li><strong><code>adata.X</code></strong> contains DeepSpot-inferred gene expression (SPOTS × GENES)</li>
+                        <li><strong><code>adata.layers['raw_counts']</code></strong> holds raw spatial transcriptomics read counts</li>
+                        <li><strong><code>adata.layers['log10k_norm_raw_counts']</code></strong> contains log10k nomalised raw gene expression counts</li>
+                     </ul>
+                     <h5>Gene Information</h5>
+                     <ul>
+                        <li><strong><code>adata.var['gene_name']</code></strong> contains human-readable gene names</li>
+                     </ul>
+                     <h5>Spatial Information</h5>
+                     <ul>
+                        <li>
+                           <strong>Spot coordinates:</strong>
+                           <ul>
+                              <li><code>adata.obs['x_array']</code>, <code>adata.obs['y_array']</code>: Visium array coordinates</li>
+                              <li><code>adata.obs['x_pixel']</code>, <code>adata.obs['y_pixel']</code>: histology image pixel coordinates</li>
+                              <li><code>adata.obsm['spatial']</code>: 2D spatial coordinates for visualization</li>
+                           </ul>
+                        </li>
+                        <li>
+                           <strong>Spatial metadata:</strong>
+                           <ul>
+                              <li><code>adata.uns['spatial']['library_id']['images']['hires']</code>: high-resolution histology image</li>
+                           </ul>
+                        </li>
+                     </ul>
+                     <h5>Annotations and Metadata</h5>
+                     <ul>
+                        <li>
+                           <strong>Tissue coverage:</strong>
+                           <ul>
+                              <li><code>adata.obs['in_tissue']</code>: boolean indicating spots within tissue boundaries</li>
+                           </ul>
+                        </li>
+                        <li>
+                           <strong>Expert annotations:</strong>
+                           <ul>
+                              <li><code>adata.obs['region_type_expert_annotation']</code>: manual tissue region annotations</li>
+                              <li>Categories: UNASSIGNED, NOR (Normal), TUM (Tumor), TLS (Tertiary Lymphoid Structures), INFL (Inflammatory)</li>
+                           </ul>
+                        </li>
+                        <li>
+                           <strong>Cell type annotations:</strong>
+                           <ul>
+                              <li><code>adata.obs['cell_type_annotations']</code>: automated cell type predictions from reference atlas</li>
+                              <li>Provides broad cell type classifications (e.g., Epithelial, Immune, Stromal)</li>
+                           </ul>
+                        </li>
+                        <li>
+                           <strong>Sample metadata:</strong>
+                           <ul>
+                              <li><code>adata.obs['sample_ID']</code>: sample identifiers</li>
+                              <li><code>adata.obs['barcode']</code>: unique spot barcodes</li>
+                           </ul>
+                        </li>
+                     </ul>
+                     <h5>Additional Metadata</h5>
+                     <ul>
+                        <li>
+                           <strong>Histology information:</strong>
+                           <ul>
+                              <li><code>adata.uns['he_slide']</code>: H&E slide metadata (if available)</li>
+                              <li><code>adata.uns['meta']</code>: additional experimental metadata (if available)</li>
+                           </ul>
+                        </li>
+                     </ul>
+                  </div>
+               </div>
+               <h3><a id="citation"></a>Citation</h3>
+               <p>
+                  The SpotWhisperer paper is <a href="https://www.biorxiv.org/content/10.1101/2025.07.14.664402v1" target="_blank">available at bioRxiv</a> and was Accepted in the ICML 2025 FM4LS Workshop, <a href="https://openreview.net/forum?id=Ej9zvGxbva" target="_blank">find this paper on OpenReview.</a>
+               </p>
+               <p>If you use SpotWhisperer or the associated benchmark dataset in your research, please cite:</p>
+               <pre><code class="language-text">@article {Schaefer2025.07.14.664402,
+	author = {Schaefer, Moritz and Nonchev, Kalin and Awasthi, Animesh and Burton, Jake and Koelzer, Viktor H and R{\"a}tsch, Gunnar and Bock, Christoph},
+	title = {Molecularly informed analysis of histopathology images using natural language},
+	elocation-id = {2025.07.14.664402},
+	year = {2025},
+	doi = {10.1101/2025.07.14.664402},
+	URL = {https://www.biorxiv.org/content/early/2025/07/18/2025.07.14.664402},
+	eprint = {https://www.biorxiv.org/content/early/2025/07/18/2025.07.14.664402.full.pdf},
+	journal = {bioRxiv}
+}</code></pre>
+               <p>and</p>
+               <pre><code class="language-text">@misc{dawo2025visium,
+  title     = "{10x} Visium spatial transcriptomics dataset: Kidney (3) and lung (5) cancer with tertiary lymphoid structures",
+  author    = "Dawo, Sebastian and Nonchev, Kalin and Silina, Karina",
+  publisher = "Zenodo",
+  year      =  2025,
+  url       = "http://dx.doi.org/10.5281/zenodo.14620362",
+  doi       = "10.5281/ZENODO.14620362"
+}</code></pre>
+            </div>
+         </div>
+      </div>
+   </body>
+</html>

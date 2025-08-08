@@ -215,6 +215,49 @@ services:
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/hca_olo/:/logs/:Z
 
+  
+  spotwhisperer_lc1:
+    <<: *cellxgene-service
+    container_name: spotwhisperer_lc1
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/Jake/lc_1/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/hca_olo/:/logs/:Z
+  
+  spotwhisperer_lc2:
+    <<: *cellxgene-service
+    container_name: spotwhisperer_lc2
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/Jake/lc_2/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/hca_olo/:/logs/:Z
+
+  spotwhisperer_lc3:
+    <<: *cellxgene-service
+    container_name: spotwhisperer_lc3
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/Jake/lc_3/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/hca_olo/:/logs/:Z
+  
+
+  spotwhisperer_lc4:
+    <<: *cellxgene-service
+    container_name: spotwhisperer_lc4
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/Jake/lc_4/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/hca_olo/:/logs/:Z
+
+
+  spotwhisperer_lc5:
+    <<: *cellxgene-service
+    container_name: spotwhisperer_lc5
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/Jake/lc_5/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/hca_olo/:/logs/:Z
+
   # certificate renewal is run through my nixos configuration
   nginx:
     container_name: nginx
