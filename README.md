@@ -233,11 +233,11 @@ For "latent-free" data analysis in the web browser with CellWhisperer (CELLxGENE
 
 ### Use AI reliably
 
-CellWhisperer represents a proof-of-concept for biomedical data analysis. Its strength lies in the fast initial exploration of scRNA-seq datasets. Like other AI systems however, CellWhisperer makes mistakes and can produce misleading results. We therefore advise to cross-check any conclusions drawn from CellWhisperer-based analyses using established bioinformatics methods.
+CellWhisperer constitutes a proof-of-concept for interactive exploration of scRNA-seq data. Like other AI models, CellWhisperer does not understand user questions in a human sense, and it can make mistakes. Key results should thus be reconfirmed with conventional bioinformatics approaches.
 
 ### Self-host the AI models (GPU with 24GB VRAM highly recommended)
 
-For your convenience, the CellWhisperer-integrated `cellxgene` server will access our API for AI functionalities. If you instead want to run the AI models locally follow these instructions:
+By default, running the `cellxgene` web app server will access the API hosted at https://cellwhisperer.bocklab.org for CellWhisperer's AI capabilities. To run the AI models locally, follow these instructions:
 
 - for the embedding model, simply provide the command line argument `--cellwhisperer-clip-model cellwhisperer/results/models/jointemb/cellwhisperer_clip_v1.ckpt` to the `cellxgene` command.
 - for the chat model:
