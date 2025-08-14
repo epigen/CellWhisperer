@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import anndata
+
 from tqdm import tqdm
 from transformers import PreTrainedModel, PretrainedConfig
 from transformers.modeling_outputs import BaseModelOutputWithPooling
@@ -34,7 +36,7 @@ class UNIProcessor(ProcessorMixin):
                 transforms.Resize(224),
                 transforms.CenterCrop(224),
                 transforms.ToTensor(),
-                transforms.Normalize(  # TODO understand
+                transforms.Normalize(  # TODO understand better. not sure if this is too good tbh...
                     mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
                 ),
             ]
@@ -44,24 +46,24 @@ class UNIProcessor(ProcessorMixin):
 
     def __call__(
         self,
-        adata,
+        adata: anndata.AnnData,
         return_tensors: Optional[str] = None,
         *args: Any,
         **kwargs: Any,
     ) -> Dict[str, Any]:
         """
         image: PIL.Image
-        adata: AnnData with .obsm[spatial_key] for spot coordinates (pixel units, y,x)
-        transcriptome_key: adata.X or adata.layers[key]
-        spatial_key: key in adata.obsm for spot positions
+        adata: AnnData with for spot coordinates (pixel units, y,x)
         Returns: list of (image_patch, transcriptome) pairs
         """
         spot_diameter_fullres = adata.uns.get(
             "spot_diameter_fullres", self.fallback_spot_diameter_fullres
         )
         barcodes = adata.obs_names
-        x_pixel = adata.obs.x_pixel
-        y_pixel = adata.obs.y_pixel
+        y_pixel = adata.obs.x_pixel.astype(
+            int
+        )  # TODO temporary flip needed for LUNG datasets
+        x_pixel = adata.obs.y_pixel.astype(int)
         image = adata.uns["20x_slide"]
         if isinstance(image, Image.Image):
             raise NotImplementedError(

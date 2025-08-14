@@ -126,7 +126,9 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             self.transcriptome_embed_dim = config.transcriptome_config.output_dim
         self.text_embed_dim = config.text_config.hidden_size
         # Multi-scaling: UNI embeddings are concatenated from multiple scales
-        self.image_embed_dim = config.image_config.embed_dim * len(config.image_config.scale_factors)
+        self.image_embed_dim = config.image_config.embed_dim * len(
+            config.image_config.scale_factors
+        )
         self.projection_dim = config.projection_dim
 
         self.discriminator = GlobalDiscriminatorDot(
@@ -245,7 +247,6 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         input_ids=None,
         attention_mask=None,
         normalize_embeds=False,
-        return_dict=None,
         **kwargs,
     ):
         r"""
@@ -256,7 +257,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         text_outputs = self.text_model(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            return_dict=return_dict,
+            return_dict=False,
             **kwargs,
         )
         text_features = self._text_pooling(text_outputs, attention_mask)
@@ -276,7 +277,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         expression_expr=None,
         expression_key_padding_mask=None,
         normalize_embeds=False,
-        return_dict=None,
+        **kwargs,
     ):
         r"""
 
@@ -307,7 +308,10 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         return transcriptome_features, transcriptome_embeds
 
     def get_image_features(
-        self, image=None, return_tensors=None, normalize_embeds=False, return_dict=None
+        self,
+        patches=None,
+        normalize_embeds=False,
+        **kwargs,
     ):
         r"""
         Returns:
@@ -315,9 +319,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             applying the projection layer to the pooled output of [`CLIPImageModel`].
         """
         image_features = self.image_model(
-            image=image,
-            return_tensors=return_tensors,
-            return_dict=return_dict,
+            patches=patches,
+            return_dict=False,
         )[1]
 
         image_embeds = self.discriminator.image_block(image_features)

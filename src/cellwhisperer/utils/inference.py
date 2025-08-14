@@ -17,6 +17,7 @@ import pandas as pd
 import numpy as np
 
 
+# TODO rename to manage images as well
 def score_transcriptomes_vs_texts(
     transcriptome_input: Union[anndata.AnnData, torch.Tensor],
     text_list_or_text_embeds: Union[List[str], torch.Tensor],
@@ -33,6 +34,7 @@ def score_transcriptomes_vs_texts(
     ] = None,
     batch_size: int = 128,
     score_norm_method: Optional[str] = None,
+    use_image_data: bool = False,
 ) -> Tuple[torch.Tensor, Optional[List[str]]]:
     """
     Convenience function to compute the similarity between text and transcriptome (embeddings) via flexible inputs
@@ -97,6 +99,7 @@ def score_transcriptomes_vs_texts(
             model,
             transcriptome_processor,
             batch_size=batch_size,
+            use_image_data=use_image_data,
         )  # n_cells * 512
 
     if average_mode == "embeddings":

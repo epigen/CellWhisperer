@@ -71,10 +71,11 @@ def load_cellwhisperer_model(
     processor = TranscriptomeTextDualEncoderProcessor(
         pl_model.model.transcriptome_model.config.model_type,
         model_path_from_name(pl_model.model.text_model.config.model_type),
-        pl_model.model.image_processor.config.model_type,
+        pl_model.model.image_model.config.model_type,
     )
 
     tokenizer = processor.tokenizer
     transcriptome_processor = processor.transcriptome_processor
+    image_processor = processor.image_processor
 
-    return pl_model, tokenizer, transcriptome_processor
+    return pl_model, tokenizer, transcriptome_processor, image_processor

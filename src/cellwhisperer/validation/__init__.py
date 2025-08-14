@@ -23,6 +23,23 @@ def initialize_validation_functions(
     tabsap_wellstudied_sc_dataset = SingleCellDataSetForValidationScoring(
         celltypes=config["top20_lung_liver_blood_celltypes"]
     )
+    
+    # Lung tissue datasets for validation
+    lung_tissue_dataset = SingleCellDataSetForValidationScoring(
+        dataset="lung_tissue",
+        celltype_obs_colname="cell_type_annotations",
+        cell_number_threshold_per_celltype=200,
+        auto_create_batch_obs_colname=False,  # Spatial data doesn't have donor/method structure
+        use_image_data=True,  # Enable image data usage for lung tissue
+    )
+    
+    lung_tissue_region_dataset = SingleCellDataSetForValidationScoring(
+        dataset="lung_tissue",
+        celltype_obs_colname="region_type_expert_annotation",
+        cell_number_threshold_per_celltype=200,
+        auto_create_batch_obs_colname=False,  # Spatial data doesn't have donor/method structure
+        use_image_data=True,  # Enable image data usage for lung tissue
+    )
 
     training_validation_functions = {
         # "zshot_cancer_gene_essentiality": EvaluateCancerGeneEssentiality(
@@ -70,6 +87,14 @@ def initialize_validation_functions(
             transcriptome_tokenizer_type=transcriptome_model_type,
             image_processor=image_model_type,
         ),
+        #"zshot_LungTissue_region_lvl": SingleCellZeroshotValidationScoreCalculator(
+        #    sc_dataset=lung_tissue_region_dataset,
+        #    batch_size=batch_size,
+        #    transcriptome_tokenizer_type=transcriptome_model_type,
+        #    tokenizer_name=text_model_type,
+        #    image_processor=image_model_type,
+        #),
+
     }
 
     # Add retrieval tests for the deduplicated validation-sets

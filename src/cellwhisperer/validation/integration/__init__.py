@@ -36,6 +36,7 @@ class SingleCellIntegrationScoreCalculator:
         self.adata = sc_dataset.adata
         self.celltype_obs_colname = sc_dataset.celltype_obs_colname
         self.batch_obs_colname = sc_dataset.batch_obs_colname
+        self.sc_dataset = sc_dataset  # Store reference to dataset object
 
         self.processor = TranscriptomeTextDualEncoderProcessor(
             transcriptome_tokenizer_type,
@@ -56,13 +57,14 @@ class SingleCellIntegrationScoreCalculator:
             - None
         """
 
-        transcriptome_embeddings = adata_to_embeds(
+        modality_embeddings = adata_to_embeds(
             self.adata,
             model=model,
-            transcriptome_processor=self.processor.transcriptome_processor,
+            processor=self.processor.transcriptome_processor,
+            use_image_data=self.sc_dataset.use_image_data,
         )
 
-        self.adata.obsm[f"X_cellwhisperer"] = transcriptome_embeddings.cpu().numpy()
+        self.adata.obsm[f"X_cellwhisperer"] = modality_embeddings.cpu().numpy()
 
         integration_metrics = eval_scib_metrics(
             self.adata,

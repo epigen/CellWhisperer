@@ -28,7 +28,7 @@ rule process_full_dataset:
         model=ancient(PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt"),
         base_model=lambda wildcards: ancient(PROJECT_DIR / config["model_name_path_map"]["scgpt" if "scgpt" in wildcards.model else ("uce" if "uce" in wildcards.model else "geneformer")]),
     output:
-        model_outputs=protected(str(PROJECT_DIR / config["paths"]["model_processed_dataset"]).replace("{model}", "{model,cellwhisperer.*}")),
+        model_outputs=protected(str(PROJECT_DIR / config["paths"]["model_processed_dataset"]).replace("{model}", "{model,.*whisperer.*}")),
     resources:
         mem_mb=900000,  # could be made more efficient...
         slurm=slurm_gres("large")

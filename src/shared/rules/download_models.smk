@@ -156,7 +156,8 @@ rule download_uni:
     conda:
         "deepspot"
     script:
-       "../scripts/download_uni.py" 
+       "../scripts/download_uni.py"
+
 
 rule download_hoptimus:
     """

@@ -24,6 +24,7 @@ class SingleCellDataSetForValidationScoring:
         batch_obs_colname="batch",
         auto_create_batch_obs_colname: bool = True,
         logger: Optional[Any] = None,
+        use_image_data: bool = False,  # New parameter to prefer image data over transcriptome
     ):
         """
         Class to process a single-cell dataset and prepare it for validation scoring.
@@ -38,10 +39,12 @@ class SingleCellDataSetForValidationScoring:
             batch_obs_colname: name of the column in the adata.obs dataframe that contains the batch labels.
             auto_create_batch_obs_colname: If true, set adata.obs["batch"] = (adata.obs["donor"].astype(str) + "_" + adata.obs["method"].astype(str))
             logger: logger to use. If None, will use the logger for this module.
+            use_image_data: If True, prefer image patches over transcriptome data when available in the dataset.
 
         """
 
         self.logger = logger or logging.getLogger(__name__)
+        self.use_image_data = use_image_data
         self.logger.info("Loading anndata...")
         if isinstance(dataset, str):
             dataset_path = get_path(["paths", "read_count_table"], dataset=dataset)
@@ -50,6 +53,17 @@ class SingleCellDataSetForValidationScoring:
             assert isinstance(dataset, Path)
 
         self.adata = anndata.read_h5ad(dataset_path)
+        
+        # Check what modalities are available
+        self.has_transcriptome = True  # All datasets have transcriptome by default
+        
+        if use_image_data:
+            self.logger.info("Image data usage enabled - will attempt to use patches or extract from WSI when available")
+            
+        self.logger.info(f"Dataset modalities - Transcriptome: {self.has_transcriptome}, Use Images: {use_image_data}")
+        
+        # Store the original dataset name for later reference
+        self.dataset_name = dataset if isinstance(dataset, str) else str(dataset)
 
         # NOTE: X should anyways be raw counts
         if "raw_counts" in self.adata.layers:
@@ -131,6 +145,7 @@ class SingleCellZeroshotValidationScoreCalculator:
 
         self.batch_size = batch_size
         self.average_mode = average_mode
+        self.sc_dataset = sc_dataset  # Store reference to the dataset object
 
         tokenizer_path = model_path_from_name(tokenizer_name)
         transcriptome_processor_kwargs = transcriptome_processor_kwargs or {}
@@ -174,17 +189,11 @@ class SingleCellZeroshotValidationScoreCalculator:
             - A dataframe with cell type as rows and the above performance metrics for those cell types as columns.
         """
 
-        transcriptome_embeddings = adata_to_embeds(
-            self.adata,
-            model=model,
-            transcriptome_processor=self.processor.transcriptome_processor,
-        )
-
         (
             performance_metrics,
             performance_metrics_per_celltype_df,
         ) = get_performance_metrics_transcriptome_vs_text(
-            transcriptome_input=transcriptome_embeddings,
+            modality_input=self.adata,
             model=model,
             transcriptome_processor=self.processor.transcriptome_processor,
             correct_text_idx_per_transcriptome=self.correct_text_idx_per_transcriptome,
@@ -192,6 +201,7 @@ class SingleCellZeroshotValidationScoreCalculator:
             grouping_keys=self.annotation,
             average_mode=self.average_mode,
             batch_size=self.batch_size,
+            use_image_data=self.sc_dataset.use_image_data,
         )
 
         return (

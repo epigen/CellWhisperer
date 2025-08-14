@@ -17,7 +17,7 @@ import numpy as np
 
 def get_performance_metrics_transcriptome_vs_text(
     model: TranscriptomeTextDualEncoderModel,
-    transcriptome_input: Union[anndata.AnnData, torch.Tensor],
+    modality_input: Union[anndata.AnnData, torch.Tensor],
     text_list_or_text_embeds: Union[List[str], torch.Tensor],
     correct_text_idx_per_transcriptome: List[int],
     average_mode: Optional[str] = "embeddings",
@@ -29,28 +29,33 @@ def get_performance_metrics_transcriptome_vs_text(
     score_norm_method: Optional[str] = None,
     report_per_class_metrics: bool = True,
     text_as_classes: bool = True,
+    use_image_data: bool = False,
 ) -> Tuple[Dict[str, torch.Tensor], pd.DataFrame]:
     """
-    Score the model's ability to produce similar embeddings for the given matching texts and adata objects.
-    :param model: TranscriptomeTextDualEncoderModel instance. Both transcriptome and text embeddings will be computed using this model.
-    :param transcriptome_input: anndata.AnnData or torch.tensor (n_cells*embedding_size) \
-        If anndata.AnnData, first compute the transcriptome embeddings. If torch.tensor, use the provided transcriptome embeddings.
+    Score the model's ability to produce similar embeddings for the given matching texts and data samples.
+    This function works with transcriptome data, image patches, or any other modality supported by the model.
+    
+    :param model: TranscriptomeTextDualEncoderModel instance. Both modality and text embeddings will be computed using this model.
+    :param modality_input: anndata.AnnData or torch.tensor (n_samples*embedding_size) \
+        If anndata.AnnData, compute the modality embeddings (transcriptome or image). If torch.tensor, use the provided embeddings.
+        The specific modality is determined by the model capabilities and data availability.
     :param text_list_or_text_embeds: List[str] or torch.tensor (n_celltype * embedding_size). If List[str], compute the text embeddings for each text. \
         If torch.tensor, use the provided text embeddings.
-    :param correct_text_idx_per_transcriptome: A list with the index in text_list_or_text_embeds of the correct text for each transcriptome in transcriptome_input.
+    :param correct_text_idx_per_transcriptome: A list with the index in text_list_or_text_embeds of the correct text for each sample in modality_input.
     :param average_mode: "embeddings" or None. \
-        If "embeddings", first tokenize and embed each cell, then average the embeddings. If None, don't average, report results at the single-transcriptome level. NOTE "cells" is not implemented at the moment but would work by first averaging the transcriptome data across all cells of same celltype, then tokenize and embed. \
-    :param grouping_keys: A list with group indicators (one for each transcriptome in transcriptome_input). If average_mode is not None, this must be provided and will be used to split the transciptome_input into groups that will be averaged separately.
+        If "embeddings", first tokenize and embed each sample, then average the embeddings. If None, don't average, report results at the single-sample level.
+    :param grouping_keys: A list with group indicators (one for each sample in modality_input). If average_mode is not None, this must be provided and will be used to split the modality_input into groups that will be averaged separately.
           Will also be used to label the rows in the result dataframe. If None, just use numbers.
-    :param transcriptome_processor: GeneformerTranscriptomeProcessor, UCETranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to prepare/tokenize the transcriptome. Can be None if transcriptome_input is a torch.tensor.
+    :param transcriptome_processor: GeneformerTranscriptomeProcessor, UCETranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to prepare/tokenize the transcriptome. Can be None if modality_input is a torch.tensor or if using image modality.
     :param batch_size: int. Model processing in batches (to avoid OOM)
     :param score_norm_method: "zscore", "softmax", "01norm" or None. How to normalize the logits \
-            (similarity to the transcriptome). "zscore" will zscore the logits across all terms. "softmax" will apply softmax to the logits.\
+            (similarity to the modality). "zscore" will zscore the logits across all terms. "softmax" will apply softmax to the logits.\
             "01norm" will normalize the logits to the range [0,1]. If None, don't normalize.
-    :param report_per_class_metrics: bool. If True, report the performance metrics per class (i.e. per transcriptome). If False, only report the macro average.
-    : param text_as_classes: bool. If True, calculate the score using the text as classes (default). \
-        If False, calculate the score using the transcriptome as classes (can be useful for retrieval scoring). \
+    :param report_per_class_metrics: bool. If True, report the performance metrics per class (i.e. per sample). If False, only report the macro average.
+    :param text_as_classes: bool. If True, calculate the score using the text as classes (default). \
+        If False, calculate the score using the samples as classes (can be useful for retrieval scoring). \
         If False, average_mode must be None.
+    :param use_image_data: bool. If True, and if modality_input is anndata.AnnData, use image data instead of transcriptome data.
     Returns: 
         A tuple of: 
          -  A dictionary containing precision, recall (at k=1,5,10,50), accuracy, f1, and rocauc. \
@@ -65,7 +70,7 @@ def get_performance_metrics_transcriptome_vs_text(
     # Get the scores.
     # grouping_keys will be updated (deduplicated and put into correct order) if averaging is used, else kept the same.
     scores, grouping_keys = score_transcriptomes_vs_texts(
-        transcriptome_input=transcriptome_input,
+        transcriptome_input=modality_input,
         text_list_or_text_embeds=text_list_or_text_embeds,
         model=model,
         logit_scale=model.discriminator.temperature.exp(),
@@ -74,6 +79,7 @@ def get_performance_metrics_transcriptome_vs_text(
         transcriptome_processor=transcriptome_processor,
         batch_size=batch_size,
         score_norm_method=score_norm_method,
+        use_image_data=use_image_data,
     )  # scores is a tensor of shape n_text * n_cells (if average_mode is None), or n_text * n_celltypes (otherwise).
     # It is normalized column-wise, i.e. for each adata, the mean of scores is 0 (if using zscore normalization)
 

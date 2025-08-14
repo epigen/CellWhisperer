@@ -1,0 +1,33 @@
+include: "../../shared/config.smk"
+include: "../../shared/rules/dataset_processing.smk"
+
+# Sample files from the lung cancer dataset
+SAMPLE_FILES = [
+    "LC1.h5ad.gz",
+    # "LC2.h5ad.gz", 
+    # "LC3.h5ad.gz",
+    # "LC4.h5ad.gz",
+    # "LC5.h5ad.gz"
+]
+
+BASE_URL = "https://medical-epigenomics.org/papers/spotwhisperer/data/"
+
+rule download_data:
+    input:
+        sample_files=[HTTP.remote(BASE_URL + file, keep_local=True) for file in SAMPLE_FILES]
+    output:
+        dataset=PROJECT_DIR / "resources" / "lung_tissue" / "read_count_table.h5ad"
+    params:
+        sample_files=SAMPLE_FILES
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=50000,
+    script:
+        "scripts/download_data.py"
+
+
+rule all:
+    input:
+        rules.download_data.output.dataset
+    default_target: True
