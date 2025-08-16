@@ -49,9 +49,9 @@ rule download_data:
     Downloads both the zarr file for gene expression and images.zip for H&E patches.
     """
     output:
-        download_flag=str(PROJECT_DIR / "resources" / "sthelar_cache" / "downloaded_{slide_id}.flag")
+        download_flag=str(PROJECT_DIR / "resources" / "sthelar_cache" / "downloaded_{sample_id}.flag")
     params:
-        slide_id="{slide_id}",
+        sample_id="{sample_id}",
         sthelar_cache_dir=str(PROJECT_DIR / "resources" / "sthelar_cache")
     conda:
         "envs/sthelar.yaml"
@@ -67,11 +67,11 @@ rule process_data:
     Process individual downloaded STHELAR slide into adata file following full_dataset_multi pattern.
     """
     input:
-        download_flag=str(PROJECT_DIR / "resources" / "sthelar_cache" / "downloaded_{slide_id}.flag")
+        download_flag=str(PROJECT_DIR / "resources" / "sthelar_cache" / "downloaded_{sample_id}.flag")
     output:
-        full_data_file=str(PROJECT_DIR / config["paths"]["full_dataset_multi"]).format(dataset="sthelar", i="{slide_id}")
+        full_data_file=str(PROJECT_DIR / config["paths"]["full_dataset_multi"]).format(dataset="sthelar", i="{sample_id}")
     params:
-        slide_id="{slide_id}",
+        sample_id="{sample_id}",
         sthelar_cache_dir=str(PROJECT_DIR / "resources" / "sthelar_cache")
     wildcard_constraints:
         dataset="sthelar"

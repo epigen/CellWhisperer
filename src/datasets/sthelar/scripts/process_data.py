@@ -44,14 +44,21 @@ def load_sthelar_slide(zarr_path):
         zarr_dir = zarr_dirs[0]
         
         # Load the SpatialData object
-        sdata = sd.read_zarr(zarr_dir)
+        try:
+            sdata = sd.read_zarr(str(zarr_dir))
+        except ImportError:
+            logger.warning("SpatialData not available, falling back to direct zarr loading")
+            # Fallback: try to load data directly from zarr structure
+            import zarr
+            zarr_store = zarr.open(str(zarr_dir), mode='r')
+            sdata = zarr_store
         
     return sdata
 
 
-def extract_patches_from_images_zip(images_zip_path, slide_id, output_dir):
+def extract_patches_from_images_zip(images_zip_path, sample_id, output_dir):
     """Extract H&E patches for a specific slide from images.zip."""
-    logger.info(f"Extracting patches for slide {slide_id}")
+    logger.info(f"Extracting patches for sample {sample_id}")
     
     patches = {}
     output_dir = Path(output_dir)
@@ -62,9 +69,9 @@ def extract_patches_from_images_zip(images_zip_path, slide_id, output_dir):
         file_list = zip_file.namelist()
         
         # Filter files for this slide (format: slide-id_patch-id.*)
-        slide_files = [f for f in file_list if f.startswith(f"{slide_id}_")]
+        slide_files = [f for f in file_list if f.startswith(f"{sample_id}_")]
         
-        logger.info(f"Found {len(slide_files)} patch files for slide {slide_id}")
+        logger.info(f"Found {len(slide_files)} patch files for sample {sample_id}")
         
         for file_path in slide_files:
             # Extract patch ID from filename
@@ -161,9 +168,9 @@ def aggregate_gene_expression_to_patches(sdata, cell_to_patch_mapping):
     return patch_expressions, patch_cell_counts
 
 
-def create_adata_for_slide(sdata, patches, patch_expressions, patch_cell_counts, slide_id):
+def create_adata_for_slide(sdata, patches, patch_expressions, patch_cell_counts, sample_id):
     """Create AnnData object for a slide with patch-level data."""
-    logger.info(f"Creating AnnData for slide {slide_id}")
+    logger.info(f"Creating AnnData for sample {sample_id}")
     
     # Get gene names from the cell table
     cell_table = sdata.tables['table_cells']
@@ -173,7 +180,7 @@ def create_adata_for_slide(sdata, patches, patch_expressions, patch_cell_counts,
     patch_ids = list(patch_expressions.keys())
     
     if len(patch_ids) == 0:
-        raise ValueError(f"No patches with expression data found for slide {slide_id}")
+        raise ValueError(f"No patches with expression data found for sample {sample_id}")
     
     # Create expression matrix (patches x genes)
     expression_matrix = np.zeros((len(patch_ids), len(gene_names)))
@@ -186,7 +193,7 @@ def create_adata_for_slide(sdata, patches, patch_expressions, patch_cell_counts,
         # Create observation metadata
         patch_obs = {
             'patch_id': patch_id,
-            'slide_id': slide_id,
+            'slide_id': sample_id,
             'cell_count': patch_cell_counts.get(patch_id, 0),
             # Add spatial coordinates if available
             'x_pixel': 0,  # Will be updated below if patch coordinates available
@@ -232,7 +239,7 @@ def create_adata_for_slide(sdata, patches, patch_expressions, patch_cell_counts,
         adata.uns['spot_diameter_fullres'] = 256  # typical patch size
     
     # Add sample metadata
-    adata.uns['sample_id'] = slide_id
+    adata.uns['sample_id'] = sample_id
     adata.uns['dataset'] = 'sthelar'
     
     return adata
@@ -262,13 +269,13 @@ def prepare_adata_for_uniprocessor(adata):
 
 def main():
     # Get parameters from snakemake
-    slide_id = snakemake.params.slide_id
+    sample_id = snakemake.params.sample_id
     cache_dir = Path(snakemake.params.sthelar_cache_dir)
     
-    logger.info(f"Processing slide {slide_id}")
+    logger.info(f"Processing sample {sample_id}")
     
     # Paths to downloaded data
-    zarr_path = cache_dir / f"sdata_{slide_id}.zarr.zip"
+    zarr_path = cache_dir / f"sdata_{sample_id}.zarr.zip"
     images_zip_path = cache_dir / "images.zip"
     
     if not zarr_path.exists():
@@ -282,7 +289,7 @@ def main():
         
         # Extract H&E patches for this slide
         with tempfile.TemporaryDirectory() as temp_dir:
-            patches = extract_patches_from_images_zip(images_zip_path, slide_id, temp_dir)
+            patches = extract_patches_from_images_zip(images_zip_path, sample_id, temp_dir)
         
         # Map cells to patches
         cell_to_patch_mapping = map_cells_to_patches(sdata, patches)
@@ -294,7 +301,7 @@ def main():
         
         # Create AnnData object
         adata = create_adata_for_slide(
-            sdata, patches, patch_expressions, patch_cell_counts, slide_id
+            sdata, patches, patch_expressions, patch_cell_counts, sample_id
         )
         
         # Prepare for UNIProcessor compatibility
@@ -304,10 +311,10 @@ def main():
         logger.info(f"Saving processed data to {snakemake.output.full_data_file}")
         adata.write_h5ad(snakemake.output.full_data_file)
         
-        logger.info(f"Successfully processed slide {slide_id}")
+        logger.info(f"Successfully processed sample {sample_id}")
         
     except Exception as e:
-        logger.error(f"Error processing slide {slide_id}: {e}")
+        logger.error(f"Error processing sample {sample_id}: {e}")
         raise
 
 

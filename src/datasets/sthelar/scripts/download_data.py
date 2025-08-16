@@ -21,8 +21,12 @@ def download_file(url, filepath, chunk_size=8192):
     """Download a file from URL with progress tracking."""
     print(f"Downloading {url} to {filepath}")
     
-    response = requests.get(url, stream=True)
-    response.raise_for_status()
+    try:
+        response = requests.get(url, stream=True, timeout=30)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Error downloading {url}: {e}")
+        raise
     
     total_size = int(response.headers.get('content-length', 0))
     downloaded = 0
@@ -86,10 +90,10 @@ def get_slide_list():
 
 def main():
     # Get parameters from snakemake
-    slide_id = snakemake.params.slide_id
+    sample_id = snakemake.params.sample_id
     cache_dir = Path(snakemake.params.sthelar_cache_dir)
     
-    print(f"Downloading STHELAR data for slide: {slide_id}")
+    print(f"Downloading STHELAR data for sample: {sample_id}")
     
     # Create cache directory
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -103,7 +107,7 @@ def main():
         print(f"Images.zip already exists at {images_zip_path}")
     
     # Download the zarr file for this specific slide
-    zarr_filename = f"sdata_{slide_id}.zarr.zip"
+    zarr_filename = f"sdata_{sample_id}.zarr.zip"
     zarr_path = cache_dir / zarr_filename
     
     if not zarr_path.exists():
@@ -116,7 +120,7 @@ def main():
     flag_file = Path(snakemake.output.download_flag)
     flag_file.touch()
     
-    print(f"Download completed for slide {slide_id}")
+    print(f"Download completed for sample {sample_id}")
 
 if __name__ == "__main__":
     main()
