@@ -1,0 +1,21 @@
+name: sthelar
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - python=3.10
+  - anndata
+  - scanpy
+  - pandas
+  - numpy
+  - zarr
+  - h5py
+  - tqdm
+  - requests
+  - urllib3
+  - pip
+  - pip:
+    - spatialdata
+    - spatialdata-io
+    - geopandas

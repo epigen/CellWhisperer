@@ -1,0 +1,90 @@
+import subprocess
+import os
+from pathlib import Path
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+include: "../../shared/config.smk"
+include: "../../shared/rules/dataset_processing.smk"
+
+# STHELAR slide configuration
+STHELAR_SLIDE_IDS = [
+    "bone_marrow_s0",
+    "bone_marrow_s1", 
+    "bone_s0",
+    "brain_s0",
+    "breast_s0",
+    "breast_s1",
+    "breast_s3",
+    "breast_s6",
+    "cervix_s0",
+    "colon_s1",
+    "colon_s2",
+    "heart_s0",
+    "kidney_s0",
+    "kidney_s1",
+    "liver_s0",
+    "liver_s1",
+    "lung_s1",
+    "lung_s3",
+    "lymph_node_s0",
+    "ovary_s0",
+    "ovary_s1",
+    "pancreatic_s0",
+    "pancreatic_s1",
+    "pancreatic_s2",
+    "prostate_s0",
+    "skin_s1",
+    "skin_s2",
+    "skin_s3",
+    "skin_s4",
+    "tonsil_s0",
+    "tonsil_s1"
+]
+
+rule download_data:
+    """
+    Download individual STHELAR slide from S-BIAD2146 archive.
+    Downloads both the zarr file for gene expression and images.zip for H&E patches.
+    """
+    output:
+        download_flag=str(PROJECT_DIR / "resources" / "sthelar_cache" / "downloaded_{slide_id}.flag")
+    params:
+        slide_id="{slide_id}",
+        sthelar_cache_dir=str(PROJECT_DIR / "resources" / "sthelar_cache")
+    conda:
+        "envs/sthelar.yaml"
+    resources:  # Large downloads, may need more time
+        mem_mb=50000,
+        slurm="cpus-per-task=2 time=02:00:00 partition=cmackall"
+    threads: 2
+    script:
+        "scripts/download_data.py"
+
+rule process_data:
+    """
+    Process individual downloaded STHELAR slide into adata file following full_dataset_multi pattern.
+    """
+    input:
+        download_flag=str(PROJECT_DIR / "resources" / "sthelar_cache" / "downloaded_{slide_id}.flag")
+    output:
+        full_data_file=str(PROJECT_DIR / config["paths"]["full_dataset_multi"]).format(dataset="sthelar", i="{slide_id}")
+    params:
+        slide_id="{slide_id}",
+        sthelar_cache_dir=str(PROJECT_DIR / "resources" / "sthelar_cache")
+    wildcard_constraints:
+        dataset="sthelar"
+    conda:
+        "envs/sthelar.yaml"
+    resources:
+        mem_mb=300000,  # STHELAR data can be very large (especially brain slides)
+        slurm="cpus-per-task=4 time=01:00:00 partition=cmackall"
+    threads: 4
+    script:
+        "scripts/process_data.py"
+
+rule all:
+    input:
+        expand(str(PROJECT_DIR / config["paths"]["full_dataset_multi"]), dataset="sthelar", i=STHELAR_SLIDE_IDS)
+    default_target: True

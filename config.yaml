@@ -76,6 +76,7 @@ datasets:
   - lung_tissue
   - hest1k
   - quilt1m
+  - sthelar
 
 metadata_cols_per_zero_shot_validation_dataset:
   immgen:
