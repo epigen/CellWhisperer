@@ -13,7 +13,7 @@ paths:
   geneset_gmt: results/genesets/{library}.gmt
   model_processed_dataset: results/{dataset}/{model}/full_output.npz
   full_dataset: results/{dataset}/full_data.h5ad
-  full_dataset_multi: results/{dataset}/full_data_{i}.h5ad  # be careful, this is not always used (although it should)
+  full_dataset_multi: results/{dataset}/h5ads/full_data_{i}.h5ad  # be careful, this is not always used (although it should)
   enrichr_terms_json: resources/enrichr_terms/terms.json
   ensembl_gene_symbol_map: resources/ensembl_gene_symbol_map.csv
   jointemb_models: results/models/jointemb
@@ -45,7 +45,7 @@ paths:
   ablations:
     models: results/models/ablations/
     plots: results/plots/ablations/
-  
+
 
 plot_style: "src/plot_style/main.style"
 
@@ -66,6 +66,7 @@ datasets:
   - hcaorganoids_cancer__organoid
   - lung_tissue
   - hest1k
+  - quilt1m
 
 metadata_cols_per_zero_shot_validation_dataset:
   immgen:

@@ -4,6 +4,7 @@ from collections import defaultdict
 from itertools import zip_longest
 from pathlib import Path
 from tqdm import tqdm
+import glob
 
 import torch
 import random
@@ -340,6 +341,9 @@ class JointEmbedDataModule(pl.LightningDataModule):
     def get_paths(self, dataset_name):
         """
         Return all paths (adata and processed) for a given dataset, along with sample_ids
+
+        TODO: would be cleaner to just return the IDs and then generate the paths live based on IDs
+        TODO: would be cleaner to have a csv file (as already done for quilt1m) and take files from in there...
         """
 
         adata_paths = [get_path(["paths", "full_dataset"], dataset=dataset_name)]
@@ -348,8 +352,12 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
         if not adata_paths[0].exists():
             adata_paths = list(
-                Path(adata_paths[0]).parent.glob("full_data_*.h5ad")
-            )  # corresponds to config["paths", "full_dataset_multi"]
+                glob.glob(
+                    get_path(
+                        ["paths", "full_dataset_multi"], dataset=dataset_name, i="*"
+                    )
+                )(Path(adata_paths[0]).parent / "h5ads").glob("full_data_*.h5ad")
+            )
 
             # if we are in test mode, then only use the first 2 datasets
             if self.trainer and self.trainer.fast_dev_run:
@@ -383,7 +391,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             # check whether data has already been prepared
 
             # TODO I need to check as well whether the individual files have been generated (because they are deleted in /scratch)
-            # TODO or maybe even better, I should create the processed files in scratch as well...
+            # TODO or maybe even better, I should create the processed files in scratch as well!
 
             filtered_paths = [
                 (adata_path, processed_path, sample_id)
@@ -431,9 +439,12 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 if self.tokenizer and "natural_language_annotation" in adata.obs
                 else None
             ),
-            transcriptomes=adata,
+            transcriptomes=adata if adata.shape[1] > 0 else None,
             image=(
-                adata if "20x_slide" in adata.uns and self.image_processor else None
+                adata
+                if ("20x_slide" in adata.uns or "image_path" in adata.uns)
+                and self.image_processor
+                else None
             ),  # NOTE Could refactor API to only provide an adata, but not sure if the repository depends on this splitting..
             return_tensors="pt",
             padding="max_length",  # TODO maybe better to in collator in the future?
@@ -489,9 +500,8 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 dim=1
             ) >= 1  # self.min_genes  # NOTE the mask cannot be used unfortunately for filtering
         else:
-            raise ValueError(
-                "Transcriptome processor {self.transcriptome_processor} not supported"
-            )
+            logging.debug("No gene values to filter on, using all samples")
+            n_genes_filter = torch.ones(len(adata.obs), dtype=torch.bool)
 
         valid_datapoints_filter = n_genes_filter
 
@@ -524,7 +534,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
         if sum(valid_datapoints_filter) == len(valid_datapoints_filter):
             logger.info(
-                f"No samples were filtered out (All cells had >= {self.min_genes} genes)"
+                f"No samples were filtered out (All cells had >= {self.min_genes} genes)"  # inaccurate comment, now that we have non-gene datasets
             )
             inputs["orig_ids"] = adata.obs.index[valid_datapoints_filter]
         else:

@@ -1,0 +1,88 @@
+import subprocess
+import os
+from pathlib import Path
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+include: "../../shared/config.smk"
+include: "../../shared/rules/dataset_processing.smk"
+
+rule download_data:
+    """
+    Download individual QUILT-1M sample from HuggingFace.
+
+    env needs rclone!
+    """
+    output:
+        full_res=expand(PROJECT_DIR / "resources" / "quilt1m" / "fullres" / "{fn}", fn=["quilt_1M_lookup.csv", "quilt_instruct.zip"] + [f"images_part_{i}.zip" for i in range(1, 10)]),
+        reduced_res=directory(PROJECT_DIR / "resources" / "quilt1m" / "reducedres")
+    params:
+        zenodo_token=lambda w: os.getenv("ZENODO_TOKEN"),
+    resources:
+        mem_mb=50000,
+        slurm="cpus-per-task=2 time=04:00:00 partition=cmackall"
+    threads: 2
+    shell: """
+        echo "To be able to download the data, request access on the QUILT-1M repository"
+        exit 1
+        rclone copy gdrive:quilt-1m {params.full_res_folder}
+        wget --header="Authorization: Bearer {params.zenodo_token}" https://zenodo.org/api/records/8239942/files-archive -O {output.reduced_res}
+    """
+
+rule unpack_data:
+    """
+    Unpack the downloaded QUILT-1M sample data.
+
+    Note this also downloads quilt
+    """
+    input:
+        full_res=expand(PROJECT_DIR / "resources" / "quilt1m" / "fullres" / "images_part_{i}.zip",i=range(1, 11)),
+    output:
+        full_res_unpacked=directory(PROJECT_DIR / "scratch" / "quilt1m" / "fullres"),
+    resources:
+        mem_mb=100000,  # Unpacking can be memory-intensive
+        slurm="cpus-per-task=2 time=05:30:00 partition=cmackall"
+    threads: 2
+    shell: """
+    echo "Unpacking QUILT-1M data..."
+    for f in {input.full_res}; do
+        unzip -o -j -d {output.full_res_unpacked} $f
+    done
+    """
+
+rule filter_metadata:
+    input:
+        metadata=PROJECT_DIR / "resources" / "quilt1m" / "quilt_1M_lookup.csv"  # TODO will reside in fullres later
+    output:
+        metadata_filtered=PROJECT_DIR / "results" / "quilt1m" / "quilt_1M_lookup.csv"
+    conda:
+        "cellwhisperer"
+    script:
+        "scripts/filter_metadata.py"
+
+rule define_crops:
+    """
+    Derive h5ad files with the crops indicated in the the unpacked QUILT-1M dataset.
+    """
+    input:
+        full_res_unpacked=rules.unpack_data.output.full_res_unpacked,  # TODO use this!!
+        metadata_filtered=rules.filter_metadata.output.metadata_filtered,
+    output:
+        cropped_images=directory(PROJECT_DIR / "results" / "quilt1m" / "h5ads"),  # TODO should be scratch, but this way it conforms with `full_dataset_multi`
+    params:
+        crop_size=224,  # Example crop size, adjust as needed
+        num_crops_per_image=10  # Randomly sampled from within the 50% center piece of the image
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=100000,  # Image processing can be memory-intensive
+        slurm="cpus-per-task=2 time=05:30:00 partition=cmackall"
+    threads: 2
+    script:
+        "scripts/define_crops.py"
+
+# rule all:
+#     input:
+#         expand(str(PROJECT_DIR / config["paths"]["full_dataset_multi"]), dataset="quilt1m", i=QUILT1M_SAMPLE_IDS)
+#     default_target: True

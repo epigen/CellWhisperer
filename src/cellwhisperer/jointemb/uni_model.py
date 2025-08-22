@@ -54,26 +54,37 @@ class UNIProcessor(ProcessorMixin):
         """
         image: PIL.Image
         adata: AnnData with for spot coordinates (pixel units, y,x)
-        Returns: list of (image_patch, transcriptome) pairs
+        Returns: list of multiscale image patches
         """
         spot_diameter_fullres = adata.uns.get(
             "spot_diameter_fullres", self.fallback_spot_diameter_fullres
         )
-        barcodes = adata.obs_names
-        y_pixel = adata.obs.x_pixel.astype(
-            int
-        )  # TODO temporary flip needed for LUNG datasets
-        x_pixel = adata.obs.y_pixel.astype(int)
-        image = adata.uns["20x_slide"]
-        if isinstance(image, Image.Image):
-            raise NotImplementedError(
-                "Currently, only numpy arrays are supported for image input."
+        y_pixel = adata.obs.y_pixel.astype(int)
+        x_pixel = adata.obs.x_pixel.astype(int)
+        if adata.uns["dataset"] not in ["quilt1m", "hest1k"]:
+            x_pixel, y_pixel = (
+                y_pixel,
+                x_pixel,
+            )  # TODO temporary flip needed for LUNG datasets (i.e. best would be to fix this in the dataset)
+            logging.warning(
+                "Flipping x and y pixel coordinates (because I assume it's the lung dataset)"
             )
+        try:
+            image = adata.uns["20x_slide"]
+        except KeyError:
+            # adata.uns["image_path"] = adata.uns["image_path"].replace(
+            #     "quilt1m_lowres", "quilt1m/fullres"
+            # )  # TODO drop
+            image = Image.open(adata.uns["image_path"]).convert("RGB")
+            image = np.array(image)
+
         X = []
         # Use scale factors from config
         scale_factors = self.config.scale_factors
 
-        for i, (b, x, y) in tqdm(enumerate(zip(barcodes, x_pixel, y_pixel))):
+        for i, (obs_index, x, y) in tqdm(
+            enumerate(zip(adata.obs_names, x_pixel, y_pixel))
+        ):
             multi_scale_tiles = []
 
             for scale_factor in scale_factors:
@@ -86,13 +97,25 @@ class UNIProcessor(ProcessorMixin):
                     )  # transform is defined below
                 except Exception as e:
                     logger.error(
-                        f"Error processing tile for barcode {b} at ({x}, {y}) with scale {scale_factor}: {e}"
+                        f"Error processing tile for barcode {obs_index} at ({x}, {y}) with scale {scale_factor}: {e}"
                     )
                     tile = torch.zeros(
                         (3, 224, 224), dtype=torch.float32
                     )  # Fallback to zero tensor if transformation fails
-
                 multi_scale_tiles.append(tile)
+
+                # To check how the crops look like
+                # if scale_factor == 1.0:
+                #     import os
+
+                #     crop_dir = "/scratch/users/moritzs/scale1crops"
+                #     os.makedirs(crop_dir, exist_ok=True)
+                #     crop_path = os.path.join(crop_dir, f"{obs_index}_scale1.png")
+                #     Image.fromarray(
+                #         self._crop_tile(
+                #             image, x, y, spot_diameter_fullres, scale_factor
+                #         )
+                #     ).save(crop_path)
 
             # Stack the scales for this patch
             multi_scale_patch = torch.stack(
