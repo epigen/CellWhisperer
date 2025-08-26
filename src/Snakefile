@@ -24,7 +24,7 @@ rule download_gsva_results:
     `include: "../../shared/rules/gsva.smk"`
     """
     input:
-        [HTTP.remote(f"{config['precomputing_base_url']}/datasets/{dataset}/gsva.parquet", keep_local=False)[0] for dataset in GSVA_COMPUTED_DATASETS]
+        [HTTP.remote("{url}/datasets/{dataset}/gsva.parquet".format(url=config['precomputing_base_url'], dataset=dataset), keep_local=False)[0] for dataset in GSVA_COMPUTED_DATASETS]
     output:
         gsva_results=expand(PROJECT_DIR / config["paths"]["gsva"]["result"], dataset=GSVA_COMPUTED_DATASETS),
     run:
@@ -61,6 +61,7 @@ rule models:
         rules.download_mistral.output,
         rules.download_pretrained_deepspot.output,
         rules.download_uni.output,  # there are others too
+        rules.download_uni.output[0].format(model_name="uni2"),  # there are others too
 
 rule all:
     input:

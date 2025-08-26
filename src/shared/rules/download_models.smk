@@ -89,8 +89,10 @@ rule download_mistral:
 
 
 rule download_cellwhisperer_embedding_model:
+    """
+"""
     input:
-        HTTP.remote(f"{BASE_URL}/models/{{cw_model}}.ckpt")[0]
+        lambda wildcards: HTTP.remote(f"{BASE_URL}/models/{wildcards.cw_model}.ckpt")[0]
     output:
         PROJECT_DIR / config["paths"]["jointemb_models"] / "{cw_model}.ckpt"
     shell: """
@@ -122,8 +124,8 @@ rule download_pretrained_deepspot:
         Kidney_HEST1K_pretrained = DEESPOT_MODELS_DIR /  "Kidney_HEST1K/final_model.pkl",
         Kidney_Lung_USZ_pretrained = DEESPOT_MODELS_DIR / "Kidney_Lung_USZ/final_model.pkl",
         Melanoma_TuPro_pretrained = DEESPOT_MODELS_DIR / "Melanoma_TuPro/final_model.pkl",
-    params: 
-        deepspot_pretrained_dir = DEESPOT_MODELS_DIR,
+    params:
+        deepspot_pretrained_dir = DEESPOT_MODELS_DIR
     resources:
         mem_mb=16000,
         slurm="cpus-per-task=1 qos=cpu partition=cpu"
@@ -139,11 +141,10 @@ rule download_uni:
     """
     Download the UNI pathology foundation model from HuggingFace
 
-    TODO make a real copy (follow symlink)
     """
     output:
-        lambda wildcards: PROJECT_DIR / config["model_name_path_map"][wildcards.model_name] / "pytorch_model.bin",
-        lambda wildcards: PROJECT_DIR / config["model_name_path_map"][wildcards.model_name] / "config.json",
+        model_path=PROJECT_DIR / "resources" / "{model_name}" / "pytorch_model.bin",  # TODO should match config["model_name_path_map"][wildcards.model_name]
+        config_path=PROJECT_DIR / "resources" / "{model_name}" / "config.json"
     wildcard_constraints:
         model_name="uni|uni2",
     params:
@@ -154,7 +155,7 @@ rule download_uni:
         mem_mb=16000,
         slurm="cpus-per-task=1 qos=cpu partition=cpu"
     conda:
-        "deepspot"
+        "cellwhisperer"
     script:
        "../scripts/download_uni.py"
 
@@ -166,7 +167,7 @@ rule download_hoptimus:
     output:
         PROJECT_DIR / config["model_name_path_map"]["hoptimus0"] / "pytorch_model.bin",
         PROJECT_DIR / config["model_name_path_map"]["hoptimus0"] / "config.json",
-    params: 
+    params:
         hoptimus_model_dir = PROJECT_DIR / config["model_name_path_map"]["hoptimus0"],
         huggingface_token = os.getenv("HUGGINGFACE_TOKEN"),
     resources:

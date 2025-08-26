@@ -1,8 +1,8 @@
 import os
 from huggingface_hub import login, hf_hub_download
+import shutil
 
 huggingface_token = snakemake.params.huggingface_token
-uni_model_dir = snakemake.params.uni_model_dir
 
 # Login to Hugging Face if token is provided
 if huggingface_token:
@@ -11,19 +11,21 @@ if huggingface_token:
 # Download the model files
 
 # Download pytorch_model.bin
-hf_hub_download(
+model_path = hf_hub_download(
     repo_id=snakemake.params.model_name,
     filename="pytorch_model.bin",
-    local_dir=uni_model_dir,
+    force_download=True,
+    token=huggingface_token,
+)
+shutil.copy2(model_path, snakemake.output.model_path)
+
+
+# Download config.json
+config_path = hf_hub_download(
+    repo_id=snakemake.params.model_name,
+    filename="config.json",
     force_download=True,
     token=huggingface_token,
 )
 
-# Download config.json
-hf_hub_download(
-    repo_id=snakemake.params.model_name,
-    filename="config.json",
-    local_dir=uni_model_dir,
-    force_download=True,
-    token=huggingface_token,
-)
+shutil.copy2(config_path, snakemake.output.config_path)

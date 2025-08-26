@@ -342,8 +342,8 @@ class JointEmbedDataModule(pl.LightningDataModule):
         """
         Return all paths (adata and processed) for a given dataset, along with sample_ids
 
-        TODO: would be cleaner to just return the IDs and then generate the paths live based on IDs
-        TODO: would be cleaner to have a csv file (as already done for quilt1m) and take files from in there...
+        TODO: would be cleaner to just return the IDs and then generate the paths on-demand based on the IDs
+        TODO: would be much cleaner to have a csv file (as already done for quilt1m) and take files from in there! (would need to implement for hest1k still, and provide coherent naming for the csv)
         """
 
         adata_paths = [get_path(["paths", "full_dataset"], dataset=dataset_name)]
@@ -351,13 +351,14 @@ class JointEmbedDataModule(pl.LightningDataModule):
         sample_ids = [""]  # Default empty sample_id for single file
 
         if not adata_paths[0].exists():
-            adata_paths = list(
-                glob.glob(
+            adata_paths = [
+                Path(v)
+                for v in glob.glob(
                     get_path(
                         ["paths", "full_dataset_multi"], dataset=dataset_name, i="*"
-                    )
-                )(Path(adata_paths[0]).parent / "h5ads").glob("full_data_*.h5ad")
-            )
+                    ).as_posix()
+                )
+            ]
 
             # if we are in test mode, then only use the first 2 datasets
             if self.trainer and self.trainer.fast_dev_run:
@@ -368,9 +369,10 @@ class JointEmbedDataModule(pl.LightningDataModule):
                     f"Neither full_data.h5ad, nor full_data_{{i}}.h5ad were found for {dataset_name}"
                 )
             else:
-                # Extract sample_ids from full_data_{i}.h5ad pattern
+                # Extract sample_ids from the 'full_data_{i}.h5ad' pattern
                 sample_ids = [
-                    adata_path.stem.split("_", 2)[-1] for adata_path in adata_paths
+                    adata_path.stem.split("full_data_")[-1]
+                    for adata_path in adata_paths
                 ]
                 processed_paths = [
                     self._processed_path(dataset_name=dataset_name, i=sample_id)

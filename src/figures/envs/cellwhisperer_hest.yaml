@@ -1,4 +1,4 @@
-name: cellwhisperer
+name: cellwhisperer_hest
 channels:
   - conda-forge
   - pytorch
@@ -14,7 +14,6 @@ dependencies:
   - ipykernel=6.25.2
   - transformers=4.34.1
   - pytorch=2.1.0
-  - safetensors=0.5.2 # 0.6.1 fails with "AttributeError: module 'torch' has no attribute 'uint64'"
   - lightning=2.1.0
   - scanpy=1.9.5
   - scipy=1.12.0  # 1.13 fails with "Dataset.astype() got an unexpected keyword argument 'copy'" in `scipy/sparse/_compressed.py`, line 762, in `_minor_index_fancy`
@@ -40,8 +39,9 @@ dependencies:
   - louvain=0.8.1
   - pynndescent=0.5.11
   - biopython=1.83
-  - httpcore=1.0.7
+  - openslide
   - pip:
+    - huggingface_hub
     - backports.tarfile==1.2.0
     - igraph==0.11.4
     - leidenalg==0.10.2
@@ -57,16 +57,13 @@ dependencies:
     - wandb==0.15.12
     - jsonargparse[signatures]==4.27.0
     - scib==1.1.4
-    - openpyxl==3.1.5
     - orbax==0.1.7
     - scvi-tools==0.20.3
     - cell-gears==0.0.2
     - umap-learn==0.5.5
     - pybiomart==0.2.0
     - matplotlib_venn==0.11.10
-    - jax==0.4.38
-    - jaxlib==0.4.38
     - git+https://github.com/mahmoodlab/UNI.git@42715efc11722a496e0a67f3369505a8f277206c
-    - -e ..
-    - -e ../modules/cellxgene/
-    - -e ../modules/Geneformer/
+    - git+https://github.com/mahmoodlab/hest.git
+    - -e ../../..
+    - -e ../../../modules/Geneformer/

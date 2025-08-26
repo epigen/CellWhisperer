@@ -46,6 +46,12 @@ paths:
     models: results/models/ablations/
     plots: results/plots/ablations/
 
+  hest_benchmark:
+    results: results/plots/hest_benchmark
+    data_root: resources/hest_bench_data
+    embed_root: results/hest_bench_data/ST_data_emb
+    pred_root: results/hest_bench_data/ST_pred_results
+
 
 plot_style: "src/plot_style/main.style"
 
@@ -129,11 +135,11 @@ model_name_path_map:
   mistral: resources/Mistral-7B-Instruct-v0.2
   llama33: resources/Llama-3.3-70B-Instruct
 
-  uni2: resources/UNI2/
+  uni2: resources/uni2/
 
   # Deepspot related model paths
   deepspot_pretrained: resources/deepspot_pretrained
-  uni: resources/UNI
+  uni: resources/uni
   hoptimus0: resources/hoptimus
 
 

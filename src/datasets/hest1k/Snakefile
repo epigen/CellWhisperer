@@ -36,8 +36,7 @@ rule download_data:
         huggingface_token=lambda w: os.getenv("HUGGINGFACE_TOKEN"),
         sample_id="{sample_id}",
         hest_cache_dir=str(PROJECT_DIR / "resources" / "hest1k_cache")
-    conda:
-        "envs/hest.yaml"
+    conda: "hest"
     resources:  # short task, but needs some memory
         mem_mb=100000,
         slurm="cpus-per-task=2 time=00:30:00 partition=cmackall gpus=1"
@@ -58,8 +57,7 @@ rule process_data:
         hest_cache_dir=str(PROJECT_DIR / "resources" / "hest1k_cache")
     wildcard_constraints:
         dataset="hest1k"
-    conda:
-        "envs/hest.yaml"
+    conda: "hest"
     resources:
         mem_mb=200000,  # HEST data can be large
         slurm="cpus-per-task=2 time=00:30:00 partition=cmackall gpus=1"
