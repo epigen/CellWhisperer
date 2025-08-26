@@ -392,17 +392,48 @@ class JointEmbedDataModule(pl.LightningDataModule):
         if not force_prepare:
             # check whether data has already been prepared
 
-            # TODO I need to check as well whether the individual files have been generated (because they are deleted in /scratch)
             # TODO or maybe even better, I should create the processed files in scratch as well!
 
-            filtered_paths = [
-                (adata_path, processed_path, sample_id)
-                for adata_path, processed_path, sample_id in zip(
-                    adata_paths, processed_paths, sample_ids
-                )
-                if not processed_path.exists()
-                or processed_path.stat().st_mtime < adata_path.stat().st_mtime
-            ]
+            filtered_paths = []
+            for adata_path, processed_path, sample_id in zip(
+                adata_paths, processed_paths, sample_ids
+            ):
+                needs_preparation = False
+                
+                # Check if main processed file exists and is up to date
+                if not processed_path.exists() or processed_path.stat().st_mtime < adata_path.stat().st_mtime:
+                    needs_preparation = True
+                else:
+                    # Check if individual sample files exist and are complete
+                    individual_samples_dir = get_path(
+                        ["paths", "data_loading_individual_samples"],
+                        dataset_name=dataset_name,
+                        i=sample_id,
+                    )
+                    
+                    if not individual_samples_dir.exists():
+                        needs_preparation = True
+                    else:
+                        # Load the processed file to get orig_ids and check if all individual files exist
+                        try:
+                            result = torch.load(str(processed_path), mmap=True)
+                            orig_ids = result[0]["orig_ids"]  # result[0] is inputs dict, result[1] is replicate_inputs dict
+                            
+                            # Check if all individual sample files exist
+                            missing_files = [
+                                orig_id for orig_id in orig_ids 
+                                if not (individual_samples_dir / f"{orig_id}.pt").exists()
+                            ]
+                            
+                            if missing_files:
+                                logger.info(f"Missing {len(missing_files)} individual sample files for {dataset_name} - {sample_id}")
+                                needs_preparation = True
+                        except Exception as e:
+                            logger.warning(f"Error checking individual files for {dataset_name} - {sample_id}: {e}")
+                            needs_preparation = True
+                
+                if needs_preparation:
+                    filtered_paths.append((adata_path, processed_path, sample_id))
             try:
                 adata_paths, processed_paths, sample_ids = list(zip(*filtered_paths))
             except ValueError:
