@@ -236,7 +236,7 @@ rule fig4_llava_ppl_all:
                dataset=["main", "tabula_sapiens_100_cells_per_type"],  # these are llava evaluation datasets
                base_model=[LLAVA_BASE_MODEL],
                model=[config["model_name_path_map"]["cellwhisperer_geneformer"]],
-               prompt_variation=["without50topgenes"],  # default
+               prompt_variation=["without50topgenes", "without50topgenesresponse"],  # default
                llava_dataset=["_default"],
                ),
 
