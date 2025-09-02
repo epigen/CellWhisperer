@@ -1,4 +1,4 @@
-BASE_URL = "https://medical-epigenomics.org/papers/schaefer2024/data"
+BASE_URL = "https://medical-epigenomics.org/papers/schaefer2025cellwhisperer/data"
 
 rule download_mixtral:
     input:

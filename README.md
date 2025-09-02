@@ -114,7 +114,7 @@ Refer to `src/figures/README.md` for further details.
 
 ### Preparation of training data for CellWhisperer training
 
-This is a resource-intensive endeavor and not fully automated. We provide the full processed datasets for your convenience (https://medical-epigenomics.org/papers/schaefer2024/data/datasets/archs4_geo/full_data.h5ad and https://medical-epigenomics.org/papers/schaefer2024/data/datasets/cellxgene_census/full_data.h5ad).
+This is a resource-intensive endeavor and not fully automated. We provide the full processed datasets for your convenience (https://medical-epigenomics.org/papers/schaefer2025cellwhisperer/data/datasets/archs4_geo/full_data.h5ad and https://medical-epigenomics.org/papers/schaefer2025cellwhisperer/data/datasets/cellxgene_census/full_data.h5ad).
 
 
 If you want to generate these datasets yourself, first you need to download the GEO/SRA/ARCHS4 and the CELLxGENE Census datasets:
