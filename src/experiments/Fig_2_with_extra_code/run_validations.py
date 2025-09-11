@@ -211,9 +211,11 @@ for ckpt_file_name in ["cellwhisperer_clip_v1.ckpt"]:
 
         celltype_palette = {
             celltype: list(CSS4_NAMED_COLORS.values())[
-                i
-                if i < len(CSS4_NAMED_COLORS.values())
-                else i - len(CSS4_NAMED_COLORS.values())
+                (
+                    i
+                    if i < len(CSS4_NAMED_COLORS.values())
+                    else i - len(CSS4_NAMED_COLORS.values())
+                )
             ]
             for i, celltype in enumerate(adata.obs.celltype.unique())
         }
@@ -353,9 +355,9 @@ for ckpt_file_name in ["cellwhisperer_clip_v1.ckpt"]:
                     textlist_wellstudied[x].replace(suffix, "").replace(prefix, "")
                     for x in scores_wellstudied.argmax(axis=1)
                 ]
-                adata_wellstudied.obs[
-                    "predicted_labels_cellwhisperer"
-                ] = predicted_labels_wellstudied
+                adata_wellstudied.obs["predicted_labels_cellwhisperer"] = (
+                    predicted_labels_wellstudied
+                )
                 plot_cellwhisperer_predictions_on_umap(
                     adata=adata_wellstudied,
                     result_dir=result_dir,
@@ -401,14 +403,13 @@ for ckpt_file_name in ["cellwhisperer_clip_v1.ckpt"]:
                     text_list_or_text_embeds=text_list,  # adata_no_nans.obs[label_col].unique().tolist(),
                     average_mode=None,
                     grouping_keys=None,
-                    transcriptome_processor=models_and_processors_dict["cellwhisperer"][
-                        1
-                    ],
                     batch_size=32,
                     score_norm_method=None,
-                    correct_text_idx_per_transcriptome=correct_text_idx_per_transcriptome
-                    if not shuffle
-                    else shuffled_text_idx_per_transcriptome,
+                    correct_text_idx_per_transcriptome=(
+                        correct_text_idx_per_transcriptome
+                        if not shuffle
+                        else shuffled_text_idx_per_transcriptome
+                    ),
                 )
                 pd.Series(performance_metrics).to_csv(
                     f"{result_dir}/{dataset_name}/performance_metrics_cellwhisperer.{label_col}_as_label.macrovag.{'RANDOM' if shuffle else ''}.csv"

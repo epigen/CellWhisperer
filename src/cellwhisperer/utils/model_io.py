@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional, Union
 from cellwhisperer.jointemb.processing import TranscriptomeTextDualEncoderProcessor
 from cellwhisperer.jointemb.cellwhisperer_lightning import (
     TranscriptomeTextDualEncoderLightning,
@@ -14,6 +14,7 @@ def load_cellwhisperer_model(
     eval: bool = True,
     cache: bool = False,
     transcriptome_model_type: str = None,
+    device: Optional[Union[str, torch.device]] = None,
 ) -> Tuple[
     TranscriptomeTextDualEncoderLightning,
     AutoTokenizer,
@@ -36,7 +37,8 @@ def load_cellwhisperer_model(
         model_path is None and transcriptome_model_type is None
     ), "Either model_path or transcriptome_model_type must be specified."
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if model_path is not None:
         model_path = Path(model_path).expanduser()
         pl_model = TranscriptomeTextDualEncoderLightning.load_from_checkpoint(

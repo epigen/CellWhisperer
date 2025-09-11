@@ -1,0 +1,350 @@
+"""
+SpotWhisperer Full Experiment Pipeline
+
+This pipeline trains SpotWhisperer models on different dataset combinations
+and evaluates them using multiple benchmark methods.
+
+Dataset combinations tested:
+- Single datasets: cellxgene_census+archs4_geo, hest1k, quilt1m
+- Pairs: various 2-dataset combinations
+- All three: cellxgene_census+archs4_geo,hest1k,quilt1m
+
+Each trained model is evaluated using:
+- HEST benchmark (hest_benchmark.smk)
+- Lung tissue benchmark (lung_benchmark.smk)
+- CellWhisperer zero-shot benchmark (cellwhisperer_benchmark.smk)
+"""
+
+import itertools
+
+# Include shared configuration and rules
+include: "../shared/config.smk"
+include: "../shared/rules/dataset_processing.smk"
+include: "rules/hest_benchmark.smk"
+include: "rules/lung_benchmark.smk"
+include: "rules/musk_benchmark.smk"
+
+# Define dataset combinations to train on
+BASE_DATASETS = ["cellxgene_census__archs4_geo", "hest1k", "quilt1m"]
+
+
+# Generate all possible dataset combinations (1, 2, and 3 datasets)
+# Create combo names for use in wildcards
+DATASET_COMBOS = []
+for r in range(1, len(BASE_DATASETS) + 1):
+    for combo in itertools.combinations(BASE_DATASETS, r):
+        combo_name = "__".join(sorted(combo))
+        DATASET_COMBOS.append(combo_name)
+
+# Model mapping for each test dataset
+MODEL_MAPPINGS = {
+    "cellxgene_census__archs4_geo": {
+        "naive_baseline": "hest1k",
+        "bimodal_matching": "cellxgene_census__archs4_geo",
+        "bimodal_bridge": "hest1k__quilt1m",
+        "trimodal": "cellxgene_census__archs4_geo__hest1k__quilt1m"
+    },
+    "hest1k": {
+        "naive_baseline": "quilt1m",
+        "bimodal_matching": "hest1k",
+        "bimodal_bridge": "cellxgene_census__archs4_geo__quilt1m",
+        "trimodal": "cellxgene_census__archs4_geo__hest1k__quilt1m"
+    },
+    "quilt1m": {
+        "naive_baseline": "cellxgene_census__archs4_geo",
+        "bimodal_matching": "quilt1m",
+        "bimodal_bridge": "cellxgene_census__archs4_geo__hest1k",
+        "trimodal": "cellxgene_census__archs4_geo__hest1k__quilt1m"
+    }
+}
+
+
+# Seeds for reproducibility
+SEEDS = [0]
+
+# Results paths
+SPOTWHISPERER_EVAL_RESULTS = PROJECT_DIR / "results/spotwhisperer_eval"
+MODELS_DIR = SPOTWHISPERER_EVAL_RESULTS / "models"
+BENCHMARKS_DIR = SPOTWHISPERER_EVAL_RESULTS / "benchmarks"
+
+
+rule train_spotwhisperer:
+    """
+    Train SpotWhisperer model with different dataset combinations
+
+    Uses spotwhisperer_v3.yaml as base config and overrides dataset names
+    """
+    input:
+        base_config=ancient(PROJECT_DIR / "src/spotwhisperer_v3.yaml")
+    output:
+        model=protected(PROJECT_DIR / config["paths"]["jointemb_models"] / "spotwhisperer_{dataset_combo}.ckpt")
+    params:
+        dataset_names=lambda wildcards: wildcards.dataset_combo.replace("__", ","),
+        test_run_config="--trainer.limit_train_batches 500 --trainer.max_epochs 2" if config.get("fast", False) else "",
+        tmpmodel=PROJECT_DIR / config["paths"]["jointemb_models"] / "spotwhisperer_clip_v1.ckpt",
+        seed=SEEDS[0],
+        project_dir=PROJECT_DIR
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=250000,  # NOTE: cellxgene_census__archs4_geo__hest1k__quilt1m needs a bit more than 200G
+        slurm=slurm_gres("large", num_cpus=20)
+    shell: """
+        cd {params.project_dir}
+        cellwhisperer fit \
+            --config {input.base_config} \
+            --data.dataset_names {params.dataset_names} \
+            --nproc 20 \
+            {params.test_run_config} \
+            --seed_everything {params.seed} \
+            --last_model_path {output.model} \
+            --wandb spotwhisperer_eval_{wildcards.dataset_combo}
+    """
+
+rule aggregate_hest_evaluation:
+    """
+    Aggregate HEST benchmark results across trained SpotWhisperer models
+
+    NOTE: maybe the copying is not necessary, could just point to and aggregate the existing aggregated results, but let's test for now
+    """
+    input:
+        lambda wildcards: expand(
+            rules.aggregate_hest_results.output.aggregated_summary,
+            model="spotwhisperer_{}".format(wildcards.dataset_combo),
+            allow_missing=True
+        )
+    output:
+        aggregated_hest=BENCHMARKS_DIR / "hest" / "{dataset_combo}" / "aggregated_results.json"
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=50000,
+        slurm="cpus-per-task=1"
+    shell: """
+        cp {input} {output.aggregated_hest}
+    """
+
+rule aggregate_musk_results:
+    """
+    Aggregate MUSK benchmark results for trained SpotWhisperer models
+    """
+    input:
+        performance_summary=lambda wildcards: expand(
+            rules.musk_performance_summary.output.summary,
+            model="spotwhisperer_{}".format(wildcards.dataset_combo),
+            seed=SEEDS[0],
+            allow_missing=True
+        )
+    output:
+        aggregated_musk=BENCHMARKS_DIR / "musk" / "{dataset_combo}" / "performance_summary.json"
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=50000,
+        slurm="cpus-per-task=1"
+    shell: """
+        cp {input.performance_summary} {output.aggregated_musk}
+    """
+
+rule aggregate_lung_evaluation:
+    """
+    Aggregate lung benchmark results for trained SpotWhisperer models
+    """
+    input:
+        performance_summary=lambda wildcards: expand(
+            rules.lung_performance_summary.output.summary,
+            model="spotwhisperer_{}".format(wildcards.dataset_combo),
+            allow_missing=True
+        )
+    output:
+        aggregated_lung=BENCHMARKS_DIR / "lung" / "{dataset_combo}" / "performance_summary.csv"
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=50000,
+        slurm="cpus-per-task=1"
+    shell: """
+        cp {input.performance_summary} {output.aggregated_lung}
+    """
+
+rule spotwhisperer_test:
+    """
+    Performs both retrieval and CellWhisperer zero-shot evaluation for a trained SpotWhisperer model.
+
+    Needs wandb unfortunately to write the logs
+    """
+    input:
+        model=rules.train_spotwhisperer.output.model,
+        base_config=ancient(PROJECT_DIR / "src/spotwhisperer_v3.yaml")
+    output:
+        # `config["paths"]["csv_logs"]` is set in `training.py`
+        retrieval_and_cwevals=PROJECT_DIR / config["paths"]["csv_logs"] / "sweval___{dataset_combo}___{test_dataset}" / "metrics.csv",
+    # log:
+    #     "logs/retrieval_analysis_{dataset_combo}_{test_dataset}.log"
+    params:
+        test_dataset=lambda wildcards: wildcards.test_dataset.replace("__", ","),
+        seed=SEEDS[0],
+        batch_size=128,  # to avoid OOM of smaller GPUs
+        num_batches=200,  # to avoid too long runtimes
+        project_dir=PROJECT_DIR
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=100000,
+        slurm=slurm_gres("small", num_cpus=2),  # for some reason, multi-processing freezes the process in the end -.-
+    shell: """
+        cd {params.project_dir}
+        cellwhisperer test \
+            --config {input.base_config} \
+            --model_ckpt {input.model} \
+            --data.dataset_names {params.test_dataset} \
+            --batch_size {params.batch_size} \
+            --seed_everything {params.seed} \
+            --trainer.limit_test_batches {params.num_batches} \
+            --nproc 0 \
+            --wandb '' \
+            --trainer.logger.init_args.version sweval___{wildcards.dataset_combo}___{wildcards.test_dataset}
+    """
+
+rule aggregate_spotwhisperer_test:
+    """
+    Aggregate retrieval and CW eval analysis results across all test datasets for each model
+    """
+    input:
+        retrieval_results=lambda wildcards: expand(
+            rules.spotwhisperer_test.output.retrieval_and_cwevals,
+            dataset_combo=wildcards.dataset_combo,
+            test_dataset=BASE_DATASETS,
+        )
+    output:
+        aggregated_retrieval=BENCHMARKS_DIR / "retrieval" / "{dataset_combo}" / "aggregated_retrieval.csv",
+        aggregated_cwevals=BENCHMARKS_DIR / "retrieval" / "{dataset_combo}" / "aggregated_cwevals.csv"
+    conda:
+        "cellwhisperer"
+    params:
+        dataset_combo=lambda wildcards: wildcards.dataset_combo.replace("__", ","),
+        test_datasets=BASE_DATASETS
+    resources:
+        mem_mb=50000,
+        slurm="cpus-per-task=1"
+    script:
+        "scripts/aggregate_retrieval_results.py"  # TODO rename
+
+
+rule create_analysis_plots:
+    """
+    Create horizontal barplots for each test dataset showing performance
+    across five model types for all metrics
+    """
+    input:
+        # HEST benchmark results
+        hest_results=lambda wildcards: expand(
+            rules.aggregate_hest_evaluation.output.aggregated_hest,
+            dataset_combo=[MODEL_MAPPINGS[wildcards.test_dataset][model_type] for model_type in ["naive_baseline", "bimodal_matching", "bimodal_bridge", "trimodal"]],
+            test_dataset=wildcards.test_dataset
+        ),
+        # MUSK benchmark results
+        musk_results=lambda wildcards: expand(
+            rules.aggregate_musk_results.output.aggregated_musk,
+            dataset_combo=[MODEL_MAPPINGS[wildcards.test_dataset][model_type] for model_type in ["naive_baseline", "bimodal_matching", "bimodal_bridge", "trimodal"]],
+            test_dataset=wildcards.test_dataset
+        ),
+        # Lung benchmark results
+        lung_results=lambda wildcards: expand(
+            rules.aggregate_lung_evaluation.output.aggregated_lung,
+            dataset_combo=[MODEL_MAPPINGS[wildcards.test_dataset][model_type] for model_type in ["naive_baseline", "bimodal_matching", "bimodal_bridge", "trimodal"]],
+            test_dataset=wildcards.test_dataset
+        ),
+        # Retrieval results
+        retrieval_results=lambda wildcards: expand(
+            rules.aggregate_spotwhisperer_test.output.aggregated_retrieval,
+            dataset_combo=[MODEL_MAPPINGS[wildcards.test_dataset][model_type] for model_type in ["naive_baseline", "bimodal_matching", "bimodal_bridge", "trimodal"]],
+            test_dataset=wildcards.test_dataset
+        ),
+        # cellwhisperer results
+        cwevals_results=lambda wildcards: expand(
+            rules.aggregate_spotwhisperer_test.output.aggregated_cwevals,
+            dataset_combo=[MODEL_MAPPINGS[wildcards.test_dataset][model_type] for model_type in ["naive_baseline", "bimodal_matching", "bimodal_bridge", "trimodal"]],
+            test_dataset=wildcards.test_dataset
+        )
+    output:
+        plots=BENCHMARKS_DIR / "analysis_plots" / "{test_dataset}" / "performance_comparison.png",
+    params:
+        model_mappings=lambda wildcards: MODEL_MAPPINGS[wildcards.test_dataset],
+        benchmarks_dir=BENCHMARKS_DIR,
+        dataset_combos=DATASET_COMBOS,
+        metrics = [
+            "hest",     # hest
+            "pannuke",  # musk
+            "skin",
+
+            "lung_tissue_region_type_expert_annotation_accuracy",
+            "lung_tissue_region_type_expert_annotation_f1_weighted",
+            "lung_tissue_region_type_expert_annotation_f1_macro",
+            "lung_tissue_cell_type_annotations_accuracy",
+            "lung_tissue_cell_type_annotations_f1_weighted",
+            "lung_tissue_cell_type_annotations_f1_macro",
+
+            # "valfn_integration_TabSap/avg_bio",
+            # "valfn_integration_TabSap/ASW_label__batch",  # Note: relatively narrow result range (0.83 - 0.86)
+            # "valfn_human_disease_dedup/recall_at_5_macroAvg",
+            "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
+            "valfn_zshot_TabSap_celltype_lvl/f1_macroAvg"
+        ],
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=50000,
+        slurm="cpus-per-task=4"
+    notebook:
+        "notebooks/create_analysis_plots.py.ipynb"
+
+rule create_retrieval_plots:
+    """
+    Create retrieval score plots for naive baseline and bimodal bridge models only
+    Shows test/clip_loss_epoch and 4 test_retrieval scores
+    """
+    input:
+        # Retrieval results for naive baseline and bimodal bridge only
+        retrieval_results=lambda wildcards: expand(
+            rules.aggregate_spotwhisperer_test.output.aggregated_retrieval,
+            dataset_combo=[MODEL_MAPPINGS[wildcards.test_dataset][model_type] for model_type in ["naive_baseline", "bimodal_bridge"]],
+            test_dataset=wildcards.test_dataset
+        )
+    output:
+        plots=BENCHMARKS_DIR / "retrieval_plots" / "{test_dataset}" / "retrieval_comparison.png",
+    params:
+        model_mappings=lambda wildcards: {k: v for k, v in MODEL_MAPPINGS[wildcards.test_dataset].items() if k in ["naive_baseline", "bimodal_bridge"]},
+        benchmarks_dir=BENCHMARKS_DIR,
+        retrieval_metrics = [
+            "test/clip_loss_epoch",
+            "test_retrieval/left_right/recall_at_50_macroAvg",
+            "test_retrieval/right_left/recall_at_50_macroAvg",
+            "test_retrieval/left_right/rocauc_macroAvg",
+            "test_retrieval/right_left/rocauc_macroAvg",
+        ],
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=50000,
+        slurm="cpus-per-task=4"
+    notebook:
+        "notebooks/create_retrieval_plots.py.ipynb"
+
+rule all:
+    """
+    Default target: run all training and evaluations
+    """
+    input:
+        # All trained models
+        expand(
+            rules.train_spotwhisperer.output.model,
+            dataset_combo=DATASET_COMBOS
+        ),
+        # Analysis plots
+        expand(rules.create_analysis_plots.output.plots, test_dataset=BASE_DATASETS),
+        expand(rules.create_retrieval_plots.output.plots, test_dataset=BASE_DATASETS)
+
+        # trimodal vs bimodal comparison
+
+    default_target: True

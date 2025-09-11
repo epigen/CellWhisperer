@@ -35,24 +35,39 @@ def slurm_gres(
             "large": "h100pcie",
         }[gpu_size]
 
-        gres = f"gres=gpu:{gpu_type}:{num_gpus}"
+        gres = "gres=gpu:{gpu_type}:{num_gpus}".format(
+            gpu_type=gpu_type, num_gpus=num_gpus
+        )
 
     elif cluster_name == "sherlock":
-        gpu_type = {
-            "small": "GPU_MEM:16GB|GPU_MEM:24GB|GPU_MEM:32GB",
-            "medium": "GPU_MEM:48GB",
-            "large": "GPU_MEM:80GB",
-        }[gpu_size]
-        gres = f'gpus={num_gpus} constraint="{gpu_type}"'
+        # gpu_type = {
+        #     "small": "GPU_MEM:16GB|GPU_MEM:24GB|GPU_MEM:32GB",
+        #     "medium": "GPU_MEM:48GB",
+        #     "large": "GPU_MEM:80GB",
+        # }[gpu_size]
+        if gpu_size in ["large", "medium"]:
+            partition = "cmackall"
+            gpu_type = "GPU_CC:8.9|GPU_CC:9.0|GPU_GEN:HPR"  # bfloat16 support
+        else:
+            gpu_type = (
+                "GPU_SKU:L40S"  # bfloat16 support  # GPU_CC:8.9|GPU_CC:9.0|GPU_GEN:HPR|
+            )
+        gres = "gpus={num_gpus} constraint={constraint}".format(
+            num_gpus=num_gpus, constraint=gpu_type
+        )
         qos = ""
     else:
         gpu_type = {"small": "3g.20gb", "medium": "a100", "large": "a100-sxm4-80gb"}[
             gpu_size
         ]
-        qos = f"qos={gpu_type}"
-        gres = f"gres=gpu:{gpu_type}:{num_gpus}"
+        qos = "qos={gpu_type}".format(gpu_type=gpu_type)
+        gres = "gres=gpu:{gpu_type}:{num_gpus}".format(
+            gpu_type=gpu_type, num_gpus=num_gpus
+        )
 
-    return f"cpus-per-task={num_cpus} {gres} {qos} partition={partition}"
+    return "cpus-per-task={num_cpus} {gres} {qos} partition={partition}".format(
+        num_cpus=num_cpus, gres=gres, qos=qos, partition=partition
+    )
 
 
 HTTP = HTTPRemoteProvider()

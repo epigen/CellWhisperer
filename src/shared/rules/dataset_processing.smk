@@ -30,7 +30,7 @@ rule process_full_dataset:
     output:
         model_outputs=protected(str(PROJECT_DIR / config["paths"]["model_processed_dataset"]).replace("{model}", "{model,.*whisperer.*}")),
     resources:
-        mem_mb=900000,  # could be made more efficient...
+        mem_mb=lambda wildcards: 900000 if wildcards.dataset in ["archs4_geo", "cellxgene_census"] else 200000,  # could be made more efficient...
         slurm=slurm_gres("large")
     threads: 8  # NOTE increase this without GPU
     log:

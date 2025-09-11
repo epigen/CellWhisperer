@@ -18,9 +18,10 @@ paths:
   ensembl_gene_symbol_map: resources/ensembl_gene_symbol_map.csv
   jointemb_models: results/models/jointemb
   wandb_logs: results/wandb_logging
+  csv_logs: results/spotwhisperer_eval/csv_logging
   datamodule_prepared_path: results/{dataset}/lightning-processed/{hash}.pt  # TODO change this to scratch/lightning-processed/{dataset}/{hash}.pt (copying over all the files)
   data_loading_individual_samples: scratch/data_loading/{dataset_name}_{i}
-  cache: results/cache  # overwritable with CELLWHISPERER_CACHE env
+  cache: scratch/cache  # overwritable with CELLWHISPERER_CACHE env
   cancer_gene_essentiality:
     ccle_expression: CCLE_RNAseq_genes_counts_20180929.gct.gz
     essential_genes: resources/cancer_gene_essentiality/CRISPRInferredCommonEssentials.csv
@@ -51,7 +52,8 @@ paths:
     data_root: resources/hest_bench_data
     embed_root: results/hest_bench_data/ST_data_emb
     pred_root: results/hest_bench_data/ST_pred_results
-
+  musk:
+    datasets: scratch/musk/
 
 plot_style: "src/plot_style/main.style"
 
@@ -117,7 +119,9 @@ model_name_path_map:
   cellwhisperer_uce: cellwhisperer_clip_v2_uce  # a57mxh0e (4 epochs)
   cellwhisperer_scgpt: cellwhisperer_clip_v2_scgpt  #  eejwiodj (4 epochs)
 
-  spotwhisperer: spotwhisperer_clip_v1  # zun9upd2
+  spotwhisperer: spotwhisperer_clip_v1  # zun9upd2 (3 scales?) HEST+ARCHS4+CELLXGENECENSUS?
+  spotwhisperer2: spotwhisperer_clip_v1  # ? <- 3 scales
+  spotwhisperer3: spotwhisperer_clip_v3fast  # single patch scale TODO replace with a properly trained version
 
   geneformer: resources/geneformer-12L-30M
   scgpt: resources/scGPT_human

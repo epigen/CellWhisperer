@@ -43,6 +43,9 @@ dependencies:
   - biopython=1.83
   - httpcore=1.0.7
   - pip:
+    - timm==0.9.16  # prevent upgrade by open_clip_torch (MUSK)
+    - open_clip_torch==2.32.0  # MUSK
+    - fairscale==0.4.13  # MUSK
     - backports.tarfile==1.2.0
     - igraph==0.11.4
     - leidenalg==0.10.2
@@ -71,3 +74,4 @@ dependencies:
     - -e ..
     - -e ../modules/cellxgene/
     - -e ../modules/Geneformer/
+    - -e ../modules/MUSK/

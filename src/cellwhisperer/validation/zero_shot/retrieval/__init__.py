@@ -65,7 +65,6 @@ class RetrievalScoreCalculator:
             ) = get_performance_metrics_transcriptome_vs_text(
                 transcriptome_input=transcriptome_embeds,
                 model=model,
-                transcriptome_processor=None,
                 correct_text_idx_per_transcriptome=list(
                     range(text_embeds.shape[0])
                 ),  # the text embeds are in the same order as the transcriptome embeds

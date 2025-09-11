@@ -6,6 +6,9 @@ import warnings
 
 from lightning import LightningModule
 from cellwhisperer.validation import initialize_validation_functions
+from cellwhisperer.validation.zero_shot.functions import (
+    get_performance_metrics_left_vs_right,
+)
 from cellwhisperer.config import model_path_from_name
 from cellwhisperer.jointemb.loss.config import LossConfig
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -86,6 +89,9 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         )
 
         self.val_batch_size = val_batch_size
+
+        # Storage for test outputs for retrieval evaluation
+        self.test_outputs = []
 
         self.save_hyperparameters()
 
@@ -344,10 +350,136 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         self.model.store_cache()
 
     def test_step(self, batch, batch_idx):
-        return self.process_step(batch, batch_idx, "test")
+        loss = self.process_step(batch, batch_idx, "test")
+
+        # Store outputs for retrieval evaluation
+        with torch.no_grad():
+            outputs = self(**batch)
+            self.test_outputs.append(
+                {
+                    "text_embeds": (
+                        outputs.text_embeds.detach().cpu()
+                        if outputs.text_embeds is not None
+                        else None
+                    ),
+                    "transcriptome_embeds": (
+                        outputs.transcriptome_embeds.detach().cpu()
+                        if outputs.transcriptome_embeds is not None
+                        else None
+                    ),
+                    "image_embeds": (
+                        outputs.image_embeds.detach().cpu()
+                        if outputs.image_embeds is not None
+                        else None
+                    ),
+                }
+            )
+
+        return loss
 
     def on_test_epoch_end(self):
         self.on_validation_epoch_end()
+
+        # Run retrieval evaluation if we have collected test outputs
+        if self.test_outputs:
+            self._run_retrieval_evaluation()
+            # Clear stored outputs
+            self.test_outputs = []
+
+    def _run_retrieval_evaluation(self):
+        """Run retrieval evaluation using stored test outputs."""
+        logger.info("Running retrieval evaluation")
+
+        # Concatenate all stored embeddings
+        text_embeds = []
+        transcriptome_embeds = []
+        image_embeds = []
+
+        for output in self.test_outputs:
+            if output["text_embeds"] is not None:
+                text_embeds.append(output["text_embeds"])
+            if output["transcriptome_embeds"] is not None:
+                transcriptome_embeds.append(output["transcriptome_embeds"])
+            if output["image_embeds"] is not None:
+                image_embeds.append(output["image_embeds"])
+
+        modalities = []
+        metric_name = []
+        # Concatenate embeddings if available
+        if transcriptome_embeds:
+            transcriptome_embeds = torch.cat(transcriptome_embeds, dim=0)
+            modalities.append(transcriptome_embeds)
+            metric_name.append("transcriptome")
+        if image_embeds:
+            image_embeds = torch.cat(image_embeds, dim=0)
+            modalities.append(image_embeds)
+            metric_name.append("image")
+        if text_embeds:
+            text_embeds = torch.cat(text_embeds, dim=0)
+            modalities.append(text_embeds)
+            metric_name.append("text")
+
+        if len(modalities) != 2:
+            raise ValueError(
+                "Both text, transcriptome and image embeddings are provided. retrieval is only implemented for two modalities."
+            )
+
+        # Text vs Transcriptome retrieval
+        correct_indices = list(
+            range(min(modalities[0].shape[0], modalities[1].shape[0]))
+        )
+
+        # Text as queries, transcriptome as targets
+        metrics_left_right, _ = get_performance_metrics_left_vs_right(
+            model=self.model,
+            left_input=modalities[0],
+            right_input=modalities[1],
+            correct_right_idx_per_left=correct_indices,
+            average_mode=None,
+            grouping_keys=None,
+            batch_size=self.val_batch_size,
+            report_per_class_metrics=False,
+            right_as_classes=False,
+            use_image_data=False,
+        )
+
+        # Transcriptome as queries, text as targets
+        metrics_right_left, _ = get_performance_metrics_left_vs_right(
+            model=self.model,
+            left_input=modalities[1],
+            right_input=modalities[0],
+            correct_right_idx_per_left=correct_indices,
+            average_mode=None,
+            grouping_keys=None,
+            batch_size=self.val_batch_size,
+            report_per_class_metrics=False,
+            right_as_classes=False,
+            use_image_data=False,
+        )
+
+        # the first is the target, the second the query (I believe)
+        for metric in metrics_left_right:
+            self.log(
+                f"test_retrieval/" + "_".join(metric_name) + f"/{metric}",
+                metrics_left_right[metric],
+                on_step=False,
+                on_epoch=True,
+                prog_bar=False,
+                logger=True,
+            )
+        for metric in metrics_right_left:
+            self.log(
+                f"test_retrieval/"
+                + "_".join(reversed(metric_name))
+                + f"_text_as_targets/{metric}",
+                metrics_right_left[metric],
+                on_step=False,
+                on_epoch=True,
+                prog_bar=False,
+                logger=True,
+            )
+
+        logger.info(f"Retrieval evaluation completed.")
 
     def configure_optimizers(self):
         """

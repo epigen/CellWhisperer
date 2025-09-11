@@ -61,7 +61,7 @@ class UNIProcessor(ProcessorMixin):
         )
         y_pixel = adata.obs.y_pixel.astype(int)
         x_pixel = adata.obs.x_pixel.astype(int)
-        if adata.uns["dataset"] not in ["quilt1m", "hest1k"]:
+        if adata.uns.get("dataset") not in ["quilt1m", "hest1k"]:
             x_pixel, y_pixel = (
                 y_pixel,
                 x_pixel,
@@ -219,7 +219,9 @@ class UNIConfig(PretrainedConfig):
         no_embed_class=True,
         reg_tokens=8,
         dynamic_img_size=True,
-        scale_factors=[0.6, 1.0, 4.0],
+        scale_factors=[
+            1.0,
+        ],  # quilt1m and hest1k data was computed with 0.6, 1.0, 4.0
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -239,6 +241,9 @@ class UNIConfig(PretrainedConfig):
 
         # Ensure one of the scale factors is 1.0
         assert 1.0 in scale_factors, "One of the scale factors must be 1.0"
+        assert (
+            len(scale_factors) == 1
+        ), "Currently only single scale factor is supported"
 
 
 class UNIModel(PreTrainedModel):
@@ -277,7 +282,7 @@ class UNIModel(PreTrainedModel):
         # patches: (n_patches, n_scales, 3, 224, 224) - first dim: patches, second: scale levels, third: RGB channels
         n_scales = len(self.config.scale_factors)
         assert (
-            patches.ndim == 5
+            patches.ndim == 5  # (B, n_scales, 3, 224, 224)
             and patches.shape[1] == n_scales  # number of scales
             and patches.shape[2] == 3  # RGB channels
             and patches.shape[3:] == (224, 224)

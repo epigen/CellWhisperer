@@ -17,139 +17,143 @@ import pandas as pd
 import numpy as np
 
 
-# TODO rename to manage images as well
-def score_transcriptomes_vs_texts(
-    transcriptome_input: Union[anndata.AnnData, torch.Tensor],
-    text_list_or_text_embeds: Union[List[str], torch.Tensor],
+def score_left_vs_right(
+    left_input: Union[anndata.AnnData, torch.Tensor, List[str]],
+    right_input: Union[anndata.AnnData, torch.Tensor, List[str]],
     logit_scale: Union[float, torch.Tensor],
     model: Optional[TranscriptomeTextDualEncoderModel] = None,
     average_mode: Optional[str] = "embeddings",
     grouping_keys: Optional[List[str]] = None,
-    transcriptome_processor: Optional[
-        Union[
-            GeneformerTranscriptomeProcessor,
-            ScGPTTranscriptomeProcessor,
-            UCETranscriptomeProcessor,
-        ]
-    ] = None,
     batch_size: int = 128,
     score_norm_method: Optional[str] = None,
     use_image_data: bool = False,
 ) -> Tuple[torch.Tensor, Optional[List[str]]]:
     """
-    Convenience function to compute the similarity between text and transcriptome (embeddings) via flexible inputs
+    Generic function to compute similarity between left and right inputs via flexible input types.
+    Supports any combination of anndata, tensor, and list[str] for both left and right inputs.
 
-    :param transcriptome_input: anndata.AnnData or torch.tensor (n_cells*embedding_size) \
-        If anndata.AnnData, first compute the transcriptome embeddings. If torch.tensor, use the provided transcriptome embeddings.
-    :param text_list_or_text_embeds: List[str] or torch.tensor (n_celltype * embedding_size). If List[str], compute the text embeddings for each text. \
-        If torch.tensor, use the provided text embeddings.
-    :param logit_scale: float. Scale the logits (similarity to the transcriptome) by this factor. Learned CLIP parameter.
-    :param model: TranscriptomeTextDualEncoderModel instance. Used to compute the similarity between text and transcriptome.
-    :param average_mode: "embeddings" or None. \
-        If "embeddings", first tokenize and embed each cell, then average the embeddings. If None, don't average, report results at the single-transcriptome level. NOTE "cells" is not implemented at the moment but would work by first averaging the transcriptome data across all cells of same celltype, then tokenize and embed. \
-    :param grouping_keys: A list with group indicators (one for each transcriptome in transcriptome_input). If this is None, while average_mode is not None, all transcriptomes are treated as a single group.
-    :param transcriptome_processor: GeneformerTranscriptomeProcessor, UCETranscriptomeProcessor or ScGPTTranscriptomeProcessor instance. Used to prepare/tokenize the transcriptome. Can be None if transcriptome_input is a torch.tensor.
+    :param left_input: anndata.AnnData, torch.tensor, or List[str]
+        If anndata.AnnData, compute embeddings using appropriate modality. If torch.tensor, use provided embeddings. If List[str], compute text embeddings.
+    :param right_input: anndata.AnnData, torch.tensor, or List[str]
+        If anndata.AnnData, compute embeddings using appropriate modality. If torch.tensor, use provided embeddings. If List[str], compute text embeddings.
+    :param logit_scale: float. Scale the logits (similarity) by this factor. Learned CLIP parameter.
+    :param model: TranscriptomeTextDualEncoderModel instance. Used to compute embeddings and similarity.
+    :param average_mode: "embeddings" or None.
+        If "embeddings", first embed each sample, then average the embeddings. If None, don't average, report results at the single-sample level.
+    :param grouping_keys: A list with group indicators (one for each sample in left_input). If this is None, while average_mode is not None, all samples are treated as a single group.
     :param batch_size: int. Model processing in batches (to avoid OOM)
-    :param score_norm_method: "zscore", "softmax", "01norm" or None. How to normalize the logits \
-            (similarity to the transcriptome). "zscore" will zscore the logits across all terms. "softmax" will apply softmax to the logits.\
+    :param score_norm_method: "zscore", "softmax", "01norm" or None. How to normalize the logits
+            (similarity scores). "zscore" will zscore the logits across all terms. "softmax" will apply softmax to the logits.
             "01norm" will normalize the logits to the range [0,1]. If None, don't normalize.
-    : return: A tuple of two objects: \
-        First, a torch.tensor of  similarity between the text and the adatas with shape: n_text * n_adata. \
-        Second, the list of transcriptome annotations corresponding to the dim1 of the tensors (or None if grouping_keys is None).
+    :param use_image_data: bool. If True, and if an input is anndata.AnnData, use image data instead of transcriptome data.
+    : return: A tuple of two objects:
+        First, a torch.tensor of similarity between the right and left inputs with shape: n_right * n_left.
+        Second, the list of left annotations corresponding to the dim1 of the tensors (or None if grouping_keys is None).
     """
 
     # check inputs
-    if type(transcriptome_input) == torch.Tensor:
+    if type(left_input) == torch.Tensor:
         assert (
-            transcriptome_input.dim() == 2
-        ), f"transcriptome_input must be a tensor of shape n_cells * embedding_size, but is {transcriptome_input.shape}"
+            left_input.dim() == 2
+        ), f"left_input must be a tensor of shape n_samples * embedding_size, but is {left_input.shape}"
         assert average_mode != "cells", "average_mode='cells' requires adata input"
     if grouping_keys is None and average_mode is not None:
-        grouping_keys = ["all"] * transcriptome_input.shape[0]
+        if isinstance(left_input, torch.Tensor):
+            grouping_keys = ["all"] * left_input.shape[0]
+        elif isinstance(left_input, list):
+            grouping_keys = ["all"] * len(left_input)
+        else:  # anndata
+            grouping_keys = ["all"] * left_input.shape[0]
 
-    #### Prepare transcriptome embeddings ###
-    if type(transcriptome_input) == torch.Tensor:
-        transcriptome_embeds = transcriptome_input
+    #### Prepare left embeddings ###
+    if type(left_input) == torch.Tensor:
+        left_embeds = left_input
+    elif isinstance(left_input, list):
+        # Handle text input for left side
+        assert model is not None, "If left input is text, we need the model"
+        left_embeds = model.embed_texts(left_input, chunk_size=batch_size)
     else:
+        # Handle anndata input for left side
         if average_mode == "cells":
             sorted_unique_annotations = sorted(list(set(grouping_keys)))
-            averaged_transcriptome_inputs = []
+            averaged_left_inputs = []
             for annotation in sorted_unique_annotations:
                 avg_input_this_value = (
-                    transcriptome_input[[annotation == x for x in grouping_keys]]
+                    left_input[[annotation == x for x in grouping_keys]]
                     .X.mean(axis=0)
                     .A1
-                )  # 512
-                averaged_transcriptome_inputs.append(avg_input_this_value)
+                )
+                averaged_left_inputs.append(avg_input_this_value)
 
-            averaged_transcriptome_inputs = np.stack(
-                averaged_transcriptome_inputs
-            )  # n_celltypes * n_genes
+            averaged_left_inputs = np.stack(averaged_left_inputs)
             grouping_keys = sorted_unique_annotations
 
-            # rebulid adata
-            transcriptome_input = anndata.AnnData(
-                X=averaged_transcriptome_inputs,
+            # rebuild adata
+            left_input = anndata.AnnData(
+                X=averaged_left_inputs,
                 obs=pd.DataFrame(index=grouping_keys),
-                var=transcriptome_input.var,
+                var=left_input.var,
             )
 
-        transcriptome_embeds = adata_to_embeds(
-            transcriptome_input,
+        left_embeds = adata_to_embeds(
+            left_input,
             model,
-            transcriptome_processor,
             batch_size=batch_size,
             use_image_data=use_image_data,
-        )  # n_cells * 512
+        )
 
     if average_mode == "embeddings":
         sorted_unique_annotations = sorted(list(set(grouping_keys)))
-        averaged_transcriptome_embeds = []
+        averaged_left_embeds = []
         for annotation in sorted_unique_annotations:
-            avg_emb_this_celltype = transcriptome_embeds[
+            avg_emb_this_group = left_embeds[
                 [annotation == x for x in grouping_keys]
-            ].mean(
-                dim=0, keepdim=False
-            )  # 512
-            averaged_transcriptome_embeds.append(avg_emb_this_celltype)
-        transcriptome_embeds = torch.stack(
-            averaged_transcriptome_embeds
-        )  # n_celltypes * 512
+            ].mean(dim=0, keepdim=False)
+            averaged_left_embeds.append(avg_emb_this_group)
+        left_embeds = torch.stack(averaged_left_embeds)
         grouping_keys = sorted_unique_annotations
 
-    if type(text_list_or_text_embeds) == torch.Tensor:
-        text_embeds = text_list_or_text_embeds
+    #### Prepare right embeddings ###
+    if type(right_input) == torch.Tensor:
+        right_embeds = right_input
+    elif isinstance(right_input, list):
+        # Handle text input for right side
+        assert model is not None, "If right input is text, we need the model"
+        right_embeds = model.embed_texts(right_input, chunk_size=batch_size)
     else:
-        assert (
-            model is not None
-        ), "If text is provided as string, we need the model (is None)"
-        text_embeds = model.embed_texts(text_list_or_text_embeds, chunk_size=batch_size)
+        # Handle anndata input for right side
+        right_embeds = adata_to_embeds(
+            right_input,
+            model,
+            batch_size=batch_size,
+            use_image_data=use_image_data,
+        )
 
     if isinstance(logit_scale, torch.Tensor):
         logging.debug("Converting logit_scale to float.")
         logit_scale = logit_scale.item()
 
-    logits_per_text = (
-        torch.matmul(text_embeds.cpu(), transcriptome_embeds.t().cpu()) * logit_scale
-    ).detach()  # n_text * n_adatas
+    logits_per_right = (
+        torch.matmul(right_embeds.cpu(), left_embeds.t().cpu()) * logit_scale
+    ).detach()  # n_right * n_left
 
     # Check for normalization
     assert (
-        (torch.norm(text_embeds, dim=1, keepdim=True) - 1) < 1e-3
-    ).all(), "Text embeddings are not normalized"
+        (torch.norm(right_embeds, dim=1, keepdim=True) - 1) < 1e-3
+    ).all(), "Right embeddings are not normalized"
     assert (
-        (torch.norm(transcriptome_embeds, dim=1, keepdim=True) - 1) < 1e-3
-    ).all(), "Transcriptome embeddings are not normalized"
+        (torch.norm(left_embeds, dim=1, keepdim=True) - 1) < 1e-3
+    ).all(), "Left embeddings are not normalized"
 
     if score_norm_method == "softmax":
-        logits_per_text = torch.softmax(logits_per_text, dim=0)
+        logits_per_right = torch.softmax(logits_per_right, dim=0)
     elif score_norm_method == "01norm":
-        logits_per_text = (logits_per_text - logits_per_text.min()) / (
-            logits_per_text.max() - logits_per_text.min()
+        logits_per_right = (logits_per_right - logits_per_right.min()) / (
+            logits_per_right.max() - logits_per_right.min()
         )
     elif score_norm_method == "zscore":
-        logits_per_text = torch.tensor(
-            stats.zscore(logits_per_text.numpy(), axis=0), dtype=torch.float32
+        logits_per_right = torch.tensor(
+            stats.zscore(logits_per_right.numpy(), axis=0), dtype=torch.float32
         )
     elif score_norm_method is None:
         pass
@@ -159,8 +163,36 @@ def score_transcriptomes_vs_texts(
         )
 
     return (
-        logits_per_text,  # n_text * n_cells, or n_text * n_celltypes
-        grouping_keys,  # n_cells or n_celltypes
+        logits_per_right,  # n_right * n_left
+        grouping_keys,  # n_left or n_left_groups
+    )
+
+
+# TODO rename to manage images as well
+def score_transcriptomes_vs_texts(
+    transcriptome_input: Union[anndata.AnnData, torch.Tensor],
+    text_list_or_text_embeds: Union[List[str], torch.Tensor],
+    logit_scale: Union[float, torch.Tensor],
+    model: Optional[TranscriptomeTextDualEncoderModel] = None,
+    average_mode: Optional[str] = "embeddings",
+    grouping_keys: Optional[List[str]] = None,
+    batch_size: int = 128,
+    score_norm_method: Optional[str] = None,
+    use_image_data: bool = False,
+) -> Tuple[torch.Tensor, Optional[List[str]]]:
+    """
+    Backward compatibility wrapper for score_left_vs_right.
+    """
+    return score_left_vs_right(
+        left_input=transcriptome_input,
+        right_input=text_list_or_text_embeds,
+        logit_scale=logit_scale,
+        model=model,
+        average_mode=average_mode,
+        grouping_keys=grouping_keys,
+        batch_size=batch_size,
+        score_norm_method=score_norm_method,
+        use_image_data=use_image_data,
     )
 
 

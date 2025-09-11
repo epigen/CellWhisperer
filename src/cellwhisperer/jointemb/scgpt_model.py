@@ -1,3 +1,4 @@
+import pyarrow  # prevent weird "race condition" leading to ImportError: /lib64/libgcc_s.so.1: version `GCC_7.0.0
 from cellwhisperer.config import get_path
 import torch
 import scipy.sparse as sp

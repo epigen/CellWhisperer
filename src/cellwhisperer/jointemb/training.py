@@ -25,7 +25,7 @@ import yaml
 import logging
 from lightning import Trainer, LightningModule
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
-from lightning.pytorch.loggers import Logger, WandbLogger
+from lightning.pytorch.loggers import Logger, WandbLogger, CSVLogger
 from jsonargparse import lazy_instance
 import argparse
 
@@ -71,6 +71,12 @@ class CellWhispererCLI(LightningCLI):
                 else argparse.ArgumentTypeError("Batch size must be greater than 1")
             ),
             help="Batch size for training and evaluation.",
+        )
+        parser.add_argument(
+            "--nproc",
+            default=10,
+            type=int,
+            help="Number of processors to use for data loading. Use 0 for main process only.",
         )
         parser.add_argument(
             "--wandb",
@@ -127,6 +133,12 @@ class CellWhispererCLI(LightningCLI):
             compute_fn=batch_size_fn,
         )
 
+        parser.link_arguments(
+            ["dap_debug", "nproc"],
+            "data.nproc",
+            lambda dap_debug, nproc: 0 if dap_debug else nproc,
+        )
+
         # NOTE: crashed with large batch sizes
         # parser.link_arguments(
         #     ["trainer.fast_dev_run", "batch_size"],
@@ -136,9 +148,9 @@ class CellWhispererCLI(LightningCLI):
 
     def before_instantiate_classes(self) -> None:
 
-        if "fit.dap_debug" in self.config and self.config["fit.dap_debug"]:
-            start_debugger(wait_for_client=True)
-        if "test.dap_debug" in self.config and self.config["test.dap_debug"]:
+        if self.config.get("fit.dap_debug", False) or self.config.get(
+            "test.dap_debug", False
+        ):
             start_debugger(wait_for_client=True)
 
         if "fit.log_level" in self.config:
@@ -257,6 +269,9 @@ class CellWhispererCLI(LightningCLI):
                     self.config["fit.last_model_path"],
                 )
 
+        def after_test(self) -> None:
+            pass
+
 
 class LoggerSaveConfigCallback(SaveConfigCallback):
     def __init__(self, *args, **kwargs):
@@ -319,17 +334,28 @@ def cli_main(args: Optional[List] = None):
             #         "sharding_strategy": "NO_SHARD",  # corresponds to DDP. no need to go fancy for the moment.. We can try later
             #     },
             # },
-            logger={
-                "class_path": WandbLogger.__module__ + "." + WandbLogger.__name__,
-                "init_args": dict(
-                    save_dir=os.path.relpath(
-                        get_path(["paths", "wandb_logs"]), os.getcwd()
+            logger=[
+                {
+                    "class_path": WandbLogger.__module__ + "." + WandbLogger.__name__,
+                    "init_args": dict(
+                        save_dir=os.path.relpath(
+                            get_path(["paths", "wandb_logs"]), os.getcwd()
+                        ),
+                        project="JointEmbed_Training",
+                        entity="single-cellm",
+                        log_model=False,
                     ),
-                    project="JointEmbed_Training",
-                    entity="single-cellm",
-                    log_model=False,
-                ),
-            },
+                },
+                {
+                    "class_path": CSVLogger.__module__ + "." + CSVLogger.__name__,
+                    "init_args": dict(
+                        save_dir=os.path.relpath(
+                            get_path(["paths", "csv_logs"]), os.getcwd()
+                        ),
+                        name="csv_logs",
+                    ),
+                },
+            ],
             enable_progress_bar=True,
             callbacks=[checkpoint_callback],
         ),

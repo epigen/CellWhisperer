@@ -261,6 +261,17 @@ class JointEmbedDatasetDisk(Dataset):
 
         # Load the sample from disk
         sample = torch.load(sample_path, map_location="cpu")
+
+        # TODO hack here since I precomputed the files as triple-scale but only use the 1.0 scale now <- delete after recompute; or control this with a parameter..
+        if "patches" in sample:
+            assert (
+                len(sample["patches"].shape) == 4
+            ), f"Unexpected patch shape: {sample['patches'].shape}"
+            if sample["patches"].shape[0] == 3:
+                sample["patches"] = sample["patches"][
+                    1:2, :, :, :
+                ]  # keep only the 1.0 scale
+
         return sample
 
 
@@ -285,7 +296,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         },  # see https://github.com/epigen/cellwhisperer/issues/193
         min_genes=100,
         train_fraction: Union[str, float] = 0.95,
-        use_replicates: bool = True,
+        use_replicates: bool = False,
         include_labels: Optional[str] = None,
         use_disk_loading: bool = False,
     ):
@@ -399,9 +410,12 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 adata_paths, processed_paths, sample_ids
             ):
                 needs_preparation = False
-                
+
                 # Check if main processed file exists and is up to date
-                if not processed_path.exists() or processed_path.stat().st_mtime < adata_path.stat().st_mtime:
+                if (
+                    not processed_path.exists()
+                    or processed_path.stat().st_mtime < adata_path.stat().st_mtime
+                ):
                     needs_preparation = True
                 else:
                     # Check if individual sample files exist and are complete
@@ -410,28 +424,37 @@ class JointEmbedDataModule(pl.LightningDataModule):
                         dataset_name=dataset_name,
                         i=sample_id,
                     )
-                    
+
                     if not individual_samples_dir.exists():
                         needs_preparation = True
                     else:
                         # Load the processed file to get orig_ids and check if all individual files exist
                         try:
                             result = torch.load(str(processed_path), mmap=True)
-                            orig_ids = result[0]["orig_ids"]  # result[0] is inputs dict, result[1] is replicate_inputs dict
-                            
+                            orig_ids = result[0][
+                                "orig_ids"
+                            ]  # result[0] is inputs dict, result[1] is replicate_inputs dict
+
                             # Check if all individual sample files exist
                             missing_files = [
-                                orig_id for orig_id in orig_ids 
-                                if not (individual_samples_dir / f"{orig_id}.pt").exists()
+                                orig_id
+                                for orig_id in orig_ids
+                                if not (
+                                    individual_samples_dir / f"{orig_id}.pt"
+                                ).exists()
                             ]
-                            
+
                             if missing_files:
-                                logger.info(f"Missing {len(missing_files)} individual sample files for {dataset_name} - {sample_id}")
+                                logger.info(
+                                    f"Missing {len(missing_files)} individual sample files for {dataset_name} - {sample_id}"
+                                )
                                 needs_preparation = True
                         except Exception as e:
-                            logger.warning(f"Error checking individual files for {dataset_name} - {sample_id}: {e}")
+                            logger.warning(
+                                f"Error checking individual files for {dataset_name} - {sample_id}: {e}"
+                            )
                             needs_preparation = True
-                
+
                 if needs_preparation:
                     filtered_paths.append((adata_path, processed_path, sample_id))
             try:
@@ -864,7 +887,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             collate_fn=multi_modal_collate_fn,  # Use custom collator for multi-modal data
         )
 
-    def val_dataloader(self):
+    def val_dataloader(self, shuffle=False):
         """
         In principle, we could also return a list of DataLoaders, but it is currently incompatible with RetrievalScoreCalculator
         """
@@ -873,10 +896,10 @@ class JointEmbedDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.nproc,
             drop_last=False,  # more accurate if we don't drop the last
-            shuffle=False,
+            shuffle=shuffle,
             collate_fn=multi_modal_collate_fn,  # Use custom collator for multi-modal data
         )
 
     def test_dataloader(self):
         # Return the validation dataloader for testing
-        return self.val_dataloader()
+        return self.val_dataloader(shuffle=True)

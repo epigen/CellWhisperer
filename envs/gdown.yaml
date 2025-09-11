@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 name: gdownenv
 channels:
   - conda-forge
@@ -7,3 +8,23 @@ dependencies:
   - pip
   - pip:
     - gdown
+||||||| parent of 81f510b (Spotwhisperer eval pipeline; MUSK evaluation; retrieval evaluation (#834))
+=======
+# Conda environment for running gdown in Snakemake rules
+# Installs gdown via pip (gdown requires pip) and lightweight utilities used by the download rule
+# Adjust python version if your project uses a specific one
+
+name: gdown
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.8,<3.11
+  - pip
+  - unzip    # CLI unzip used by the download rule
+  - wget     # small helper if needed
+  - pip:
+    - gdown>=4.4.0
+    - requests>=2.25
+    - tqdm
+>>>>>>> 81f510b (Spotwhisperer eval pipeline; MUSK evaluation; retrieval evaluation (#834))

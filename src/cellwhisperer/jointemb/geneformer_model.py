@@ -369,6 +369,12 @@ class GeneformerModel(
         """
         assert not return_dict, f"No support for return_dict={return_dict}"
         layer_to_quant = quant_layers(self.geneformer_model) + self.config.emb_layer
+
+        expression_token_lengths = expression_token_lengths.clone()
+        expression_token_lengths[expression_token_lengths == 0] = (
+            1  # hack to avoid nans. # TODO this is problematic sind it biases the BatchNorm in the discriminator (because many samples will have the same value...)
+        )
+
         embs = get_embs(
             self.geneformer_model,
             expression_tokens,
@@ -379,6 +385,7 @@ class GeneformerModel(
             self.config.forward_batch_size,
             self.config.summary_stat,
         )
+
         return (None, embs)
 
         # if not return_dict:

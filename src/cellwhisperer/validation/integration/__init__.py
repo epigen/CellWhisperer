@@ -60,7 +60,6 @@ class SingleCellIntegrationScoreCalculator:
         modality_embeddings = adata_to_embeds(
             self.adata,
             model=model,
-            processor=self.processor.transcriptome_processor,
             use_image_data=self.sc_dataset.use_image_data,
         )
 

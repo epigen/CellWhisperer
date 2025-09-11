@@ -1,18 +1,11 @@
 # SpotWhisperer evaluation pipeline for lung tissue datasets
-
-
-# TODO need to exclude these if integrated with full pipeline
-include: "../../shared/config.smk"
-# include: "../shared/rules/download_models.smk"  # covered by the main Snakefile
-include: "../../shared/rules/dataset_processing.smk"
-
-SPOTWHISPERER_RESULTS = PROJECT_DIR / "results/plots/spotwhisperer_evaluation"
+SPOTWHISPERER_RESULTS = PROJECT_DIR / "results/spotwhisperer_eval/lung"
 SPOTWHISPERER_MODEL_RESULTS = SPOTWHISPERER_RESULTS / "{model}"
 
-LUNG_TISSUE_METADATA_COLS = ["region_type_expert_annotation"]  # "cell_type_annotations", 
+LUNG_TISSUE_METADATA_COLS = ["region_type_expert_annotation", "cell_type_annotations"]
 METRICS = ["accuracy", "f1", "auroc"]
 
-rule zero_shot_spotwhisperer_prediction:
+rule zero_shot_lung_prediction:
     """
     Zero-shot property prediction with CellWhisperer for lung tissue datasets
 
@@ -31,15 +24,15 @@ rule zero_shot_spotwhisperer_prediction:
     params:
         use_prefix_suffix_version=True,
         average_by_class=lambda wildcards: wildcards.grouping == "by_class",
-        filter_classes=["UNASSIGNED"],
+        filter_classes=["UNASSIGNED", "NOR", "INFL"],  # "normal cells" is not a thing and "infiltrating immune cells" overlaps with TLS (TLS can be seen as subset of infiltrating immune cells)
     wildcard_constraints:
         dataset="lung_tissue",
         metadata_col="cell_type_annotations|region_type_expert_annotation"
     conda:
         "cellwhisperer"
     resources:
-        mem_mb=350000,
-        slurm=slurm_gres()
+        mem_mb=35000,
+        slurm=slurm_gres("small"),
     log:
         notebook="../logs/zero_shot_spotwhisperer_prediction_{model}_{dataset}_{metadata_col}_{grouping}.ipynb"
     notebook:
@@ -49,15 +42,16 @@ rule zero_shot_spotwhisperer_prediction:
 rule plot_spotwhisperer_confusion_matrix:
     """
     Plot confusion matrices for SpotWhisperer predictions
-    TODO tbd
     """
     input:
-        predictions=rules.zero_shot_spotwhisperer_prediction.output.predictions,
+        predictions=rules.zero_shot_lung_prediction.output.predictions,
         raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
     output:
         confusion_matrix=SPOTWHISPERER_MODEL_RESULTS / "plots" / "{dataset}" / "confusion_matrix_{metadata_col}_{grouping}.png",
         performance_metrics=SPOTWHISPERER_MODEL_RESULTS / "performance" / "{dataset}" / "{metadata_col}_{grouping}_metrics.json",
+    wildcard_constraints:
+        metadata_col=".*annotations?"
     conda:
         "cellwhisperer"
     resources:
@@ -72,7 +66,7 @@ rule plot_spotwhisperer_confusion_matrix:
 rule compute_spotwhisperer_umap:
     """
     Compute UMAP embedding for SpotWhisperer datasets
-    TODO tbd, if needed 
+    TODO tbd, if needed
     """
     input:
         processed_dataset=rules.process_full_dataset.output.model_outputs,
@@ -96,7 +90,7 @@ rule plot_spotwhisperer_spatial:
     TODO tbd, if needed
     """
     input:
-        predictions=rules.zero_shot_spotwhisperer_prediction.output.predictions,
+        predictions=rules.zero_shot_lung_prediction.output.predictions,
         raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         umap=rules.compute_spotwhisperer_umap.output.umap,
         mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
@@ -114,10 +108,9 @@ rule plot_spotwhisperer_spatial:
 
 
 # Performance summary across all lung tissue datasets
-rule spotwhisperer_performance_summary:
+rule lung_performance_summary:
     """
     Compute and aggregate performance metrics
-    TODO tbd if needed
     """
     input:
         performance_files=expand(
@@ -125,7 +118,7 @@ rule spotwhisperer_performance_summary:
             dataset=["lung_tissue"],
             metadata_col=LUNG_TISSUE_METADATA_COLS,
             grouping=["by_cell"],
-            model=config["model_name_path_map"]["sptwhisperer"]
+            allow_missing=True
         )
     output:
         summary=SPOTWHISPERER_RESULTS / "performance_summary_{model}.csv",
@@ -146,7 +139,7 @@ rule spotwhisperer_all:
     input:
         # Basic predictions
         expand(
-            rules.zero_shot_spotwhisperer_prediction.output.predictions,
+            rules.zero_shot_lung_prediction.output.predictions,
             model=[config["model_name_path_map"]["spotwhisperer"]],
             dataset=["lung_tissue"],
             metadata_col=LUNG_TISSUE_METADATA_COLS,
@@ -155,7 +148,7 @@ rule spotwhisperer_all:
         # # Confusion matrices and performance metrics
         # expand(
         #     rules.plot_spotwhisperer_confusion_matrix.output.confusion_matrix,
-        #     model=[config["model_name_path_map"]["sptwhisperer"]],
+        #     model=[config["model_name_path_map"]["spotwhisperer"]],
         #     dataset=LUNG_TISSUE_DATASETS,
         #     metadata_col=LUNG_TISSUE_METADATA_COLS,
         #     grouping=["by_cell", "by_class"]
@@ -163,14 +156,14 @@ rule spotwhisperer_all:
         # # Spatial plots
         # expand(
         #     rules.plot_spotwhisperer_spatial.output.spatial_plot,
-        #     model=[config["model_name_path_map"]["sptwhisperer"]],
+        #     model=[config["model_name_path_map"]["spotwhisperer"]],
         #     dataset=LUNG_TISSUE_DATASETS,
         #     metadata_col=LUNG_TISSUE_METADATA_COLS,
         #     grouping=["by_cell", "by_class"]
         # ),
         # # Performance summary
         expand(
-            rules.spotwhisperer_performance_summary.output.summary,
-            model=[config["model_name_path_map"]["sptwhisperer"]]
+            rules.lung_performance_summary.output.summary,
+            model=[config["model_name_path_map"]["spotwhisperer"]]
         )
     default_target: True  # TODO delete

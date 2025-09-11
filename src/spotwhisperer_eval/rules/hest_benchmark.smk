@@ -1,8 +1,5 @@
-# HEST benchmark evaluation pipeline for CellWhisperer
+# HEST benchmark evaluation pipeline for SpotWhisperer
 # Three-step pipeline per dataset: (1) patch extraction (2) inference (3) evaluation
-
-include: "../../shared/config.smk"
-include: "../../shared/rules/dataset_processing.smk"
 
 # Define datasets to benchmark
 HEST_DATASETS = ["IDC", "PRAD", "PAAD", "SKCM", "COAD", "READ", "CCRCC", "HCC", "LUNG", "LYMPH_IDC"]
@@ -59,8 +56,8 @@ rule spotwhisperer_inference:
     conda:
         "cellwhisperer"
     resources:
-        mem_mb=500000,
-        slurm=slurm_gres(),
+        mem_mb=200000,
+        slurm=slurm_gres("small"),
         runtime=480  # 8 hours
     threads: 1
     script:
@@ -91,8 +88,8 @@ rule hest_evaluation:
     conda:
         "hest"
     resources:
+        slurm=slurm_gres("small", num_cpus=4),
         mem_mb=200000,
-        slurm="cpus-per-task=8",
         runtime=240  # 4 hours for full evaluation with cross-validation
     script:
         "../scripts/run_hest_evaluation.py"

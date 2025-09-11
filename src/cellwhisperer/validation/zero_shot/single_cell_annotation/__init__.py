@@ -53,15 +53,19 @@ class SingleCellDataSetForValidationScoring:
             assert isinstance(dataset, Path)
 
         self.adata = anndata.read_h5ad(dataset_path)
-        
+
         # Check what modalities are available
         self.has_transcriptome = True  # All datasets have transcriptome by default
-        
+
         if use_image_data:
-            self.logger.info("Image data usage enabled - will attempt to use patches or extract from WSI when available")
-            
-        self.logger.info(f"Dataset modalities - Transcriptome: {self.has_transcriptome}, Use Images: {use_image_data}")
-        
+            self.logger.info(
+                "Image data usage enabled - will attempt to use patches or extract from WSI when available"
+            )
+
+        self.logger.info(
+            f"Dataset modalities - Transcriptome: {self.has_transcriptome}, Use Images: {use_image_data}"
+        )
+
         # Store the original dataset name for later reference
         self.dataset_name = dataset if isinstance(dataset, str) else str(dataset)
 
@@ -195,7 +199,6 @@ class SingleCellZeroshotValidationScoreCalculator:
         ) = get_performance_metrics_transcriptome_vs_text(
             modality_input=self.adata,
             model=model,
-            transcriptome_processor=self.processor.transcriptome_processor,
             correct_text_idx_per_transcriptome=self.correct_text_idx_per_transcriptome,
             text_list_or_text_embeds=self.text_list,
             grouping_keys=self.annotation,
