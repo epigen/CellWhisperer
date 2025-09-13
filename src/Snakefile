@@ -37,7 +37,7 @@ rule download_deduplicated:
     Download deduplicated datasets for meaningful loss-based performance analysis.
     """
     input:
-        [HTTP.remote(f"{config['precomputing_base_url']}/datasets/{dataset}/full_data.parquet", keep_local=False)[0] for dataset in config["retrieval_deduplicated_sets"]]
+        [HTTP.remote(f"{config['precomputing_base_url']}/datasets/{dataset}/full_data.h5ad", keep_local=False)[0] for dataset in config["retrieval_deduplicated_sets"]]
     output:
         gsva_results=expand(PROJECT_DIR / config["paths"]["full_dataset"], dataset=config["retrieval_deduplicated_sets"]),
     run:
