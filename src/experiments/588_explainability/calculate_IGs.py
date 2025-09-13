@@ -32,7 +32,7 @@ sc.set_figure_params(vector_friendly=True, dpi_save=500)
 # %%
 # Cellwhisperer scoring
 from cellwhisperer.utils.model_io import load_cellwhisperer_model
-from cellwhisperer.utils.inference import score_transcriptomes_vs_texts
+from cellwhisperer.utils.inference import score_modality_vs_texts
 from cellwhisperer.config import get_path
 
 

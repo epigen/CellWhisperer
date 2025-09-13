@@ -23,6 +23,7 @@ include: "../shared/rules/dataset_processing.smk"
 include: "rules/hest_benchmark.smk"
 include: "rules/lung_benchmark.smk"
 include: "rules/musk_benchmark.smk"
+include: "rules/cellwhisperer_benchmark.smk"
 
 # Define dataset combinations to train on
 BASE_DATASETS = ["cellxgene_census__archs4_geo", "hest1k", "quilt1m"]
@@ -285,11 +286,12 @@ rule create_analysis_plots:
             "lung_tissue_cell_type_annotations_f1_weighted",
             "lung_tissue_cell_type_annotations_f1_macro",
 
-            # "valfn_integration_TabSap/avg_bio",
-            # "valfn_integration_TabSap/ASW_label__batch",  # Note: relatively narrow result range (0.83 - 0.86)
-            # "valfn_human_disease_dedup/recall_at_5_macroAvg",
             "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
-            "valfn_zshot_TabSap_celltype_lvl/f1_macroAvg"
+            "valfn_zshot_TabSap_celltype_lvl/f1_macroAvg",
+            "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
+            "valfn_zshot_TabSap_celltype_lvl/rocauc_macroAvg"
+            # TODO later "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_recall_at_5_macroAvg" (check whether it is being generated)
+
         ],
     conda:
         "cellwhisperer"
@@ -343,8 +345,12 @@ rule all:
         ),
         # Analysis plots
         expand(rules.create_analysis_plots.output.plots, test_dataset=BASE_DATASETS),
-        expand(rules.create_retrieval_plots.output.plots, test_dataset=BASE_DATASETS)
+        expand(rules.create_retrieval_plots.output.plots, test_dataset=BASE_DATASETS),
 
-        # trimodal vs bimodal comparison
+        # Per-class comparison
+        expand(
+            rules.musk_per_class_analysis.output.analysis,
+            seed=SEEDS[0]
+        )
 
     default_target: True

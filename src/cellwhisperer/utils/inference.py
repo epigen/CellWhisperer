@@ -5,10 +5,6 @@ from typing import Union, List, Optional, Tuple, Dict
 import anndata
 import logging
 import torch
-from transformers import AutoTokenizer
-from cellwhisperer.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
-from cellwhisperer.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
-from cellwhisperer.jointemb.uce_model import UCETranscriptomeProcessor
 from scipy import stats
 import os
 import json
@@ -168,9 +164,8 @@ def score_left_vs_right(
     )
 
 
-# TODO rename to manage images as well
-def score_transcriptomes_vs_texts(
-    transcriptome_input: Union[anndata.AnnData, torch.Tensor],
+def score_modality_vs_texts(
+    modality_input: Union[anndata.AnnData, torch.Tensor],
     text_list_or_text_embeds: Union[List[str], torch.Tensor],
     logit_scale: Union[float, torch.Tensor],
     model: Optional[TranscriptomeTextDualEncoderModel] = None,
@@ -184,7 +179,7 @@ def score_transcriptomes_vs_texts(
     Backward compatibility wrapper for score_left_vs_right.
     """
     return score_left_vs_right(
-        left_input=transcriptome_input,
+        left_input=modality_input,
         right_input=text_list_or_text_embeds,
         logit_scale=logit_scale,
         model=model,
@@ -200,7 +195,7 @@ def prepare_terms(
     terms: Union[str, Path, Dict], additional_text_dict: Dict = {}
 ) -> pd.DataFrame:
     """
-    Prepare terms for their use with score_transcriptomes_vs_texts
+    Prepare terms for their use with score_modality_vs_texts
 
     :param terms: Either a `Path` or `str` to the json file containing the biological terms to match transcriptomes against (e.g. Enrichr) or a dict containing such terms. Expected format in both cases: (keys: library name, values: list of terms)
     :param additional_text_dict: dict. Additional text to compute the similarity to the transcriptome for. \

@@ -9,7 +9,7 @@ import matplotlib
 import torch
 
 from cellwhisperer.config import get_path
-from cellwhisperer.utils.inference import score_transcriptomes_vs_texts
+from cellwhisperer.utils.inference import score_modality_vs_texts
 from cellwhisperer.validation.integration.functions import eval_scib_metrics
 from cellwhisperer.validation.zero_shot.single_cell_annotation import (
     get_performance_metrics_transcriptome_vs_text,
@@ -270,12 +270,12 @@ for ckpt_file_name in ["cellwhisperer_clip_v1.ckpt"]:
                 )
                 text_list = adata_no_nans.obs[label_col].unique().tolist()
 
-            scores, _ = score_transcriptomes_vs_texts(
+            scores, _ = score_modality_vs_texts(
                 model=models_and_processors_dict["cellwhisperer"][0],
                 logit_scale=models_and_processors_dict["cellwhisperer"][
                     0
                 ].discriminator.temperature.exp(),
-                transcriptome_input=torch.tensor(
+                modality_input=torch.tensor(
                     adata_no_nans.obsm["X_cellwhisperer"],
                     device=models_and_processors_dict["cellwhisperer"][0].device,
                 ),
@@ -396,7 +396,7 @@ for ckpt_file_name in ["cellwhisperer_clip_v1.ckpt"]:
                     performance_metrics_per_label_df,
                 ) = get_performance_metrics_transcriptome_vs_text(
                     model=models_and_processors_dict["cellwhisperer"][0],
-                    transcriptome_input=torch.tensor(
+                    modality_input=torch.tensor(
                         adata_no_nans.obsm["X_cellwhisperer"],
                         device=models_and_processors_dict["cellwhisperer"][0].device,
                     ),
@@ -474,12 +474,12 @@ for ckpt_file_name in ["cellwhisperer_clip_v1.ckpt"]:
                 "blood platelets": "platelet",
             }
             for term, celltype in terms_celltype_dict.items():
-                scores, _ = score_transcriptomes_vs_texts(
+                scores, _ = score_modality_vs_texts(
                     model=models_and_processors_dict["cellwhisperer"][0],
                     logit_scale=models_and_processors_dict["cellwhisperer"][
                         0
                     ].discriminator.temperature.exp(),
-                    transcriptome_input=torch.tensor(
+                    modality_input=torch.tensor(
                         adata.obsm["X_cellwhisperer"],
                         device=models_and_processors_dict["cellwhisperer"][0].device,
                     ),

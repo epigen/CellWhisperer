@@ -63,7 +63,7 @@ class RetrievalScoreCalculator:
                 performance_metrics,
                 _,
             ) = get_performance_metrics_transcriptome_vs_text(
-                transcriptome_input=transcriptome_embeds,
+                modality_input=transcriptome_embeds,
                 model=model,
                 correct_text_idx_per_transcriptome=list(
                     range(text_embeds.shape[0])

@@ -469,9 +469,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             )
         for metric in metrics_right_left:
             self.log(
-                f"test_retrieval/"
-                + "_".join(reversed(metric_name))
-                + f"_text_as_targets/{metric}",
+                f"test_retrieval/" + "_".join(reversed(metric_name)) + f"/{metric}",
                 metrics_right_left[metric],
                 on_step=False,
                 on_epoch=True,

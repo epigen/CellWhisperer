@@ -1,7 +1,7 @@
 import anndata
 import pandas as pd
 from cellwhisperer.utils.model_io import load_cellwhisperer_model
-from cellwhisperer.utils.inference import score_transcriptomes_vs_texts
+from cellwhisperer.utils.inference import score_modality_vs_texts
 import torch
 from pathlib import Path
 from cellwhisperer.config import get_path
@@ -176,9 +176,9 @@ adata.obs["natural_language_annotation"] = [
 
 # Prepare top terms per cluster
 all_terms = df[df["library"] == library]["term_without_prefix"].unique().tolist()
-scores, annot = score_transcriptomes_vs_texts(
+scores, annot = score_modality_vs_texts(
     model=pl_model_cellwhisperer.model,
-    transcriptome_input=torch.tensor(
+    modality_input=torch.tensor(
         embeds_not_nan, device=pl_model_cellwhisperer.model.device
     ),
     text_list_or_text_embeds=all_terms,
@@ -229,9 +229,9 @@ top_terms += df_stack.drop_duplicates(subset="term_without_prefix")[
 top_terms = list(set(top_terms))  # remove duplicates
 
 # Calculate the scores for all terms
-scores_all_terms, _ = score_transcriptomes_vs_texts(
+scores_all_terms, _ = score_modality_vs_texts(
     model=pl_model_cellwhisperer.model,
-    transcriptome_input=torch.tensor(
+    modality_input=torch.tensor(
         embeds_not_nan, device=pl_model_cellwhisperer.model.device
     ),
     text_list_or_text_embeds=all_terms,

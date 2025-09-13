@@ -61,7 +61,7 @@ class UNIProcessor(ProcessorMixin):
         )
         y_pixel = adata.obs.y_pixel.astype(int)
         x_pixel = adata.obs.x_pixel.astype(int)
-        if adata.uns.get("dataset") not in ["quilt1m", "hest1k"]:
+        if adata.uns.get("dataset") == "lung_tissue":
             x_pixel, y_pixel = (
                 y_pixel,
                 x_pixel,

@@ -353,7 +353,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         """
         Return all paths (adata and processed) for a given dataset, along with sample_ids
 
-        TODO: would be cleaner to just return the IDs and then generate the paths on-demand based on the IDs
+        TODO: would be cleaner to just return the IDs and then generate the paths on-demand based on the IDs <- this is a little harder now...
         TODO: would be much cleaner to have a csv file (as already done for quilt1m) and take files from in there! (would need to implement for hest1k still, and provide coherent naming for the csv)
         """
 
@@ -361,7 +361,21 @@ class JointEmbedDataModule(pl.LightningDataModule):
         processed_paths = [self._processed_path(dataset_name)]
         sample_ids = [""]  # Default empty sample_id for single file
 
-        if not adata_paths[0].exists():
+        if adata_paths[0].exists():
+            adata = anndata.read_h5ad(adata_paths[0], backed="r")
+
+            if "multi_sample_fns" in adata.uns:
+
+                adata_paths = [
+                    adata_paths[0].parent / sample
+                    for sample in adata.uns["multi_sample_fns"]
+                ]
+                processed_paths = [
+                    self._processed_path(dataset_name=dataset_name, i=sample_id)
+                    for sample_id in adata.uns["multi_sample_ids"]
+                ]
+                sample_ids = adata.uns["multi_sample_ids"]
+        else:
             adata_paths = [
                 Path(v)
                 for v in glob.glob(

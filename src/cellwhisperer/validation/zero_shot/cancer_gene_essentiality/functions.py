@@ -211,7 +211,7 @@ class EvaluateCancerGeneEssentiality:
                 _, transcriptome_embeds = model.get_transcriptome_features(
                     **batch, normalize_embeds=True
                 )
-            similarity = torch.matmul(  # TODO use `score_transcriptomes_vs_texts`
+            similarity = torch.matmul(  # TODO use `score_modality_vs_texts`
                 anchor_embed, transcriptome_embeds.t().to(anchor_embed.device)
             )
             similarities.append(similarity.cpu())

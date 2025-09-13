@@ -6,7 +6,7 @@ Used as micro-service to prevent model loading for each dataset-specific servers
 """
 
 
-from cellwhisperer.utils.inference import score_transcriptomes_vs_texts
+from cellwhisperer.utils.inference import score_modality_vs_texts
 from cellwhisperer.utils.model_io import load_cellwhisperer_model
 from cellwhisperer.config import get_path, config
 
@@ -39,7 +39,7 @@ def text_api_endpoint():
     )
 
 
-@app.route("/api/score_transcriptomes_vs_texts", methods=["POST"])
+@app.route("/api/score_modality_vs_texts", methods=["POST"])
 def scoring_api_endpoint():
     """
     Note: this is slow because of the large ize of transcriptome_embeds (transfer time)
@@ -55,7 +55,7 @@ def scoring_api_endpoint():
         score_norm_method,
     ) = pickle.loads(data)
     # Call your function
-    scores, _ = score_transcriptomes_vs_texts(
+    scores, _ = score_modality_vs_texts(
         transcriptome_embeds.to(pl_model.model.device),
         text_list,
         pl_model.model.discriminator.temperature.exp(),

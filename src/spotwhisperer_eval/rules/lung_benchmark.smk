@@ -63,48 +63,48 @@ rule plot_spotwhisperer_confusion_matrix:
         "../notebooks/plot_spotwhisperer_confusion_matrix.py.ipynb"
 
 
-rule compute_spotwhisperer_umap:
-    """
-    Compute UMAP embedding for SpotWhisperer datasets
-    TODO tbd, if needed
-    """
-    input:
-        processed_dataset=rules.process_full_dataset.output.model_outputs,
-        raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"]
-    output:
-        umap=SPOTWHISPERER_MODEL_RESULTS / "datasets" / "{dataset}" / "X_umap_on_neighbors_{model}.npz"
-    conda:
-        "cellwhisperer"
-    resources:
-        mem_mb=400000,
-        slurm="cpus-per-task=2"
-    log:
-        notebook="../logs/compute_spotwhisperer_umap_{dataset}_{model}.ipynb"
-    notebook:
-        "../notebooks/compute_spotwhisperer_umap.py.ipynb"
+# rule compute_spotwhisperer_umap:
+#     """
+#     Compute UMAP embedding for SpotWhisperer datasets
+#     TODO tbd, if needed
+#     """
+#     input:
+#         processed_dataset=rules.process_full_dataset.output.model_outputs,
+#         raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"]
+#     output:
+#         umap=SPOTWHISPERER_MODEL_RESULTS / "datasets" / "{dataset}" / "X_umap_on_neighbors_{model}.npz"
+#     conda:
+#         "cellwhisperer"
+#     resources:
+#         mem_mb=400000,
+#         slurm="cpus-per-task=2"
+#     log:
+#         notebook="../logs/compute_spotwhisperer_umap_{dataset}_{model}.ipynb"
+#     notebook:
+#         "../notebooks/compute_spotwhisperer_umap.py.ipynb"
 
 
-rule plot_spotwhisperer_spatial:
-    """
-    Plot spatial distribution of predictions on tissue sections
-    TODO tbd, if needed
-    """
-    input:
-        predictions=rules.zero_shot_lung_prediction.output.predictions,
-        raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
-        umap=rules.compute_spotwhisperer_umap.output.umap,
-        mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
-    output:
-        spatial_plot=SPOTWHISPERER_MODEL_RESULTS / "plots" / "{dataset}" / "spatial_{metadata_col}_{grouping}.png",
-    conda:
-        "cellwhisperer"
-    resources:
-        mem_mb=200000,
-        slurm="cpus-per-task=2"
-    log:
-        notebook="../logs/plot_spotwhisperer_spatial_{model}_{dataset}_{metadata_col}_{grouping}.ipynb"
-    notebook:
-        "../notebooks/plot_spotwhisperer_spatial.py.ipynb"
+# rule plot_spotwhisperer_spatial:
+#     """
+#     Plot spatial distribution of predictions on tissue sections
+#     TODO tbd, if needed
+#     """
+#     input:
+#         predictions=rules.zero_shot_lung_prediction.output.predictions,
+#         raw_read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
+#         umap=rules.compute_spotwhisperer_umap.output.umap,
+#         mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
+#     output:
+#         spatial_plot=SPOTWHISPERER_MODEL_RESULTS / "plots" / "{dataset}" / "spatial_{metadata_col}_{grouping}.png",
+#     conda:
+#         "cellwhisperer"
+#     resources:
+#         mem_mb=200000,
+#         slurm="cpus-per-task=2"
+#     log:
+#         notebook="../logs/plot_spotwhisperer_spatial_{model}_{dataset}_{metadata_col}_{grouping}.ipynb"
+#     notebook:
+#         "../notebooks/plot_spotwhisperer_spatial.py.ipynb"
 
 
 # Performance summary across all lung tissue datasets

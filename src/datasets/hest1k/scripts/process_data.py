@@ -29,7 +29,9 @@ def prepare_adata_for_uniprocessor(st_data):
     # TODO: Fix this by linking WSI to pxl_col_in_fullres coordinates properly
     if "pxl_col_in_fullres" in adata.obs and "pxl_row_in_fullres" in adata.obs:
         # Use HEST's pixel coordinates
-        adata.obs["x_pixel"] = adata.obs["pxl_col_in_fullres"].astype(int)
+        adata.obs["x_pixel"] = adata.obs["pxl_col_in_fullres"].astype(
+            int
+        )  # pxl_col_in_fullres is centered on spot (https://github.com/mahmoodlab/HEST/blob/main/tutorials/2-Interacting-with-HEST-1k.ipynb)
         adata.obs["y_pixel"] = adata.obs["pxl_row_in_fullres"].astype(int)
     elif "spatial" in adata.obsm:
         # Use spatial coordinates from obsm

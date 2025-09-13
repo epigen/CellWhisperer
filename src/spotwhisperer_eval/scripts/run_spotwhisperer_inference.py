@@ -4,6 +4,8 @@ Run SpotWhisperer inference on HEST benchmark patches.
 
 This script creates a CustomInferenceEncoder wrapper for SpotWhisperer and runs
 inference on HEST patches, saving embeddings in HEST's expected format.
+
+NOTE: This file could be drastically refactored to use spotwhisperer-style code. Or better, the hest benchmark could be transformed to a separate dataset so that we could run `cellwhisperer test` directly
 """
 import pyarrow  # to prevent weird library loading issues
 import os
@@ -18,19 +20,96 @@ from PIL import Image
 
 from cellwhisperer.utils.model_io import load_cellwhisperer_model
 from torch.utils.data import Dataset
+import scanpy as sc
+
+
+def normalize_adata(adata: sc.AnnData, smooth=False) -> sc.AnnData:
+    """
+    Normalize each spot by total gene counts + Logarithmize each spot
+    Copied from modules/HEST/src/hest/bench/st_dataset.py
+    """
+    filtered_adata = adata.copy()
+    filtered_adata.X = filtered_adata.X.astype(np.float64)
+
+    if smooth:
+        adata_df = adata.to_df()
+        for index, df_row in adata.obs.iterrows():
+            row = int(df_row["array_row"])
+            col = int(df_row["array_col"])
+            neighbors_index = adata.obs[
+                (
+                    (adata.obs["array_row"] >= row - 1)
+                    & (adata.obs["array_row"] <= row + 1)
+                )
+                & (
+                    (adata.obs["array_col"] >= col - 1)
+                    & (adata.obs["array_col"] <= col + 1)
+                )
+            ].index
+            neighbors = adata_df.loc[neighbors_index]
+            nb_neighbors = len(neighbors)
+
+            avg = neighbors.sum() / nb_neighbors
+            filtered_adata[index] = avg
+
+    # Logarithm of the expression
+    sc.pp.log1p(filtered_adata)
+    return filtered_adata
+
+
+def load_adata(expr_path, genes=None, barcodes=None, normalize=False):
+    """
+    Load expression data from .h5ad file
+    Copied from modules/HEST/src/hest/bench/st_dataset.py
+    """
+    adata = sc.read_h5ad(expr_path)
+    if barcodes is not None:
+        adata = adata[barcodes]
+    if genes is not None:
+        adata = adata[:, genes]
+    if normalize:
+        adata = normalize_adata(adata)
+    return adata.to_df()
 
 
 class H5HESTDataset(Dataset):
     """Dataset to read ST + H&E from .h5
-    Copied from hestcore.datasets
+    Extended from hestcore.datasets to also load transcriptomics data
     """
 
-    def __init__(self, h5_path, img_transform=None, chunk_size=1000):
+    def __init__(
+        self,
+        h5_path,
+        expr_path=None,
+        genes=None,
+        img_transform=None,
+        chunk_size=1000,
+        normalize_expr=True,
+    ):
         self.h5_path = h5_path
+        self.expr_path = expr_path
+        self.genes = genes
         self.img_transform = img_transform
         self.chunk_size = chunk_size
+        self.normalize_expr = normalize_expr
+
         with h5py.File(h5_path, "r") as f:
             self.n_chunks = int(np.ceil(len(f["barcode"]) / chunk_size))
+            # Store all barcodes for transcriptomics loading
+            self.all_barcodes = f["barcode"][:].flatten().astype(str).tolist()
+
+        # Load expression data once if provided
+        self.expression_data = None
+        if expr_path is not None and genes is not None:
+            logger.info(f"Loading expression data from {expr_path}")
+            adata_df = load_adata(
+                expr_path,
+                genes=genes,
+                barcodes=self.all_barcodes,
+                normalize=normalize_expr,
+            )
+            self.expression_data = adata_df.values  # Convert to numpy array
+            logger.info(f"Loaded expression data shape: {self.expression_data.shape}")
 
     def __len__(self):
         return self.n_chunks
@@ -48,7 +127,13 @@ class H5HESTDataset(Dataset):
                 [self.img_transform(Image.fromarray(img)) for img in imgs]
             )
 
-        return {"imgs": imgs, "barcodes": barcodes, "coords": coords}
+        batch_data = {"imgs": imgs, "barcodes": barcodes, "coords": coords}
+
+        # Add expression data if available
+        if self.expression_data is not None:
+            batch_data["expression"] = self.expression_data[start_idx:end_idx]
+
+        return batch_data
 
 
 def save_hdf5(
@@ -147,16 +232,20 @@ class SpotWhispererInferenceEncoder:
         self.model.eval()
         return self
 
-    def __call__(self, patches):
+    def __call__(self, patches, expression_data=None):
         """
-        Forward pass for patch inference.
+        Forward pass for patch and expression inference.
 
         Args:
             patches: torch.Tensor of shape (batch_size, 3, 224, 224)
+            expression_data: numpy.ndarray of shape (batch_size, n_genes) or None
 
         Returns:
-            torch.Tensor: Image embeddings
+            dict: Dictionary with 'image_embeds' and optionally 'transcriptome_embeds'
         """
+        results = {}
+
+        # Process image patches
         # SpotWhisperer expects multi-scale patches: (batch_size, n_scales, 3, 224, 224)
         batch_size = patches.shape[0]
         n_scales = len(self.model.image_model.config.scale_factors)
@@ -164,12 +253,38 @@ class SpotWhispererInferenceEncoder:
         # Replicate patches across all scales (simple approach)
         multi_scale_patches = patches.unsqueeze(1).expand(-1, n_scales, -1, -1, -1)
 
-        # Get embeddings using SpotWhisperer's get_image_features method
+        # Get image embeddings using SpotWhisperer's get_image_features method
         _, image_embeds = self.model.get_image_features(
             patches=multi_scale_patches, normalize_embeds=True
         )
+        results["image_embeds"] = image_embeds
 
-        return image_embeds
+        # Process transcriptome data if provided
+        if expression_data is not None:
+            # Convert expression data to the format expected by SpotWhisperer's transcriptome processor
+            expression_tensor = torch.tensor(
+                expression_data, dtype=torch.float32, device=patches.device
+            )
+
+            # Process through transcriptome processor to get the input format for the model
+            transcriptome_inputs = self.transcriptome_processor(
+                expression_tensor, return_tensors="pt"
+            )
+
+            # Move to correct device
+            for key in transcriptome_inputs:
+                if isinstance(transcriptome_inputs[key], torch.Tensor):
+                    transcriptome_inputs[key] = transcriptome_inputs[key].to(
+                        patches.device
+                    )
+
+            # Get transcriptome embeddings using SpotWhisperer's get_transcriptome_features method
+            _, transcriptome_embeds = self.model.get_transcriptome_features(
+                **transcriptome_inputs, normalize_embeds=True
+            )
+            results["transcriptome_embeds"] = transcriptome_embeds
+
+        return results
 
 
 def get_path(path):
@@ -201,7 +316,7 @@ def embed_tiles_spotwhisperer(
     device: str,
 ):
     """
-    Extract embeddings from tiles using SpotWhisperer encoder and save to H5 file.
+    Extract image and transcriptome embeddings from tiles using SpotWhisperer encoder and save to H5 file.
 
     This function is adapted from HEST's embed_tiles() to work with SpotWhisperer.
     """
@@ -211,17 +326,37 @@ def embed_tiles_spotwhisperer(
         batch = post_collate_fn(batch)
         imgs = batch["imgs"].to(device).float()
 
+        # Get expression data if available
+        expression_data = batch.get("expression", None)
+
         with torch.inference_mode(), torch.cuda.amp.autocast(dtype=encoder.precision):
-            embeddings = encoder(imgs)
+            embedding_results = encoder(imgs, expression_data)
 
         if batch_idx == 0:
             mode = "w"
         else:
             mode = "a"
 
-        asset_dict = {"embeddings": embeddings.cpu().numpy()}
+        # Save both image and transcriptome embeddings
+        asset_dict = {
+            "image_embeddings": embedding_results["image_embeds"].cpu().numpy()
+        }
+
+        if "transcriptome_embeds" in embedding_results:
+            asset_dict["transcriptome_embeddings"] = (
+                embedding_results["transcriptome_embeds"].cpu().numpy()
+            )
+
+        # Also save the legacy "embeddings" key for backward compatibility (image embeddings)
+        asset_dict["embeddings"] = embedding_results["image_embeds"].cpu().numpy()
+
+        # Add other batch data (excluding imgs and expression which are large)
         asset_dict.update(
-            {key: np.array(val) for key, val in batch.items() if key != "imgs"}
+            {
+                key: np.array(val)
+                for key, val in batch.items()
+                if key not in ["imgs", "expression"]
+            }
         )
 
         save_hdf5(embedding_save_path, asset_dict=asset_dict, mode=mode)
@@ -269,7 +404,9 @@ def process_dataset_splits(dataset_bench_path, embedding_dir, encoder, device):
                 continue
 
             patches_path = split_df.iloc[i]["patches_path"]
+            expr_path = split_df.iloc[i]["expr_path"]
             tile_h5_path = dataset_bench_path / patches_path
+            expr_full_path = dataset_bench_path / expr_path
 
             embed_path = embedding_dir / f"{sample_id}.h5"
 
@@ -279,9 +416,25 @@ def process_dataset_splits(dataset_bench_path, embedding_dir, encoder, device):
                 processed_samples.add(sample_id)
                 continue
 
+            # Load genes list (assuming it's available in the dataset directory)
+            genes_file = dataset_bench_path / "var_50genes.json"
+            if genes_file.exists():
+                import json
+
+                with open(genes_file, "r") as f:
+                    genes = json.load(f)["genes"]
+                logger.info(f"Using {len(genes)} genes for transcriptome embeddings")
+            else:
+                genes = None
+                logger.warning(
+                    "No genes file found - will only generate image embeddings"
+                )
+
             # Create dataset and dataloader for this sample
             tile_dataset = H5HESTDataset(
                 str(tile_h5_path),
+                expr_path=str(expr_full_path) if genes is not None else None,
+                genes=genes,
                 chunk_size=snakemake.params.batch_size,
                 img_transform=encoder.eval_transforms,
             )

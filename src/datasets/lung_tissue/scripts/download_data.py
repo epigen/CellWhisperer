@@ -48,6 +48,7 @@ def augment_metadata(adata):
         ).to_numpy()
 
     adata.uns["default_embedding"] = "X_spatial"
+    adata.uns["dataset"] = "lung_tissue"
 
     return adata  # it's anyways inplace
 

@@ -52,6 +52,7 @@ paths:
     data_root: resources/hest_bench_data
     embed_root: results/hest_bench_data/ST_data_emb
     pred_root: results/hest_bench_data/ST_pred_results
+    data_processed: results/hest_bench_data/prepared/
   musk:
     datasets: scratch/musk/
 
@@ -109,9 +110,9 @@ llava_eval:
   question_topgenes: "Which are the 50 most strongly expressed genes in this sample of cells?"
   response_prefix_topgenes: "The 50 most strongly expressed genes are {}"
 
-retrieval_deduplicated_sets: {}
-  # - immgen_deduplicated
-  # - human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
+retrieval_deduplicated_sets:
+  - immgen_deduplicated
+  - human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
 
 model_name_path_map:
   cellwhisperer: cellwhisperer_clip_v1
@@ -121,7 +122,7 @@ model_name_path_map:
 
   spotwhisperer: spotwhisperer_clip_v1  # zun9upd2 (3 scales?) HEST+ARCHS4+CELLXGENECENSUS?
   spotwhisperer2: spotwhisperer_clip_v1  # ? <- 3 scales
-  spotwhisperer3: spotwhisperer_clip_v3fast  # single patch scale TODO replace with a properly trained version
+  spotwhisperer3: spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m
 
   geneformer: resources/geneformer-12L-30M
   scgpt: resources/scGPT_human

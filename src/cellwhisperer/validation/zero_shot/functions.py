@@ -54,10 +54,8 @@ def get_performance_metrics_left_vs_right(
             These metrics are reported using macro averaging (i.e. averaging over classes)
          -  None if report_per_class_metrics=False, else a dataframe with class labels as rows and performance metrics as columns.
     """
-
-    full_grouping_keys = copy(
-        grouping_keys
-    )  # We keep the full annotations in case they get modified due to averaging below
+    if grouping_keys is None and average_mode is not None:
+        raise ValueError("If average_mode is not None, grouping_keys must be provided.")
 
     # Get the scores.
     # grouping_keys will be updated (deduplicated and put into correct order) if averaging is used, else kept the same.
@@ -77,12 +75,7 @@ def get_performance_metrics_left_vs_right(
     # labels for the left input, and the true classes
     if grouping_keys is None:
         grouping_keys = [str(x) for x in range(scores.shape[1])]
-        if average_mode is not None:
-            raise ValueError(
-                "If grouping_keys is None, average_mode must be None as well"
-            )
-        else:
-            true_class_indices = correct_right_idx_per_left
+        true_class_indices = correct_right_idx_per_left
     elif not right_as_classes:
         # the correct left index for every right input:
         true_class_indices = [
@@ -92,7 +85,7 @@ def get_performance_metrics_left_vs_right(
     else:
         if average_mode is not None:
             true_class_indices = [
-                correct_right_idx_per_left[full_grouping_keys.index(x)]
+                correct_right_idx_per_left[grouping_keys.index(x)]
                 for x in grouping_keys
             ]  # If we are averaging, we need to subset the true classes to match the averaged left inputs
         else:
@@ -116,7 +109,7 @@ def get_performance_metrics_left_vs_right(
         )  # Here, it's better to have samples=left, classes=right, so we transpose
         columns = right_labels
         index = left_labels
-        num_classes = int(max(true_class_indices) + 1)
+        num_classes = len(right_annotations)
 
     else:
         if average_mode is not None:
@@ -125,7 +118,7 @@ def get_performance_metrics_left_vs_right(
             )
         columns = left_labels
         index = right_labels
-        num_classes = len(grouping_keys)
+        num_classes = len(grouping_keys)  # TODO not sure if this is correct
 
     # Create a dataframe with the scores
     scores_df = pd.DataFrame(
@@ -137,7 +130,7 @@ def get_performance_metrics_left_vs_right(
         scores_df = scores_df[sorted(scores_df.columns)]
 
     torchmetric_kwargs = {
-        "preds": scores,
+        "preds": scores,  # scores.t() if right_as_classes else scores,  # TODO delete comment
         "target": torch.Tensor(true_class_indices).long(),
         "num_classes": num_classes,
         "average": "none",
