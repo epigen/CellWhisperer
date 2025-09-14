@@ -269,7 +269,7 @@ rule create_analysis_plots:
             test_dataset=wildcards.test_dataset
         )
     output:
-        plots=report(BENCHMARKS_DIR / "analysis_plots" / "{test_dataset}" / "performance_comparison.png", category="eval", subcategory="Target: {test_dataset}"),
+        plots=report(BENCHMARKS_DIR / "analysis_plots" / "{test_dataset}" / "performance_comparison.png", category="eval", subcategory="Target: {test_dataset}", labels={"Analysis": "Overview"}),
     params:
         model_mappings=lambda wildcards: MODEL_MAPPINGS[wildcards.test_dataset],
         benchmarks_dir=BENCHMARKS_DIR,
@@ -314,7 +314,7 @@ rule create_retrieval_plots:
             test_dataset=wildcards.test_dataset
         )
     output:
-        plots=report(BENCHMARKS_DIR / "retrieval_plots" / "{test_dataset}" / "retrieval_comparison.png", category="eval", subcategory="Target: {test_dataset}"),
+        plots=report(BENCHMARKS_DIR / "retrieval_plots" / "{test_dataset}" / "retrieval_comparison.png", category="eval", subcategory="Target: {test_dataset}", labels={"Analysis": "Retrieval"}),
     params:
         model_mappings=lambda wildcards: {k: v for k, v in MODEL_MAPPINGS[wildcards.test_dataset].items() if k in ["naive_baseline", "bimodal_bridge"]},
         benchmarks_dir=BENCHMARKS_DIR,
