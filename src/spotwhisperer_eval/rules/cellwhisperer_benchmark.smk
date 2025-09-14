@@ -30,7 +30,8 @@ rule cellwhisperer_zero_shot_prediction:
         performance_metrics_per_metadata=CELLWHISPERER_MODEL_RESULTS / "datasets" / "{dataset,[^/]+}" / "{metadata_col}" / "performance_metrics_permetadata{normed}.csv"
     params:
         normed=lambda wildcards: wildcards.normed == "normed",
-        use_prefix_suffix_version=True
+        use_prefix_suffix_version=True,
+        average_mode=None  # TODO try alternative: "embeddings"
     wildcard_constraints:
         dataset="|".join(CELLWHISPERER_BENCHMARK_DATASETS),
         metadata_col="celltype",

@@ -45,7 +45,7 @@ def slurm_gres(
         #     "medium": "GPU_MEM:48GB",
         #     "large": "GPU_MEM:80GB",
         # }[gpu_size]
-        if gpu_size in ["large", "medium"]:
+        if True or gpu_size in ["large", "medium"]:
             partition = "cmackall"
             gpu_type = "GPU_CC:8.9|GPU_CC:9.0|GPU_GEN:HPR"  # bfloat16 support
         else:
