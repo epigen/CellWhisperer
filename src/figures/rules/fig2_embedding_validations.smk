@@ -232,6 +232,8 @@ rule plot_confusion_matrix_and_get_performance_metrics:
     resources:
         mem_mb=350000,
         slurm=slurm_gres()
+    conda:
+        "cellwhisperer"
     log:
         notebook="../logs/plot_confusion_matrix_and_get_performance_metrics_{model}_{dataset}_{metadata_col}_{normed}.ipynb"
     notebook:
@@ -427,7 +429,7 @@ rule fig2_main:
             for metadata_col in config["metadata_cols_per_zero_shot_validation_dataset"][dataset]
         ],
 
-        expand(rules.cw_vs_basemodel_macroavg_comparisons.output.barplots_across_training_options_across_metrics, model=CLIP_MODEL),
+        expand(rules.cw_vs_basemodel_macroavg_comparisons.output.barplots_across_training_options_across_metrics, model=CW_CLIP_MODELS),
         expand(rules.zero_shot_performance_examples.output.per_class_examples_plot, model=CLIP_MODEL),
         expand(rules.aggregate_scfm_evaluations.output, training_options=TRAINING_OPTIONS, metric=["accuracy", "f1", "auroc"]),
 

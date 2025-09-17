@@ -13,7 +13,9 @@ rule geo_umap_plots:
         mem_mb=300000,  # for good measure
         slurm="cpus-per-task=2"
     params:
-        highlight_clusters=["Active Myeloid Differentiation in HSPCs", "K562 Erythroleukemia Cells in Culture", "Obese adipose tissue immune and metabolic state"]  # optional: "Undifferentiated Human Pluripotent Stem cells", "Active Myeloid and T Cell Immune Response",
+        highlight_clusters=["CD34+ HSPCs with broad differentiation potential",
+        "K562 leukemia cells cultured in supplemented RPMI 1640",
+        "Active remodeling and immune response in cells"]
     conda:
         "cellwhisperer"
     log:

@@ -102,7 +102,7 @@ rule compute_top_genes:
     params:
         top_n_genes=100,
     resources:
-        mem_mb=500000,
+        mem_mb=750000, # 500000 failed for archs4_geo
         slurm="cpus-per-task=2"
     conda:
         "cellwhisperer"

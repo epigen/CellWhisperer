@@ -21,20 +21,13 @@ rule download_geneformer:
         PROJECT_DIR / config["model_name_path_map"]["geneformer"] / "config.json",
         PROJECT_DIR / config["model_name_path_map"]["geneformer"] / "pytorch_model.bin",
         PROJECT_DIR / config["model_name_path_map"]["geneformer"] / "training_args.bin",
+        directory(PROJECT_DIR / config["model_name_path_map"]["geneformer"] ),
     run:
         import shutil
         for fin, fout in zip(input, output):
             shutil.copy(fin, fout)
 
-
 rule download_uce:
-    input:
-        HTTP.remote("https://figshare.com/ndownloader/files/42706576", keep_local=False, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36'}),
-        HTTP.remote("https://figshare.com/ndownloader/files/43423236", keep_local=False, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36'}),
-        HTTP.remote("https://figshare.com/ndownloader/files/42715213", keep_local=False, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36'}),
-        HTTP.remote("https://figshare.com/ndownloader/files/42706555", keep_local=False, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36'}),
-        HTTP.remote("https://figshare.com/ndownloader/files/42706558", keep_local=False, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36'}),
-        HTTP.remote("https://figshare.com/ndownloader/files/42706585", keep_local=False, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36'}),
     output:
         PROJECT_DIR / config["model_name_path_map"]["uce4layer"],
         PROJECT_DIR / config["model_name_path_map"]["uce"],
@@ -42,14 +35,26 @@ rule download_uce:
         PROJECT_DIR / config["uce_paths"]["offset_pkl_path"],
         PROJECT_DIR / config["uce_paths"]["spec_chrom_csv_path"],
         PROJECT_DIR / config["uce_paths"]["tokens"],
-    run:
-        import shutil
-        for fin, fout in zip(input, output):
-            shutil.copy(fin, fout)
+    shell:
+        """
+        urls=(
+            "https://figshare.com/ndownloader/files/42706576"
+            "https://figshare.com/ndownloader/files/43423236"
+            "https://figshare.com/ndownloader/files/42715213"
+            "https://figshare.com/ndownloader/files/42706555"
+            "https://figshare.com/ndownloader/files/42706558"
+            "https://figshare.com/ndownloader/files/42706585"
+        )
+        outs=({output})
+        i=0
+        for url in "${{urls[@]}}"; do
+            wget --header="User-Agent: Mozilla/5.0" -O "${{outs[$i]}}" "$url"
+            i=$((i+1))
+        done
+
         # unpack protein embeddings
-        import tarfile
-        with tarfile.open(output[2], "r:gz") as tar:
-            tar.extractall(output[2].parent)
+        tar -xzf {output[2]} -C $(dirname {output[2]})
+        """
 
 rule download_llama33:
     output:

@@ -26,6 +26,9 @@ rule process_data:
     output:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="aida").replace(".h5ad",".before_subsetting.h5ad"),
     conda: "cellwhisperer"
+    resources:
+        mem_mb=100000,
+        slurm="cpus-per-task=1"
     script:
         "scripts/process_data.py"
 
@@ -40,5 +43,8 @@ rule subset_data:
     params:
         groupby="Annotation_Level1",
         max_cells=1000,
+    resources:
+        mem_mb=100000,
+        slurm="cpus-per-task=1"
     script:
         "scripts/subset_data.py"

@@ -14,6 +14,7 @@ dependencies:
   - ipykernel=6.25.2
   - transformers=4.34.1
   - pytorch=2.1.0
+  - safetensors=0.5.2 # 0.6.1 fails with "AttributeError: module 'torch' has no attribute 'uint64'"
   - lightning=2.1.0
   - scanpy=1.9.5
   - scipy=1.12.0  # 1.13 fails with "Dataset.astype() got an unexpected keyword argument 'copy'" in `scipy/sparse/_compressed.py`, line 762, in `_minor_index_fancy`
@@ -39,6 +40,7 @@ dependencies:
   - louvain=0.8.1
   - pynndescent=0.5.11
   - biopython=1.83
+  - httpcore=1.0.7
   - pip:
     - backports.tarfile==1.2.0
     - igraph==0.11.4
@@ -61,6 +63,8 @@ dependencies:
     - umap-learn==0.5.5
     - pybiomart==0.2.0
     - matplotlib_venn==0.11.10
+    - jax==0.4.38
+    - jaxlib==0.4.38
     - -e ..
     - -e ../modules/cellxgene/
     - -e ../modules/Geneformer/

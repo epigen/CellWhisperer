@@ -156,6 +156,8 @@ rule llava_evaluation_prediction_scores:
         propmt_variation=".*response(?!permuted).*",
     conda:
         "llava"  # newer version of pandas in this env
+    resources:
+        mem_mb=30000,
     log:
         notebook="logs/llava_evaluation_prediction_scores/{dataset}_{base_model}_{model}_{llava_dataset}{prompt_variation}.ipynb"
     notebook:

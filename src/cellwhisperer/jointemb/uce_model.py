@@ -128,6 +128,9 @@ class UCETranscriptomeProcessor(ProcessorMixin):
         """
 
         npzs_dir = get_path(["uce_paths", "tmp_feature_path"], name=self.name)
+        # Ensure the directory exists
+        npzs_dir.mkdir(parents=True, exist_ok=True)
+        
         processed_adata = self._compute_features(adata)
         features = data_to_torch_X(processed_adata.X).numpy()
         num_cells = processed_adata.X.shape[0]
