@@ -23,7 +23,7 @@ rule bowel_disease_stem_cell_contribution:
 
 rule bowel_disease_conventional_analysis:
     """
-
+    NOTE: This notebook was executed interactively and does not run out of the box within snakemake. We provide it here as "pseudocode" to be run interactively with snakemake's `--edit-notebook` option.
     """
     input:
         matrix_tsv=HTTP.remote("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE116222&format=file&file=GSE116222%5FExpression%5Fmatrix%2Etxt%2Egz", keep_local=True)[0],
@@ -61,4 +61,4 @@ rule bowel_disease_conventional_analysis:
 rule fig5_all:
     input:
         expand(rules.bowel_disease_stem_cell_contribution.output.plot, target_cluster=["", "Cycling ileal epithelial precursor cells"]),
-        rules.bowel_disease_conventional_analysis.output.umap_raw,
+        # rules.bowel_disease_conventional_analysis.output.umap_raw,
