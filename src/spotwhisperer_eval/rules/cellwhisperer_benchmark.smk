@@ -19,6 +19,7 @@ rule cellwhisperer_zero_shot_prediction:
     """
     Zero-shot cell type prediction using trained SpotWhisperer model
 
+    NOTE: This might be obsolete due to `cellwhisperer test` command (in main Snakefile)
     """
     input:
         processed_dataset=PROJECT_DIR / config["paths"]["model_processed_dataset"],
@@ -49,6 +50,9 @@ rule cellwhisperer_zero_shot_prediction:
 rule cellwhisperer_benchmark_summary:
     """
     Summarize CellWhisperer benchmark performance across all datasets
+
+    NOTE: This might be obsolete due to `cellwhisperer test` command (in main Snakefile)
+
     """
     input:
         performance_files=lambda wildcards: expand(
@@ -71,6 +75,37 @@ rule cellwhisperer_benchmark_summary:
     notebook:
         "../notebooks/cellwhisperer_benchmark_summary.py.ipynb"
 
+rule cellwhisperer_per_class_analysis:
+    """
+    Generate per-class analysis comparing trimodal vs bimodal models
+    for CellWhisperer benchmark datasets
+    """
+    input:
+        # Results from trimodal and bimodal_matching models
+        lambda wildcards: [
+            CELLWHISPERER_BENCHMARK_RESULTS / "spotwhisperer_{}".format(combo) / "datasets" / dataset / metadata_col / "performance_metrics_permetadata{}.csv".format(normed)
+            for combo in ["cellxgene_census__archs4_geo__hest1k__quilt1m",  # trimodal
+                          "hest1k", "quilt1m", "cellxgene_census__archs4_geo"]  # bimodal matching options
+            for dataset in CELLWHISPERER_BENCHMARK_DATASETS
+            for metadata_col in ["celltype"]
+            for normed in ["raw"]
+        ]
+    output:
+        analysis=report(CELLWHISPERER_BENCHMARK_RESULTS / "comparison" / "per_class_analysis.csv", category="per_class_analysis", subcategory="transcriptome-text", labels={"Analysis": "CellWhisperer benchmark", "Format": "csv"}),
+        plot=report(CELLWHISPERER_BENCHMARK_RESULTS / "comparison" / "per_class_analysis.pdf", category="per_class_analysis", subcategory="transcriptome-text", labels={"Analysis": "CellWhisperer benchmark", "Format": "plot"})
+    params:
+        datasets=CELLWHISPERER_BENCHMARK_DATASETS,
+        metric="rocauc"  # precision	accuracy	f1	rocauc	recall_at_1	recall_at_5	recall_at_10	recall_at_50	
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=20000,
+        slurm="cpus-per-task=2"
+    log:
+        notebook="../logs/cellwhisperer_per_class_analysis.ipynb"
+    notebook:
+        "../notebooks/cellwhisperer_per_class_analysis.py.ipynb"
+
 rule cellwhisperer_benchmark_all:
     """
     Run complete CellWhisperer benchmark for a given model
@@ -78,4 +113,6 @@ rule cellwhisperer_benchmark_all:
     input:
         # Summary results
         expand(CELLWHISPERER_MODEL_RESULTS / "benchmark_summary.csv",
-               model="spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m")
+               model="spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"),
+        # Per-class analysis
+        rules.cellwhisperer_per_class_analysis.output.analysis

@@ -15,7 +15,7 @@ rule download_data:
     env needs rclone!
     """
     output:
-        full_res=expand(PROJECT_DIR / "resources" / "quilt1m" / "fullres" / "{fn}", fn=["quilt_1M_lookup.csv", "quilt_instruct.zip"] + [f"images_part_{i}.zip" for i in range(1, 10)]),
+        full_res=expand(PROJECT_DIR / "resources" / "quilt1m" / "fullres" / "{fn}", fn=["quilt_1M_lookup.csv", "quilt_instruct.zip"] + ["images_part_{i}.zip".format(i=i) for i in range(1, 10)]),
         reduced_res=directory(PROJECT_DIR / "resources" / "quilt1m" / "reducedres")
     params:
         zenodo_token=lambda w: os.getenv("ZENODO_TOKEN"),

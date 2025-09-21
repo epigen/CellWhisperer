@@ -150,8 +150,8 @@ rule musk_per_class_analysis:
             for dataset in ["pannuke", "skin"]
         ]
     output:
-        analysis=report(MUSK_RESULTS / "comparison" / "per_class_analysis_seed{seed}.csv", category="eval", subcategory="Musk: per_class_analysis"),
-        plot=report(MUSK_RESULTS / "comparison" / "per_class_analysis_seed{seed}.pdf", category="eval", subcategory="Musk: per_class_analysis")
+        analysis=report(MUSK_RESULTS / "comparison" / "per_class_analysis_seed{seed}.csv", category="per_class_analysis", subcategory="image-text", labels={"Analysis": "MUSK benchmark"}),
+        plot=report(MUSK_RESULTS / "comparison" / "per_class_analysis_seed{seed}.pdf", category="per_class_analysis", subcategory="image-text")
     params:
         datasets=["pannuke", "skin"] * 3,
         model_types=["trimodal", "trimodal",  "bimodal_mismatch1", "bimodal_mismatch1", "bimodal_mismatch2", "bimodal_mismatch2", "bimodal_matching", "bimodal_matching"]

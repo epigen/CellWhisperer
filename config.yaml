@@ -19,7 +19,7 @@ paths:
   jointemb_models: results/models/jointemb
   wandb_logs: results/wandb_logging
   csv_logs: results/spotwhisperer_eval/csv_logging
-  datamodule_prepared_path: results/{dataset}/lightning-processed/{hash}.pt  # TODO change this to scratch/lightning-processed/{dataset}/{hash}.pt (copying over all the files)
+  datamodule_prepared_path: scratch/lightning_processed/{dataset}/{hash}.pt
   data_loading_individual_samples: scratch/data_loading/{dataset_name}_{i}
   cache: scratch/cache  # overwritable with CELLWHISPERER_CACHE env
   cancer_gene_essentiality:

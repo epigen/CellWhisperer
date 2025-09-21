@@ -77,7 +77,6 @@ rule hest_spotwhisperer_test:
     params:
         test_dataset="hesteval_{dataset}",
         batch_size=64,
-        num_batches=200,  # Limit batches to avoid long runtime
         seed=1,
         project_dir=PROJECT_DIR
     conda:
@@ -93,9 +92,9 @@ rule hest_spotwhisperer_test:
             --config {input.base_config} \
             --model_ckpt {input.model} \
             --data.dataset_names {params.test_dataset} \
+            --data.train_fraction 0.0 \
             --batch_size {params.batch_size} \
             --seed_everything {params.seed} \
-            --trainer.limit_test_batches {params.num_batches} \
             --nproc 0 \
             --wandb '' \
             --trainer.logger.init_args.version hest_eval___{wildcards.model}___{wildcards.dataset}
@@ -129,11 +128,43 @@ rule aggregate_hest_results:
     script:
         "../scripts/aggregate_hest_results.py"
 
+rule hest_per_class_analysis:
+    """
+    Generate per-class analysis comparing trimodal vs bimodal models
+    for HEST benchmark datasets (10 organs/9 cancers)
+    """
+    input:
+        # Results from trimodal and bimodal_matching models for HEST datasets
+        lambda wildcards: [
+            PROJECT_DIR / config["paths"]["csv_logs"] / "hest_eval___spotwhisperer_{}___{}".format(combo, dataset) / "metrics.csv"
+            for combo in ["cellxgene_census__archs4_geo__hest1k__quilt1m",  # trimodal
+                         "cellxgene_census__archs4_geo", "hest1k", "quilt1m"]  # bimodal matching options
+            for dataset in HEST_DATASETS
+        ]
+    output:
+        analysis=report(HEST_RESULTS / "comparison" / "per_class_analysis.csv", category="per_class_analysis", subcategory="transcriptome-image", labels={"Analysis": "HEST Benchmark (retrieval-based)", "Format": "csv"}),
+        plot=report(HEST_RESULTS / "comparison" / "per_class_analysis.pdf", category="per_class_analysis", subcategory="transcriptome-image", labels={"Analysis": "HEST Benchmark (retrieval-based)", "Format": "plot"}),
+        clip_scores=report(HEST_RESULTS / "comparison" / "individual_clip_scores.csv", category="per_class_analysis", subcategory="transcriptome-image", labels={"Analysis": "HEST Benchmark (retrival-based)", "Format": "csv (CLIP scores)"})
+    params:
+        datasets=HEST_DATASETS,
+        model_types=["trimodal", "bimodal_mismatch1", "bimodal_mismatch2", "bimodal_matching"]
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=20000,
+        slurm="cpus-per-task=2"
+    log:
+        notebook="../logs/hest_per_class_analysis.ipynb"
+    notebook:
+        "../notebooks/hest_per_class_analysis.py.ipynb"
+
 # Main rule to run complete HEST benchmark across all datasets
 rule hest_benchmark_all:
     input:
         expand(
             rules.aggregate_hest_results.output.aggregated_summary,
             model=config["model_name_path_map"]["spotwhisperer3"]
-        )
+        ),
+        # Per-class analysis
+        rules.hest_per_class_analysis.output.analysis
     default_target: True

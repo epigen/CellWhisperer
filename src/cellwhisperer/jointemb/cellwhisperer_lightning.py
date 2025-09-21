@@ -5,9 +5,11 @@ Wraps lightning and transformers logic, providing bare configs to the user/CLI
 import warnings
 
 from lightning import LightningModule
+import lightning
 from cellwhisperer.validation import initialize_validation_functions
 from cellwhisperer.validation.zero_shot.functions import (
     get_performance_metrics_left_vs_right,
+    prepare_metrics_and_labels,
 )
 from cellwhisperer.config import model_path_from_name
 from cellwhisperer.jointemb.loss.config import LossConfig
@@ -28,6 +30,9 @@ import torch
 import copy
 from functools import partial
 import logging
+import pandas as pd
+import os
+from cellwhisperer.utils.inference import score_left_vs_right
 
 logger = logging.getLogger(__name__)
 
@@ -288,6 +293,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         if not self.trainer.fast_dev_run:
             logger.info("Running validation functions")
             for val_fn_name, val_fn in self.validation_functions.items():
+                logger.debug(f"Running validation function: {val_fn_name}")
                 with torch.no_grad():  # necessary, despite model being in eval mode
                     val_results = val_fn(self.model)
                     val_metrics = val_results[0]
@@ -424,37 +430,71 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                 "Both text, transcriptome and image embeddings are provided. retrieval is only implemented for two modalities."
             )
 
+        # Obtain a subsample of max. 20000 data points (for performance)
+        if modalities[0].shape[0] != modalities[1].shape[0]:
+            raise ValueError("Modality sizes do not match. This should never happen.")
+        if modalities[0].shape[0] > 20000:
+            orig_indices = torch.randperm(modalities[0].shape[0])[:20000]
+            modalities[0] = modalities[0][orig_indices]
+            modalities[1] = modalities[1][orig_indices]
+            logger.info(
+                "Using a random subsample of 20000 data points for retrieval evaluation."
+            )
+        else:
+            orig_indices = torch.arange(modalities[0].shape[0])
+
         # Text vs Transcriptome retrieval
         correct_indices = list(
             range(min(modalities[0].shape[0], modalities[1].shape[0]))
         )
 
         # Text as queries, transcriptome as targets
-        metrics_left_right, _ = get_performance_metrics_left_vs_right(
+        scores_left_right, _ = score_left_vs_right(
+            left_input=modalities[0],
+            right_input=modalities[1],
+            logit_scale=self.model.discriminator.temperature.exp(),
             model=self.model,
+            average_mode=None,
+            grouping_keys=None,
+            batch_size=self.val_batch_size,
+            score_norm_method=None,
+            use_image_data=False,
+        )
+
+        # Transcriptome as queries, text as targets
+        scores_right_left, _ = score_left_vs_right(
+            left_input=modalities[1],
+            right_input=modalities[0],
+            logit_scale=self.model.discriminator.temperature.exp(),
+            model=self.model,
+            average_mode=None,
+            grouping_keys=None,
+            batch_size=self.val_batch_size,
+            score_norm_method=None,
+            use_image_data=False,
+        )
+
+        # Get performance metrics using precomputed scores
+        metrics_left_right, _ = prepare_metrics_and_labels(
+            scores=scores_left_right,
             left_input=modalities[0],
             right_input=modalities[1],
             correct_right_idx_per_left=correct_indices,
             average_mode=None,
             grouping_keys=None,
-            batch_size=self.val_batch_size,
-            report_per_class_metrics=False,
             right_as_classes=False,
-            use_image_data=False,
+            report_per_class_metrics=False,
         )
 
-        # Transcriptome as queries, text as targets
-        metrics_right_left, _ = get_performance_metrics_left_vs_right(
-            model=self.model,
+        metrics_right_left, _ = prepare_metrics_and_labels(
+            scores=scores_right_left,
             left_input=modalities[1],
             right_input=modalities[0],
             correct_right_idx_per_left=correct_indices,
             average_mode=None,
             grouping_keys=None,
-            batch_size=self.val_batch_size,
-            report_per_class_metrics=False,
             right_as_classes=False,
-            use_image_data=False,
+            report_per_class_metrics=False,
         )
 
         # the first is the target, the second the query (I believe)
@@ -477,7 +517,63 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                 logger=True,
             )
 
+        # Save individual CLIP scores for per-class analysis (using precomputed scores). NOTE: might be that `report_per_class_metrics` does the same, but not sure
+        self._save_individual_clip_scores_from_precomputed(
+            scores_left_right, scores_right_left, metric_name, orig_indices
+        )
+
         logger.info(f"Retrieval evaluation completed.")
+
+    def _save_individual_clip_scores_from_precomputed(
+        self, scores_left_right, scores_right_left, metric_name, orig_indices
+    ):
+        """Save individual CLIP scores for per-class analysis using precomputed scores."""
+
+        combined_dataset = self.trainer.datamodule.test_dataloader().dataset
+        orig_ids = [
+            v for dataset in combined_dataset.datasets for v in dataset.orig_ids
+        ]
+        i_s = [
+            v
+            for dataset in combined_dataset.datasets
+            for v in [getattr(dataset, "i", None)] * len(dataset)
+        ]
+
+        # for i, batch in self.trainer.datamodule.test_dataloader():
+        # Create DataFrame with individual scores
+        n_samples = min(scores_left_right.shape[1], scores_right_left.shape[0])
+        individual_scores = []
+
+        for i in range(n_samples):
+
+            # Score for correct pair
+            correct_score_lr = scores_left_right[i, i].item()
+            correct_score_rl = scores_right_left[i, i].item()
+
+            individual_scores.append(
+                {
+                    "sample_idx": i,
+                    "modality_left": metric_name[0],
+                    "modality_right": metric_name[1],
+                    "clip_score_left_right": correct_score_lr,
+                    "clip_score_right_left": correct_score_rl,
+                    "is_correct_pair": True,
+                    "orig_indices": orig_indices[i].item(),
+                    "orig_ids": orig_ids[orig_indices[i].item()],
+                    "dataset_i": i_s[i],
+                }
+            )
+
+        # Save to CSV file
+        scores_df = pd.DataFrame(individual_scores)
+        csv_logger = [
+            logger
+            for logger in self.loggers
+            if isinstance(logger, lightning.pytorch.loggers.csv_logs.CSVLogger)
+        ][0]
+        scores_df.to_csv(
+            Path(csv_logger.log_dir) / "individual_clip_scores.csv", index=False
+        )
 
     def configure_optimizers(self):
         """

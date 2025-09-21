@@ -43,8 +43,11 @@ class CellWhispererCLI(LightningCLI):
     """CLI for cellwhisperer."""
 
     def __init__(self, *args, **kwargs):
+
+        warnings.filterwarnings("ignore", message="np.find_common_type is deprecated")
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         warnings.filterwarnings("ignore", category=FutureWarning)
+        warnings.filterwarnings("once", category=DeprecationWarning, module="pandas")
         warnings.filterwarnings(
             "ignore", category=ResourceWarning
         )  # "ResourceWarning: Implicitly cleaning up <TemporaryDirectory..."

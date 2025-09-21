@@ -39,6 +39,14 @@ for r in range(1, len(BASE_DATASETS) + 1):
 
 # Model mapping for each test dataset
 MODEL_MAPPINGS = {
+
+    "immgen": {
+        "naive_baseline": "hest1k",
+        "bimodal_matching": "cellxgene_census__archs4_geo",
+        "bimodal_bridge": "hest1k__quilt1m",
+        "trimodal": "cellxgene_census__archs4_geo__hest1k__quilt1m"
+    },
+
     "cellxgene_census__archs4_geo": {
         "naive_baseline": "hest1k",
         "bimodal_matching": "cellxgene_census__archs4_geo",
@@ -57,6 +65,12 @@ MODEL_MAPPINGS = {
         "bimodal_bridge": "cellxgene_census__archs4_geo__hest1k",
         "trimodal": "cellxgene_census__archs4_geo__hest1k__quilt1m"
     }
+}
+
+DATASET_PAIR_MAPPING = {
+    "cellxgene_census__archs4_geo": "transcriptome-text",
+    "hest1k": "transcriptome-image",
+    "quilt1m": "image-text",
 }
 
 
@@ -180,28 +194,29 @@ rule spotwhisperer_test:
     output:
         # `config["paths"]["csv_logs"]` is set in `training.py`
         retrieval_and_cwevals=PROJECT_DIR / config["paths"]["csv_logs"] / "sweval___{dataset_combo}___{test_dataset}" / "metrics.csv",
+        individual_clip_scores=PROJECT_DIR / config["paths"]["csv_logs"] / "sweval___{dataset_combo}___{test_dataset}" / "individual_clip_scores.csv",
     # log:
     #     "logs/retrieval_analysis_{dataset_combo}_{test_dataset}.log"
     params:
         test_dataset=lambda wildcards: wildcards.test_dataset.replace("__", ","),
         seed=SEEDS[0],
         batch_size=128,  # to avoid OOM of smaller GPUs
-        num_batches=200,  # to avoid too long runtimes
-        project_dir=PROJECT_DIR
+        project_dir=PROJECT_DIR,
     conda:
         "cellwhisperer"
     resources:
         mem_mb=100000,
-        slurm=slurm_gres("small", num_cpus=2),  # for some reason, multi-processing freezes the process in the end -.-
+        runtime=16*60,
+        slurm=slurm_gres("small", num_cpus=2),  # for some reason, multi-processing freezes the process in the end (or does it?) -.-
     shell: """
         cd {params.project_dir}
         cellwhisperer test \
             --config {input.base_config} \
             --model_ckpt {input.model} \
             --data.dataset_names {params.test_dataset} \
+            --data.train_fraction 0.0 \
             --batch_size {params.batch_size} \
             --seed_everything {params.seed} \
-            --trainer.limit_test_batches {params.num_batches} \
             --nproc 0 \
             --wandb '' \
             --trainer.logger.init_args.version sweval___{wildcards.dataset_combo}___{wildcards.test_dataset}
@@ -236,6 +251,7 @@ rule create_analysis_plots:
     """
     Create horizontal barplots for each test dataset showing performance
     across five model types for all metrics
+
     """
     input:
         # HEST benchmark results
@@ -269,7 +285,7 @@ rule create_analysis_plots:
             test_dataset=wildcards.test_dataset
         )
     output:
-        plots=report(BENCHMARKS_DIR / "analysis_plots" / "{test_dataset}" / "performance_comparison.png", category="eval", subcategory="Target: {test_dataset}", labels={"Analysis": "Overview"}),
+        plots=report(BENCHMARKS_DIR / "analysis_plots" / "{test_dataset}" / "performance_comparison.png", category="aggregated", subcategory=lambda wildcards: DATASET_PAIR_MAPPING[wildcards.test_dataset], labels={"Analysis": "Overview", "Format": "plot"}),
     params:
         model_mappings=lambda wildcards: MODEL_MAPPINGS[wildcards.test_dataset],
         benchmarks_dir=BENCHMARKS_DIR,
@@ -314,7 +330,7 @@ rule create_retrieval_plots:
             test_dataset=wildcards.test_dataset
         )
     output:
-        plots=report(BENCHMARKS_DIR / "retrieval_plots" / "{test_dataset}" / "retrieval_comparison.png", category="eval", subcategory="Target: {test_dataset}", labels={"Analysis": "Retrieval"}),
+        plots=report(BENCHMARKS_DIR / "retrieval_plots" / "{test_dataset}" / "retrieval_comparison.png", category="aggregated", subcategory=lambda wildcards: DATASET_PAIR_MAPPING[wildcards.test_dataset], labels={"Analysis": "Retrieval"}),
     params:
         model_mappings=lambda wildcards: {k: v for k, v in MODEL_MAPPINGS[wildcards.test_dataset].items() if k in ["naive_baseline", "bimodal_bridge"]},
         benchmarks_dir=BENCHMARKS_DIR,
@@ -333,6 +349,36 @@ rule create_retrieval_plots:
     notebook:
         "notebooks/create_retrieval_plots.py.ipynb"
 
+rule retrieval_per_class_analysis:
+    """
+    Generate per-class analysis comparing trimodal vs bimodal models
+    for retrieval tasks using individual CLIP scores
+    """
+    input:
+        # Reference individual CLIP scores from spotwhisperer_test rule outputs
+        model_results=lambda wildcards: [
+            rules.spotwhisperer_test.output.individual_clip_scores.format(
+                dataset_combo=combo,
+                test_dataset=wildcards.dataset
+            )
+            for combo in [MODEL_MAPPINGS[wildcards.dataset][model_type] for model_type in ["trimodal", "bimodal_matching"]]
+        ],
+        # test_dataset=lambda wildcards: [PROJECT_DIR / config["paths"]["full_dataset"].format(dataset=dataset) for dataset in wildcards.dataset.split("__")]
+    output:
+        analysis=report(BENCHMARKS_DIR / "retrieval_per_class" / "{dataset}" / "per_class_analysis.csv", category="per_class_analysis", subcategory=lambda wildcards: DATASET_PAIR_MAPPING[wildcards.dataset], labels={"Analysis": "Retrieval per class", "Format": "csv"}),
+        plot=report(BENCHMARKS_DIR / "retrieval_per_class" / "{dataset}" / "per_class_analysis.pdf", category="per_class_analysis", subcategory=lambda wildcards: DATASET_PAIR_MAPPING[wildcards.dataset], labels={"Analysis": "Retrieval per class", "Format": "plot"}),
+    params:
+        model_mappings=lambda wildcards: MODEL_MAPPINGS[wildcards.dataset],
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=20000,
+        slurm="cpus-per-task=2"
+    log:
+        notebook="logs/retrieval_per_class_analysis_{dataset}.ipynb"
+    notebook:
+        "notebooks/retrieval_per_class_analysis.py.ipynb"
+
 rule all:
     """
     Default target: run all training and evaluations
@@ -347,10 +393,29 @@ rule all:
         expand(rules.create_analysis_plots.output.plots, test_dataset=BASE_DATASETS),
         expand(rules.create_retrieval_plots.output.plots, test_dataset=BASE_DATASETS),
 
-        # Per-class comparison
+        # Per-class comparison for MUSK
         expand(
             rules.musk_per_class_analysis.output.analysis,
             seed=SEEDS[0]
-        )
+        ),
+
+        # Per-class comparison for CellWhisperer benchmark
+        expand(
+            rules.cellwhisperer_per_class_analysis.output.analysis,
+            allow_missing=True
+        ),
+
+        # Per-class comparison for retrieval analysis
+        expand(
+            rules.retrieval_per_class_analysis.output.analysis,
+            dataset=BASE_DATASETS,
+            allow_missing=True
+        ), # TODO
+
+        # Per-class comparison for HEST benchmark
+        expand(
+            rules.hest_per_class_analysis.output.analysis,
+            allow_missing=True
+        ), # TODO
 
     default_target: True

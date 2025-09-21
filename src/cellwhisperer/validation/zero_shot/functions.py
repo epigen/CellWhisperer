@@ -72,6 +72,33 @@ def get_performance_metrics_left_vs_right(
     )  # scores is a tensor of shape n_right * n_left (if average_mode is None), or n_right * n_left_groups (otherwise).
     # It is normalized column-wise, i.e. for each left sample, the mean of scores is 0 (if using zscore normalization)
 
+    # Prepare the labels and compute the performance metrics
+    return prepare_metrics_and_labels(
+        scores=scores,
+        left_input=left_input,
+        right_input=right_input,
+        correct_right_idx_per_left=correct_right_idx_per_left,
+        average_mode=average_mode,
+        grouping_keys=grouping_keys,
+        right_as_classes=right_as_classes,
+        report_per_class_metrics=report_per_class_metrics,
+    )
+
+
+def prepare_metrics_and_labels(
+    scores: torch.Tensor,
+    left_input: Union[anndata.AnnData, torch.Tensor, List[str]],
+    right_input: Union[anndata.AnnData, torch.Tensor, List[str]],
+    correct_right_idx_per_left: List[int],
+    average_mode: Optional[str],
+    grouping_keys: Optional[List[str]],
+    right_as_classes: bool,
+    report_per_class_metrics: bool,
+) -> Tuple[Dict[str, torch.Tensor], pd.DataFrame]:
+    """
+    Prepare the labels and compute the performance metrics using torchmetrics.
+    """
+
     # labels for the left input, and the true classes
     if grouping_keys is None:
         grouping_keys = [str(x) for x in range(scores.shape[1])]

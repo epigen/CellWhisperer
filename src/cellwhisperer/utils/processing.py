@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import sparse
+from tqdm.auto import tqdm
 import anndata
 import torch
 import logging
@@ -50,7 +51,12 @@ def adata_to_embeds(
 
             # Process patches in batches
             num_patches = len(image_patches)
-            for i in range(0, num_patches, batch_size):
+            for i in tqdm(
+                range(0, num_patches, batch_size),
+                desc="Processing image patches",
+                total=(num_patches + batch_size - 1) // batch_size,
+                disable=num_patches < 2 * batch_size,
+            ):
                 batch_patches = image_patches[i : i + batch_size]
 
                 # Process the batch of patches
@@ -133,10 +139,16 @@ def adata_to_embeds(
     )
 
     transcriptome_embeds = []
-    for i in range(
-        0,
-        next(iter(transcriptome_processor_result.values())).shape[0],
-        batch_size,
+    n_transcriptomes = next(iter(transcriptome_processor_result.values())).shape[0]
+    for i in tqdm(
+        range(
+            0,
+            n_transcriptomes,
+            batch_size,
+        ),
+        desc="Processing transcriptomes",
+        total=(n_transcriptomes + batch_size - 1) // batch_size,
+        disable=n_transcriptomes < 2 * batch_size,
     ):
         batch = {
             k: v[i : i + batch_size].to(model.device)

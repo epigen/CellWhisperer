@@ -75,7 +75,12 @@ class UNIProcessor(ProcessorMixin):
             # adata.uns["image_path"] = adata.uns["image_path"].replace(
             #     "quilt1m_lowres", "quilt1m/fullres"
             # )  # TODO drop
-            image = Image.open(adata.uns["image_path"]).convert("RGB")
+            try:
+                image = Image.open(adata.uns["image_path"]).convert("RGB")
+            except FileNotFoundError as e:
+                raise ValueError(
+                    "Image path not available. Perhaps you need to run: `snakemake -R unpack_data` in src/datasets/quilt1m"
+                )
             image = np.array(image)
 
         X = []

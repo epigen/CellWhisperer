@@ -9,6 +9,7 @@ from cellwhisperer.jointemb.processing import TranscriptomeTextDualEncoderProces
 from cellwhisperer.config import get_path
 
 
+from tqdm.auto import tqdm
 import torch
 from .geneformer_model import GeneformerConfig, GeneformerModel
 from .scgpt_model import ScGPTConfig, ScGPTModel
@@ -664,9 +665,12 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         tokenizer = processor.tokenizer
 
         ret_list = []
-        for chunk in [
-            texts[i : i + chunk_size] for i in range(0, len(texts), chunk_size)
-        ]:
+        for chunk in tqdm(
+            [texts[i : i + chunk_size] for i in range(0, len(texts), chunk_size)],
+            desc="Embedding texts",
+            total=(len(texts) + chunk_size - 1) // chunk_size,
+            disable=len(texts) < 2 * chunk_size,
+        ):
             text_tokens = tokenizer(chunk, return_tensors="pt", padding=True)
             for k, v in text_tokens.items():
                 text_tokens[k] = v.to(self.device)
