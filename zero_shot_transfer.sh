@@ -10,7 +10,7 @@ metadata_cols=("cell_type" "cell_ontology_class")
 groupings=("by_cell" "by_class")
 
 # Base paths
-source_base="/msc/home/q56ppene/cellwhisperer_revision2/cellwhisperer_private/results/zero_shot_llm"
+source_base="/msc/home/q56ppene/cellwhisperer_revision2/cellwhisperer_private/results/plots/zero_shot_validations"
 target_base="/nobackup/lab_bock/public_html/papers/schaefer2025cellwhisperer/datasets"
 
 # Process each combination
