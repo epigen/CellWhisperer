@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Script to transfer zero-shot LLM prediction files from muwhpc to lustre
-# Based on the Snakemake rule zero_shot_llm_prediction_download
+# Simplified version for specific models and datasets
 
-# Define datasets, models, metadata columns, and groupings
-datasets=("aida" "immgen" "pancreas" "tabula_sapiens" "tabula_sapiens_well_studied_celltypes")
-models=("gpt4" "llama33" "claudesonnet" "deepseek" "mistral7b")
+# Define specific datasets and models
+datasets=("aida" "pancreas" "tabula_sapiens_well_studied_celltypes" "human_disease" "tabula_sapiens" "immgen" "tabula_sapiens_100_cells_per_type")
+models=("claudesonnet" "llama33" "mistral7b" "gpt4")
 metadata_cols=("cell_type" "cell_ontology_class")
 groupings=("by_cell" "by_class")
 
@@ -23,19 +23,15 @@ for dataset in "${datasets[@]}"; do
     for model in "${models[@]}"; do
         for metadata_col in "${metadata_cols[@]}"; do
             for grouping in "${groupings[@]}"; do
-                echo "Transferring ${model}_${metadata_col}_${grouping}.csv for ${dataset}"
-                
                 # Source and target paths
                 source_file="${source_base}/${model}/datasets/${dataset}/predictions/${metadata_col}.${grouping}.csv"
                 target_file="${target_base}/${dataset}/zero_shot_llm/${model}_${metadata_col}_${grouping}.csv"
                 
-                # Copy the file from muwhpc to lustre
-                scp "muwhpc:${source_file}" "lustre:${target_file}" || echo "Failed to transfer ${source_file}"
+                # Copy the file from muwhpc to lustre (suppress errors)
+                scp -q "muwhpc:${source_file}" "lustre:${target_file}" 2>/dev/null || true
             done
         done
     done
-    
-    echo "Completed transfers for ${dataset}"
 done
 
-echo "All zero-shot LLM prediction file transfers completed"
+echo "File transfers completed"
