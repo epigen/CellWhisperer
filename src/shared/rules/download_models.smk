@@ -65,6 +65,15 @@ rule download_llama33:
         git clone https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct {output}
     """
 
+rule download_mistral:
+    output:
+        directory(PROJECT_DIR / config["model_name_path_map"]["mistral"])
+    shell: """
+        echo "You'll need a huggingface token to download mistral 7b. You may also download it manually into {output}"
+        git lfs install
+        git clone https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2 {output}
+    """
+
 
 rule download_cellwhisperer_embedding_model:
     input:

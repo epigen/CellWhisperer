@@ -1,32 +1,44 @@
-rule zero_shot_llm_prediction:
+rule zero_shot_llm_prediction_download:
     """
-    GPT-4 zero-shot predictions, adapting prompt from Hou et al., 2024 (https://www.nature.com/articles/s41592-024-02235-4)
-
-    For Llama 3.1 and 3.3 and Mistral, run first `export OLLAMA_HOST=0.0.0.0:8080 ~/ollama/bin/ollama serve` (note that they might not operate well simultaneously)
-
+    For reproducibility and to avoid OpenAI API calls, we provide precomputed results
     """
     input:
-        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
-        gene_normalizers=rules.compute_gene_normalizers.output.gene_mean_log1ps,  # NOTE could also get the ones computed with `seurat_get_top_genes`
+        HTTP.remote(f"{config['precomputing_base_url']}/datasets/{{dataset}}/zero_shot_llm/{{model}}_{{metadata_col}}_{{grouping}}.csv", keep_local=False)[0],
     output:
-        predictions=protected(ZERO_SHOT_RESULTS / "{model,gpt4|llama33|claudesonnet|deepseek|mistral7b}" / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv"),
-    params:
-        api_key=lambda wildcards: os.getenv(config["llm_apis"][wildcards.model]["api_key_env"]),
-        api_base_url=lambda wildcards: config["llm_apis"][wildcards.model]["base_url"],
-        prompt=lambda wildcards: f"Identify the {wildcards.metadata_col} for a given set of markers. Only provide the name of the {wildcards.metadata_col}. Do not show numbers before the name. \n{wildcards.metadata_col} candidates: {{candidates}}\n\nMarkers: {{markers}}",
-        top_n_genes=50,
-        model=lambda wildcards: config["llm_apis"][wildcards.model]["model_name"],
-        average_by_class=lambda wildcards: wildcards.grouping == "by_class",
-    resources:
-        mem_mb=lambda wildcards: 300000 if wildcards.dataset == "tabula_sapiens" else 120000,
-        slurm="cpus-per-task=2"
-    conda:
-        "cellwhisperer"
-    log:
-        notebook="../logs/zero_shot_llm_prediction_{model}_{dataset}_{metadata_col}_{grouping}.ipynb",
-        progress="../logs/zero_shot_llm_prediction_{model}_{dataset}_{metadata_col}_{grouping}.log"
-    notebook:
-        "../notebooks/zero_shot_llm_prediction.py.ipynb"
+        predictions=ZERO_SHOT_RESULTS / "{model,gpt4|llama33|claudesonnet|deepseek|mistral7b}" / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv",
+    run:
+        import shutil
+        shutil.copy(input[0], output.predictions)
+
+# rule zero_shot_llm_prediction:
+#     """
+#     GPT-4 zero-shot predictions, adapting prompt from Hou et al., 2024 (https://www.nature.com/articles/s41592-024-02235-4)
+
+#     For Llama 3.1 and 3.3 and Mistral, run first `export OLLAMA_HOST=0.0.0.0:8080 ~/ollama/bin/ollama serve` (note that they might not operate well simultaneously)
+
+#     """
+#     input:
+#         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
+#         gene_normalizers=rules.compute_gene_normalizers.output.gene_mean_log1ps,  # NOTE could also get the ones computed with `seurat_get_top_genes`
+#     output:
+#         predictions=protected(ZERO_SHOT_RESULTS / "{model,gpt4|llama33|claudesonnet|deepseek|mistral7b}" / "datasets" / "{dataset,[^/]+}" / "predictions" / "{metadata_col}.{grouping,by_cell|by_class}.csv"),
+#     params:
+#         api_key=lambda wildcards: os.getenv(config["llm_apis"][wildcards.model]["api_key_env"]),
+#         api_base_url=lambda wildcards: config["llm_apis"][wildcards.model]["base_url"],
+#         prompt=lambda wildcards: f"Identify the {wildcards.metadata_col} for a given set of markers. Only provide the name of the {wildcards.metadata_col}. Do not show numbers before the name. \n{wildcards.metadata_col} candidates: {{candidates}}\n\nMarkers: {{markers}}",
+#         top_n_genes=50,
+#         model=lambda wildcards: config["llm_apis"][wildcards.model]["model_name"],
+#         average_by_class=lambda wildcards: wildcards.grouping == "by_class",
+#     resources:
+#         mem_mb=lambda wildcards: 300000 if wildcards.dataset == "tabula_sapiens" else 120000,
+#         slurm="cpus-per-task=2"
+#     conda:
+#         "cellwhisperer"
+#     log:
+#         notebook="../logs/zero_shot_llm_prediction_{model}_{dataset}_{metadata_col}_{grouping}.ipynb",
+#         progress="../logs/zero_shot_llm_prediction_{model}_{dataset}_{metadata_col}_{grouping}.log"
+#     notebook:
+#         "../notebooks/zero_shot_llm_prediction.py.ipynb"
 
 rule integrate_zero_shot_embedding_performance:
     input:

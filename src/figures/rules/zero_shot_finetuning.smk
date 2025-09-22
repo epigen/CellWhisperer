@@ -34,28 +34,42 @@ rule finetune_scfm:
     notebook:
         "../notebooks/finetune_scfm.py.ipynb"
 
-rule transfer_labels:
+
+rule transfer_labels_download:
     """
-    Transfer labels from training data to evaluation data
+    For reproducibility and to avoid OpenAI API calls, we provide precomputed results
     """
     input:
-        training_data=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="cellxgene_census"),
-        eval_data=PROJECT_DIR / config["paths"]["read_count_table"],
+        HTTP.remote(f"{config['precomputing_base_url']}/datasets/{{dataset}}/transfered_labels.csv", keep_local=False)[0],
     output:
         transfered_labels=FINETUNE_RESULTS_DIR / "{dataset}" / "transfered_labels.csv",
-    params:
-        label_col="celltype",
-        openai_api_key=os.getenv("OPENAI_API_KEY"),
-        model="gpt-4o-2024-11-20"
-    resources:
-        mem_mb=350000,
-        slurm="cpus-per-task=2"
-    conda:
-        "cellwhisperer"
-    log:
-        notebook="logs/transfer_labels_{dataset}.ipynb"
-    notebook:
-        "../notebooks/transfer_labels.py.ipynb"
+    run:
+        import shutil
+        shutil.copy(input[0], output.transfered_labels)
+
+# Provided as download
+# rule transfer_labels:
+#     """
+#     Transfer labels from training data to evaluation data
+#     """
+#     input:
+#         training_data=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="cellxgene_census"),
+#         eval_data=PROJECT_DIR / config["paths"]["read_count_table"],
+#     output:
+#         transfered_labels=FINETUNE_RESULTS_DIR / "{dataset}" / "transfered_labels.csv",
+#     params:
+#         label_col="celltype",
+#         openai_api_key=os.getenv("OPENAI_API_KEY"),
+#         model="gpt-4o-2024-11-20"
+#     resources:
+#         mem_mb=350000,
+#         slurm="cpus-per-task=2"
+#     conda:
+#         "cellwhisperer"
+#     log:
+#         notebook="logs/transfer_labels_{dataset}.ipynb"
+#     notebook:
+#         "../notebooks/transfer_labels.py.ipynb"
 
 rule evaluate_scfm:
     """
@@ -64,7 +78,7 @@ rule evaluate_scfm:
     input:
         model=rules.finetune_scfm.output.model_weights,
         eval_data=PROJECT_DIR / config["paths"]["read_count_table"],
-        transfered_labels=rules.transfer_labels.output.transfered_labels,
+        transfered_labels=FINETUNE_RESULTS_DIR / "{dataset}" / "transfered_labels.csv",
     output:
         predictions_raw=FINETUNE_RESULTS_DIR / "{model}" / "{dataset}" / "predictions_raw_{training_options}.csv",  # this is the same for all datasets
         predictions=FINETUNE_RESULTS_DIR / "{model}" / "{dataset}" / "predictions_{training_options}.csv",

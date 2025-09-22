@@ -72,3 +72,5 @@ rule models:
         rules.download_cellwhisperer_llm.output,
         rules.download_mixtral.output,
         rules.download_geneformer.output,
+        rules.download_llama33.output,
+        rules.download_mistral.output
