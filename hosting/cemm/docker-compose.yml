@@ -203,9 +203,9 @@ services:
     <<: *cellxgene-service
     container_name: cellxgene_development
     volumes:
-      - /nobackup/lab_bock/projects/cellwhisperer/results/development3s/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - /nobackup/lab_bock/projects/cellwhisperer/results/development/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
-      - ./llava_logs/development3s/:/logs/:Z
+      - ./llava_logs/development/:/logs/:Z
 
   cellxgene_hca_olo:
     <<: *cellxgene-service

@@ -98,13 +98,13 @@ conda install -c bioconda -n base snakemake=7
 
 We provide all our validations and analyses in a single pipeline, (re)producing all (*) plots in our paper.
 
-Note that due to the high computational cost, this pipeline relies on some precomputed files, which are downloaded from our server as part of the pipeline. Nevertheless computing all the analyses will require a considerable amount of storage (~1TB), RAM (up to 1TB), GPU (40GB VRAM) and time (2 days) resources.
+Note that due to the high computational cost, this pipeline relies on some precomputed files, which are downloaded from our server as part of the pipeline. Nevertheless computing all the analyses will require a considerable amount of storage (~1TB), RAM (up to 1TB), GPU (40GB VRAM) and time (2 days) resources. You will need a huggingface token to download the "mistral" and "llama-3.3" models (needed for Figure 4 evaluations)
 
 To run the pipeline, execute
 
 ```bash
 cd src
-snakemake --use-conda  # optionally only download "models" or generate "figures"
+snakemake --use-conda -k  # optionally only download "models" or generate "figures"
 ```
 
 (*) Some interactive analyses/screenshots were performed directly in the CELLxGENE CellWhisperer browser integration and are not reproduced by the pipeline. Also note that some analyses (e.g. Extended Data Figure 3) depend on GPT-4 and the availability of an OpenAI API key.
