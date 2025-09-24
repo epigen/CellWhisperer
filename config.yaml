@@ -52,8 +52,7 @@ datasets:
   - tabula_sapiens
   - tabula_sapiens_100_cells_per_type
   - archs4_geo
-  - development4s_raw
-  - development_merged5000
+  - development
   - car_t
   - bowel_disease
   - gut_cell_atlas
