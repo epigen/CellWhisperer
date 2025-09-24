@@ -1,16 +1,15 @@
 [submodule "modules/cellxgene"]
-	path = modules/cellxgene
-	url = git@github.com:epigen/cellxgene.git
+        path = modules/cellxgene
+        url = https://github.com/epigen/cellxgene
 [submodule "modules/Geneformer"]
-	path = modules/Geneformer
-	url = git@github.com:epigen/Geneformer.git
+        path = modules/Geneformer
+        url = https://github.com/epigen/Geneformer
 [submodule "src/datasets/archs4/metasra"]
-	path = src/datasets/archs4_geo/metasra
-	url = https://github.com/dmalzl/metasra
-	
+        path = src/datasets/archs4_geo/metasra
+        url = https://github.com/dmalzl/metasra
 [submodule "modules/LLaVA"]
-	path = modules/LLaVA
-	url = https://github.com/moritzschaefer/LLaVA_cellwhisperer_develop
+        path = modules/LLaVA
+        url = https://github.com/epigen/llava
 [submodule "modules/UCE"]
-	path = modules/UCE
-	url = git@github.com:epigen/UCE.git
+        path = modules/UCE
+        url = https://github.com/epigen/UCE
