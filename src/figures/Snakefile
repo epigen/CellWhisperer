@@ -3,6 +3,7 @@ include: "../shared/config.smk"
 include: "../shared/rules/dataset_processing.smk"
 include: "rules/fig1_landscape_validation_ablation.smk"
 include: "rules/fig2_embedding_validations.smk"
+include: "rules/fig3_development.smk"
 include: "rules/fig4_interactive_usecase_llm.smk"
 include: "rules/fig5_colonic_epithelium.smk"
 include: "rules/reviewer_response.smk"
@@ -11,9 +12,9 @@ rule all:
     input:
         rules.fig1_main.input,
         rules.fig2_main.input,
+        rules.fig3_main.input,
         rules.fig4_llava_ppl_all.input,
         rules.fig5_all.input,
-
         rules.reviewer_response_all.input,
 
     default_target: True
