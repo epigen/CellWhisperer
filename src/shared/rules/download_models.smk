@@ -84,16 +84,16 @@ rule download_cellwhisperer_embedding_model:
         cp {input} {output}
         """
 
-rule download_cellwhisperer_llm:
+rule download_cellwhisperer_llms:
     """
     """
     input:
-        HTTP.remote(f"{BASE_URL}/models/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1.tar.gz")
+        HTTP.remote(f"{BASE_URL}/models/{{base_model}}__{{model}}__{{llava_dataset}}.tar.gz")
     output:
-        directory(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"].format(base_model=config["model_name_path_map"]["llava_base_llm"],
-                                                                                       model=config["model_name_path_map"]["cellwhisperer"],
-                                                                                       llava_dataset="_default"))
+        directory(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"])
     shell: """
         mkdir {output}
         tar -xzvf {input} -C {output} --no-same-owner
     """
+
+

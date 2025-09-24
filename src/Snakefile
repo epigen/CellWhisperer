@@ -32,19 +32,6 @@ rule download_gsva_results:
         for fin, fout in zip(input, output):
             shutil.copy(fin, fout)
 
-rule download_deduplicated:
-    """
-    Download deduplicated datasets for meaningful loss-based performance analysis.
-    """
-    input:
-        [HTTP.remote(f"{config['precomputing_base_url']}/datasets/{dataset}/full_data.h5ad", keep_local=False)[0] for dataset in config["retrieval_deduplicated_sets"]]
-    output:
-        gsva_results=expand(PROJECT_DIR / config["paths"]["full_dataset"], dataset=config["retrieval_deduplicated_sets"]),
-    run:
-        import shutil
-        for fin, fout in zip(input, output):
-            shutil.copy(fin, fout)
-
 # include: "shared/rules/gsva.smk"  # Alternatively compute them instead of downloading
 
 
@@ -54,23 +41,27 @@ GPU_TYPE = "a100-sxm4-80gb"
 include: "cellxgene_preprocessing/rules/prepare_cellxgene_dataset.smk"
 include: "shared/rules/download_models.smk"
 
-rule all:
-    input:
-        rules.datasets_all.input,
-        rules.figures_all.input,
-        expand(rules.download_cellwhisperer_embedding_model.output, cw_model=CW_CLIP_MODELS),  # Download included through
-        rules.download_cellwhisperer_llm.output,
-        rules.download_deduplicated.output
-
 rule figures:
     input:
         rules.figures_all.input,
 
+
+
 rule models:
     input:
         expand(rules.download_cellwhisperer_embedding_model.output, cw_model=CW_CLIP_MODELS),  # Download included through
-        rules.download_cellwhisperer_llm.output,
+        expand(rules.download_cellwhisperer_llms.output, zip,
+               base_model=[config["model_name_path_map"]["llava_base_llm"]] * 3,
+               model=[config["model_name_path_map"]["cellwhisperer"], config["model_name_path_map"]["cellwhisperer"], "uce"],
+               llava_dataset=["_default", "_celltype", "_top50genescelltype"]),
         rules.download_mixtral.output,
         rules.download_geneformer.output,
         rules.download_llama33.output,
         rules.download_mistral.output
+
+rule all:
+    input:
+        rules.datasets_all.input,
+        rules.figures.input,
+        rules.models.input,
+    default_target: True
