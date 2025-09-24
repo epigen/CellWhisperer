@@ -32,3 +32,5 @@ llava_logs/
 *.log
 *html*hidden
 lsyncd*.conf
+.aider*
+.env

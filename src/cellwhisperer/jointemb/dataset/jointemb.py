@@ -186,13 +186,13 @@ class JointEmbedDataModule(pl.LightningDataModule):
             replicate_inputs = {}
 
         if self.include_labels is not None:
-            # Add labels to the inputs.
             if adata.obs[self.include_labels].dtype.name != "category":
                 adata.obs[self.include_labels] = pd.Categorical(
                     adata.obs[self.include_labels]
                 )
-                # TODO maybe save the categorical as well for later?
+                # NOTE maybe save the categorical as well for later?
 
+            # Add labels to the inputs.
             inputs["labels"] = torch.tensor(
                 adata.obs[self.include_labels].astype("category").cat.codes.values,
                 dtype=torch.long,
