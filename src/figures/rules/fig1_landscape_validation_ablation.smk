@@ -34,7 +34,7 @@ rule final_model_retrieval_scores:
 
     """
     input:
-        csv=HTTP.remote(f"{config['precomputing_base_url']}/human_disease_dedup_recall_at_5_wandb_export.csv", keep_local=False)[0],
+        csv=HTTP.remote(f"{config['precomputing_base_url']}/misc/human_disease_dedup_recall_at_5_wandb_export.csv", keep_local=False)[0],
         # model=PROJECT_DIR / config["paths"]["jointemb_models"] / f"{CLIP_MODEL}.ckpt",  # needed in theory to compute the retrieval scores
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
@@ -53,7 +53,7 @@ rule plot_ablation_wandb:
     The plotted scores here were originally exported from wandb. We provide them for your convenience now, but you can run the full ablations using the pipeline in `src/ablation_study`
     """
     input:
-        csv=HTTP.remote(f"{config['precomputing_base_url']}/ablation_study_wandb_export.csv", keep_local=True)[0]
+        csv=HTTP.remote(f"{config['precomputing_base_url']}/misc/ablation_study_wandb_export.csv", keep_local=True)[0]
     output:
         top_models_metrics_details=PROJECT_DIR / config["paths"]["ablations"]["plots"] / "top_models_metrics_details.pdf",
         all_models_comparison=PROJECT_DIR / config["paths"]["ablations"]["plots"] / "all_models_comparison.pdf",

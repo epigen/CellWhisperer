@@ -14,7 +14,7 @@ rule generate_query_variants_download:
     For reproducibility and to avoid OpenAI API calls, we provide precomputed results
     """
     input:
-        HTTP.remote(f"{config['precomputing_base_url']}/prompt_sensitivity_query_variants.csv", keep_local=False)[0],
+        HTTP.remote(f"{config['precomputing_base_url']}/misc/prompt_sensitivity_query_variants.csv", keep_local=False)[0],
     output:
         query_variants=PROJECT_DIR / "results" / "prompt_sensitivity"/ "query_variants.csv"
     run:
