@@ -27,6 +27,21 @@ rule download_geneformer:
         for fin, fout in zip(input, output):
             shutil.copy(fin, fout)
 
+rule download_scgpt:
+    output:
+        PROJECT_DIR / config["model_name_path_map"]["scgpt"] / "config.json",
+        PROJECT_DIR / config["model_name_path_map"]["scgpt"] / "pytorch_model.bin",
+        PROJECT_DIR / config["model_name_path_map"]["scgpt"] / "training_args.bin",
+    params:
+        folder=PROJECT_DIR / config["model_name_path_map"]["scgpt"]
+    conda:
+        "../../envs/gdown.yaml"
+    shell:"""
+        cd {params.folder}/..
+        gdown --folder --id 1oWh_-ZRdhtoGQ2Fw24HP41FgLoomVo-y
+    """
+
+
 rule download_uce:
     output:
         PROJECT_DIR / config["model_name_path_map"]["uce4layer"],
