@@ -1,0 +1,23 @@
+# h5ads (to extract images from)
+h5ads:
+    - "/home/jburton/projects/sw-lc1-dataset/h5ad_annotated/LC1.h5ad.gz"
+    - "/home/jburton/projects/sw-lc1-dataset/h5ad_annotated/LC2.h5ad.gz"
+    - "/home/jburton/projects/sw-lc1-dataset/h5ad_annotated/LC3.h5ad.gz"
+    - "/home/jburton/projects/sw-lc1-dataset/h5ad_annotated/LC4.h5ad.gz"
+    - "/home/jburton/projects/sw-lc1-dataset/h5ad_annotated/LC5.h5ad.gz"
+crop_sizes:
+    - "auto"
+    - 224
+# Datasets (currently pre-processed images)
+datasets:
+    - "/nobackup/lab_bock/users/jburton/lc_dataset/tiles/sw_size/lc1/"
+# Models - the models to use for classification
+models:
+    #- "PLIP"
+    - "CONCH"
+# Labels - the class labels for zero-shot classification.
+labels:
+    - "cancer cells"
+    - "normal cells"
+    - "tertiary lymphoid structures"
+    - "infiltrating cells"

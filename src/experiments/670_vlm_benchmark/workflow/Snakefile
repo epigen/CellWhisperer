@@ -1,0 +1,52 @@
+from pathlib import Path
+
+configfile: "config/config.yaml"
+
+dataset_names = ["_".join(dataset.split("/")[1:-1]) for dataset in config["datasets"]]
+dataset_paths = { name: path for name, path in zip(dataset_names, config["datasets"]) }
+
+model_output = expand("results/{ds}.{model}.csv", ds=dataset_names, model=config["models"])
+
+crop_files = [Path(p).name for p in config["h5ads"]]
+crop_output = expand("results/{of}.{crop_size}/", of=crop_files, crop_size=config["crop_sizes"])
+crop_paths = { name: path for name, path in zip(crop_files, config["h5ads"]) }
+
+print(crop_output)
+
+rule all:
+    input: model_output, crop_output
+
+rule do_crop:
+    input: crop_output
+
+rule run_plip:
+    input:
+        data_root = lambda wildcards: dataset_paths[wildcards.ds]
+    output:
+        csv = "results/{ds}.PLIP.csv"
+    params:
+        labels = config["labels"]
+    conda: "envs/plip.yaml"
+    notebook:
+        "notebooks/PLIP.ipynb"
+
+rule run_conch:
+    input:
+        data_root = lambda wildcards: dataset_paths[wildcards.ds]
+    output:
+        csv = "results/{ds}.CONCH.csv"
+    params:
+        labels = config["labels"]
+    conda: "envs/conch.yaml"
+    notebook:
+        "notebooks/CONCH.ipynb"
+
+rule crop_images:
+    input:
+        h5ad = lambda wildcards: crop_paths[wildcards.of]
+    output:
+        cropped_dir = directory("results/{of}.{crop_size}/")
+    params:
+        crop_size = lambda wildcards: wildcards.crop_size
+    notebook:
+        "notebooks/CROP.ipynb"

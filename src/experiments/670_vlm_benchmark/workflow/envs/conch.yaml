@@ -1,0 +1,16 @@
+channels:
+  - pytorch-nightly
+  - nvidia
+  - anaconda
+  - conda-forge
+  - nodefaults
+dependencies:
+  - pip=25.1
+  - transformers
+  - ipykernel
+  - nbconvert
+  - pip:
+      - torch --index-url https://download.pytorch.org/whl/cu118
+      - torchvision --index-url https://download.pytorch.org/whl/cu118
+      - torchaudio --index-url https://download.pytorch.org/whl/cu118
+      - git+https://github.com/Mahmoodlab/CONCH.git

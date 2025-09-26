@@ -1,0 +1,18 @@
+channels:
+  - pytorch-nightly
+  - nvidia
+  - anaconda
+  - conda-forge
+  - nodefaults
+dependencies:
+  - pip=25.1
+  - conda-forge::transformers
+  - ipykernel
+  - conda-forge::pillow
+  - pytorch
+  - pytorch-cuda=12.1
+  - torchaudio
+  - torchvision
+  - jupyter
+  - nbconvert
+  - scikit-learn
