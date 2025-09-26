@@ -32,10 +32,11 @@ rule download_scgpt:
         PROJECT_DIR / config["model_name_path_map"]["scgpt"] / "config.json",
         PROJECT_DIR / config["model_name_path_map"]["scgpt"] / "pytorch_model.bin",
         PROJECT_DIR / config["model_name_path_map"]["scgpt"] / "training_args.bin",
+        directory(PROJECT_DIR / config["model_name_path_map"]["scgpt"] ),
     params:
         folder=PROJECT_DIR / config["model_name_path_map"]["scgpt"]
     conda:
-        "../../envs/gdown.yaml"
+        "../../../envs/gdown.yaml"
     shell:"""
         cd {params.folder}/..
         gdown --folder --id 1oWh_-ZRdhtoGQ2Fw24HP41FgLoomVo-y

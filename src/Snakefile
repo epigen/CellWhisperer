@@ -38,6 +38,7 @@ rule download_gsva_results:
 LLAVA_BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
 GPU_TYPE = "a100-sxm4-80gb"
 
+include: "shared/rules/genesets.smk"
 include: "cellxgene_preprocessing/rules/prepare_cellxgene_dataset.smk"
 include: "shared/rules/download_models.smk"
 

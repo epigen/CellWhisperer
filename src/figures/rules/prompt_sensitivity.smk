@@ -55,7 +55,7 @@ rule compute_text_embeddings:
         "cellwhisperer"
     resources:
         mem_mb=40000,
-        slurm=f"cpus-per-task=5 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
+        slurm=slurm_gres("large", num_gpus=1, num_cpus=10)
     log:
         progress="../logs/compute_text_embeddings_{model}.log",
         notebook="../logs/compute_text_embeddings_{model}.ipynb"

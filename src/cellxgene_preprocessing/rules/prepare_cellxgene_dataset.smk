@@ -92,6 +92,7 @@ rule cellwhisperer_cluster_keywords:
     input:
         adata=rules.leiden_umap_embeddings.output.adata,
         model=ancient(PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt"),
+        terms=PROJECT_DIR / config["paths"]["enrichr_terms_json"],
     output:
         csv=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "cellwhisperer_annotated_clusters.csv",
     conda:
