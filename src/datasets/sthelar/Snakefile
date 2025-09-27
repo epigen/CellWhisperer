@@ -1,9 +1,4 @@
-import subprocess
 import os
-from pathlib import Path
-
-PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
-configfile: PROJECT_DIR / "config.yaml"
 
 include: "../../shared/config.smk"
 include: "../../shared/rules/dataset_processing.smk"
@@ -42,6 +37,17 @@ STHELAR_SLIDE_IDS = [
     "tonsil_s0",
     "tonsil_s1"
 ]
+
+# Test configuration - single slide for fast testing
+STHELAR_TEST_SLIDE_IDS = [
+    "heart_s0"  # Small slide for quick testing
+]
+
+# Allow overriding slide list via config or command line
+if config.get("sthelar_test_mode", False):
+    SLIDE_IDS = STHELAR_TEST_SLIDE_IDS
+else:
+    SLIDE_IDS = STHELAR_SLIDE_IDS
 
 rule download_data:
     """
@@ -86,5 +92,13 @@ rule process_data:
 
 rule all:
     input:
-        expand(str(PROJECT_DIR / config["paths"]["full_dataset_multi"]), dataset="sthelar", i=STHELAR_SLIDE_IDS)
+        expand(str(PROJECT_DIR / config["paths"]["full_dataset_multi"]), dataset="sthelar", i=SLIDE_IDS)
     default_target: True
+
+rule test:
+    """
+    Test rule for efficient pipeline testing with a single slide.
+    Usage: snakemake --cores 4 --conda-frontend mamba -s src/datasets/sthelar/Snakefile test
+    """
+    input:
+        expand(str(PROJECT_DIR / config["paths"]["full_dataset_multi"]), dataset="sthelar", i=STHELAR_TEST_SLIDE_IDS)

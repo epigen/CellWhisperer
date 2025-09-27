@@ -267,56 +267,51 @@ def prepare_adata_for_uniprocessor(adata):
     return adata
 
 
-def main():
-    # Get parameters from snakemake
-    sample_id = snakemake.params.sample_id
-    cache_dir = Path(snakemake.params.sthelar_cache_dir)
-    
-    logger.info(f"Processing sample {sample_id}")
-    
-    # Paths to downloaded data
-    zarr_path = cache_dir / f"sdata_{sample_id}.zarr.zip"
-    images_zip_path = cache_dir / "images.zip"
-    
-    if not zarr_path.exists():
-        raise FileNotFoundError(f"Zarr file not found: {zarr_path}")
-    if not images_zip_path.exists():
-        raise FileNotFoundError(f"Images zip not found: {images_zip_path}")
-    
-    try:
-        # Load the SpatialData object
-        sdata = load_sthelar_slide(zarr_path)
-        
-        # Extract H&E patches for this slide
-        with tempfile.TemporaryDirectory() as temp_dir:
-            patches = extract_patches_from_images_zip(images_zip_path, sample_id, temp_dir)
-        
-        # Map cells to patches
-        cell_to_patch_mapping = map_cells_to_patches(sdata, patches)
-        
-        # Aggregate gene expression to patch level
-        patch_expressions, patch_cell_counts = aggregate_gene_expression_to_patches(
-            sdata, cell_to_patch_mapping
-        )
-        
-        # Create AnnData object
-        adata = create_adata_for_slide(
-            sdata, patches, patch_expressions, patch_cell_counts, sample_id
-        )
-        
-        # Prepare for UNIProcessor compatibility
-        adata = prepare_adata_for_uniprocessor(adata)
-        
-        # Save the processed data
-        logger.info(f"Saving processed data to {snakemake.output.full_data_file}")
-        adata.write_h5ad(snakemake.output.full_data_file)
-        
-        logger.info(f"Successfully processed sample {sample_id}")
-        
-    except Exception as e:
-        logger.error(f"Error processing sample {sample_id}: {e}")
-        raise
+# Get parameters from snakemake
+sample_id = snakemake.params.sample_id
+cache_dir = Path(snakemake.params.sthelar_cache_dir)
 
+logger.info(f"Processing sample {sample_id}")
 
-if __name__ == "__main__":
-    main()
+# Paths to downloaded data
+zarr_path = cache_dir / f"sdata_{sample_id}.zarr.zip"
+images_zip_path = cache_dir / "images.zip"
+
+if not zarr_path.exists():
+    raise FileNotFoundError(f"Zarr file not found: {zarr_path}")
+if not images_zip_path.exists():
+    raise FileNotFoundError(f"Images zip not found: {images_zip_path}")
+
+try:
+    # Load the SpatialData object
+    sdata = load_sthelar_slide(zarr_path)
+    
+    # Extract H&E patches for this slide
+    with tempfile.TemporaryDirectory() as temp_dir:
+        patches = extract_patches_from_images_zip(images_zip_path, sample_id, temp_dir)
+    
+    # Map cells to patches
+    cell_to_patch_mapping = map_cells_to_patches(sdata, patches)
+    
+    # Aggregate gene expression to patch level
+    patch_expressions, patch_cell_counts = aggregate_gene_expression_to_patches(
+        sdata, cell_to_patch_mapping
+    )
+    
+    # Create AnnData object
+    adata = create_adata_for_slide(
+        sdata, patches, patch_expressions, patch_cell_counts, sample_id
+    )
+    
+    # Prepare for UNIProcessor compatibility
+    adata = prepare_adata_for_uniprocessor(adata)
+    
+    # Save the processed data
+    logger.info(f"Saving processed data to {snakemake.output.full_data_file}")
+    adata.write_h5ad(snakemake.output.full_data_file)
+    
+    logger.info(f"Successfully processed sample {sample_id}")
+    
+except Exception as e:
+    logger.error(f"Error processing sample {sample_id}: {e}")
+    raise
