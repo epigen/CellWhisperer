@@ -282,36 +282,31 @@ if not zarr_path.exists():
 if not images_zip_path.exists():
     raise FileNotFoundError(f"Images zip not found: {images_zip_path}")
 
-try:
-    # Load the SpatialData object
-    sdata = load_sthelar_slide(zarr_path)
-    
-    # Extract H&E patches for this slide
-    with tempfile.TemporaryDirectory() as temp_dir:
-        patches = extract_patches_from_images_zip(images_zip_path, sample_id, temp_dir)
-    
-    # Map cells to patches
-    cell_to_patch_mapping = map_cells_to_patches(sdata, patches)
-    
-    # Aggregate gene expression to patch level
-    patch_expressions, patch_cell_counts = aggregate_gene_expression_to_patches(
-        sdata, cell_to_patch_mapping
-    )
-    
-    # Create AnnData object
-    adata = create_adata_for_slide(
-        sdata, patches, patch_expressions, patch_cell_counts, sample_id
-    )
-    
-    # Prepare for UNIProcessor compatibility
-    adata = prepare_adata_for_uniprocessor(adata)
-    
-    # Save the processed data
-    logger.info(f"Saving processed data to {snakemake.output.full_data_file}")
-    adata.write_h5ad(snakemake.output.full_data_file)
-    
-    logger.info(f"Successfully processed sample {sample_id}")
-    
-except Exception as e:
-    logger.error(f"Error processing sample {sample_id}: {e}")
-    raise
+# Load the SpatialData object
+sdata = load_sthelar_slide(zarr_path)
+
+# Extract H&E patches for this slide
+with tempfile.TemporaryDirectory() as temp_dir:
+    patches = extract_patches_from_images_zip(images_zip_path, sample_id, temp_dir)
+
+# Map cells to patches
+cell_to_patch_mapping = map_cells_to_patches(sdata, patches)
+
+# Aggregate gene expression to patch level
+patch_expressions, patch_cell_counts = aggregate_gene_expression_to_patches(
+    sdata, cell_to_patch_mapping
+)
+
+# Create AnnData object
+adata = create_adata_for_slide(
+    sdata, patches, patch_expressions, patch_cell_counts, sample_id
+)
+
+# Prepare for UNIProcessor compatibility
+adata = prepare_adata_for_uniprocessor(adata)
+
+# Save the processed data
+logger.info(f"Saving processed data to {snakemake.output.full_data_file}")
+adata.write_h5ad(snakemake.output.full_data_file)
+
+logger.info(f"Successfully processed sample {sample_id}")

@@ -43,12 +43,6 @@ STHELAR_TEST_SLIDE_IDS = [
     "heart_s0"  # Small slide for quick testing
 ]
 
-# Allow overriding slide list via config or command line
-if config.get("sthelar_test_mode", False):
-    SLIDE_IDS = STHELAR_TEST_SLIDE_IDS
-else:
-    SLIDE_IDS = STHELAR_SLIDE_IDS
-
 rule download_data:
     """
     Download individual STHELAR slide from S-BIAD2146 archive.
@@ -92,7 +86,7 @@ rule process_data:
 
 rule all:
     input:
-        expand(str(PROJECT_DIR / config["paths"]["full_dataset_multi"]), dataset="sthelar", i=SLIDE_IDS)
+        expand(str(PROJECT_DIR / config["paths"]["full_dataset_multi"]), dataset="sthelar", i=STHELAR_SLIDE_IDS)
     default_target: True
 
 rule test:
