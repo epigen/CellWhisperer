@@ -57,6 +57,7 @@ dependencies:
     - wandb==0.15.12
     - jsonargparse[signatures]==4.27.0
     - scib==1.1.4
+    - openpyxl==3.1.5
     - orbax==0.1.7
     - scvi-tools==0.20.3
     - cell-gears==0.0.2
