@@ -344,7 +344,8 @@ class UNIModel(PreTrainedModel):
         # Only load pretrained weights if not uni_small
         if config.model_type != "uni_small":
             model.model.load_state_dict(
-                torch.load(pretrained_model_name_or_path, map_location="cpu"), strict=True
+                torch.load(pretrained_model_name_or_path, map_location="cpu"),
+                strict=True,
             )
 
         return model

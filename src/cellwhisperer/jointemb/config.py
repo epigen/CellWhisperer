@@ -101,7 +101,7 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
                 depth=12,
                 num_heads=6,
                 embed_dim=384,
-                **image_config
+                **image_config,
             )
         else:
             raise ValueError(f"Unsupported image model type: {image_model_type}")
