@@ -622,15 +622,18 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             if "config" not in kwargs_image:
                 image_config = AutoConfig.from_pretrained(image_model_name_or_path)
                 kwargs_image["config"] = image_config
-            if kwargs_image["config"]["model_type"] == "uni2":
+            if kwargs_image["config"]["model_type"] in ["uni2", "uni_small"]:
                 from .uni_model import UNIConfig, UNIModel
 
                 kwargs_image["config"] = UNIConfig(**kwargs_image["config"])
-                image_model = UNIModel.from_pretrained(
-                    image_model_name_or_path + "/pytorch_model.bin",
-                    # *model_args,  # maybe
-                    **kwargs_image,
-                )
+                if kwargs_image["config"]["model_type"] == "uni2":
+                    image_model = UNIModel.from_pretrained(
+                        image_model_name_or_path + "/pytorch_model.bin",
+                        # *model_args,  # maybe
+                        **kwargs_image,
+                    )
+                else:  # uni_small
+                    image_model = UNIModel(kwargs_image["config"])
             else:
                 image_model = AutoModel.from_pretrained(
                     image_model_name_or_path, *model_args, **kwargs
