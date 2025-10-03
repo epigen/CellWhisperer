@@ -12,9 +12,6 @@ from cellwhisperer.config import get_path
 from tqdm.auto import tqdm
 import torch
 from .geneformer_model import GeneformerConfig, GeneformerModel
-from .scgpt_model import ScGPTConfig, ScGPTModel
-from .uce_model import UCEConfig, UCEModel
-from .uni_model import UNIConfig, UNIModel
 from .loss.discriminator import GlobalDiscriminatorDot
 
 from transformers.modeling_utils import PreTrainedModel
@@ -94,9 +91,15 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         if transcriptome_model is None:
             if isinstance(config.transcriptome_config, GeneformerConfig):
                 transcriptome_model = GeneformerModel(config.transcriptome_config)
-            elif isinstance(config.transcriptome_config, ScGPTConfig):
+
+            elif type(config.transcriptome_config).__name__ == "ScGPTConfig":
+                from .scgpt_model import ScGPTModel
+
                 transcriptome_model = ScGPTModel(config.transcriptome_config)
-            elif isinstance(config.transcriptome_config, UCEConfig):
+            elif type(config.transcriptome_config).__name__ == "UCEConfig":
+
+                from .uce_model import UCEModel
+
                 transcriptome_model = UCEModel(config.transcriptome_config)
             else:
                 raise NotImplementedError(
@@ -107,7 +110,9 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             text_model = AutoModel.from_config(self.config.text_config)
 
         if image_model is None:
-            if isinstance(config.image_config, UNIConfig):
+            if type(config.image_config).__name__ == "UNIConfig":
+                from .uni_model import UNIModel
+
                 image_model = UNIModel(config.image_config)
             else:
                 raise NotImplementedError(
@@ -560,6 +565,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                     **kwargs_transcriptome,
                 )
             elif kwargs_transcriptome["config"]["model_type"] == "scgpt":
+                from .scgpt_model import ScGPTConfig, ScGPTModel
+
                 kwargs_transcriptome["config"] = ScGPTConfig(
                     **kwargs_transcriptome["config"]
                 )
@@ -569,6 +576,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                     **kwargs_transcriptome,
                 )
             elif kwargs_transcriptome["config"]["model_type"] == "uce":
+                from .uce_model import UCEConfig, UCEModel
+
                 kwargs_transcriptome["config"] = UCEConfig(
                     **kwargs_transcriptome["config"]
                 )
@@ -614,6 +623,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                 image_config = AutoConfig.from_pretrained(image_model_name_or_path)
                 kwargs_image["config"] = image_config
             if kwargs_image["config"]["model_type"] == "uni2":
+                from .uni_model import UNIConfig, UNIModel
+
                 kwargs_image["config"] = UNIConfig(**kwargs_image["config"])
                 image_model = UNIModel.from_pretrained(
                     image_model_name_or_path + "/pytorch_model.bin",

@@ -11,6 +11,9 @@ import numpy as np
 import scanpy as sc
 import logging
 from hest import iter_hest
+import matplotlib.pyplot as plt
+from PIL import Image
+import random
 
 
 def prepare_adata_for_uniprocessor(st_data):
@@ -108,6 +111,36 @@ def prepare_adata_for_uniprocessor(st_data):
     return adata
 
 
+def crop_tile(image, x, y, size):
+    """Crops a tile from a PIL image."""
+    img_height, img_width = image.shape[:2]
+    x = max(0, min(x, img_width - size))
+    y = max(0, min(y, img_height - size))
+    tile = image[y : y + size, x : x + size]
+    return tile
+
+
+def generate_example_patches(adata, num_patches=3):
+    """Generate example patches from the dataset for QC reporting."""
+    image = adata.uns["20x_slide"]
+    spot_diameter = adata.uns.get("spot_diameter_fullres", 224)
+
+    # Sample random spots for patch generation
+    random.seed(42)
+    sample_indices = random.sample(
+        range(len(adata.obs)), min(num_patches, len(adata.obs))
+    )
+
+    patches = []
+    for idx in sample_indices:
+        x = int(adata.obs.iloc[idx]["x_pixel"])
+        y = int(adata.obs.iloc[idx]["y_pixel"])
+        patch = crop_tile(image, x, y, spot_diameter)
+        patches.append(patch)
+
+    return patches
+
+
 sample_id = snakemake.params.sample_id
 
 print(f"Processing sample {sample_id}")
@@ -120,6 +153,19 @@ for st_data in iter_hest(str(snakemake.params.hest_cache_dir), id_list=[sample_i
     # Add sample ID to uns for tracking
     adata.uns["sample_id"] = sample_id
     adata.uns["dataset"] = "hest1k"
+
+    # Generate example patches for report
+    logging.info(
+        f"Generating {len(snakemake.output.report_patches)} example patches for QC"
+    )
+    patches = generate_example_patches(adata, len(snakemake.output.report_patches))
+
+    for i, patch in enumerate(patches):
+        patch_image = Image.fromarray(patch.astype(np.uint8))
+        output_path = snakemake.output.report_patches[i]
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        patch_image.save(output_path)
+        logging.info(f"Saved example patch to {output_path}")
 
     # Save individual sample file (full_dataset_multi pattern)
     print(f"Saving processed data to {snakemake.output.full_data_file}")

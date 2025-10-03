@@ -11,7 +11,8 @@ from transformers.models.biogpt.modeling_biogpt import BioGptDecoderLayer
 from cellwhisperer.config import get_path, model_path_from_name, config
 from cellwhisperer.misc.utils import obj_signature
 from cellwhisperer.misc.debug import start_debugger
-from scgpt.model import FlashTransformerEncoderLayer
+
+# from scgpt.model import FlashTransformerEncoderLayer
 import torch
 from torch.nn import TransformerEncoderLayer
 from typing import Optional, List

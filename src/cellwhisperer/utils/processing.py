@@ -9,9 +9,6 @@ from cellwhisperer.jointemb.processing import TranscriptomeTextDualEncoderProces
 from transformers import AutoTokenizer
 from typing import Union, List
 from cellwhisperer.jointemb.model import TranscriptomeTextDualEncoderModel
-from cellwhisperer.jointemb.scgpt_model import ScGPTTranscriptomeProcessor
-from cellwhisperer.jointemb.geneformer_model import GeneformerTranscriptomeProcessor
-from cellwhisperer.jointemb.uce_model import UCETranscriptomeProcessor
 
 
 def adata_to_embeds(

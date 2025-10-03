@@ -26,9 +26,6 @@ from transformers import AutoTokenizer
 from transformers.processing_utils import ProcessorMixin
 from transformers.tokenization_utils_base import BatchEncoding
 from .geneformer_model import GeneformerTranscriptomeProcessor
-from .scgpt_model import ScGPTTranscriptomeProcessor
-from .uce_model import UCETranscriptomeProcessor
-from .uni_model import UNIProcessor
 
 
 class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
@@ -71,11 +68,15 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
                 **transcriptome_kwargs,
             )
         elif transcriptome_processor == "scgpt":
+            from .scgpt_model import ScGPTTranscriptomeProcessor
+
             transcriptome_processor = ScGPTTranscriptomeProcessor(
                 nproc=nproc,
                 **transcriptome_kwargs,
             )
         elif transcriptome_processor == "uce":
+            from .uce_model import UCETranscriptomeProcessor
+
             transcriptome_processor = UCETranscriptomeProcessor(
                 nproc=nproc,
                 **transcriptome_kwargs,
@@ -87,6 +88,8 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
             transcriptome_processor = transcriptome_processor
 
         if image_processor == "uni2":
+            from .uni_model import UNIProcessor
+
             image_processor = UNIProcessor(
                 **transcriptome_kwargs,
             )

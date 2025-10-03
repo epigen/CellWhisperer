@@ -51,7 +51,11 @@ rule process_data:
     input:
         download_flag=str(PROJECT_DIR / "resources" / "hest1k_cache" / "downloaded_{sample_id}.flag")
     output:
-        full_data_file=str(PROJECT_DIR / config["paths"]["full_dataset_multi"]).format(dataset="hest1k", i="{sample_id}")
+        full_data_file=str(PROJECT_DIR / config["paths"]["full_dataset_multi"]).format(dataset="hest1k", i="{sample_id}"),
+        report_patches=report(
+            [PROJECT_DIR / f"results/hest1k/{{sample_id}}/test_patch_{i}.png" for i in range(3)],
+            category="Quality Control"
+        )
     params:
         sample_id="{sample_id}",
         hest_cache_dir=str(PROJECT_DIR / "resources" / "hest1k_cache")

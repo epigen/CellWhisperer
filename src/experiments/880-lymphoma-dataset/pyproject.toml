@@ -1,0 +1,20 @@
+[project]
+name = "lymphoma-dataset"
+version = "0.1.0"
+description = "Lymphoma dataset processing"
+requires-python = ">=3.8"
+dependencies = [
+    "openslide-python",
+    "openslide-bin",
+    "Pillow",
+    "anndata",
+    "numpy",
+    "matplotlib",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]

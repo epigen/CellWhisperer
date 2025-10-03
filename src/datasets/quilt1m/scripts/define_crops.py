@@ -4,6 +4,15 @@ import numpy as np
 import random
 from tqdm import tqdm
 import anndata as ad
+import sys
+from PIL import Image
+import logging
+
+# Add src to path for config import
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
+from cellwhisperer.config import config
+
+logging.basicConfig(level=logging.INFO)
 
 # Load metadata
 df = pd.read_csv(snakemake.input.metadata_filtered)
@@ -29,9 +38,14 @@ for _, row in tqdm(df.iterrows(), total=len(df), desc="Creating h5ad files"):
         print(f"Image {image_path} is too small for crops, skipping.")
         continue
 
-    # Calculate center 50% region
+    # Get configuration for quilt1m
+    he_config_name = config["dataset_he_mapping"]["quilt1m"]  # "visium_resolution"
+    he_config = config["he_configs"][he_config_name]
+    crop_ratio = config.get("quilt1m_config", {}).get("crop_center_ratio", 0.5)
+
+    # Calculate center region based on config
     center_h, center_w = h // 2, w // 2
-    crop_region_h, crop_region_w = int(h * 0.5), int(w * 0.5)
+    crop_region_h, crop_region_w = int(h * crop_ratio), int(w * crop_ratio)
 
     # Ensure crop region is at least crop_size, but not larger than image
     crop_region_h = min(max(crop_region_h, snakemake.params.crop_size), h)
@@ -83,7 +97,8 @@ for _, row in tqdm(df.iterrows(), total=len(df), desc="Creating h5ad files"):
     adata.uns["slide_path"] = str(image_path)
     adata.uns["image_width"] = w
     adata.uns["image_height"] = h
-    adata.uns["patch_size"] = 14  # TODO what does this mean?
+    patch_size = he_config["patch_size_pixels"]  # 224
+    adata.uns["patch_size"] = patch_size  # Use config value
     adata.uns["spot_diameter_fullres"] = snakemake.params.crop_size
     adata.uns["dataset"] = "quilt1m"
     adata.uns["modality"] = "image_text"
@@ -94,3 +109,61 @@ for _, row in tqdm(df.iterrows(), total=len(df), desc="Creating h5ad files"):
     adata.write_h5ad(
         Path(snakemake.output.cropped_images) / f"full_data_{image_path.stem}.h5ad"
     )  # as per `full_dataset_multi` in config.yaml (could be passed as params)
+
+# Generate example patches for report
+logging.info(
+    f"Generating {len(snakemake.output.report_patches)} example patches for QC"
+)
+
+# Collect example patches from different images
+example_patches = []
+patch_count = 0
+
+for _, row in df.iterrows():
+    image_path = Path(snakemake.input.full_res_unpacked) / row["image_path"]
+
+    # Skip if we have enough patches or image doesn't exist
+    if patch_count >= len(snakemake.output.report_patches) or not image_path.exists():
+        continue
+
+    # Load image and extract one random patch
+    try:
+        image = Image.open(image_path)
+        w, h = image.size
+
+        # Get a random crop from center region
+        he_config_name = config["dataset_he_mapping"]["quilt1m"]  # "visium_resolution"
+        he_config = config["he_configs"][he_config_name]
+        crop_ratio = config.get("quilt1m_config", {}).get("crop_center_ratio", 0.5)
+
+        center_h, center_w = h // 2, w // 2
+        crop_region_h, crop_region_w = int(h * crop_ratio), int(w * crop_ratio)
+        crop_region_h = min(max(crop_region_h, snakemake.params.crop_size), h)
+        crop_region_w = min(max(crop_region_w, snakemake.params.crop_size), w)
+
+        start_y = center_h - crop_region_h // 2
+        end_y = center_h + crop_region_h // 2
+        start_x = center_w - crop_region_w // 2
+        end_x = center_w + crop_region_w // 2
+
+        max_y = end_y - snakemake.params.crop_size
+        max_x = end_x - snakemake.params.crop_size
+
+        if max_y >= start_y and max_x >= start_x:
+            random.seed(42 + patch_count)  # Different seed for each patch
+            y = random.randint(start_y, max_y)
+            x = random.randint(start_x, max_x)
+
+            patch = image.crop(
+                (x, y, x + snakemake.params.crop_size, y + snakemake.params.crop_size)
+            )
+
+            output_path = snakemake.output.report_patches[patch_count]
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            patch.save(output_path)
+            logging.info(f"Saved example patch to {output_path}")
+            patch_count += 1
+
+    except Exception as e:
+        logging.warning(f"Failed to extract patch from {image_path}: {e}")
+        continue

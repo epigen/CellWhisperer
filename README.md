@@ -96,6 +96,36 @@ docker run --gpus all -it \
   cellwhisperer bash
 ```
 
+3. [Optional] Install snakemake in your `base` environment
+
+```bash
+conda install -c bioconda -n base snakemake=7
+```
+
+Alternatively, `snakemake` is accessible within the `cellwhisperer` environment (`conda activate cellwhisperer`).
+
+4. You're good! Run the web app and analyze your datasets as described below
+
+Note: You might need to install gcc and gxx (e.g. v9.5) if you don't have them. If you install them with conda, it might lead to [issues with snakemake](https://github.com/conda/conda/issues/6945).
+
+### Pixi/nix/aider
+
+nix develop
+
+
+### Install within Docker
+
+You can also install and use CellWhisperer within docker, which includes all installation steps above (including cellxgene installation):
+
+```bash
+docker build -t cellwhisperer .
+docker run --gpus all -it --volume .:/opt/cellwhisperer cellwhisperer bash  # also works without GPUs
+conda activate cellwhisperer
+```
+
+Note that this container mounts the project directory as volume (`--volume .:/opt/cellwhisperer`) in the container (such that code modifications are visible in the container). Consider mounting also a `resources` and `results` directory to `/opt/cellwhisperer/resources` and `/opt/cellwhisperer/results`, as these are source and target directories when processing datasets (see section [Analyze your own datasets](#analyze) below).
+
+
 <a name="analyze"/>
 
 ## Analyze Your Own Datasets

@@ -15,8 +15,8 @@ import torch
 import torch
 from torchvision import transforms
 import timm
-from huggingface_hub import login, hf_hub_download
 
+from cellwhisperer.config import config
 
 logger = logging.getLogger(__name__)
 
@@ -28,13 +28,17 @@ MODEL_INPUT_SIZE = 2048
 class UNIProcessor(ProcessorMixin):
     attributes = []
 
-    def __init__(self, config=None, *args, **kwargs):
-        self.fallback_spot_diameter_fullres = 100
-        self.config = config or UNIConfig()  # Use default config if none provided
+    def __init__(self, config_param=None, *args, **kwargs):
+        # Get H&E configuration defaults (use visium_resolution as default)
+        he_config = config["he_configs"]["visium_resolution"]
+        self.fallback_spot_diameter_fullres = he_config.get("spot_diameter_um", 100)
+        patch_size = he_config["patch_size_pixels"]
+
+        self.config = config_param or UNIConfig()  # Use default config if none provided
         self.transform = transforms.Compose(
             [
-                transforms.Resize(224),
-                transforms.CenterCrop(224),
+                transforms.Resize(patch_size),
+                transforms.CenterCrop(patch_size),
                 transforms.ToTensor(),
                 transforms.Normalize(  # TODO understand better. not sure if this is too good tbh...
                     mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)

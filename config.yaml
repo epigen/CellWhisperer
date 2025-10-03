@@ -6,6 +6,7 @@ cluster_name: "sherlock"  # used within `config.smk` to define SLURM resources f
 
 paths:
   read_count_table: resources/{dataset}/read_count_table.h5ad
+  histo_image: resources/{dataset}/image.svs
   raw_annotations: resources/{dataset}/annotations.tsv
   structured_annotations: results/{dataset}/annotations.json
   processed_annotations: results/{dataset}/processed_annotations.json
@@ -58,6 +59,31 @@ paths:
 
 plot_style: "src/plot_style/main.style"
 
+# Spatial transcriptomics processing parameters
+he_configs:
+  visium_resolution:
+    target_pixel_size: 0.5        # μm/pixel (typical 20x magnification)
+    patch_size_pixels: 224        # Standard for all vision models
+    description: "Standard Visium-compatible resolution"
+
+  detailed_resolution:  # NOTE do this with 40x!
+    target_pixel_size: 0.25        # μm/pixel (higher magnification)
+    patch_size_pixels: 224        # Keep consistent for model compatibility
+    description: "High-resolution detailed analysis"
+
+  white_cutoff: 220
+
+# Dataset mapping to resolution configs
+dataset_he_mapping:
+  lymphoma_cosmx_small: visium_resolution
+  lymphoma_cosmx_small_detailed: detailed_resolution
+  hest1k: visium_resolution
+  quilt1m: visium_resolution
+
+# Additional dataset-specific parameters
+quilt1m_config:
+  crop_center_ratio: 0.5  # Use center 50% of image for cropping
+
 datasets:
   - immgen
   - human_disease
@@ -77,6 +103,8 @@ datasets:
   - hest1k
   - quilt1m
   - sthelar
+  - lymphoma_cosmx_small
+  - lymphoma_cosmx_small_detailed
 
 metadata_cols_per_zero_shot_validation_dataset:
   immgen:

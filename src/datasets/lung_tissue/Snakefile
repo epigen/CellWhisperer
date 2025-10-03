@@ -16,7 +16,11 @@ rule download_data:
     input:
         sample_files=[HTTP.remote(BASE_URL + file, keep_local=True) for file in SAMPLE_FILES]
     output:
-        dataset=PROJECT_DIR / "resources" / "lung_tissue" / "read_count_table.h5ad"
+        dataset=PROJECT_DIR / "resources" / "lung_tissue" / "read_count_table.h5ad",
+        report_patches=report(
+            [PROJECT_DIR / f"results/lung_tissue/test_patch_{i}.png" for i in range(3)],
+            category="Quality Control"
+        )
     params:
         sample_files=SAMPLE_FILES
     conda:

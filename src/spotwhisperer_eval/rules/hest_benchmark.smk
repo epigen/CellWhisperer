@@ -52,7 +52,9 @@ rule convert_hest_to_spotwhisperer:
     conda:
         "cellwhisperer"
     params:
-        multi_folder=lambda wildcards, output: Path(output.converted_dataset).parent / "h5ads"
+        multi_folder=lambda wildcards, output: Path(output.converted_dataset).parent / "h5ads",
+    # Get H&E configuration for HEST datasets
+    patch_size_pixels = config["he_configs"][config["dataset_he_mapping"]["hest1k"]]["patch_size_pixels"]
     resources:
         mem_mb=100000,
         slurm="cpus-per-task=4",

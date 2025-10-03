@@ -172,13 +172,13 @@ def convert_hest_sample_to_spotwhisperer(sample_row, dataset_bench_path, output_
 
     # Add required uns fields for SpotWhisperer
     new_adata.uns["20x_slide"] = reconstructed_image
-    new_adata.uns["spot_diameter_fullres"] = 224  # HEST patch size
+    new_adata.uns["spot_diameter_fullres"] = snakemake.params["patch_size_pixels"]
     new_adata.uns["dataset"] = "hest_benchmark"
     new_adata.uns["modality"] = "spatial_transcriptomics"
     new_adata.uns["sample_id"] = sample_id
     new_adata.uns["image_width"] = reconstructed_image.shape[1]
     new_adata.uns["image_height"] = reconstructed_image.shape[0]
-    new_adata.uns["patch_size"] = 224  # Standard patch size for HEST
+    new_adata.uns["patch_size"] = snakemake.params["patch_size_pixels"]
 
     # Add spatial information (required by some downstream tools)
     new_adata.obsm["spatial"] = adjusted_coords
@@ -275,7 +275,7 @@ metadata = {
     "modality": "spatial_transcriptomics",
     "multi_sample_fns": df["relative_path"].tolist(),
     "multi_sample_ids": df["sample_id"].tolist(),
-    "patch_size": 224,
+    "patch_size": snakemake.params["patch_size_pixels"],
     "converted_from": "hest_benchmark",
 }
 adata = anndata.AnnData()

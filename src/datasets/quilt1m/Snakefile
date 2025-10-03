@@ -70,6 +70,10 @@ rule define_crops:
         metadata_filtered=rules.filter_metadata.output.metadata_filtered,
     output:
         cropped_images=directory(PROJECT_DIR / "results" / "quilt1m" / "h5ads"),  # TODO should be scratch, but this way it conforms with `full_dataset_multi`
+        report_patches=report(
+            [PROJECT_DIR / f"results/quilt1m/test_patch_{i}.png" for i in range(5)],
+            category="Quality Control"
+        )
     params:
         crop_size=224,  # Example crop size, adjust as needed
         num_crops_per_image=10  # Randomly sampled from within the 50% center piece of the image

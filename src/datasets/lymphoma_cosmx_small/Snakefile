@@ -1,0 +1,56 @@
+# This pipeline processes lymphoma_cosmx 1K data variants. Provided by Warren
+# It takes a high-resolution spatial transcriptomics AnnData object and an SVS image,
+# and generates a gridded AnnData object with configurable spot sizes.
+# Supports both lymphoma_cosmx_small (Visium-sized) and lymphoma_cosmx_small_detailed (high-res). But only detailed makes sense actually
+
+import subprocess
+from pathlib import Path
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+include: PROJECT_DIR / "src/shared/config.smk"
+
+# Data is already provided in resources/lymphoma_cosmx_small/. Downloaded from $OAK (CosMx_1K_CART_1__61360.svs, ALL.h5ad) to read_count_table.h5ad
+
+
+rule process_data:
+    """
+    Process lymphoma CosMx data, handling 40x magnification by scaling down to 20x.
+
+    NOTE: may filter for minimal amount of reads per cell and based on metadata
+
+    """
+    input:
+        read_count_table=PROJECT_DIR / "resources/lymphoma_cosmx_small/read_count_table.h5ad",
+        image=PROJECT_DIR / "resources/lymphoma_cosmx_small/CosMx_1K_CART_1__61360.svs",
+    output:
+        adata=PROJECT_DIR / config["paths"]["full_dataset"],
+        image=PROJECT_DIR / config["paths"]["histo_image"],
+        report_patches=report(
+            [PROJECT_DIR / f"results/{{dataset}}/test_patch_{i}.png" for i in range(3)],
+            category="Quality Control"
+        ),
+        qc_tile_plot=report(
+            PROJECT_DIR / "results/{dataset}/qc_tile_plot.png",
+            category="Quality Control"
+        ),
+
+    conda:
+        "cellwhisperer"
+    params:  # determined through src/experiments/880-lymphoma-dataset
+        spot_diameter_pixels=lambda wildcards: config["he_configs"][config["dataset_he_mapping"][wildcards.dataset]]["patch_size_pixels"],
+        white_cutoff=lambda wildcards: config["he_configs"]["white_cutoff"],
+        x_offset=0.842708,
+        y_offset=1.235417,
+        scale_factor=0.79488464508,
+        filter_good_quality=False,  # Filter for good_quality cells as annotated by pathologists
+        min_num_cells=5,  # filter out patches with fewer reads
+    script:
+        "scripts/process_data.py"
+
+rule all:
+    input:
+        expand(rules.process_data.output.adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed"])
+    default_target: True
+
