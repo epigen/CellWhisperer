@@ -14,12 +14,12 @@ dependencies:
   - ipdb=0.13.13
   - ipykernel=6.25.2
   - transformers=4.34.1
-  - pytorch=2.1.0
+  - pytorch=2.1.0  # TODO 2.7.*
   - safetensors=0.5.2 # 0.6.1 fails with "AttributeError: module 'torch' has no attribute 'uint64'"
   - lightning=2.1.0
   - scanpy=1.9.5
   - scipy=1.12.0  # 1.13 fails with "Dataset.astype() got an unexpected keyword argument 'copy'" in `scipy/sparse/_compressed.py`, line 762, in `_minor_index_fancy`
-  - torchvision=0.16.0
+  - torchvision=0.16.0  # TODO 0.22.0
   - torchaudio=2.1.0
   # - anaconda::utf8proc=2.6.1  # disabled due to `anaconda` dependency. Re-enable in case of errors
   - pytorch-cuda=12.1
@@ -59,7 +59,7 @@ dependencies:
     - plotly==5.20.0
     - kaleido==0.2.1
     - networkx==2.6.3
-    - wandb==0.15.12
+    - wandb==0.15.12  # wandb==0.22.1
     - jsonargparse[signatures]==4.27.0
     - scib==1.1.4
     # - orbax==0.1.7
