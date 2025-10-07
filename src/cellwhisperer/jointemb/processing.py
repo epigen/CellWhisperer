@@ -87,7 +87,7 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
             ), "You have to specify a transcriptome processor."
             transcriptome_processor = transcriptome_processor
 
-        if image_processor == "uni2":
+        if image_processor.startswith("uni"):
             from .uni_model import UNIProcessor
 
             image_processor = UNIProcessor(

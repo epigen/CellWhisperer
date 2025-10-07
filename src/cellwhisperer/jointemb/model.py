@@ -118,6 +118,9 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                 raise NotImplementedError(
                     "Only uni is supported for now as an image model"
                 )
+        self.config.image_config.embed_dim = (
+            image_model.embed_dim
+        )  # Determined within uni_model.py depending on `model_name`
 
         self.prepare_models(transcriptome_model, text_model, image_model)
         # make sure that the individual model's config refers to the shared config
@@ -132,8 +135,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             self.transcriptome_embed_dim = config.transcriptome_config.output_dim
         self.text_embed_dim = config.text_config.hidden_size
         # Multi-scaling: UNI embeddings are concatenated from multiple scales
-        self.image_embed_dim = config.image_config.embed_dim * len(
-            config.image_config.scale_factors
+        self.image_embed_dim = self.config.image_config.embed_dim * len(
+            self.config.image_config.scale_factors
         )
         self.projection_dim = config.projection_dim
 
@@ -622,11 +625,11 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             if "config" not in kwargs_image:
                 image_config = AutoConfig.from_pretrained(image_model_name_or_path)
                 kwargs_image["config"] = image_config
-            if kwargs_image["config"]["model_type"] in ["uni2", "uni_small"]:
+            if kwargs_image["config"]["model_type"].startswith("uni"):
                 from .uni_model import UNIConfig, UNIModel
 
                 kwargs_image["config"] = UNIConfig(**kwargs_image["config"])
-                if kwargs_image["config"]["model_type"] == "uni2":
+                if kwargs_image["config"].model_type == "uni2":
                     image_model = UNIModel.from_pretrained(
                         image_model_name_or_path + "/pytorch_model.bin",
                         # *model_args,  # maybe

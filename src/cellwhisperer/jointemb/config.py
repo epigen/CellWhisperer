@@ -97,10 +97,7 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
             self.image_config = UNIConfig(**image_config)
         elif image_model_type == "uni_small":
             self.image_config = UNIConfig(
-                model_name="vit_small_patch14_224",
-                depth=12,
-                num_heads=6,
-                embed_dim=384,
+                model_name="vit_small_patch16_224",  # timm/vit_small_patch16_224.dino
                 **image_config,
             )
         else:

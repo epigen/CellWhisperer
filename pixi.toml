@@ -2,7 +2,7 @@
 authors = ["Moritz Schaefer <mail@moritzs.de>"]
 channels = ["conda-forge", "pytorch", "bioconda", "nodefaults"]
 name = "cellwhisperer-aarch64"
-platforms = ["linux-aarch64" "linux-64"]
+platforms = ["linux-aarch64", "linux-64"]
 version = "0.1.0"
 
 
@@ -15,7 +15,8 @@ langchain = "0.0.314.*"
 ipdb = "0.13.13.*"
 ipykernel = "6.25.2.*"
 transformers = "4.34.1.*"
-pytorch = "2.1.0.*"
+pytorch = "2.7.*"
+torchvision = "0.22.*"  # Add this line
 safetensors = "0.5.2.*"
 lightning = "2.1.0.*"
 scanpy = "1.9.5.*"
@@ -38,7 +39,7 @@ biopython = "1.83.*"
 httpcore = "1.0.7.*"
 
 [pypi-dependencies]
-torchvision = "==0.16.0"
+# torchvision = "==0.*"
 # torchaudio = "==2.1.0"
 louvain = "*"
 timm = "==0.9.8"
@@ -54,7 +55,7 @@ tdigest = "==0.5.2.2"
 plotly = "==5.20.0"
 kaleido = "==0.2.1"
 # networkx = "==2.6.3"
-wandb = "==0.15.12"
+wandb = "==0.*"
 jsonargparse = { version = "==4.27.0", extras = ["signatures"] }
 orbax = "==0.1.7"
 scvi-tools = ">=1.0.0"

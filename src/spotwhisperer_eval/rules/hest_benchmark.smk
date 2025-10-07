@@ -43,6 +43,8 @@ rule convert_hest_to_spotwhisperer:
     This creates H5AD files with embedded images that can be used with
     the standard `cellwhisperer test` command instead of custom evaluation scripts.
 
+    TODO this yields empty h5ad files :/
+
     """
     input:
         dataset_dir=HEST_DATA_ROOT / "{dataset}"
@@ -54,7 +56,7 @@ rule convert_hest_to_spotwhisperer:
     params:
         multi_folder=lambda wildcards, output: Path(output.converted_dataset).parent / "h5ads",
     # Get H&E configuration for HEST datasets
-    patch_size_pixels = config["he_configs"][config["dataset_he_mapping"]["hest1k"]]["patch_size_pixels"]
+        patch_size_pixels = config["he_configs"][config["dataset_he_mapping"]["hest1k"]]["patch_size_pixels"]
     resources:
         mem_mb=100000,
         slurm="cpus-per-task=4",

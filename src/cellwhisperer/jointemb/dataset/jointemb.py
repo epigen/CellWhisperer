@@ -574,7 +574,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
         valid_datapoints_filter = n_genes_filter
 
-        if self.image_processor == "uni2" and "patches" in inputs:
+        if self.image_processor.startswith("uni") and "patches" in inputs:
             # Check if the 1.0 scale patch (original resolution) is all zeros
             # Find the index of 1.0 in scale_factors, default to index 1 if not found
             try:
@@ -741,7 +741,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
     def _load_processed_dataset_memory(self, dataset_name):
         """Original memory-based loading - aggregate and return"""
         _, processed_paths, _ = self.get_paths(dataset_name)
-        results = [torch.load(p) for p in processed_paths]
+        results = [torch.load(p, weights_only=False) for p in processed_paths]
 
         if len(results[0][1]) > 0:
             raise NotImplementedError("Currently, no 'replicates' are supported")

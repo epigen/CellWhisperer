@@ -266,12 +266,13 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
     def setup(self, stage=None):
         # We do this here because during __init__ self.trainer is not yet available
-        self.validation_functions = initialize_validation_functions(
-            batch_size=self.val_batch_size,
-            transcriptome_model_type=self.model.transcriptome_model.config.model_type,
-            text_model_type=self.model.text_model.config.model_type,
-            image_model_type=self.model.image_model.config.model_type,
-        )
+        if not self.trainer.fast_dev_run:
+            self.validation_functions = initialize_validation_functions(
+                batch_size=self.val_batch_size,
+                transcriptome_model_type=self.model.transcriptome_model.config.model_type,
+                text_model_type=self.model.text_model.config.model_type,
+                image_model_type=self.model.image_model.config.model_type,
+            )
         if stage == "fit":
             if isinstance(self.frozen_warmup, float):
                 self.frozen_warmup_steps = int(

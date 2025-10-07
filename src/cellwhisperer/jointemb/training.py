@@ -185,9 +185,15 @@ class CellWhispererCLI(LightningCLI):
             if self.model.model.config.locking_mode[2] == "u":
                 image_model_path = None
             else:
-                image_model_path = model_path_from_name(
-                    self.model.model.image_model.config.model_type
-                )
+                if (
+                    self.model.model.image_model.config.model_name
+                    != "vit_small_patch16_224"
+                ):  # would be nicer to check for model_type
+                    image_model_path = None
+                else:
+                    image_model_path = model_path_from_name(
+                        self.model.model.image_model.config.model_type
+                    )
 
             if (
                 self.model.model.config.locking_mode[0] != "L"

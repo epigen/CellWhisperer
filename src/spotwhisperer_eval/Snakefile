@@ -16,6 +16,7 @@ Each trained model is evaluated using:
 """
 
 import itertools
+import glob
 
 # Include shared configuration and rules
 include: "../shared/config.smk"
@@ -349,21 +350,67 @@ rule create_retrieval_plots:
     notebook:
         "notebooks/create_retrieval_plots.py.ipynb"
 
-rule retrieval_per_class_analysis:
+def samples_for_dataset(dataset_name):
     """
-    Generate per-class analysis comparing trimodal vs bimodal models
-    for retrieval tasks using individual CLIP scores
+    For full_dataset_multi, we need to list the directory containing those files and read out the sample names.
+    Returns list of sample indices (i values) for datasets that use full_dataset_multi pattern.
+    """
+    pattern_path = PROJECT_DIR / config["paths"]["full_dataset_multi"].format(dataset=dataset_name, i="*")
+    matching_files = glob.glob(str(pattern_path))
+
+    sample_indices = []
+    for file_path in matching_files:
+        filename = Path(file_path).stem  # removes .h5ad
+        if filename.startswith("full_data_"):
+            # Extract the {i} part after "full_data_"
+            i_value = filename[len("full_data_"):]
+            sample_indices.append(i_value)
+
+    if len(sample_indices) == 0:
+        import ipdb; ipdb.set_trace()
+
+        raise ValueError(f"No file found for {dataset_name}")
+    return sorted(sample_indices)
+
+rule extract_sample_metadata:
+    """
+    Extract sample-level metadata (obs) from retrieval datasets
     """
     input:
-        # Reference individual CLIP scores from spotwhisperer_test rule outputs
-        model_results=lambda wildcards: [
-            rules.spotwhisperer_test.output.individual_clip_scores.format(
-                dataset_combo=combo,
-                test_dataset=wildcards.dataset
-            )
-            for combo in [MODEL_MAPPINGS[wildcards.dataset][model_type] for model_type in ["trimodal", "bimodal_matching"]]
-        ],
-        # test_dataset=lambda wildcards: [PROJECT_DIR / config["paths"]["full_dataset"].format(dataset=dataset) for dataset in wildcards.dataset.split("__")]
+        dataset_files=lambda wildcards: [
+            PROJECT_DIR / config["paths"]["full_dataset_multi"].format(dataset=component, i=i)
+            for component in wildcards.dataset.split("__")
+            if component in ["hest1k", "quilt1m"]
+            for i in samples_for_dataset(component)
+        ] + [
+            PROJECT_DIR / config["paths"]["full_dataset"].format(dataset=component)
+            for component in wildcards.dataset.split("__")
+            if component not in ["hest1k", "quilt1m"]
+        ]
+    output:
+        metadata=report(BENCHMARKS_DIR / "sample_metadata" / "{dataset}" / "sample_metadata.csv", category="per_class_analysis", subcategory=lambda wildcards: DATASET_PAIR_MAPPING[wildcards.dataset], labels={"Analysis": "Sample-level metadata", "Format": "csv"}),
+    params:
+        project_dir=PROJECT_DIR,
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=50000,
+        slurm="cpus-per-task=4"
+    script:
+        "scripts/extract_sample_metadata.py"
+
+rule retrieval_per_class_analysis:
+    """
+    Generate per-class analysis for bimodal_bridge model
+    using individual CLIP scores
+
+    This mostly copies the scores over into the snakemake report
+    """
+    input:
+        model_results=lambda wildcards: rules.spotwhisperer_test.output.individual_clip_scores.format(
+            dataset_combo=MODEL_MAPPINGS[wildcards.dataset]["bimodal_bridge"],
+            test_dataset=wildcards.dataset
+        )
     output:
         analysis=report(BENCHMARKS_DIR / "retrieval_per_class" / "{dataset}" / "per_class_analysis.csv", category="per_class_analysis", subcategory=lambda wildcards: DATASET_PAIR_MAPPING[wildcards.dataset], labels={"Analysis": "Retrieval per class", "Format": "csv"}),
         plot=report(BENCHMARKS_DIR / "retrieval_per_class" / "{dataset}" / "per_class_analysis.pdf", category="per_class_analysis", subcategory=lambda wildcards: DATASET_PAIR_MAPPING[wildcards.dataset], labels={"Analysis": "Retrieval per class", "Format": "plot"}),
@@ -402,6 +449,13 @@ rule all:
         # Per-class comparison for CellWhisperer benchmark
         expand(
             rules.cellwhisperer_per_class_analysis.output.analysis,
+            allow_missing=True
+        ),
+
+        # Sample metadata extraction
+        expand(
+            rules.extract_sample_metadata.output.metadata,
+            dataset=[dataset for base_dataset in BASE_DATASETS for dataset in base_dataset.split("__")],
             allow_missing=True
         ),
 

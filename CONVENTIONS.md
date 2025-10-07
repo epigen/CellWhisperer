@@ -5,14 +5,13 @@
 - All commands should be executed within the pixi environment
 
 ## Command Execution
-- Always use `pixi run --no-progress` prefix when running Python scripts or other commands
-- Examples:
-  - `pixi run python script.py` instead of `python script.py`
-  - `cd src/datasets/<name> && pixi run snakemake`
-  - `pixi run pytest`
-
+- Prepend the launcher command `nix develop -c pixi run --no-progress` to anything you wanna run. E.g. for running `python`, run `nix develop -c pixi run --no-progress python `; if you need to `cd` somewhere do `cd` first, e.g. `cd src/datasets/<name> && nix develop -c pixi run --no-progress snakemake` for running `snakemake` in a specific directory.
 
 # Coding Conventions
+
+## General
+
+- Try to make concise and smart contributions that leverage the existing code base, rather than writing a lot of new/additional code.
 
 ## Snakemake
 

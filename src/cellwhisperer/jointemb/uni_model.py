@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import anndata
 
+import openslide
 from tqdm import tqdm
 from transformers import PreTrainedModel, PretrainedConfig
 from transformers.modeling_outputs import BaseModelOutputWithPooling
@@ -10,11 +11,10 @@ from typing import Dict, Any, Optional, Tuple, Union
 import numpy as np
 from PIL import Image
 import logging
-import timm
-import torch
 import torch
 from torchvision import transforms
 import timm
+import os
 
 from cellwhisperer.config import config
 
@@ -80,12 +80,17 @@ class UNIProcessor(ProcessorMixin):
             #     "quilt1m_lowres", "quilt1m/fullres"
             # )  # TODO drop
             try:
-                image = Image.open(adata.uns["image_path"]).convert("RGB")
+                image_path = adata.uns["image_path"]
+                # Check file extension to determine how to load
+                _, ext = os.path.splitext(image_path.lower())
+                if ext in [".svs"]:
+                    image = openslide.OpenSlide(image_path)
+                else:
+                    image = Image.open(image_path).convert("RGB")
             except FileNotFoundError as e:
                 raise ValueError(
                     "Image path not available. Perhaps you need to run: `snakemake -R unpack_data` in src/datasets/quilt1m"
                 )
-            image = np.array(image)
 
         X = []
         # Use scale factors from config
@@ -153,7 +158,7 @@ class UNIProcessor(ProcessorMixin):
 
     def _crop_tile(
         self,
-        image: np.ndarray,
+        image: Union[Image.Image, openslide.OpenSlide],
         x_pixel,
         y_pixel,
         cell_diameter_pixels,
@@ -163,7 +168,13 @@ class UNIProcessor(ProcessorMixin):
         x = x_pixel - int(scaled_diameter // 2)
         y = y_pixel - int(scaled_diameter // 2)
 
-        img_h, img_w = image.shape[:2]
+        # Handle OpenSlide objects (SVS files)
+        if isinstance(image, openslide.OpenSlide):
+            img_w, img_h = image.dimensions
+        elif isinstance(image, Image.Image):
+            img_h, img_w = image.size[1], image.size[0]
+        else:
+            raise ValueError(f"Unsupported image type: {type(image)}")
 
         if scale_factor != 1.0:
             # For non-1.0 scale factors, move the crop to stay within image bounds
@@ -188,7 +199,16 @@ class UNIProcessor(ProcessorMixin):
             x_end = min(img_w, x + scaled_diameter)
             y_end = min(img_h, y + scaled_diameter)
 
-            cell = image[y_start:y_end, x_start:x_end]
+            if isinstance(image, openslide.OpenSlide):
+                # Read region directly from OpenSlide
+                region_width = x_end - x_start
+                region_height = y_end - y_start
+                region = image.read_region(
+                    (x_start, y_start), 0, (region_width, region_height)
+                )
+                cell = np.array(region.convert("RGB"))
+            elif isinstance(image, Image.Image):
+                cell = np.array(image)[y_start:y_end, x_start:x_end]
 
             # If the crop is still smaller than expected, return None to indicate zero tensor needed
             actual_h, actual_w = cell.shape[:2]
@@ -206,7 +226,13 @@ class UNIProcessor(ProcessorMixin):
                 raise ValueError("Patch (scale factor=1.0) is out of image bounds")
             else:
                 # Crop the image (patch is fully within bounds)
-                cell = image[y_start:y_end, x_start:x_end]
+                if isinstance(image, openslide.OpenSlide):
+                    region = image.read_region(
+                        (x_start, y_start), 0, (scaled_diameter, scaled_diameter)
+                    )
+                    cell = np.array(region.convert("RGB"))
+                elif isinstance(image, Image.Image):
+                    cell = np.array(image)[y_start:y_end, x_start:x_end]
 
         return cell[:, :, :3]
 
@@ -217,17 +243,6 @@ class UNIConfig(PretrainedConfig):
     def __init__(
         self,
         model_name="vit_giant_patch14_224",
-        img_size=224,
-        patch_size=14,
-        depth=24,
-        num_heads=24,
-        init_values=1e-5,
-        embed_dim=1536,
-        mlp_ratio=2.66667 * 2,
-        num_classes=0,
-        no_embed_class=True,
-        reg_tokens=8,
-        dynamic_img_size=True,
         scale_factors=[
             1.0,
         ],  # quilt1m and hest1k data was computed with 0.6, 1.0, 4.0
@@ -235,18 +250,8 @@ class UNIConfig(PretrainedConfig):
     ):
         super().__init__(**kwargs)
         self.model_name = model_name
-        self.img_size = img_size
-        self.patch_size = patch_size
-        self.depth = depth
-        self.num_heads = num_heads
-        self.init_values = init_values
-        self.embed_dim = embed_dim
-        self.mlp_ratio = mlp_ratio
-        self.num_classes = num_classes
-        self.no_embed_class = no_embed_class
-        self.reg_tokens = reg_tokens
-        self.dynamic_img_size = dynamic_img_size
         self.scale_factors = scale_factors
+        self.embed_dim = None
 
         # Ensure one of the scale factors is 1.0
         assert 1.0 in scale_factors, "One of the scale factors must be 1.0"
@@ -266,20 +271,22 @@ class UNIModel(PreTrainedModel):
 
         self.model = timm.create_model(
             config.model_name,
-            img_size=config.img_size,
-            patch_size=config.patch_size,
-            depth=config.depth,
-            num_heads=config.num_heads,
-            init_values=config.init_values,
-            embed_dim=config.embed_dim,
-            mlp_ratio=config.mlp_ratio,
-            num_classes=config.num_classes,
-            no_embed_class=config.no_embed_class,
+            num_classes=0,
+            no_embed_class=True,
+            dynamic_img_size=True,
+            depth=24 if config.model_name == "vit_giant_patch14_224" else None,
+            num_heads=24 if config.model_name == "vit_giant_patch14_224" else None,
+            init_values=1e-5,
+            embed_dim=1536 if config.model_name == "vit_giant_patch14_224" else None,
+            mlp_ratio=(
+                2.66667 * 2 if config.model_name == "vit_giant_patch14_224" else None
+            ),
             mlp_layer=timm.layers.SwiGLUPacked,
             act_layer=torch.nn.SiLU,
-            reg_tokens=config.reg_tokens,
-            dynamic_img_size=config.dynamic_img_size,
         )
+
+        # Store the embedding dimension from the model
+        self.embed_dim = self.model.num_features
 
         self.post_init()
 
@@ -306,7 +313,9 @@ class UNIModel(PreTrainedModel):
             scale_patches = patches[:, scale_idx, :, :, :]
 
             # Process through UNI model
-            scale_outputs = self.model(scale_patches)
+            scale_outputs = self.model(
+                scale_patches
+            )  # TODO check for the giant model! Does hidden_features work there?
             scale_embeddings.append(scale_outputs)
 
         # Concatenate embeddings from all scales
@@ -342,7 +351,7 @@ class UNIModel(PreTrainedModel):
         model = cls(config, *args, **kwargs)
 
         # Only load pretrained weights if not uni_small
-        if config.model_type != "uni_small":
+        if config.model_name != "vit_small_patch16_224":
             model.model.load_state_dict(
                 torch.load(pretrained_model_name_or_path, map_location="cpu"),
                 strict=True,
