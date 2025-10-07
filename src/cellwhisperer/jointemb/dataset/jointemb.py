@@ -746,6 +746,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         if len(results[0][1]) > 0:
             raise NotImplementedError("Currently, no 'replicates' are supported")
 
+        # TODO this is not reflected in _load_disk_datasets! How to DRY?
         if "expression_token_lengths" in results[0][0]:
             # pad the expression tokens to the maximum length
             max_expression_length = (
