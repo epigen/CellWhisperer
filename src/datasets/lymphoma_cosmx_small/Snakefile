@@ -50,8 +50,27 @@ rule process_data:
     script:
         "scripts/process_data.py"
 
+rule plot_transcriptome_umap:
+    """
+    Generate UMAP plot of aggregated transcriptomes to assess biological signal preservation
+    after patch-level aggregation.
+    """
+    input:
+        adata=rules.process_data.output.adata
+    output:
+        umap_plot=report(
+            PROJECT_DIR / "results/{dataset}/transcriptome_umap.png",
+            category="Quality Control",
+            labels={"Analysis": "Transcriptome UMAP", "Format": "plot"}
+        )
+    conda:
+        "cellwhisperer"
+    script:
+        "scripts/plot_transcriptome_umap.py"
+
 rule all:
     input:
-        expand(rules.process_data.output.adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed"])
+        expand(rules.process_data.output.adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed"]),
+        expand(rules.plot_transcriptome_umap.output.umap_plot, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed"])
     default_target: True
 
