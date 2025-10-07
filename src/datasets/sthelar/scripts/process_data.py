@@ -250,6 +250,7 @@ def create_adata_for_slide(
     # Add sample metadata
     adata.uns["sample_id"] = sample_id
     adata.uns["dataset"] = "sthelar"
+    adata.uns["pixel_size"] = 0.25
 
     return adata
 
