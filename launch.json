@@ -64,6 +64,16 @@
             "justMyCode": false,
         },
         {
+            "name": "DAP debugging (localhost)",
+            "type": "python",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5681
+            },
+            "justMyCode": false
+        },
+        {
             "name": "Remote DAP debugging (meduni)",
             "type": "python",
             "request": "attach",

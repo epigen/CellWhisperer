@@ -118,9 +118,6 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                 raise NotImplementedError(
                     "Only uni is supported for now as an image model"
                 )
-        self.config.image_config.embed_dim = (
-            image_model.embed_dim
-        )  # Determined within uni_model.py depending on `model_name`
 
         self.prepare_models(transcriptome_model, text_model, image_model)
         # make sure that the individual model's config refers to the shared config

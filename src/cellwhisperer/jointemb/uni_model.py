@@ -74,7 +74,7 @@ class UNIProcessor(ProcessorMixin):
                 "Flipping x and y pixel coordinates (because I assume it's the lung dataset)"
             )
         try:
-            image = adata.uns["20x_slide"]
+            image = adata.uns["he_slide"]
         except KeyError:
             # adata.uns["image_path"] = adata.uns["image_path"].replace(
             #     "quilt1m_lowres", "quilt1m/fullres"
@@ -251,7 +251,7 @@ class UNIConfig(PretrainedConfig):
         super().__init__(**kwargs)
         self.model_name = model_name
         self.scale_factors = scale_factors
-        self.embed_dim = None
+        self.embed_dim = 1536 if model_name == "vit_giant_patch14_224" else 384
 
         # Ensure one of the scale factors is 1.0
         assert 1.0 in scale_factors, "One of the scale factors must be 1.0"
@@ -274,10 +274,11 @@ class UNIModel(PreTrainedModel):
             num_classes=0,
             no_embed_class=True,
             dynamic_img_size=True,
+            reg_tokens=8,
             depth=24 if config.model_name == "vit_giant_patch14_224" else None,
             num_heads=24 if config.model_name == "vit_giant_patch14_224" else None,
             init_values=1e-5,
-            embed_dim=1536 if config.model_name == "vit_giant_patch14_224" else None,
+            embed_dim=config.embed_dim,
             mlp_ratio=(
                 2.66667 * 2 if config.model_name == "vit_giant_patch14_224" else None
             ),
@@ -286,7 +287,6 @@ class UNIModel(PreTrainedModel):
         )
 
         # Store the embedding dimension from the model
-        self.embed_dim = self.model.num_features
 
         self.post_init()
 

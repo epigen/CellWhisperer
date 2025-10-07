@@ -9,6 +9,8 @@ import subprocess
 import tempfile
 import time
 
+raise DeprecationWarning("https://github.com/zinagoodlab/cosmx_he_alignment")
+
 LEVEL_INDEX = 1  # Level 1 corresponds to the second scale of the svs (0-based indexing)
 svs_file = "/home/moritz/code/cellwhisperer/resources/lymphoma_cosmx_small/image.svs"
 h5ad_file = "/home/moritz/code/cellwhisperer/resources/lymphoma_cosmx_small/read_count_table.h5ad"

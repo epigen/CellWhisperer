@@ -133,7 +133,8 @@ class FrozenCachedModel(nn.Module):
 
         logger.info(f"Saving cache for model {self.model_hash}")
         # make sure the directory exists
-        self.cache_file.parent.mkdir(parents=True, exist_ok=True)
+        self.cache_file.parent.resolve().mkdir(parents=True, exist_ok=True)
+
         for _ in range(3):
             try:
                 with open(self.cache_file, "wb") as f:

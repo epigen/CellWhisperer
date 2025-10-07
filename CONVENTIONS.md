@@ -5,7 +5,7 @@
 - All commands should be executed within the pixi environment
 
 ## Command Execution
-- Prepend the launcher command `nix develop -c pixi run --no-progress` to anything you wanna run. E.g. for running `python`, run `nix develop -c pixi run --no-progress python `; if you need to `cd` somewhere do `cd` first, e.g. `cd src/datasets/<name> && nix develop -c pixi run --no-progress snakemake` for running `snakemake` in a specific directory.
+- Prepend the launcher command `pixi run --no-progress` to anything you wanna run. E.g. for running `python`, run `pixi run --no-progress python`; if you need to `cd` somewhere do `cd` first, e.g. `cd src/datasets/<name> && pixi run --no-progress snakemake` for running `snakemake` in a specific directory.
 
 # Coding Conventions
 

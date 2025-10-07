@@ -511,7 +511,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             transcriptomes=adata if adata.shape[1] > 0 else None,
             image=(
                 adata
-                if ("20x_slide" in adata.uns or "image_path" in adata.uns)
+                if ("he_slide" in adata.uns or "image_path" in adata.uns)
                 and self.image_processor
                 else None
             ),  # NOTE Could refactor API to only provide an adata, but not sure if the repository depends on this splitting..
@@ -746,19 +746,23 @@ class JointEmbedDataModule(pl.LightningDataModule):
         if len(results[0][1]) > 0:
             raise NotImplementedError("Currently, no 'replicates' are supported")
 
-        # pad the expression tokens to the maximum length
-        max_expression_length = (
-            torch.cat([result[0]["expression_token_lengths"] for result in results])
-            .max()
-            .item()
-        )
-        for result in results:
-            # pad the expression token lengths to the maximum length
-            result[0]["expression_tokens"] = torch.nn.functional.pad(
-                result[0]["expression_tokens"],
-                (0, max_expression_length - result[0]["expression_tokens"].shape[1]),
-                value=0,
+        if "expression_token_lengths" in results[0][0]:
+            # pad the expression tokens to the maximum length
+            max_expression_length = (
+                torch.cat([result[0]["expression_token_lengths"] for result in results])
+                .max()
+                .item()
             )
+            for result in results:
+                # pad the expression token lengths to the maximum length
+                result[0]["expression_tokens"] = torch.nn.functional.pad(
+                    result[0]["expression_tokens"],
+                    (
+                        0,
+                        max_expression_length - result[0]["expression_tokens"].shape[1],
+                    ),
+                    value=0,
+                )
 
         return (
             {
