@@ -2,6 +2,7 @@
 # It takes a high-resolution spatial transcriptomics AnnData object and an SVS image,
 # and generates a gridded AnnData object with configurable spot sizes.
 # Supports both lymphoma_cosmx_small (Visium-sized) and lymphoma_cosmx_small_detailed (high-res). But only detailed makes sense actually
+# Alignment transformation parameters were determined through https://github.com/zinagoodlab/cosmx_he_alignment
 
 import subprocess
 from pathlib import Path
@@ -38,7 +39,7 @@ rule process_data:
 
     conda:
         "cellwhisperer"
-    params:  # determined through src/experiments/880-lymphoma-dataset
+    params:  
         spot_diameter_pixels=lambda wildcards: config["he_configs"][config["dataset_he_mapping"][wildcards.dataset]]["patch_size_pixels"],
         white_cutoff=lambda wildcards: config["he_configs"]["white_cutoff"],
         x_offset=0.842708,
