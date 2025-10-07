@@ -4,7 +4,6 @@ Process downloaded STHELAR dataset for CellWhisperer.
 This script processes the downloaded STHELAR zarr files and H&E patches
 to be compatible with the existing processing pipeline requirements.
 
-TODO it seems like the image is not yet well integrated
 """
 
 import numpy as np
@@ -250,7 +249,7 @@ def create_adata_for_slide(
     # Add sample metadata
     adata.uns["sample_id"] = sample_id
     adata.uns["dataset"] = "sthelar"
-    adata.uns["pixel_size"] = 0.25
+    adata.uns["pixel_size"] = 0.25  # 40x resoultion
 
     return adata
 

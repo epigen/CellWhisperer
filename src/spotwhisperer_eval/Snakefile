@@ -165,6 +165,8 @@ rule aggregate_musk_results:
 rule aggregate_lung_evaluation:
     """
     Aggregate lung benchmark results for trained SpotWhisperer models
+
+    20x and thus not supported
     """
     input:
         performance_summary=lambda wildcards: expand(
@@ -267,12 +269,12 @@ rule create_analysis_plots:
             dataset_combo=[MODEL_MAPPINGS[wildcards.test_dataset][model_type] for model_type in ["naive_baseline", "bimodal_matching", "bimodal_bridge", "trimodal"]],
             test_dataset=wildcards.test_dataset
         ),
-        # Lung benchmark results
-        lung_results=lambda wildcards: expand(
-            rules.aggregate_lung_evaluation.output.aggregated_lung,
-            dataset_combo=[MODEL_MAPPINGS[wildcards.test_dataset][model_type] for model_type in ["naive_baseline", "bimodal_matching", "bimodal_bridge", "trimodal"]],
-            test_dataset=wildcards.test_dataset
-        ),
+        # Lung benchmark results (20x and thus not supported)
+        # lung_results=lambda wildcards: expand(
+        #     rules.aggregate_lung_evaluation.output.aggregated_lung,
+        #     dataset_combo=[MODEL_MAPPINGS[wildcards.test_dataset][model_type] for model_type in ["naive_baseline", "bimodal_matching", "bimodal_bridge", "trimodal"]],
+        #     test_dataset=wildcards.test_dataset
+        # ),
         # Retrieval results
         retrieval_results=lambda wildcards: expand(
             rules.aggregate_spotwhisperer_test.output.aggregated_retrieval,
@@ -296,12 +298,12 @@ rule create_analysis_plots:
             "pannuke",  # musk
             "skin",
 
-            "lung_tissue_region_type_expert_annotation_accuracy",
-            "lung_tissue_region_type_expert_annotation_f1_weighted",
-            "lung_tissue_region_type_expert_annotation_f1_macro",
-            "lung_tissue_cell_type_annotations_accuracy",
-            "lung_tissue_cell_type_annotations_f1_weighted",
-            "lung_tissue_cell_type_annotations_f1_macro",
+            # "lung_tissue_region_type_expert_annotation_accuracy",  # lung is 20x and thus not supported
+            # "lung_tissue_region_type_expert_annotation_f1_weighted",
+            # "lung_tissue_region_type_expert_annotation_f1_macro",
+            # "lung_tissue_cell_type_annotations_accuracy",
+            # "lung_tissue_cell_type_annotations_f1_weighted",
+            # "lung_tissue_cell_type_annotations_f1_macro",
 
             "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
             "valfn_zshot_TabSap_celltype_lvl/f1_macroAvg",

@@ -36,7 +36,7 @@ def adata_to_embeds(
 
     # Check for image data availability
     has_image_patches = "patches" in adata.obsm
-    has_whole_slide_image = "20x_slide" in adata.uns
+    has_whole_slide_image = "he_slide" in adata.uns
     has_image_model = hasattr(model, "image_model") and model.image_model is not None
 
     if use_image_data and has_image_model:
@@ -94,7 +94,7 @@ def adata_to_embeds(
                         sample_adata = adata[sample_mask].copy()
 
                         # Set the correct WSI for this sample
-                        sample_adata.uns["20x_slide"] = adata.uns["wsi_images"][
+                        sample_adata.uns["he_slide"] = adata.uns["wsi_images"][
                             sample_id
                         ]
 

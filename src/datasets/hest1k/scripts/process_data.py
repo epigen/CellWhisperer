@@ -61,7 +61,7 @@ def prepare_adata_for_uniprocessor(st_data):
     except Exception as e:
         raise ValueError(f"Could not load WSI image: {e}")
 
-    adata.uns["20x_slide"] = image
+    adata.uns["he_slide"] = image
     adata.uns["pixel_size"] = st_data.pixel_size  # um per pixel
     adata.uns["spot_diameter_fullres"] = adata.uns["spatial"]["ST"]["scalefactors"][
         "spot_diameter_fullres"
@@ -72,7 +72,7 @@ def prepare_adata_for_uniprocessor(st_data):
     # ):
     #     # If there is no WSI but a downscaled_fullres, use these coordinates
     #     image = adata.uns["spatial"]["ST"]["images"]["downscaled_fullres"]
-    #     adata.uns["20x_slide"] = image
+    #     adata.uns["he_slide"] = image
     # else:
     #     raise ValueError(
     #         "No functioning image found - neither WSI nor downscaled_fullres available"
@@ -122,7 +122,7 @@ def crop_tile(image, x, y, size):
 
 def generate_example_patches(adata, num_patches=3):
     """Generate example patches from the dataset for QC reporting."""
-    image = adata.uns["20x_slide"]
+    image = adata.uns["he_slide"]
     spot_diameter = adata.uns.get("spot_diameter_fullres", 224)
 
     # Sample random spots for patch generation

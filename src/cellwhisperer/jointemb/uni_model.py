@@ -31,7 +31,9 @@ class UNIProcessor(ProcessorMixin):
     def __init__(self, config_param=None, *args, **kwargs):
         # Get H&E configuration defaults (use visium_resolution as default)
         he_config = config["he_configs"]["visium_resolution"]
-        self.fallback_spot_diameter_fullres = he_config.get("spot_diameter_um", 100)
+        self.fallback_spot_diameter_fullres = he_config.get(
+            "spot_diameter_um", 100
+        )  # TODO this corresponds to visium (where spot centers are 105um apart)
         patch_size = he_config["patch_size_pixels"]
 
         self.config = config_param or UNIConfig()  # Use default config if none provided

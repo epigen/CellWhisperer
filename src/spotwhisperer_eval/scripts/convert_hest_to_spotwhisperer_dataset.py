@@ -171,8 +171,9 @@ def convert_hest_sample_to_spotwhisperer(sample_row, dataset_bench_path, output_
         new_adata.layers[layer_name] = adata.layers[layer_name]
 
     # Add required uns fields for SpotWhisperer
-    new_adata.uns["20x_slide"] = reconstructed_image
+    new_adata.uns["he_slide"] = reconstructed_image
     new_adata.uns["spot_diameter_fullres"] = snakemake.params["patch_size_pixels"]
+    new_adata.uns["pixel_size"] = 0.25
     new_adata.uns["dataset"] = "hest_benchmark"
     new_adata.uns["modality"] = "spatial_transcriptomics"
     new_adata.uns["sample_id"] = sample_id

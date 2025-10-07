@@ -45,7 +45,7 @@ The processing is split into two separate steps:
 ### 2. Data Processing (`scripts/process_data.py`) 
 Transforms HEST data to include:
 - `x_pixel`, `y_pixel`: Spatial coordinates from `pxl_col_in_fullres`, `pxl_row_in_fullres`
-- `20x_slide`: Histology image as numpy array (H,W,3)
+- `he_slide`: Histology image as numpy array (H,W,3)
 - `spot_diameter_fullres`: Patch diameter for extraction (default: 100)
 - `gene_name`: Gene identifiers in var DataFrame
 - `counts`: Raw count matrix in layers
