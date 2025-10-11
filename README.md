@@ -1,6 +1,8 @@
 # CellWhisperer
 
-CellWhisperer is a multimodal AI model combining transcriptomics with natural language to enable intuitive interaction with scRNA-seq datasets. The [project website](http://cellwhisperer.bocklab.org/) hosts the web tool with several example datasets as well as a short video tutorial. We also provide our model weights and curated datasets.
+CellWhisperer is a multimodal AI model combining transcriptomics with natural language to enable intuitive interaction with scRNA-seq datasets. CellWhisperer is [published in Nature Biotechnology](https://doi.org/10.1038/s41587-025-02857-9). The [project website](http://cellwhisperer.bocklab.org/) hosts the web tool with several example datasets as well as a short video tutorial. We also provide our model weights and curated datasets.
+
+This repository contains detailed instructions on how to run your own CellWhisperer instance and import custom datasets, as well as the full source code, models, and training data.
 
 > This is the *private* `main` branch. Internal development is carried out here.
 > The `public` branch contains the source code that is shown to the public, with full commit history.
@@ -9,89 +11,177 @@ CellWhisperer is a multimodal AI model combining transcriptomics with natural la
 
 ##### Table of Contents
 
-- [Install](#install)
-- [Analyze your own datasets](#analyze)
-- [Folder structure](#structure)
-- [Run paper analyses](#run)
+- [Installation](#install)
+- [Analyze Your Own Datasets](#analyze)
+- [Folder Structure](#structure)
+- [Reproducing Paper Analyses](#run)
+- [Citation and Contact](#citation)
 
 <a name="install"/>
 
-## Install
+## Installation
 
-CellWhisperer can be run through conda and docker. Both installation options run about 15 minutes. Both CPU and GPU (CUDA 12) are support.
+Installing a local copy of CellWhisperer allows you to analyze your own datasets and explore scRNA-seq data interactively using the CellWhisperer AI model. The installation process takes approximately 15 minutes and supports both CPU and GPU (CUDA 12) environments.
 
-1. Download this repository, using `git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules` (*you do need the submodules*), and you can alternatively retrieve them with `git submodule update --init --recursive`)
+**Prerequisites:**
+- Linux system
+- Conda or Miniconda installed
+- (Optional) CUDA 12 compatible GPU for faster processing
 
-### Install via conda/pip (recommended)
+### Installation Steps
 
-2. Install the environments
+1. **Clone the repository** with all submodules (required):
+   ```bash
+   git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules
+   cd cellwhisperer
+   ```
+   
+   If you've already cloned without submodules, retrieve them with:
+   ```bash
+   git submodule update --init --recursive
+   ```
+
+2. **Set up the conda environments:**
+   ```bash
+   ./envs/setup.sh
+   ```
+   
+   This script creates the necessary conda environments including `cellwhisperer` (main environment) and `llava` (for the chat model).
+
+3. **Install snakemake** (optional, for running paper analyses):
+   ```bash
+   conda install -c bioconda -n base snakemake=7
+   ```
+   
+   Alternatively, `snakemake` is accessible within the `cellwhisperer` environment after activation.
+
+4. **Verify installation:**
+   Activate the environment and check that cellxgene is available:
+   ```bash
+   conda activate cellwhisperer
+   cellxgene --version
+   ```
+
+**Note on compilers:** If you encounter build issues, you may need to install gcc and g++ (version 9.5 recommended). If installing via conda, be aware of potential [compatibility issues with snakemake](https://github.com/conda/conda/issues/6945).
+
+You're now ready to run CellWhisperer locally (see next section) or analyze your own datasets.
+
+### Alternative: Docker Installation
+
+For users who prefer containerized environments, CellWhisperer can be installed and run using Docker. This approach includes all dependencies and installation steps in a self-contained environment.
+
+1. **Build the Docker image:**
+   ```bash
+   docker build -t cellwhisperer .
+   ```
+
+2. **Run the container:**
+   ```bash
+   docker run --gpus all -it --volume .:/opt/cellwhisperer cellwhisperer bash
+   # Also works without GPUs (omit --gpus all)
+   ```
+
+3. **Activate the environment inside the container:**
+   ```bash
+   conda activate cellwhisperer
+   ```
+
+**Note on volumes:** The command above mounts the project directory as a volume (`--volume .:/opt/cellwhisperer`) so that code modifications are visible inside the container. For processing datasets, consider also mounting `resources` and `results` directories:
 
 ```bash
-./envs/setup.sh
+docker run --gpus all -it \
+  --volume .:/opt/cellwhisperer \
+  --volume /path/to/resources:/opt/cellwhisperer/resources \
+  --volume /path/to/results:/opt/cellwhisperer/results \
+  cellwhisperer bash
 ```
-
-3. [Optional] Install snakemake in your `base` environment
-
-```bash
-conda install -c bioconda -n base snakemake=7
-```
-
-Alternatively, `snakemake` is accessible within the `cellwhisperer` environment (`conda activate cellwhisperer`).
-
-4. You're good! Run the web app and analyze your datasets as described below
-
-Note: You might need to install gcc and gxx (e.g. v9.5) if you don't have them. If you install them with conda, it might lead to [issues with snakemake](https://github.com/conda/conda/issues/6945).
-
-### Install within Docker
-
-You can also install and use CellWhisperer within docker, which includes all installation steps above (including cellxgene installation):
-
-```bash
-docker build -t cellwhisperer .
-docker run --gpus all -it --volume .:/opt/cellwhisperer cellwhisperer bash  # also works without GPUs
-conda activate cellwhisperer
-```
-
-Note that this container mounts the project directory as volume (`--volume .:/opt/cellwhisperer`) in the container (such that code modifications are visible in the container). Consider mounting also a `resources` and `results` directory to `/opt/cellwhisperer/resources` and `/opt/cellwhisperer/results`, as these are source and target directories when processing datasets (see section [Analyze your own datasets](#analyze) below).
-
 
 <a name="analyze"/>
 
+## Analyze Your Own Datasets
 
-## Analyze your own dataset
+CellWhisperer can analyze your own scRNA-seq datasets through a straightforward three-step process. We currently support human data with raw (unnormalized) read counts.
 
-To analyze your own scRNA-seq dataset with the CellWhisperer web app, follow these steps (CPU Runtime: ~2h/10,000 cells):
+**Processing time:** Approximately 2 hours per 10,000 cells on CPU (significantly faster with GPU).
 
-1. Prepare your dataset as h5ad file in `<PROJECT_ROOT>/resources/<dataset_name>/read_count_table.h5ad`
-  - Make sure to adhere to the following guidelines
-    - Provide raw read counts (format: int32) in `.X` or in `.layers["counts"]`
-    - `.var` must have a unique index and an additional field `gene_name` containing the gene symbols.
-  - Additional (optional) guidelines are provided [below](#dataset_format_guidelines)
+### Step 1: Prepare Your Dataset
 
-2. Process the dataset for faster execution
-  - `cd <PROJECT_ROOT>/src/cellxgene_preprocessing && snakemake --use-conda --cores 8 --config 'datasets=["<dataset_name>"]'`
-  - Notes:
-    - This runs much faster if you have a GPU (4GB VRAM are enough) available. Alternatively, a substantial number of CPU cores (e.g. `--cores 32`) helps as well.
-    - The pipeline requires roughly two times the amount of RAM of your dataset file size.
-    - We use the GPT-4 API or a locally hosted Mixtral model (GPU with 40GB VRAM recommended) to condense the CellWhisperer-generated cluster descriptions into brief captions. Provide an OpenAI API key  if you want to use GPT-4 (`export OPENAI_API_KEY=sk-abc`; Costs are negligible), otherwise Mixtral is used.
-3. Run the CellWhisperer web app loading your processed dataset file
-  - `cellxgene launch -p 5005  --debug --host 0.0.0.0 --max-category-items 500 --var-names gene_name <PROJECT_ROOT>/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad`
+Place your dataset as h5ad file at `<PROJECT_ROOT>/resources/<dataset_name>/read_count_table.h5ad` with the following requirements:
 
-### Use AI reliably
+**Required:**
+- Raw read counts (int32 format) in `.X` or `.layers["counts"]`
+- `.var` must have a unique index (e.g., Ensembl IDs) and a `gene_name` field with gene symbols
+- No NaN values in the count matrix
 
-CellWhisperer constitutes a proof-of-concept for interactive exploration of scRNA-seq data. Like other AI models, CellWhisperer does not understand user questions in a human sense, and it can make mistakes. Key results should thus be reconfirmed with conventional bioinformatics approaches.
+**Recommended:**
+- Filter cells with few expressed genes (e.g., <100 genes with counts >1)
+- Use `categorical` dtype for categorical columns in `.obs`
+- Provide an `ensembl_id` field in `.var` (will be computed if missing)
+- For large datasets (>100k cells), keep only essential metadata fields
 
-### Self-host the AI models (GPU with 24GB VRAM highly recommended)
+See [Input Dataset Format Guidelines](#dataset_format_guidelines) below for more details.
 
-By default, running the web app (`cellxgene launch`) will access the API hosted at https://cellwhisperer.bocklab.org for CellWhisperer's AI capabilities. To run the AI models locally, follow these instructions:
+### Step 2: Process the Dataset
 
-- for the embedding model, simply provide the command line argument `--cellwhisperer-clip-model <PROJECT_ROOT>/results/models/jointemb/cellwhisperer_clip_v1.ckpt` to the `cellxgene launch` command.
-- for the chat model:
-  1. run a controller with command `python -m llava.serve.controller --host 0.0.0.0 --port 10000` in the `llava` environment
-  2. run a worker with the command `python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 --controller localhost:10000 --port 40000 --worker localhost:40000 --model-path /path/to/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1/`
-  3. adjust the variable `CONTROLLER_URL` in `cellwhisperer/modules/cellxgene/server/common/compute/llava_utils.py` to your locally running LLM service.
+Run the preprocessing pipeline to generate embeddings and prepare the dataset for CellWhisperer:
 
-You may want to consider running everything within an orchestrated docker environment. See `hosting/home/docker-compose.yml` for a starting point.
+```bash
+cd <PROJECT_ROOT>/src/cellxgene_preprocessing
+snakemake --use-conda --cores 8 --config 'datasets=["<dataset_name>"]'
+```
+
+**Important notes:**
+- **GPU acceleration:** Processing is considerably faster with a GPU (4GB VRAM sufficient). Without GPU, increase CPU cores (e.g., `--cores 32`).
+- **Memory requirements:** Allow approximately 2× the dataset file size in RAM.
+- **Cluster captions:** The pipeline uses GPT-4 API or a locally hosted Mixtral model to summarize CellWhisperer descriptions into brief cluster captions. To use GPT-4 (recommended, cost is low), set: `export OPENAI_API_KEY=sk-your-key`. Otherwise, Mixtral will be used (requires GPU with 40GB VRAM).
+
+### Step 3: Launch CellWhisperer
+
+Start the web interface with your processed dataset:
+
+```bash
+conda activate cellwhisperer
+cellxgene launch -p 5005 --host 0.0.0.0 --max-category-items 500 \
+  --var-names gene_name \
+  <PROJECT_ROOT>/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad
+```
+
+Access the interface at `http://localhost:5005` and start exploring your data with natural language queries!
+
+### Optional: Self-host the AI models
+
+By default, the web app accesses the CellWhisperer API hosted at https://cellwhisperer.bocklab.org for AI capabilities. This allows you to use CellWhisperer without local GPU resources.
+
+To run the AI models locally:
+
+1. **For the embedding model** (requires 4GB VRAM), add the following argument to the `cellxgene launch` command:
+   ```bash
+   --cellwhisperer-clip-model <PROJECT_ROOT>/results/models/jointemb/cellwhisperer_clip_v1.ckpt
+   ```
+
+2. **For the chat model** (requires 20GB VRAM), you need to run separate services:
+   
+   In one terminal (controller):
+   ```bash
+   conda activate llava
+   python -m llava.serve.controller --host 0.0.0.0 --port 10000
+   ```
+   
+   In another terminal (model worker):
+   ```bash
+   conda activate llava
+   python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 \
+     --controller localhost:10000 --port 40000 --worker localhost:40000 \
+     --model-path <path_to_mistral_model>
+   ```
+   
+   Then adjust the `CONTROLLER_URL` variable in `modules/cellxgene/server/common/compute/llava_utils.py` to point to your local controller.
+
+For a more integrated setup with Docker orchestration, refer to `hosting/home/docker-compose.yml` as a starting point.
+
+### Important: Use AI Reliably
+
+CellWhisperer constitutes a proof-of-concept for interactive exploration of scRNA-seq data. Like other AI models, CellWhisperer does not understand user questions in a human sense, and it can make mistakes. **Key results should always be reconfirmed with conventional bioinformatics approaches.**
 
 <a name="dataset_format_guidelines"/>
 
@@ -117,45 +207,56 @@ We only support human data and raw (unnormalized) read count data for dataset pr
 
 <a name="structure"/>
 
-## Folder structure
+## Folder Structure
 
-- **src**: Model, training, dataset and analysis source code
-- **modules**: Forked and modified source code repositories included as git submodules
-- results: Result files generated by analysis and training pipelines
-- resources: Datasets and models downloaded by our pipelines.
+This section provides an overview of the repository organization to help you navigate the codebase.
 
-### src/
+```
+cellwhisperer/
+├── src/               # Source code for models, training, and analyses
+├── modules/           # Git submodules for modified external dependencies
+├── results/           # Generated results from pipelines (created during use)
+├── resources/         # Downloaded datasets and models (created during use)
+└── envs/              # Conda environment configurations
+```
 
-Immediately relevant to the user are:
+### src/ Directory
 
-- `cellxgene_preprocessing`: Pipeline to process new (single cell) RNA-seq datasets for interactive exploration within the CELLxGENE/CellWhisperer web app
-- `figures`: Pipeline to (re)produce all analyses/plots for the final manuscript (see `src/figures/README.md` for details)
+To analyze your own data or to reproduce analyses from our paper, these directories are most relevant:
 
-Under the hood, the main python package (`cellwhisperer`) and a series of pipelines are important:
+- **`cellxgene_preprocessing/`**: Pipeline to process new scRNA-seq datasets for use with CellWhisperer
+- **`figures/`**: Pipeline to reproduce all analyses and plots from the paper (see `src/figures/README.md` for details)
 
-- `cellwhisperer`: CellWhisperer embedding model python package including model, training and inference code
-- `datasets`: retrieval/preparation of training and validation datasets (transcriptomes as well as annotations)
-- `pre_training_processing`: Generation of natural language captions and other preparations to obtain final datasets for multimodal contrastive training
-- `llava`: Pipeline for training and validation of the CellWhisperer chat model
-- `ablation`: Pipeline for embedding model ablation and evaluation
-- `hosting`: Hosting infrastructure source code
+**For developers and researchers, these contain the core implementation:**
 
-### Code style
+- **`cellwhisperer/`**: Main Python package with the embedding model, training code, and inference utilities
+- **`datasets/`**: Scripts for retrieving and preparing training/validation datasets (transcriptomes and annotations)
+- **`pre_training_processing/`**: Natural language caption generation and dataset preparation for contrastive training
+- **`llava/`**: Training and validation pipeline for the CellWhisperer chat model
+- **`ablation/`**: Ablation studies and evaluation pipelines for the embedding model
+- **`hosting/`**: Infrastructure code for deploying CellWhisperer as a web service
 
-We use `blacken` for automated code formatting.
+### modules/ Directory (Git Submodules)
 
-### modules/
+CellWhisperer builds upon three external projects, integrated as git submodules. These were forked from their original repositories to maintain transparency regarding our modifications:
 
-CellWhisperer builds atop three projects that are integrated via git submodules. These were forked from original repositories on GitHub, in order to retain transparency on our code contributions.
+- **`llava/`**: Chat model implementation (modified LLaVA architecture)
+- **`cellxgene/`**: Modified CELLxGENE Explorer with CellWhisperer UI and API integration
+- **`Geneformer/`**: Transcriptome foundation model used in CellWhisperer's embedding architecture
 
-- `llava`: CellWhisperer chat model python package including model, training and inference code
-- `cellxgene`: CELLxGENE Explorer browser package, modified to integrate UI and API elements for CellWhisperer integration
-- `Geneformer`: The transcriptome model used for the CellWhisperer embedding model
+### Code Style
+
+We use `blacken` for automated Python code formatting. To format code:
+
+```bash
+conda activate cellwhisperer
+blacken <file_or_directory>
+```
 
 
 <a name="run"/>
 
-## Run paper analyses
+## Reproducing Paper Analyses
 
 All training data, evaluation data and model weights are downloaded automatically, and can be browsed on [our file server](http://medical-epigenomics.org/papers/schaefer2025cellwhisperer/)
 
@@ -226,6 +327,24 @@ Our config for training CellWhisperer is located at `src/cellwhisperer_clip_v1.y
 Note 1: The pipelines includes code to generate the datasets. Since this takes a considerable amount of time and computational resources, we recommend downloading our provided data set. (automatically done by the snakemake pipeline defined in `src/Snakefile`).
 Note 2: You might be requested to login to huggingface to be able to download the Mistral-7B model. Simply follow the instructions printed in the command line. The `huggingface-cli` tool is installed in the `cellwhisperer` environment.
 
-### SLURM clusters and snakemake
+### SLURM Clusters and Snakemake
 
 While the easiest way to run `snakemake` is on a local or allocated machine, you can also use it for automated job deployment on HPC clusters such as SLURM. Follow [the snakemake docs](https://snakemake.readthedocs.io/en/v7.7.0/executing/cluster.html) to set up a config profile for your cluster. You'll likely need to modify the `slurm_gres` function defined in `src/shared/config.smk` to reflect your cluster's resource identifiers.
+
+---
+
+<a name="citation"/>
+
+## Citation and Contact
+
+If you use CellWhisperer in your research, please cite our paper:
+
+**Moritz Schaefer\*, Peter Peneder\*, Daniel Malzl, Salvo Danilo Lombardo, Mihaela Peycheva, Jake Burton, Anna Hakobyan, Varun Sharma, Thomas Krausgruber, Celine Sin, Jörg Menche, Eleni M. Tomazou, Christoph Bock.** *Multimodal learning enables chat-based exploration of single-cell data.* Nature Biotechnology, https://doi.org/10.1038/s41587-025-02857-9
+
+### Questions or Feedback?
+
+For questions or additional information, please contact the authors of the paper:
+- Email: cellwhisperer@bocklab.org
+- GitHub Issues: https://github.com/epigen/CellWhisperer/issues
+
+We welcome feedback and contributions to improve CellWhisperer!

@@ -1,14 +1,16 @@
-# Home server
+# Home Server Deployment
 
+This directory contains configuration files for deploying CellWhisperer on a personal server or workstation.
 
-Here I collect all the files required for my home server
+## Quick Start
 
 ```bash
 docker compose up -d
-# Attach or exec
+# Attach or exec to interact with containers
 docker compose exec conda /bin/bash
 ```
-Note: nvidia-docker is deprecated
+
+**Note:** nvidia-docker is deprecated. Use `docker --gpus` flag instead (as shown in docker-compose.yml).
 
 ## Rebuild web client
 
