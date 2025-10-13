@@ -51,7 +51,7 @@
         }
         .video-wrapper video {
             width: 100%;
-            display: block;
+            display: none;
         }
         .overlay {
             position: absolute;
@@ -62,6 +62,7 @@
             background-color: #1e2820;
             background-size: cover;
             cursor: pointer;
+            z-index: 1;
         }
         a {
             color: #bbb;
@@ -77,7 +78,7 @@
         </p>
         <div>
             <a href="/tabulasapiens/" class="button">Decipher single cells from the <br> <span style="font-weight: bold">Tabula Sapiens dataset</span></a>
-            <a href="/geo/" class="button">Explore the landscape of <br> human transcriptomes in <span style="font-weight: bold">GEO</span></a>
+            <a href="/geo/" class="button">Explore <br> human transcriptomes in <span style="font-weight: bold">GEO</span></a>
             <a href="/colonic_epithelium/" class="button">Chat with the <br> <span style="font-weight: bold">colonic epithelium</span></a>
             <a href="/development/" class="button">Analyze <br> <span style="font-weight: bold">embryonic development </span></a>
         </div>
@@ -86,13 +87,11 @@
             <a href="https://openreview.net/forum?id=yWiZaE4k3K" class="button">Spotlight paper @ ICLR 2024 MLGenX</a>
             <a href="https://www.biorxiv.org/content/10.1101/2024.10.15.618501v1" class="button" style="font-weight: bold;">BioRxiv</a>
             <a href="https://github.com/epigen/cellwhisperer" class="button">Code</a>
-            <a href="https://medical-epigenomics.org/papers/schaefer2025cellwhisperer/data/" class="button">Generated datasets and models</a>
+            <a href="https://medical-epigenomics.org/papers/schaefer2025cellwhisperer/data/" class="button">Datasets &amp; Models</a>
+            <a href="#analyze-your-data" class="button">Analyze your own data</a>
         </div>
-        <p class="description" style="font-style: italic;">
-            CellWhisperer constitutes a proof-of-concept for interactive exploration of scRNA-seq data. Like other AI models, CellWhisperer does not understand user questions in a human sense, and it can make mistakes. Key results should thus be reconfirmed with conventional bioinformatics approaches.
-        </p>
         <h2 class="headline">Tutorial</h2>
-        <p class="description">(Click the annotated screenshot for a 2-minute video-tutorial)</p>
+        <p class="description" style="text-align: center;">(Click the annotated screenshot for a 2-minute video-tutorial)</p>
         <div class="video-wrapper">
             <video id="videoPlayer" width="100%" controls>
                 <source src="https://medical-epigenomics.org/papers/schaefer2025cellwhisperer/video/TutorialNarrated.mp4" type="video/mp4">
@@ -102,22 +101,45 @@
                 <img src="annotated_screenshot.png" alt="Annotated screenshot of CellWhisperer application" width="100%" />
             </div>
         </div>
-        <h2 class="headline">Analyze your own data</h2>
+        <p class="description" style="font-style: italic;">
+            CellWhisperer constitutes a proof-of-concept for interactive exploration of scRNA-seq data. Like other AI models, CellWhisperer does not understand user questions in a human sense, and it can make mistakes. Key results should thus be reconfirmed with conventional bioinformatics approaches.
+        </p>
+        <h2 class="headline" id="analyze-your-data">Analyze your own data</h2>
         <div class="description" style="
                     max-width: 800px;
                     margin: auto;
                     ">
             <p>
-                To prepare your scRNA-seq data for use within CellWhisperer, follow these simple steps:
+                The CellWhisperer server linked above provides example datasets but does not allow for upload of user-provided datasets. To analyze your own data with CellWhisperer, you need to run CellWhisperer on your computer or on a local server. This is relatively straightforward to set up in three steps:
             </p>
             <ol style="
                     padding-left: 110px;
                     padding-right: 110px;
                     ">
-                <li>Generate an h5ad file containing raw reads and a <tt>gene_name</tt> <tt>var</tt> column</li>
-                <li>Run our single-command processing pipeline</li>
-                <li>Start the CellWhisperer-integrated CELLxGENE Explorer</li>
-            </ol>For details on these steps, refer to the "Analysis of new datasets with CellWhisperer" section in our <a href="https://github.com/epigen/cellwhisperer#analyze" target="_blank">README</a>.
+                <li>Prepare your scRNA-seq data as an h5ad file</li>
+                <li>Run the CellWhisperer data processing script</li>
+                <li>Launch CellWhisperer on your computer and add the dataset</li>
+            </ol>
+            <p>
+                A step-by-step description is provided in the <a href="https://github.com/epigen/cellwhisperer#analyze" target="_blank">CellWhisperer github repository</a>.
+            </p>
+        </div>
+        <h2 class="headline">News</h2>
+        <div class="description" style="
+                    max-width: 800px;
+                    margin: auto;
+                    text-align: left;
+                    ">
+            <ul style="list-style-type: none; padding-left: 0;">
+                <li><strong>2025-06-03:</strong> Talk at Google Genomics Deep Dive</li>
+                <li><strong>2025-05-05:</strong> Talk at RNA-AI (Monte Verita, Switzerland)</li>
+                <li><strong>2025:</strong> Nature Biotechnology paper (in press, DOI: <a href="https://doi.org/10.1038/s41587-025-02857-9" target="_blank">10.1038/s41587-025-02857-9</a>)</li>
+                <li><strong>2024-11-15:</strong> Talk at CSHL Biological Data Science Meeting (Cold Spring Harbor, USA)</li>
+                <li><strong>2024-10-15:</strong> Talk at Max Delbrück Center Data Science &amp; AI Lecture Series (Berlin, Germany)</li>
+                <li><strong>2024-10-15:</strong> bioRxiv preprint published</li>
+                <li><strong>2024-04-26:</strong> Talk at EU-LIFE Utopia Conference (Vienna, Austria)</li>
+                <li><strong>2024-03-24:</strong> Spotlight paper @ ICLR MLGenX 2024</li>
+            </ul>
         </div>
         <h2 class="headline">Citation</h2>
         <div class="description" style="
@@ -125,14 +147,20 @@
                     margin: auto;
                     ">
             <p>
-                If you use CellWhisperer in your research, please cite the following preprint:
+                If you use CellWhisperer in your research, please cite us:
             </p>
             <p>
-                Moritz Schaefer*, Peter Peneder*, Daniel Malzl, Mihaela Peycheva, Jake Burton, Anna Hakobyan, Varun Sharma, Thomas Krausgruber, Jörg Menche, Eleni M. Tomazou, Christoph Bock (2024) <i>Multimodal learning of transcriptomes and text enables interactive single-cell RNA-seq data exploration with natural-language chats.</i> bioRxiv, https://www.biorxiv.org/content/10.1101/2024.10.15.618501v1
+                Moritz Schaefer*, Peter Peneder*, Daniel Malzl, Salvo Danilo Lombardo, Mihaela Peycheva, Jake Burton, Anna Hakobyan, Varun Sharma, Thomas Krausgruber, Celine Sin, Jörg Menche, Eleni M. Tomazou, Christoph Bock (2025) <i>Multimodal learning enables chat-based exploration of single-cell data.</i> Nature Biotechnology (in press). DOI: <a href="https://doi.org/10.1038/s41587-025-02857-9" target="_blank">10.1038/s41587-025-02857-9</a>
+            </p>
+            <p style="font-size: 0.9em; font-style: italic;">
+                * equal contribution
+            </p>
+            <p>
+                Preprint: <a href="https://www.biorxiv.org/content/10.1101/2024.10.15.618501v1" target="_blank">bioRxiv</a>
             </p>
         </div>
         <h2 class="headline">Feedback</h2>
-        <p class="description">Got feedback? Drop us an email at <a href="mailto: cellwhisperer@bocklab.org">cellwhisperer@bocklab.org</a> or open an issue on <a href="https://github.com/epigen/CellWhisperer/issues">GitHub</a>.</p>
+        <p class="description">Got feedback? Drop us an email at <a href="mailto:cellwhisperer@bocklab.org">cellwhisperer@bocklab.org</a> or open an issue on <a href="https://github.com/epigen/CellWhisperer/issues">GitHub</a>.</p>
     </div>
     <script>
         document.getElementById('videoOverlay').addEventListener('click', function() {
