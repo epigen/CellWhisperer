@@ -198,7 +198,7 @@ We only support human data and raw (unnormalized) read count data for dataset pr
 - Try to use `categorical` instead of 'object' dtype for categorical `obs` columns
 - If you want to generate cluster-labels for your own provided `obs` cluster column(s), provide a field `.uns["cluster_fields"] = ["obs_col_name1", "obs_col_name2", ...]`
 - Any layouts that should make it into the webapp need to adhere to these rules:
-  - stored in `.obsm` whith name `X_{name}`
+  - stored in `.obsm` with name `X_{name}`
   - type: `np.ndarray` (NOT `pd.DataFrame`), dtype: float/int/uint
   - shape: `(n_obs, >= 2)`
   - all values finite or NaN (NO +Inf or -Inf)
