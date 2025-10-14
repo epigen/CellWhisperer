@@ -86,7 +86,7 @@ For users who prefer containerized environments, CellWhisperer can be installed 
    conda activate cellwhisperer
    ```
 
-**Note on volumes:** The command above mounts the project directory as a volume (`--volume .:/opt/cellwhisperer`) so that code modifications are visible inside the container. For processing datasets, consider also mounting `resources` and `results` directories:
+**Note on volumes:** The command below mounts the project directory as a volume (`--volume .:/opt/cellwhisperer`) so that code modifications are visible inside the container. For processing datasets, consider also mounting `resources` and `results` directories:
 
 ```bash
 docker run --gpus all -it \
