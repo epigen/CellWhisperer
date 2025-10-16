@@ -131,7 +131,7 @@ snakemake --use-conda --cores 8 --config 'datasets=["<dataset_name>"]'
 ```
 
 **Important notes:**
-- **GPU acceleration:** Processing is considerably faster with a GPU (4GB VRAM sufficient). Without GPU, increase CPU cores (e.g., `--cores 32`).
+- **GPU acceleration:** Processing is considerably faster with a GPU (4GB VRAM sufficient). Without GPU, increase CPU cores (e.g., `--cores 32`). To specify which GPU to use, set the `CUDA_VISIBLE_DEVICES` environment variable (e.g., `export CUDA_VISIBLE_DEVICES=0` for the first GPU).
 - **Memory requirements:** Allow approximately 2× the dataset file size in RAM.
 - **Cluster captions:** The pipeline uses GPT-4 API or a locally hosted Mixtral model to summarize CellWhisperer descriptions into brief cluster captions. To use GPT-4 (recommended, cost is low), set: `export OPENAI_API_KEY=sk-your-key`. Otherwise, Mixtral will be used (requires GPU with 40GB VRAM).
 
@@ -146,13 +146,13 @@ cellxgene launch -p 5005 --host 0.0.0.0 --max-category-items 500 \
   <PROJECT_ROOT>/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad
 ```
 
-Access the interface at `http://localhost:5005` and start exploring your data with natural language queries!
+Access the interface at `http://localhost:5005` and start exploring your data with natural language queries! (If port 5005 is already in use, you can change it by modifying the `-p` parameter to any available port.)
 
 ### Optional: Self-host the AI models
 
-By default, the web app accesses the CellWhisperer API hosted at https://cellwhisperer.bocklab.org for AI capabilities. This allows you to use CellWhisperer without local GPU resources.
+By default, the web app accesses the CellWhisperer API hosted at https://cellwhisperer.bocklab.org for interactive AI capabilities (i.e. the chat interface and the generation of CellWhisperer scores for given queries; cell embeddings and cluster descriptions are generated locally during Step 2). This setup allows you to run CellWhisperer smoothly without local GPU resources for the web interface.
 
-To run the AI models locally:
+If you prefer to run the AI models for the web interface locally:
 
 1. **For the embedding model** (requires 4GB VRAM), add the following argument to the `cellxgene launch` command:
    ```bash
@@ -179,7 +179,7 @@ To run the AI models locally:
 
 For a more integrated setup with Docker orchestration, refer to `hosting/home/docker-compose.yml` as a starting point.
 
-### Important: Use AI Reliably
+### Important: Use AI Cautiously
 
 CellWhisperer constitutes a proof-of-concept for interactive exploration of scRNA-seq data. Like other AI models, CellWhisperer does not understand user questions in a human sense, and it can make mistakes. **Key results should always be reconfirmed with conventional bioinformatics approaches.**
 
@@ -197,7 +197,7 @@ We only support human data and raw (unnormalized) read count data for dataset pr
 - For best results, filter cells with few expressed genes (e.g. <100 genes with expression <1)
 - Try to use `categorical` instead of 'object' dtype for categorical `obs` columns
 - If you want to generate cluster-labels for your own provided `obs` cluster column(s), provide a field `.uns["cluster_fields"] = ["obs_col_name1", "obs_col_name2", ...]`
-- Any layouts that should make it into the webapp need to adhere to these rules:
+- Any 2D visualizations/embeddings (e.g., UMAP, t-SNE) that should be available in the webapp need to adhere to these rules:
   - stored in `.obsm` with name `X_{name}`
   - type: `np.ndarray` (NOT `pd.DataFrame`), dtype: float/int/uint
   - shape: `(n_obs, >= 2)`
@@ -264,7 +264,7 @@ All training data, evaluation data and model weights are downloaded automaticall
 
 We provide all our validations and analyses in a single pipeline, (re)producing all (*) plots in our paper.
 
-Note that due to the high computational cost, this pipeline relies on some precomputed files, which are downloaded from our server as part of the pipeline. Nevertheless computing all the analyses will require a considerable amount of storage (~1TB), RAM (up to 1TB), GPU (40GB VRAM) and time (2 days) resources. You will need a huggingface token to download the "mistral" and "llama-3.3" models (needed for Figure 4 evaluations)
+Note that due to the high computational cost, this pipeline relies on some precomputed files, which are downloaded from our server as part of the pipeline. Nevertheless computing all the analyses will require a considerable amount of storage (~1TB), RAM (up to 1TB), GPU (40GB VRAM) and time (approximately 1 week) resources. You will need a huggingface token to download the "mistral" and "llama-3.3" models (needed for Figure 4 evaluations)
 
 To run the pipeline, execute
 
