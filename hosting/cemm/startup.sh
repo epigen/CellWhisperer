@@ -1,23 +1,46 @@
-#!/bin/sh
-set -x
-set -e
-PATH="/home/jburton/.local/bin:/home/jburton/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin"
-export PATH
-# Wait for network before  mounting
-while ! ping -c 1 -w 60 8.8.8.8 &> /dev/null
-do
-	sleep 1
+#!/bin/bash
+
+REMOTE_USER="jburton"
+REMOTE_HOST="login.int.cemm.at"
+REMOTE_DIR="/nobackup/lab_bock/projects/cellwhisperer/"
+
+# The local mount point (must exist)
+MOUNT_POINT="/nobackup/lab_bock/projects/cellwhisperer/"
+
+# A log file for debugging
+LOG_FILE="/home/jburton/cellwhisperer_private/hosting/cemm/reboot.log"
+
+echo "$(date) Reboot script started." >> "$LOG_FILE"
+
+sleep 180
+
+while ! ping -c 1 -W 1 8.8.8.8 >/dev/null 2>&1; do
+    echo "$(date) Waiting for network." >> "$LOG_FILE"
+    sleep 5
 done
-mkdir -p /nobackup/lab_bock/projects/cellwhisperer
-sleep 5
+echo "$(date) Network is up." >> "$LOG_FILE"
 
-while ! pgrep -f "sshfs.*/nobackup/lab_bock/projects/cellwhisperer/" > /dev/null; do
-    echo "Trying to start sshfs"
-    sshfs -o ro,debug,sshfs_debug,loglevel=debug,reconnect,ServerAliveInterval=45,ServerAliveCountMax=2,IdentityFile=/home/jburton/.ssh/id_rsa jburton@login.int.cemm.at:/nobackup/lab_bock/projects/cellwhisperer/ /nobackup/lab_bock/projects/cellwhisperer/ 1> /dev/null 2> /dev/null &
-    sleep 2
-done
-echo "SSHFS started"
+if mountpoint -q "$MOUNT_POINT"; then
+    echo "$(date) Filesystem is already mounted at $MOUNT_POINT." >> "$LOG_FILE"
+else
+    echo "$(date) Attempting to mount sshfs share..." >> "$LOG_FILE"
+    sshfs -o ro,reconnect,ServerAliveInterval=45,ServerAliveCountMax=2,IdentityFile=/home/jburton/.ssh/id_rsa "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}" "$MOUNT_POINT" >> "$LOG_FILE" 2>&1
 
-/home/jburton/cellwhisperer_private/hosting/cemm/cellwhisperer_cycle.sh
+    # Check if the mount command was successful
+    if [ $? -eq 0 ]; then
+        echo "$(date) Mount successful." >> "$LOG_FILE"
+    else
+        echo "$(date) Mount FAILED. Check SSH keys and paths. Exiting." >> "$LOG_FILE"
+        exit 1
+    fi
+fi
 
-wait
+echo "$(date) Running post-mount commands." >> "$LOG_FILE"
+# ------------------------------------------------------------------
+
+/home/jburton/cellwhisperer_private/hosting/cemm/reset_everything.sh >> "$LOG_FILE" 2>&1
+/home/jburton/cellwhisperer_private/hosting/cemm/cellwhisperer_cycle.sh >> "$LOG_FILE" 2>&1
+
+# ------------------------------------------------------------------
+
+echo "$(date) Reboot script finished." >> "$LOG_FILE"

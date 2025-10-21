@@ -1,6 +1,9 @@
+# add these wo lines to the services for debugging
+# - ./docker_conda:/opt/miniconda3
+# - ~/cellwhisperer:/opt/cellwhisperer
+
 name: cellwhisperer_group
 version: '3.8'
-
 services:
   cellwhisperer_clip:
     container_name: cellwhisperer_clip
@@ -20,18 +23,20 @@ services:
     environment:
       MODEL: "/model.ckpt"
       CONDA_ENV: cellwhisperer
-      TRANSFORMERS_CACHE: /cache/transformers
+      TRANSFORMERS_CACHE: /cache/transformers  # soon deprecated in favor of HF_CACHE
       HF_CACHE: /cache/transformers
       CELLWHISPERER_CACHE: /cache/cellwhisperer
-    #  deploy:
-    #  resources:
-    #    reservations:
-    #        devices:
-    #        - capabilities: [gpu]
-    #          driver: nvidia
-    #          count: all
     devices:
-        - "nvidia.com/gpu=all"
+        - "nvidia.com/gpu=0"
+          #security_opt:
+          # - label=type:nvidia_container_t
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              driver: nvidia
+              count: all
     networks:
         - whisper
 
@@ -52,92 +57,84 @@ services:
 
   cellwhisperer_llava_model:
     <<: *llava-service
-    command: python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 --controller http://cellwhisperer_llava_controller:10000 --port 40000 --worker http://cellwhisperer_llava_model:40000 --model-path /Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1/
+    command: python -m llava.serve.model_worker --multi-modal --host 0.0.0.0 --controller https://cellwhisperer.cemm.at/llava-controller --port 40000 --worker https://cellwhisperer.cemm.at/llava-model-worker --model-path /Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1/
     container_name: cellwhisperer_llava_model
-    devices:
-        - "nvidia.com/gpu=all"
-    #deploy:
-    #  resources:
-    #    reservations:
-    #      devices:
-    #        - nvidia.com/gpu=all
-    #        - capabilities: [gpu]
-    #          count: all
-    #          driver: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              count: all
+              driver: nvidia
     volumes:
-      - /nobackup/lab_bock/projects/cellwhisperer/results/llava/finetuned/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1:/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1:ro
+      - /nobackup/lab_bock/projects/cellwhisperer/results/llava/finetuned/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1:/Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1:ro  # the name is important
       - cache:/cache/:Z
+    devices:
+      - "nvidia.com/gpu=0"
+        #security_opt:
+        #- label=type:nvidia_container_t
     environment:
       CONDA_ENV: llava
       HF_CACHE: /cache/transformers
     networks:
       - whisper
 
-  cellxgene_tabsap: &cellxgene-service  # This YAML anchor is the base for all dynamic services
+  cellxgene_tabsap: &cellxgene-service
     container_name: cellxgene_tabsap
     build:
       context: ../..
     image: cellwhisperer
     working_dir: /opt/cellwhisperer
     volumes:
-      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - /nobackup/lab_bock/projects/cellwhisperer/results/tabula_sapiens/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/tabsap/:/logs/:Z
     command: gunicorn --worker-class gevent --bind 0.0.0.0:5005 server.app.wsgi:application --timeout 60
     stdin_open: true
     tty: true
     restart: unless-stopped
-    environment: &cellxgene-env
+    environment:
       CXG_CONFIG_FILE: /cellxgene_config.yaml
       LOGDIR: "/logs/"
       MODEL: "http://cellwhisperer_clip:8910/api"
       JEST_ENV: "prod"
       RETRY_ATTEMPTS: 2
       CONDA_ENV: cellwhisperer
-      
-      PROXY_LOCATION_PATH: "tabulasapiens"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "false"
     deploy:
       resources:
         limits:
           memory: 16G
-    networks:
-        - whisper
     depends_on:
       - cellwhisperer_clip
       - cellwhisperer_llava_model
       - cellwhisperer_llava_controller
+    networks:
+        whisper
 
   cellxgene_car_t:
     <<: *cellxgene-service
     container_name: cellxgene_car_t
     volumes:
-      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - /nobackup/lab_bock/projects/cellwhisperer/results/car_t/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/car_t/:/logs/:Z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "car_t"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "false"
 
   cellxgene_bowel_disease:
     <<: *cellxgene-service
-    container_name: cellxgene_bowel_disease
+    container_name: cellxgene_bowerl_disease
     volumes:
-      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - /nobackup/lab_bock/projects/cellwhisperer/results/bowel_disease/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ./llava_logs/bowel_disease/:/logs/:Z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "colonic_epithelium"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "false"
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/bowel_idisease/:/logs/:Z
 
+  cellxgene_gbusslinger:
+    <<: *cellxgene-service
+    container_name: cellxgene_gbusslinger
+    volumes:
+      - /nobackup/lab_bock/projects/cellwhisperer/results/gbusslinger/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
+      - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
+      - ./llava_logs/gbusslinger/:/logs/:Z
+      
   cellxgene_human_disease:
     <<: *cellxgene-service
     container_name: cellxgene_human_disease
@@ -145,13 +142,7 @@ services:
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - /nobackup/lab_bock/projects/cellwhisperer/results/human_disease/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./llava_logs/human_disease/:/logs/:Z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "human_disease"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "false"
-
+      
   cellxgene_geo:
     <<: *cellxgene-service
     container_name: cellxgene_geo
@@ -159,12 +150,6 @@ services:
       - /nobackup/lab_bock/projects/cellwhisperer/results/archs4_geo/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/geo/:/logs/:Z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "geo"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "false"
 
   cellxgene_hcaorganoids_cancer__organoid:
     <<: *cellxgene-service
@@ -173,13 +158,7 @@ services:
       - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_cancer__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/hcaorganoids_cancer__organoid/:/logs/:Z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "hcaorganoids_cancer__organoid"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "true"
-
+      
   cellxgene_hcaorganoids_cancer__primary:
     <<: *cellxgene-service
     container_name: cellxgene_hcaorganoids_cancer__primary
@@ -187,13 +166,7 @@ services:
       - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_cancer__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/hcaorganoids_cancer__primary/:/logs/:Z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "hcaorganoids_cancer__primary"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "true"
-
+      
   cellxgene_hcaorganoids_normal__primary:
     <<: *cellxgene-service
     container_name: cellxgene_hcaorganoids_normal__primary
@@ -201,12 +174,6 @@ services:
       - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_normal__primary/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/hcaorganoids_normal__primary/:/logs/:Z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "hcaorganoids_normal__primary"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "true"
 
   cellxgene_hcaorganoids_normal__organoid:
     <<: *cellxgene-service
@@ -215,12 +182,6 @@ services:
       - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids_normal__organoid/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/hcaorganoids_normal__organoid/:/logs/:Z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "hcaorganoids_normal__organoid"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "true"
 
   cellxgene_gut_cell_atlas:
     <<: *cellxgene-service
@@ -229,26 +190,14 @@ services:
       - /nobackup/lab_bock/projects/cellwhisperer/results/gut_cell_atlas/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/gut_cell_atlas/:/logs/:Z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "gut_cell_atlas"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "false"
 
   cellxgene_hcaorganoids:
     <<: *cellxgene-service
     container_name: cellxgene_hcaorganoids
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/results/hcaorganoids/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ./llava_logs/hcaorganoids/:/logs/:Z
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "hcaorganoids"
-      PROXY_AUTH: "true"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
+      - ./llava_logs/hcaorganoids/:/logs/:Z
 
   cellxgene_development:
     <<: *cellxgene-service
@@ -257,12 +206,6 @@ services:
       - /nobackup/lab_bock/projects/cellwhisperer/results/development3s/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/development3s/:/logs/:Z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "development"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "false"
 
   cellxgene_hca_olo:
     <<: *cellxgene-service
@@ -271,13 +214,8 @@ services:
       - /nobackup/lab_bock/projects/cellwhisperer/results/hca_olo/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/hca_olo/:/logs/:Z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "hca_olo"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "true"
 
+  
   spotwhisperer_lc1:
     <<: *cellxgene-service
     container_name: spotwhisperer_lc1
@@ -285,13 +223,7 @@ services:
       - /nobackup/lab_bock/projects/cellwhisperer/Jake/lc_1/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/hca_olo/:/logs/:Z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "lc1"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "false"
-
+  
   spotwhisperer_lc2:
     <<: *cellxgene-service
     container_name: spotwhisperer_lc2
@@ -299,12 +231,6 @@ services:
       - /nobackup/lab_bock/projects/cellwhisperer/Jake/lc_2/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/hca_olo/:/logs/:Z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "lc2"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "false"
 
   spotwhisperer_lc3:
     <<: *cellxgene-service
@@ -313,12 +239,7 @@ services:
       - /nobackup/lab_bock/projects/cellwhisperer/Jake/lc_3/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/hca_olo/:/logs/:Z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "lc3"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "false"
+  
 
   spotwhisperer_lc4:
     <<: *cellxgene-service
@@ -327,69 +248,40 @@ services:
       - /nobackup/lab_bock/projects/cellwhisperer/Jake/lc_4/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
       - ./llava_logs/hca_olo/:/logs/:Z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "lc4"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "false"
+
 
   spotwhisperer_lc5:
     <<: *cellxgene-service
     container_name: spotwhisperer_lc5
     volumes:
       - /nobackup/lab_bock/projects/cellwhisperer/Jake/lc_5/cellwhisperer_clip_v1/cellxgene.h5ad:/dataset.h5ad:ro
-      - ./llava_logs/lc_5/:/logs/:Z
       - ./cellxgene_config.yaml:/cellxgene_config.yaml:ro,z
-    environment:
-      <<: *cellxgene-env
-      PROXY_LOCATION_PATH: "lc5"
-      GENERATE_PROXY_LOCATION: "true"
-      PROXY_PORT: "5005"
-      PROXY_AUTH: "false"
+      - ./llava_logs/hca_olo/:/logs/:Z
 
+  # certificate renewal is run through my nixos configuration
   nginx:
     container_name: nginx
     image: nginx:latest
     volumes:
-      - ./htpasswd:/etc/nginx/.htpasswd:ro,Z
-      - nginx_conf:/etc/nginx/conf.d:z
-      - ../static:/static:Z
-      - ./nginx.conf:/etc/nginx/nginx.conf:Z
-      - ./logging/dashboard/:/usr/share/nginx/dashboard/:ro,z
+        - ./htpasswd:/etc/nginx/.htpasswd:ro,Z
+        - ./nginx.conf:/etc/nginx/nginx.conf:ro,Z
+        - ../static:/static:Z
     ports:
       - "8000:8000"
-    #command: tail -f /dev/null
-    #restart: unless-stopped
+    depends_on:
+      - cellxgene_tabsap
+      - cellxgene_geo
+      - cellxgene_human_disease
+      - cellxgene_car_t
+      - cellxgene_bowel_disease
+      - cellxgene_gut_cell_atlas
+    restart: unless-stopped
     networks:
         - whisper
-    depends_on:
-        - cellwhisperer_clip
-        - cellwhisperer_llava_model
-        - cellwhisperer_llava_controller
 
-  docker-gen:
-    userns_mode: "keep-id"
-    privileged: true # This container needs to be able to access the podman socket to get running containers.
-    container_name: docker-gen-sidecar
-    image: jwilder/docker-gen
-    command: -notify-sighup nginx -watch /etc/docker-gen/templates/nginx.tmpl /etc/nginx/conf.d/default.conf
-    restart: unless-stopped
-    volumes:
-      # Mount the rootless podman socket
-      - ${XDG_RUNTIME_DIR}/podman/podman.sock:/var/run/docker.sock:ro,Z
-      - ./nginx.tmpl:/etc/docker-gen/templates/nginx.tmpl:ro,Z
-      - nginx_conf:/etc/nginx/conf.d:z
-    networks:
-      - whisper
-    environment:
-      - DOCKER_HOST=unix:///var/run/docker.sock
-
-networks:
+networks: # You need to create the network external to the docker compose lifecycle by running podman network create cwhisper
     whisper:
             name: ${PODMAN_NETWORK_NAME:-cwhispernet}
-            external: true
-
+    external: true
 volumes:
     cache:
-    nginx_conf:

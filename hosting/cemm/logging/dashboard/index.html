@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Activity Dashboard</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f4f9; color: #333; }
+        .chart-container { max-width: 900px; margin: 50px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #5a5a5a; }
+    </style>
+    <!-- 1. Include the Chart.js library from a CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div class="chart-container">
+        <h1>Usage Report</h1>
+        <!-- 2. This canvas is where the chart will be drawn -->
+        <canvas id="userActivityChart"></canvas>
+    </div>
+
+    <script>
+        // 3. This script will fetch our data and build the chart
+        async function createChart() {
+            // Fetch the aggregated data from our JSON file
+            const response = await fetch('stats.json');
+            const data = await response.json();
+
+            const ctx = document.getElementById('userActivityChart').getContext('2d');
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels, // Months
+                    datasets: [{
+                        label: 'Chat Sessions',
+                        data: data.chatData,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Browsing-Only Sessions',
+                        data: data.browseData,
+                        backgroundColor: 'rgba(255, 159, 64, 0.6)',
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Unique Sessions'
+                            },
+			    ticks: {
+                                // This ensures that the ticks on the Y axis are always whole numbers.
+                                // It prevents labels like "0.5", "1.5", etc.
+                                precision: 0,
+                                // For smaller numbers, this suggests the axis step by 1.
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Run the function to create the chart when the page loads
+        createChart();
+    </script>
+
+</body>
+</html>

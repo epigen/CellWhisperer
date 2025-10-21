@@ -56,3 +56,11 @@ If you need to completely rebuild the container environment:
 
 **Note:** Specific cleanup steps will depend on your container runtime configuration.
 
+## Docker Nginx Sidecar
+
+To support dynamic scaling/loading of user supplied datasets we use [docker-gen](https://hub.docker.com/r/jwilder/docker-gen) to dynamically update the nginx configuration when new containers are started. This requires an additional container `docker-gen` which runs on the same network and monitors for changes to the running containers. On detecting a change it will re-write the nginx configuration template in `nginx.tmpl` to insert container metadata. For existing containers this metadata comes from the `docker-compose` file. Specifically the `PROXY_LOCATION_PATH: "lc5"` and `GENERATE_PROXY_LOCATION: "true"` keys. This cause a new entry to be inserted into the nginx config to proxy requests to the PROXY_LOCATION_PATH to this container. This metadata in the future will also come from the podman python library.
+
+Thus, `nginx.tmpl` now contains a template for an nginx sub-configuration that is re-written and loaded into `/etc/nginx/conf.d/` and `nginx.conf` contains only logging boilerplate and the directive to include these dynamic files.
+
+
+

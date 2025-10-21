@@ -1,0 +1,107 @@
+server {
+    listen 8000;
+    server_name cellwhisperer.cemm.at;
+    resolver 127.0.0.11 valid=30s;
+    resolver_timeout 1s;
+
+    # Log while keeping forwarded IP.
+    access_log /var/log/nginx/access.log forwarded;
+    error_log /var/log/nginx/error.log;
+
+    client_max_body_size 100M;
+    root /static;
+
+    # Serve 'index.html' for root URL, '/index', and '/index.html'
+    location = / {
+        if (-f $document_root/maintenance.html) {
+	    return 503;
+        }
+        try_files /index.html =404;
+    }
+
+    error_page 503 @maintenance;
+    location @maintenance {
+        rewrite ^(.*)$ /maintenance.html break;
+    }
+
+    location = /index {
+        try_files /index.html =404;
+    }
+
+    location = /index.html {
+        try_files /index.html =404;
+    }
+    
+    location /dashboard/ {
+        alias /usr/share/nginx/dashboard/;
+        index index.html;
+    }
+
+    # Proxy requests to the controller service
+    location /llava-controller/ {
+        #set $upstream_llava_controller "http://cellwhisperer_llava_controller:10000/";
+        #proxy_pass $upstream_llava_controller;
+	proxy_pass http://cellwhisperer_llava_controller:10000/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 60s;
+    }
+
+    # Proxy requests to the model worker service
+    location /llava-model-worker/ {
+        #set $upstream_llava_worker "http://cellwhisperer_llava_model:40000/";
+        #proxy_pass $upstream_llava_worker;
+	proxy_pass http://cellwhisperer_llava_model:40000/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 60s;
+    }
+    
+    # Proxy requests to the model API server
+    location /clip/ {
+        #set $upstream_clip "http://cellwhisperer_clip:8910/";
+        #proxy_pass $upstream_clip;
+	proxy_pass http://cellwhisperer_clip:8910/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 60s;
+    }
+
+    # Dynamically generated for every cellwhisperer instance.
+    {{ range . }}
+    {{ if .Env.GENERATE_PROXY_LOCATION }}
+
+    # Generated location for: {{ .Name }}
+    location /{{ .Env.PROXY_LOCATION_PATH }}/ {
+
+        {{ if eq .Env.PROXY_AUTH "true" }}
+        auth_basic "Protected Area";
+        auth_basic_user_file /etc/nginx/.htpasswd;
+        {{ end }}
+
+        #set $upstream_{{ .Name }} "http://{{ .Name }}:{{ .Env.PROXY_PORT }}";
+        #proxy_pass $upstream_{{ .Name }};
+        proxy_pass http://{{ .Name }}:{{ .Env.PROXY_PORT }}/;
+	proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    {{ end }}
+    {{ end }}
+}

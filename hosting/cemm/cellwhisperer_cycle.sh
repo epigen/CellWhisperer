@@ -29,5 +29,6 @@ export PODMAN_NETWORK_NAME=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 10;)
 podman network create --subnet 10.89.1.1/24 ${PODMAN_NETWORK_NAME} # --ipam-driver="dhcp"
 
 # Start the cellwhisperer containers.
+#docker compose --podman-run-args="--device nvidia.com/gpu=all" up -d --remove-orphans
 docker compose up -d --remove-orphans
 #podman-compose --in-pod cellwhisperer_group --pod-args='--infra=true' up -d
