@@ -175,7 +175,7 @@ If you prefer to run the AI models for the web interface locally:
      --model-path <path_to_mistral_model>
    ```
    
-   Then adjust the `CONTROLLER_URL` variable in `modules/cellxgene/server/common/compute/llava_utils.py` to point to your local controller.
+   Then adjust the `WORKER_URL` variable in `modules/cellxgene/server/common/compute/llava_utils.py` to point to your local controller.
 
 For a more integrated setup with Docker orchestration, refer to `hosting/home/docker-compose.yml` as a starting point.
 
