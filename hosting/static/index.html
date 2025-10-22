@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,166 +10,271 @@
             font-family: Arial, sans-serif;
             text-align: center;
             background-color: #1e2820;
+            margin: 0;
+            padding: 0;
         }
+
         .container {
             max-width: 1200px;
             margin: auto;
             padding: 20px;
             padding-bottom: 60px;
         }
+
         .headline {
             color: #eee;
             margin: 40px 0px 20px 0px;
         }
+
         .description {
             max-width: 1090px;
             margin-bottom: 30px;
             color: #bbb;
         }
+
         .button {
             display: inline-block;
-            padding: 10px 20px;
+            padding: 12px 22px;
             margin: 10px;
-            background-color: #007bff;
             color: #ffffff;
             text-decoration: none;
-            border-radius: 5px;
-            transition: background-color 0.3s;
+            border-radius: 10px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
-        .button:hover {
-            background-color: #0056b3;
+
+        /* Top row: muted teal gradient */
+        .button.teal {
+            background: linear-gradient(135deg, #2b7a78, #3b9c94, #68b6a9);
         }
-        .inactive {
-            background-color: #6c757d;
-            pointer-events: none;
+
+        .button.teal:hover {
+            transform: translateY(-3px);
+            background: linear-gradient(135deg, #3b9c94, #2b7a78);
         }
+
+        /* Bottom row: muted amber-gold gradient */
+        .button.amber {
+            background: linear-gradient(135deg, #d6a64f, #e2b865, #f0cd7b);
+            color: #2a2a2a;
+        }
+
+        .button.amber:hover {
+            transform: translateY(-3px);
+            background: linear-gradient(135deg, #e2b865, #d6a64f);
+        }
+
         .video-wrapper {
             cursor: pointer;
             position: relative;
             width: 100%;
             max-width: 800px;
             margin: auto;
+            display: flex;
+            justify-content: center;
         }
+
         .video-wrapper video {
             width: 100%;
             display: none;
         }
+
         .overlay {
+            position: relative;
+            width: 100%;
+            background-color: #1e2820;
+            cursor: pointer;
+        }
+
+        .overlay img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 15px;
+        }
+
+        a {
+            color: #bbb;
+        }
+
+        /* Banner styling (full-width top banner) */
+        .banner-container {
+            position: relative;
+            width: 100%;
+            margin: 0;
+            border-radius: 0;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .banner-container::before {
+            content: "";
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: #1e2820;
-            background-size: cover;
-            cursor: pointer;
+            background: radial-gradient(circle at 30% 50%, rgba(78, 199, 185, 0.15), transparent 60%),
+                radial-gradient(circle at 70% 50%, rgba(226, 184, 101, 0.15), transparent 60%);
             z-index: 1;
         }
-        a {
-            color: #bbb;
+
+        .banner-container::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.35), transparent 70%);
+            z-index: 2;
+        }
+
+        .banner-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+            position: relative;
+            z-index: 0;
         }
     </style>
 </head>
+
 <body>
+
+    <!-- Full-width top banner -->
+    <div class="banner-container">
+        <img src="CellWhisperer_bridge_illustration_wide.png" alt="CellWhisperer illustration" />
+    </div>
+
+    <!-- Centered main content -->
     <div class="container">
+
         <h1 class="headline">Unlocking the Language of Cells</h1>
+
         <p class="description">
             CellWhisperer bridges the gap between transcriptomics data and natural language,
             enabling intuitive interaction with scRNA-seq datasets.
         </p>
+
+        <!-- Top row (muted teal buttons) -->
         <div>
-            <a href="/tabulasapiens/" class="button">Decipher single cells from the <br> <span style="font-weight: bold">Tabula Sapiens dataset</span></a>
-            <a href="/geo/" class="button">Explore <br> human transcriptomes in <span style="font-weight: bold">GEO</span></a>
-            <a href="/colonic_epithelium/" class="button">Chat with the <br> <span style="font-weight: bold">colonic epithelium</span></a>
-            <a href="/development/" class="button">Analyze <br> <span style="font-weight: bold">embryonic development </span></a>
+            <a href="/tabulasapiens/" class="button teal">Decipher single cells from the <br><b>Tabula Sapiens
+                    dataset</b></a>
+            <a href="/geo/" class="button teal">Explore <br> human transcriptomes in <b>GEO</b></a>
+            <a href="/colonic_epithelium/" class="button teal">Chat with the <br><b>colonic epithelium</b></a>
+            <a href="/development/" class="button teal">Analyze <br><b>embryonic development</b></a>
         </div>
-        <img src="tree_of_knowledge.webp" alt="Centered Image" style="display: block; margin-left: auto; margin-right: auto; width: 50%;" />
+
+        <!-- Bottom row (muted amber buttons) -->
         <div>
-            <a href="https://openreview.net/forum?id=yWiZaE4k3K" class="button">Spotlight paper @ ICLR 2024 MLGenX</a>
-            <a href="https://www.biorxiv.org/content/10.1101/2024.10.15.618501v1" class="button" style="font-weight: bold;">BioRxiv</a>
-            <a href="https://github.com/epigen/cellwhisperer" class="button">Code</a>
-            <a href="https://medical-epigenomics.org/papers/schaefer2025cellwhisperer/data/" class="button">Datasets &amp; Models</a>
-            <a href="#analyze-your-data" class="button">Analyze your own data</a>
+            <a href="https://openreview.net/forum?id=yWiZaE4k3K" class="button amber">Spotlight paper @ ICLR 2024
+                MLGenX</a>
+            <a href="https://www.biorxiv.org/content/10.1101/2024.10.15.618501v1"
+                class="button amber"><b>BioRxiv</b></a>
+            <a href="https://github.com/epigen/cellwhisperer" class="button amber">Code</a>
+            <a href="https://medical-epigenomics.org/papers/schaefer2025cellwhisperer/data/"
+                class="button amber">Datasets &amp; Models</a>
+            <a href="#analyze-your-data" class="button amber">Analyze your own data</a>
         </div>
+
         <h2 class="headline">Tutorial</h2>
-        <p class="description" style="text-align: center;">(Click the annotated screenshot for a 2-minute video-tutorial)</p>
+        <p class="description">(Click the annotated screenshot for a 2-minute video-tutorial)</p>
+
         <div class="video-wrapper">
             <video id="videoPlayer" width="100%" controls>
-                <source src="https://medical-epigenomics.org/papers/schaefer2025cellwhisperer/video/TutorialNarrated.mp4" type="video/mp4">
+                <source
+                    src="https://medical-epigenomics.org/papers/schaefer2025cellwhisperer/video/TutorialNarrated.mp4"
+                    type="video/mp4">
                 Your browser does not support the video tag.
             </video>
             <div class="overlay" id="videoOverlay">
-                <img src="annotated_screenshot.png" alt="Annotated screenshot of CellWhisperer application" width="100%" />
+                <img src="annotated_screenshot.png" alt="Annotated screenshot of CellWhisperer application"
+                    width="100%" />
             </div>
         </div>
+
         <p class="description" style="font-style: italic;">
-            CellWhisperer constitutes a proof-of-concept for interactive exploration of scRNA-seq data. Like other AI models, CellWhisperer does not understand user questions in a human sense, and it can make mistakes. Key results should thus be reconfirmed with conventional bioinformatics approaches.
+            CellWhisperer constitutes a proof-of-concept for interactive exploration of scRNA-seq data. Like other AI
+            models, CellWhisperer does not understand user questions in a human sense, and it can make mistakes. Key
+            results should thus be reconfirmed with conventional bioinformatics approaches.
         </p>
+
         <h2 class="headline" id="analyze-your-data">Analyze your own data</h2>
-        <div class="description" style="
-                    max-width: 800px;
-                    margin: auto;
-                    ">
+        <div class="description" style="max-width: 800px; margin: auto;">
             <p>
-                The CellWhisperer server linked above provides example datasets but does not allow for upload of user-provided datasets. To analyze your own data with CellWhisperer, you need to run CellWhisperer on your computer or on a local server. This is relatively straightforward to set up in three steps:
+                The CellWhisperer server linked above provides example datasets but does not allow for upload of
+                user-provided datasets. To analyze your own data with CellWhisperer, you need to run CellWhisperer on
+                your computer or on a local server. This is relatively straightforward to set up in three steps:
             </p>
-            <ol style="
-                    padding-left: 110px;
-                    padding-right: 110px;
-                    ">
+            <ol style="padding-left: 110px; padding-right: 110px;">
                 <li>Prepare your scRNA-seq data as an h5ad file</li>
                 <li>Run the CellWhisperer data processing script</li>
                 <li>Launch CellWhisperer on your computer and add the dataset</li>
             </ol>
             <p>
-                A step-by-step description is provided in the <a href="https://github.com/epigen/cellwhisperer#analyze" target="_blank">CellWhisperer github repository</a>.
+                A step-by-step description is provided in the
+                <a href="https://github.com/epigen/cellwhisperer#analyze" target="_blank">CellWhisperer GitHub
+                    repository</a>.
             </p>
         </div>
+
         <h2 class="headline">News</h2>
-        <div class="description" style="
-                    max-width: 800px;
-                    margin: auto;
-                    text-align: left;
-                    ">
+        <div class="description" style="max-width: 800px; margin: auto; text-align: left;">
             <ul style="list-style-type: none; padding-left: 0;">
                 <li><strong>2025-06-03:</strong> Talk at Google Genomics Deep Dive</li>
                 <li><strong>2025-05-05:</strong> Talk at RNA-AI (Monte Verita, Switzerland)</li>
-                <li><strong>2025:</strong> Nature Biotechnology paper (in press, DOI: <a href="https://doi.org/10.1038/s41587-025-02857-9" target="_blank">10.1038/s41587-025-02857-9</a>)</li>
-                <li><strong>2024-11-15:</strong> Talk at CSHL Biological Data Science Meeting (Cold Spring Harbor, USA)</li>
-                <li><strong>2024-10-15:</strong> Talk at Max Delbrück Center Data Science &amp; AI Lecture Series (Berlin, Germany)</li>
+                <li><strong>2025:</strong> Nature Biotechnology paper (in press, DOI:
+                    <a href="https://doi.org/10.1038/s41587-025-02857-9" target="_blank">10.1038/s41587-025-02857-9</a>)
+                </li>
+                <li><strong>2024-11-15:</strong> Talk at CSHL Biological Data Science Meeting (Cold Spring Harbor, USA)
+                </li>
+                <li><strong>2024-10-15:</strong> Talk at Max Delbrück Center Data Science &amp; AI Lecture Series
+                    (Berlin,
+                    Germany)</li>
                 <li><strong>2024-10-15:</strong> bioRxiv preprint published</li>
                 <li><strong>2024-04-26:</strong> Talk at EU-LIFE Utopia Conference (Vienna, Austria)</li>
                 <li><strong>2024-03-24:</strong> Spotlight paper @ ICLR MLGenX 2024</li>
             </ul>
         </div>
+
         <h2 class="headline">Citation</h2>
-        <div class="description" style="
-                    max-width: 800px;
-                    margin: auto;
-                    ">
+        <div class="description" style="max-width: 800px; margin: auto;">
+            <p>If you use CellWhisperer in your research, please cite us:</p>
             <p>
-                If you use CellWhisperer in your research, please cite us:
+                Moritz Schaefer*, Peter Peneder*, Daniel Malzl, Salvo Danilo Lombardo, Mihaela Peycheva, Jake Burton,
+                Anna Hakobyan, Varun Sharma, Thomas Krausgruber, Celine Sin, Jörg Menche, Eleni M. Tomazou, Christoph
+                Bock (2025) <i>Multimodal learning enables chat-based exploration of single-cell data.</i> Nature
+                Biotechnology (in press). DOI:
+                <a href="https://doi.org/10.1038/s41587-025-02857-9" target="_blank">10.1038/s41587-025-02857-9</a>
             </p>
+            <p style="font-size: 0.9em; font-style: italic;">* equal contribution</p>
             <p>
-                Moritz Schaefer*, Peter Peneder*, Daniel Malzl, Salvo Danilo Lombardo, Mihaela Peycheva, Jake Burton, Anna Hakobyan, Varun Sharma, Thomas Krausgruber, Celine Sin, Jörg Menche, Eleni M. Tomazou, Christoph Bock (2025) <i>Multimodal learning enables chat-based exploration of single-cell data.</i> Nature Biotechnology (in press). DOI: <a href="https://doi.org/10.1038/s41587-025-02857-9" target="_blank">10.1038/s41587-025-02857-9</a>
-            </p>
-            <p style="font-size: 0.9em; font-style: italic;">
-                * equal contribution
-            </p>
-            <p>
-                Preprint: <a href="https://www.biorxiv.org/content/10.1101/2024.10.15.618501v1" target="_blank">bioRxiv</a>
+                Preprint:
+                <a href="https://www.biorxiv.org/content/10.1101/2024.10.15.618501v1" target="_blank">bioRxiv</a>
             </p>
         </div>
+
         <h2 class="headline">Feedback</h2>
-        <p class="description">Got feedback? Drop us an email at <a href="mailto:cellwhisperer@bocklab.org">cellwhisperer@bocklab.org</a> or open an issue on <a href="https://github.com/epigen/CellWhisperer/issues">GitHub</a>.</p>
+        <p class="description">
+            Got feedback? Drop us an email at
+            <a href="mailto:cellwhisperer@bocklab.org">cellwhisperer@bocklab.org</a>
+            or open an issue on
+            <a href="https://github.com/epigen/CellWhisperer/issues">GitHub</a>.
+        </p>
+
     </div>
+
     <script>
-        document.getElementById('videoOverlay').addEventListener('click', function() {
+        document.getElementById('videoOverlay').addEventListener('click', function () {
             var video = document.getElementById('videoPlayer');
             this.style.display = 'none';
             video.style.display = 'block';
             video.play();
         });
     </script>
+
 </body>
+
 </html>
