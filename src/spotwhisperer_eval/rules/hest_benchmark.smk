@@ -43,8 +43,6 @@ rule convert_hest_to_spotwhisperer:
     This creates H5AD files with embedded images that can be used with
     the standard `cellwhisperer test` command instead of custom evaluation scripts.
 
-    TODO this yields empty h5ad files :/
-
     """
     input:
         dataset_dir=HEST_DATA_ROOT / "{dataset}"

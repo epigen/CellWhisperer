@@ -95,7 +95,7 @@ rule cellwhisperer_per_class_analysis:
         plot=report(CELLWHISPERER_BENCHMARK_RESULTS / "comparison" / "per_class_analysis.pdf", category="per_class_analysis", subcategory="transcriptome-text", labels={"Analysis": "CellWhisperer benchmark", "Format": "plot"})
     params:
         datasets=CELLWHISPERER_BENCHMARK_DATASETS,
-        metric="rocauc"  # precision	accuracy	f1	rocauc	recall_at_1	recall_at_5	recall_at_10	recall_at_50	
+        metrics=["rocauc", "f1", "accuracy", "precision", "recall_at_1", "recall_at_5", "recall_at_10", "recall_at_50"]  # All available metrics
     conda:
         "cellwhisperer"
     resources:

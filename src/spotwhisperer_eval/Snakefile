@@ -18,6 +18,17 @@ Each trained model is evaluated using:
 import itertools
 import glob
 
+# Define modality colors
+MODALITY_COLORS = {
+    "text": "#33aac3",
+    "image": "#8c1515", 
+    "transcriptome": "#9c7cb8",
+    "text-image": "#e74c3c",
+    "image-transcriptome": "#3498db",
+    "text-transcriptome": "#2ecc71",
+    "trimodal": "#f39c12",
+}
+
 # Include shared configuration and rules
 include: "../shared/config.smk"
 include: "../shared/rules/dataset_processing.smk"
@@ -25,6 +36,7 @@ include: "rules/hest_benchmark.smk"
 include: "rules/lung_benchmark.smk"
 include: "rules/musk_benchmark.smk"
 include: "rules/cellwhisperer_benchmark.smk"
+include: "rules/model_interpretation.smk"
 
 # Define dataset combinations to train on
 BASE_DATASETS = ["cellxgene_census__archs4_geo", "hest1k", "quilt1m"]
@@ -162,28 +174,28 @@ rule aggregate_musk_results:
         cp {input.performance_summary} {output.aggregated_musk}
     """
 
-rule aggregate_lung_evaluation:
-    """
-    Aggregate lung benchmark results for trained SpotWhisperer models
+# rule aggregate_lung_evaluation:
+#     """
+#     Aggregate lung benchmark results for trained SpotWhisperer models
 
-    20x and thus not supported
-    """
-    input:
-        performance_summary=lambda wildcards: expand(
-            rules.lung_performance_summary.output.summary,
-            model="spotwhisperer_{}".format(wildcards.dataset_combo),
-            allow_missing=True
-        )
-    output:
-        aggregated_lung=BENCHMARKS_DIR / "lung" / "{dataset_combo}" / "performance_summary.csv"
-    conda:
-        "cellwhisperer"
-    resources:
-        mem_mb=50000,
-        slurm="cpus-per-task=1"
-    shell: """
-        cp {input.performance_summary} {output.aggregated_lung}
-    """
+#     20x and thus not supported
+#     """
+#     input:
+#         performance_summary=lambda wildcards: expand(
+#             rules.lung_performance_summary.output.summary,
+#             model="spotwhisperer_{}".format(wildcards.dataset_combo),
+#             allow_missing=True
+#         )
+#     output:
+#         aggregated_lung=BENCHMARKS_DIR / "lung" / "{dataset_combo}" / "performance_summary.csv"
+#     conda:
+#         "cellwhisperer"
+#     resources:
+#         mem_mb=50000,
+#         slurm="cpus-per-task=1"
+#     shell: """
+#         cp {input.performance_summary} {output.aggregated_lung}
+#     """
 
 rule spotwhisperer_test:
     """
@@ -306,9 +318,9 @@ rule create_analysis_plots:
             # "lung_tissue_cell_type_annotations_f1_macro",
 
             "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
-            "valfn_zshot_TabSap_celltype_lvl/f1_macroAvg",
+            # "valfn_zshot_TabSap_celltype_lvl/f1_macroAvg",
             "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
-            "valfn_zshot_TabSap_celltype_lvl/rocauc_macroAvg"
+            # "valfn_zshot_TabSap_celltype_lvl/rocauc_macroAvg"
             # TODO later "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_recall_at_5_macroAvg" (check whether it is being generated)
 
         ],
@@ -351,6 +363,123 @@ rule create_retrieval_plots:
         slurm="cpus-per-task=4"
     notebook:
         "notebooks/create_retrieval_plots.py.ipynb"
+
+rule spider_performance_plot:
+    """
+    Create radar plot comparing trimodal and three bimodal_matching models
+    across all metrics grouped by modality pairing
+
+    TODO: make sure that hest is our retrieval benchmark on 20x (I need compatibility for both anyways..)
+    """
+    input:
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
+        # HEST benchmark results for all 4 models
+        hest_results=expand(
+            rules.aggregate_hest_evaluation.output.aggregated_hest,
+            dataset_combo=[
+                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"],
+                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"],
+                MODEL_MAPPINGS["hest1k"]["bimodal_matching"], 
+                MODEL_MAPPINGS["quilt1m"]["bimodal_matching"]
+            ]
+        ),
+        # MUSK benchmark results for all 4 models
+        musk_results=expand(
+            rules.aggregate_musk_results.output.aggregated_musk,
+            dataset_combo=[
+                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"],
+                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"],
+                MODEL_MAPPINGS["hest1k"]["bimodal_matching"],
+                MODEL_MAPPINGS["quilt1m"]["bimodal_matching"]
+            ]
+        ),
+        # Retrieval results for all 4 models
+        retrieval_results=expand(
+            rules.aggregate_spotwhisperer_test.output.aggregated_retrieval,
+            dataset_combo=[
+                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"],
+                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"],
+                MODEL_MAPPINGS["hest1k"]["bimodal_matching"],
+                MODEL_MAPPINGS["quilt1m"]["bimodal_matching"]
+            ]
+        ),
+        # CellWhisperer results for all 4 models
+        cwevals_results=expand(
+            rules.aggregate_spotwhisperer_test.output.aggregated_cwevals,
+            dataset_combo=[
+                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"],
+                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"],
+                MODEL_MAPPINGS["hest1k"]["bimodal_matching"],
+                MODEL_MAPPINGS["quilt1m"]["bimodal_matching"]
+            ]
+        ),
+        # Lung benchmark results for all 4 models
+        lung_results=expand(
+            BENCHMARKS_DIR / "lung" / "{dataset_combo}" / "performance_summary.csv",
+            # rules.aggregate_lung_evaluation.output.aggregated_lung,
+            dataset_combo=[
+                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"],
+                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"],
+                MODEL_MAPPINGS["hest1k"]["bimodal_matching"],
+                MODEL_MAPPINGS["quilt1m"]["bimodal_matching"]
+            ]
+        )
+    output:
+        plot=report(BENCHMARKS_DIR / "spider_plot" / "model_comparison_radar.png", category="aggregated", subcategory="all_modalities", labels={"Analysis": "Radar comparison", "Format": "plot"}),
+    params:
+        model_configs=[
+            ("trimodal", MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"]),
+            ("text-transcriptome", MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"]),
+            ("image-transcriptome", MODEL_MAPPINGS["hest1k"]["bimodal_matching"]),
+            ("image-text", MODEL_MAPPINGS["quilt1m"]["bimodal_matching"])
+        ],
+        metrics_by_modality={
+            "text-image": ["pannuke", "skin", "lung_tissue_region_type_expert_annotation_accuracy", "lung_tissue_cell_type_annotations_accuracy"],
+            "image-transcriptome": ["hest"],
+            "text-transcriptome": [
+                "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
+                # "valfn_zshot_TabSap_celltype_lvl/f1_macroAvg",
+                "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
+                # "valfn_zshot_TabSap_celltype_lvl/rocauc_macroAvg"
+            ]
+        },
+        modality_colors=MODALITY_COLORS
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=50000,
+        slurm="cpus-per-task=4"
+    notebook:
+        "notebooks/spider_performance_plot.py.ipynb"
+
+rule bimodal_bridge_plot:
+    """
+    Create barplot showing AUROC retrieval performance for the three bimodal bridge models
+    on their respective evaluation datasets with baseline comparison
+    """
+    input:
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
+        # Retrieval results for bimodal bridge models on their respective datasets
+        retrieval_results=[
+            rules.spotwhisperer_test.output.retrieval_and_cwevals.format(
+                dataset_combo=MODEL_MAPPINGS[dataset]["bimodal_bridge"],
+                test_dataset=dataset
+            ) for dataset in BASE_DATASETS
+        ]
+    output:
+        plot=report(BENCHMARKS_DIR / "bimodal_bridge_plot" / "auroc_comparison.png", category="aggregated", subcategory="bimodal_bridge", labels={"Analysis": "Bimodal bridge AUROC", "Format": "plot"}),
+        plot_svg=report(BENCHMARKS_DIR / "bimodal_bridge_plot" / "auroc_comparison.svg", category="aggregated", subcategory="bimodal_bridge", labels={"Analysis": "Bimodal bridge AUROC", "Format": "plot"}),
+    params:
+        datasets=BASE_DATASETS,
+        model_mappings=MODEL_MAPPINGS,
+        modality_colors=MODALITY_COLORS
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=50000,
+        slurm="cpus-per-task=4"
+    notebook:
+        "notebooks/bimodal_bridge_plot.py.ipynb"
 
 def samples_for_dataset(dataset_name):
     """
@@ -441,6 +570,8 @@ rule all:
         # Analysis plots
         expand(rules.create_analysis_plots.output.plots, test_dataset=BASE_DATASETS),
         expand(rules.create_retrieval_plots.output.plots, test_dataset=BASE_DATASETS),
+        rules.spider_performance_plot.output.plot,
+        rules.bimodal_bridge_plot.output.plot,
 
         # Per-class comparison for MUSK
         expand(
@@ -473,5 +604,8 @@ rule all:
             rules.hest_per_class_analysis.output.analysis,
             allow_missing=True
         ), # TODO
+
+        # Model interpretation analyses
+        rules.model_interpretation_all.input,
 
     default_target: True
