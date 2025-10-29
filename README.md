@@ -28,7 +28,11 @@ Installing a local copy of CellWhisperer allows you to analyze your own datasets
 - Conda or Miniconda installed
 - (Optional) CUDA 12 compatible GPU for faster processing
 
-### Installation Steps
+### Install via pixi
+
+For most your purposes, the pixi based environment will do the job. See `CONVENTIONS.md` for instructions on how to use it.
+
+### Install via conda/pip
 
 1. **Clone the repository** with all submodules (required):
    ```bash
@@ -107,11 +111,6 @@ Alternatively, `snakemake` is accessible within the `cellwhisperer` environment 
 4. You're good! Run the web app and analyze your datasets as described below
 
 Note: You might need to install gcc and gxx (e.g. v9.5) if you don't have them. If you install them with conda, it might lead to [issues with snakemake](https://github.com/conda/conda/issues/6945).
-
-### Pixi/nix/aider
-
-nix develop
-
 
 ### Install within Docker
 
