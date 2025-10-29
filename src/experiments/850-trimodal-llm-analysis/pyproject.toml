@@ -1,0 +1,11 @@
+[project]
+name = "trimodal"
+version = "0.1.0"
+description = "Analysis pipeline for SpatialWhisperer trimodal biomedical foundation model: per-class performance and retrieval analysis comparing trimodal vs bimodal learning"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.10.6",
+    "pandas>=2.3.3",
+    "seaborn>=0.13.2",
+]
