@@ -332,6 +332,17 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.include_labels = include_labels
         self.use_disk_loading = use_disk_loading
 
+        # Initialize processor
+        self.processor = TranscriptomeTextDualEncoderProcessor(
+            self.transcriptome_processor,
+            (
+                AutoTokenizer.from_pretrained(self.tokenizer, **self.tokenizer_kwargs)
+                if self.tokenizer
+                else None
+            ),
+            self.image_processor,
+        )
+
     def _processed_path(self, dataset_name, i: Optional[str] = None):
         return get_path(
             ["paths", "datamodule_prepared_path"],
@@ -349,32 +360,21 @@ class JointEmbedDataModule(pl.LightningDataModule):
             ),
         )
 
-    def get_paths(self, dataset_name):
+    def get_sample_ids(self, dataset_name):
         """
-        Return all paths (adata and processed) for a given dataset, along with sample_ids
+        Return sample IDs for a given dataset, generate paths on-demand
 
-        TODO: would be cleaner to just return the IDs and then generate the paths on-demand based on the IDs <- this is a little harder now...
         TODO: would be much cleaner to have a csv file (as already done for quilt1m) and take files from in there! (would need to implement for hest1k still, and provide coherent naming for the csv)
         """
+        adata_path = get_path(["paths", "full_dataset"], dataset=dataset_name)
 
-        adata_paths = [get_path(["paths", "full_dataset"], dataset=dataset_name)]
-        processed_paths = [self._processed_path(dataset_name)]
-        sample_ids = [""]  # Default empty sample_id for single file
-
-        if adata_paths[0].exists():
-            adata = anndata.read_h5ad(adata_paths[0], backed="r")
+        if adata_path.exists():
+            adata = anndata.read_h5ad(adata_path, backed="r")
 
             if "multi_sample_fns" in adata.uns:
-
-                adata_paths = [
-                    adata_paths[0].parent / sample
-                    for sample in adata.uns["multi_sample_fns"]
-                ]
-                processed_paths = [
-                    self._processed_path(dataset_name=dataset_name, i=sample_id)
-                    for sample_id in adata.uns["multi_sample_ids"]
-                ]
-                sample_ids = adata.uns["multi_sample_ids"]
+                return adata.uns["multi_sample_ids"]
+            else:
+                return [""]  # Default empty sample_id for single file
         else:
             adata_paths = [
                 Path(v)
@@ -395,16 +395,23 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 )
             else:
                 # Extract sample_ids from the 'full_data_{i}.h5ad' pattern
-                sample_ids = [
+                return [
                     adata_path.stem.split("full_data_")[-1]
                     for adata_path in adata_paths
                 ]
-                processed_paths = [
-                    self._processed_path(dataset_name=dataset_name, i=sample_id)
-                    for sample_id in sample_ids
-                ]
 
-        return adata_paths, processed_paths, sample_ids
+    def get_adata_path(self, dataset_name, sample_id):
+        """Generate adata path from dataset name and sample ID"""
+        if sample_id == "":
+            return get_path(["paths", "full_dataset"], dataset=dataset_name)
+        else:
+            return get_path(
+                ["paths", "full_dataset_multi"], dataset=dataset_name, i=sample_id
+            )
+
+    def get_processed_path(self, dataset_name, sample_id):
+        """Generate processed path from dataset name and sample ID"""
+        return self._processed_path(dataset_name, sample_id)
 
     def prepare_data(self, force_prepare=False):
         # Generate all datasets
@@ -412,15 +419,15 @@ class JointEmbedDataModule(pl.LightningDataModule):
             self.prepare_dataset(dataset_name, force_prepare)
 
     def prepare_dataset(self, dataset_name, force_prepare):
-        adata_paths, processed_paths, sample_ids = self.get_paths(dataset_name)
+        sample_ids = self.get_sample_ids(dataset_name)
 
         if not force_prepare:
             # check whether data has already been prepared
+            filtered_sample_ids = []
+            for sample_id in sample_ids:
+                adata_path = self.get_adata_path(dataset_name, sample_id)
+                processed_path = self.get_processed_path(dataset_name, sample_id)
 
-            filtered_paths = []
-            for adata_path, processed_path, sample_id in zip(
-                adata_paths, processed_paths, sample_ids
-            ):
                 needs_preparation = False
 
                 # Check if main processed file exists and is up to date
@@ -469,40 +476,31 @@ class JointEmbedDataModule(pl.LightningDataModule):
                     #         needs_preparation = True
 
                 if needs_preparation:
-                    filtered_paths.append((adata_path, processed_path, sample_id))
-            try:
-                adata_paths, processed_paths, sample_ids = list(zip(*filtered_paths))
-            except ValueError:
+                    filtered_sample_ids.append(sample_id)
+
+            if not filtered_sample_ids:
                 # If no files to process, return early
                 logger.info(
                     f"No new data to prepare for {dataset_name}. Skipping preparation."
                 )
                 return
 
-        logger.info(f"Preparing {len(adata_paths)} data files for {dataset_name}...")
-        for adata_path, processed_path, sample_id in zip(
-            adata_paths, processed_paths, sample_ids
-        ):
+            sample_ids = filtered_sample_ids
+
+        logger.info(f"Preparing {len(sample_ids)} data files for {dataset_name}...")
+        for sample_id in sample_ids:
+            adata_path = self.get_adata_path(dataset_name, sample_id)
+            processed_path = self.get_processed_path(dataset_name, sample_id)
             self.prepare_dataset_file(
                 adata_path, processed_path, dataset_name, sample_id
             )
 
     def prepare_dataset_file(self, adata_path, processed_path, dataset_name, sample_id):
-        # Load data and processor
-        processor = TranscriptomeTextDualEncoderProcessor(  # TODO test moving this to constructor
-            self.transcriptome_processor,
-            (
-                AutoTokenizer.from_pretrained(self.tokenizer, **self.tokenizer_kwargs)
-                if self.tokenizer
-                else None
-            ),
-            self.image_processor,
-        )
-
+        # Load data
         adata = anndata.read_h5ad(adata_path)
 
         # Fixed size embedding (https://huggingface.co/docs/transformers/en/pad_truncation), as we combine multiple datasets
-        inputs = processor(
+        inputs = self.processor(
             text=(
                 list(adata.obs["natural_language_annotation"])
                 if self.tokenizer and "natural_language_annotation" in adata.obs
@@ -516,7 +514,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 else None
             ),  # NOTE Could refactor API to only provide an adata, but not sure if the repository depends on this splitting..
             return_tensors="pt",
-            padding="max_length",  # TODO maybe better to in collator in the future?
+            padding="max_length",  # TODO maybe better to in collator? (but we need fixed size here to generate tensors and individual sample files)
         )
 
         # Add weights tensors (if available)
@@ -531,7 +529,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
         if self.use_replicates:
             logging.info("Preparing replicates")
-            replicate_inputs = self._prepare_replicate_inputs(inputs, adata, processor)
+            replicate_inputs = self._prepare_replicate_inputs(inputs, adata)
         else:
             replicate_inputs = {}
 
@@ -540,7 +538,6 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 adata.obs[self.include_labels] = pd.Categorical(
                     adata.obs[self.include_labels]
                 )
-                # NOTE maybe save the categorical as well for later?
 
             # Add labels to the inputs.
             inputs["labels"] = torch.tensor(
@@ -578,10 +575,12 @@ class JointEmbedDataModule(pl.LightningDataModule):
             # Check if the 1.0 scale patch (original resolution) is all zeros
             # Find the index of 1.0 in scale_factors, default to index 1 if not found
             try:
-                # For now, assume default scale_factors [0.6, 1.0, 4.0] where 1.0 is at index 1
-                # TODO: Make this more robust by getting actual scale_factors from processor config
+                # Get scale_factors from processor config
+                scale_factors = getattr(
+                    self.processor.image_processor, "scale_factors", [0.6, 1.0, 4.0]
+                )
                 original_scale_idx = (
-                    1  # Index of 1.0 scale factor in default scale_factors
+                    scale_factors.index(1.0) if 1.0 in scale_factors else 1
                 )
                 # Tensor shape is (n_patches, n_scales, 3, 224, 224)
                 non_zero_original_patches = (
@@ -630,7 +629,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             processed_path,
         )
 
-    def _prepare_replicate_inputs(self, inputs, adata, processor):
+    def _prepare_replicate_inputs(self, inputs, adata):
         """
         Take the length from the first one and apply it to all of them
         This is not required per se (the dimensionalities could also vary from epoch to epoch), however, it feels cleaner to remain dimensionalities across epochs.
@@ -721,11 +720,12 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
     def _load_disk_datasets(self, dataset_name):
         """Generate individual .pt files for each sample and return disk datasets"""
-        _, processed_paths, sample_ids = self.get_paths(dataset_name)
+        sample_ids = self.get_sample_ids(dataset_name)
         disk_datasets = []
 
         # Process each file individually to avoid loading all into memory
-        for processed_path, sample_id in zip(processed_paths, sample_ids):
+        for sample_id in sample_ids:
+            processed_path = self.get_processed_path(dataset_name, sample_id)
 
             # Load only this specific processed file
             result = torch.load(str(processed_path), mmap=True)
@@ -740,13 +740,16 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
     def _load_processed_dataset_memory(self, dataset_name):
         """Original memory-based loading - aggregate and return"""
-        _, processed_paths, _ = self.get_paths(dataset_name)
+        processed_paths = [
+            self.get_processed_path(dataset_name, sample_id)
+            for sample_id in self.get_sample_ids(dataset_name)
+        ]
         results = [torch.load(p, weights_only=False) for p in processed_paths]
 
         if len(results[0][1]) > 0:
             raise NotImplementedError("Currently, no 'replicates' are supported")
 
-        # TODO this is not reflected in _load_disk_datasets! How to DRY?
+        # TODO this is not reflected in _load_disk_datasets! Perhaps better to do this in the collator?
         if "expression_token_lengths" in results[0][0]:
             # pad the expression tokens to the maximum length
             max_expression_length = (
@@ -789,6 +792,8 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.val_datasets = []
 
         for dataset_name in self.dataset_names:
+            # TODO: Refactor memory loading to follow the same logic as disk loading (keeping datasets separate)
+            # instead of concatenating everything into single tensors. This would make both paths more consistent.
             if self.use_disk_loading:
                 # Generate individual sample files and get disk datasets
                 disk_datasets = self._load_disk_datasets(dataset_name)

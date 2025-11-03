@@ -83,37 +83,56 @@ class ClipLoss(nn.Module):
         """
         # Determine device from the first available tensor
         device = None
-        for tensor in [logits_transcriptome_text, logits_transcriptome_image, logits_text_image]:
+        for tensor in [
+            logits_transcriptome_text,
+            logits_transcriptome_image,
+            logits_text_image,
+        ]:
             if tensor is not None:
                 device = tensor.device
                 break
-        if device is None:
-            device = torch.device('cpu')
-            
+        else:
+            device = torch.device("cpu")
+
         total_loss = torch.tensor(0.0, device=device)
         num_valid_pairs = 0
-        
+
+        # assert that weights are None
+        assert (
+            transcriptome_weights is None and annotation_weights is None
+        ), "Weights are not supported in multi-modal ClipLoss."  # because we would need to filter them accordingly
+
         # Handle the new multi-modal logits
         if logits_transcriptome_text is not None:
-            text_loss = contrastive_loss(logits_transcriptome_text, weight=annotation_weights)
-            transcriptome_loss = contrastive_loss(logits_transcriptome_text.t(), weight=transcriptome_weights)
+            text_loss = contrastive_loss(
+                logits_transcriptome_text, weight=annotation_weights
+            )
+            transcriptome_loss = contrastive_loss(
+                logits_transcriptome_text.t(), weight=transcriptome_weights
+            )
             total_loss += (text_loss + transcriptome_loss) / 2.0
             num_valid_pairs += 1
-            
+
         if logits_transcriptome_image is not None:
             # For transcriptome-image pairs, treat transcriptome as "text" and image as "transcriptome"
-            transcriptome_loss = contrastive_loss(logits_transcriptome_image, weight=transcriptome_weights)
-            image_loss = contrastive_loss(logits_transcriptome_image.t(), weight=None)  # No specific image weights
+            transcriptome_loss = contrastive_loss(
+                logits_transcriptome_image, weight=transcriptome_weights
+            )
+            image_loss = contrastive_loss(
+                logits_transcriptome_image.t(), weight=None
+            )  # No specific image weights
             total_loss += (transcriptome_loss + image_loss) / 2.0
             num_valid_pairs += 1
-            
+
         if logits_text_image is not None:
             # For text-image pairs
             text_loss = contrastive_loss(logits_text_image, weight=annotation_weights)
-            image_loss = contrastive_loss(logits_text_image.t(), weight=None)  # No specific image weights
+            image_loss = contrastive_loss(
+                logits_text_image.t(), weight=None
+            )  # No specific image weights
             total_loss += (text_loss + image_loss) / 2.0
             num_valid_pairs += 1
-        
+
         # Return mean loss across all valid pairs
         if num_valid_pairs > 0:
             return total_loss / num_valid_pairs

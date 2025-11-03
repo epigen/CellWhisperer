@@ -30,4 +30,4 @@ final_metadata = pd.concat(combined_obs, ignore_index=False)
 final_metadata["dataset"] = snakemake.wildcards.dataset
 
 # Save to output
-final_metadata.to_csv(snakemake.output.metadata, index=False)
+final_metadata.to_csv(snakemake.output.metadata, index=True)

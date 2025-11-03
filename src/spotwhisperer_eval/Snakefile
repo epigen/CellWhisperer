@@ -81,6 +81,8 @@ MODEL_MAPPINGS = {
 }
 
 DATASET_PAIR_MAPPING = {
+    "cellxgene_census": "transcriptome-text",
+    "archs4_geo": "transcriptome-text",
     "cellxgene_census__archs4_geo": "transcriptome-text",
     "hest1k": "transcriptome-image",
     "quilt1m": "image-text",
@@ -202,6 +204,8 @@ rule spotwhisperer_test:
     Performs both retrieval and CellWhisperer zero-shot evaluation for a trained SpotWhisperer model.
 
     Needs wandb unfortunately to write the logs
+
+    NOTE: for some reason, this process freezes in the end; it's not due to nproc) -.-
     """
     input:
         model=rules.train_spotwhisperer.output.model,
@@ -222,7 +226,7 @@ rule spotwhisperer_test:
     resources:
         mem_mb=100000,
         runtime=16*60,
-        slurm=slurm_gres("small", num_cpus=2),  # for some reason, multi-processing freezes the process in the end (or does it?) -.-
+        slurm=slurm_gres("small", num_cpus=4),
     shell: """
         cd {params.project_dir}
         cellwhisperer test \
@@ -232,9 +236,9 @@ rule spotwhisperer_test:
             --data.train_fraction 0.0 \
             --batch_size {params.batch_size} \
             --seed_everything {params.seed} \
-            --nproc 0 \
-            --wandb '' \
-            --trainer.logger.init_args.version sweval___{wildcards.dataset_combo}___{wildcards.test_dataset}
+            --nproc 4 \
+            --trainer.logger.init_args.version sweval___{wildcards.dataset_combo}___{wildcards.test_dataset} \
+            --wandb ''
     """
 
 rule aggregate_spotwhisperer_test:
