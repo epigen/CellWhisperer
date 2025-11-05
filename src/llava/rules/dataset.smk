@@ -99,7 +99,7 @@ rule generate_llava_stage2_conversations:
         prompt_reminder= "\nMake sure to ignore any patient- or donor-specific information, like in your last responses."
     resources:
         mem_mb=100000,
-        slurm=f"cpus-per-task=25 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
+        slurm=slurm_gres(num_cpus=25)
     conda: "llama_cpp"
     notebook: "../notebooks/llava_stage2_dataset.py.ipynb"
 
@@ -175,7 +175,7 @@ rule aggregate_llava_stage2_dataset:
     NOTE consider oversampling complex items (e.g. use them twice, as they are fewer)
     """
     input:
-        # json_splits = glob.glob("/msc/home/mschae83/cellwhisperer/results/llava/processed/archs4_geo/second/*-of-128.json"),  # , i=[1, 103, 118, 20, 35, 48, 61, 7, 89, 1, 104, 120, 23, 36, 5, 62, 74, 9, 102, 107, 122, 33, 37, 50, 65, 79, 93])
+        # json_splits = glob.glob("/msc/home/mschae83/cellwhisperer/results/llava{llava_dataset,[^/]*}/processed/archs4_geo/second/*-of-128.json"),  # , i=[1, 103, 118, 20, 35, 48, 61, 7, 89, 1, 104, 120, 23, 36, 5, 62, 74, 9, 102, 107, 122, 33, 37, 50, 65, 79, 93])
         json_splits=[split.format(dataset=dataset)
                      for dataset in ["archs4_geo", "cellxgene_census"]
                      for split in gather.split(PROJECT_DIR / "results" / "llava" / "processed" / "{{dataset}}" / "{scatteritem}.json")
@@ -201,8 +201,8 @@ rule aggregate_llava_stage2_dataset:
         # PROJECT_DIR / "envs" / "main.yaml"
         "cellwhisperer"
     output:
-        llava_stage2_dataset=PROJECT_DIR / config["paths"]["llava"]["finetune_text_dataset"],
-        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="main_uncurated")
+        llava_stage2_dataset=PROJECT_DIR / config["paths"]["llava"]["finetune_text_dataset"].format(llava_dataset="_default"),
+        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="main_uncurated", llava_dataset="_default")
     script:
         "../scripts/aggregate_llava_stage2_dataset.py"
 
@@ -210,24 +210,35 @@ rule curate_evaluation_dataset:
     input:
         rules.aggregate_llava_stage2_dataset.output.evaluation_dataset,
     output:
-        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="main")
+        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="main", llava_dataset="_default")
     shell: """
         echo "Please copy the evaluation dataset to the correct location and curate it manually. /home/moritz/Projects/cellwhisperer/src/experiments/422_curate_llava_testset/README.md"
         cp /home/moritz/Projects/cellwhisperer/src/experiments/422_curate_llava_testset/curated.json {output.evaluation_dataset}
     """
 
 
-rule tabsap_celltype_evaluation_dataset:
+rule generate_cellxgene_census_conversations:
+    """
+    Generate a conversation training dataset based on cellxgene_census.
+    Each conversation contains the question "what is the type of this cell?" and the response "this is a <celltype>".
+    """
     input:
-        dataset=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="tabula_sapiens"),
+        annotations_cellxgene_census=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="cellxgene_census"),
+        top_genes=PROJECT_DIR / "results" / "cellxgene_census" / "top_genes.parquet"
     output:
-        evaluation_dataset=PROJECT_DIR / config["paths"]["llava"]["evaluation_text_dataset"].format(dataset="tabula_sapiens"),
+        PROJECT_DIR / config["paths"]["llava"]["finetune_text_dataset"]
+    wildcard_constraints:
+        llava_dataset="_celltype|_top50genescelltype}"
     params:
-        celltypes=config["top20_lung_liver_blood_celltypes"],
-        num_cells_per_celltype=20,
-        question="Which cell type is this cell?",
-        response_prefix="This cell is a " ,
+        question=config["llava_eval"]["question_celltype"],
+        response_prefix=config["llava_eval"]["response_prefix_celltype"],
+        pre_prompt_topgenes=lambda wildcards: config["llava_eval"]["pre_prompt_topgenes"] if "top50genes" in wildcards.llava_dataset else None,
+        top_n_genes=50,
     conda:
         "cellwhisperer"
-    notebook:
-        "../notebooks/tabsap_celltype_evaluation_dataset.py.ipynb"
+    resources:
+        mem_mb=200000,
+        # slurm=slurm_gres(num_gpus=5, num_cpus=40)
+        slurm=slurm_gres("large", num_gpus=1, num_cpus=10)
+    script:
+        "../scripts/generate_cellxgene_census_conversations.py"

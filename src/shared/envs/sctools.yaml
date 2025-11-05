@@ -1,0 +1,20 @@
+name: sctools
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - python=3.11
+  - scanpy=1.9.5
+  - anndata=0.10.2
+  - nb_conda=2.2.1
+  - nb_conda_kernels=2.3.1
+  - tokenizers=0.14
+  - regex=2024.11.6
+  - celltypist=1.6.3
+  - pip=24.0
+  - pip:
+      - git+https://github.com/menchelab/sctools.git@4b1690e7cf375cd2f8fe00adf55c0cc92905c75e
+      - scikit-misc==0.5.1
+      - igraph==0.10.0
+      - leidenalg==0.10.2

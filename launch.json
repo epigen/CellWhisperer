@@ -72,12 +72,12 @@
             "request": "attach",
             "connect": {
                 "host": "s0-n02.hpc.meduniwien.ac.at",
-                "port": 5678
+                "port": 5679
             },
             "pathMappings": [
                 {
                     "localRoot": "/home/moritz/Projects/cellwhisperer",
-                    "remoteRoot": "/msc/home/mschae83/cellwhisperer"
+                    "remoteRoot": "/msc/home/mschae83/cellwhisperer_private"
                 }
             ],
             "justMyCode": false

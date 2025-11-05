@@ -1,0 +1,50 @@
+"Download and preprocess the AIDA dataset"
+import subprocess
+from pathlib import Path
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+rule all:
+    input:
+        PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="aida"),
+
+rule download_data:
+    """
+    """
+    output:
+        read_count_table=temporary(PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="aida").replace(".h5ad",".as_downloaded.h5ad")),
+    conda: "cellwhisperer"
+    script:
+        "scripts/download_data.py"
+
+rule process_data:
+    """
+    """
+    input:
+        read_count_table=rules.download_data.output.read_count_table,
+    output:
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="aida").replace(".h5ad",".before_subsetting.h5ad"),
+    conda: "cellwhisperer"
+    resources:
+        mem_mb=100000,
+        slurm="cpus-per-task=1"
+    script:
+        "scripts/process_data.py"
+
+rule subset_data:
+    """
+    """
+    input:
+        read_count_table=rules.process_data.output.read_count_table,
+    output:
+        read_count_table=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="aida"),
+    conda: "cellwhisperer"
+    params:
+        groupby="Annotation_Level1",
+        max_cells=1000,
+    resources:
+        mem_mb=100000,
+        slurm="cpus-per-task=1"
+    script:
+        "scripts/subset_data.py"

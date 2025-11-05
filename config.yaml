@@ -1,7 +1,8 @@
 anndata_label_name: natural_language_annotation
 num_replicates: 5
 llava_projector_type: mlp2x_8t_gelu # NOTE fails if > 8 because we use a fully connected layer between all 8 tokens (i.e. having too many params)
-precomputing_base_url: https://medical-epigenomics.org/papers/schaefer2024/data
+precomputing_base_url: https://medical-epigenomics.org/papers/schaefer2025cellwhisperer/data
+cluster_name: "sherlock"  # used within `config.smk` to define SLURM resources for snakemake jobs
 
 paths:
   read_count_table: resources/{dataset}/read_count_table.h5ad
@@ -25,18 +26,15 @@ paths:
     cw_transcriptome_term_scores: results/{dataset}/{model}/cw_transcriptome_term_scores.parquet
     plots: results/plots/gsva_correlation/{dataset}/{model}
 
-  zero_shot_validation:
-    result_dir: results/plots/zero_shot_validation/{model,[^/]+}/
-
   llava:
-    root: results/llava/
-    pretrain_text_dataset: results/llava/pretrain_texts.json
-    finetune_text_dataset: results/llava/finetune_conversations.json
-    evaluation_text_dataset: results/llava/evaluation/{dataset}_conversations.json
-    combined_processed_data: results/llava/combined_processed_data/{model}.npz
-    pretrained_model_dir: results/llava/pretrained/{base_model}__{model}/
-    finetuned_model_dir: results/llava/finetuned/{base_model}__{model}/
-    evaluation_results:  results/plots/llava/{dataset}/{base_model}__{model}/
+    root: results/llava{llava_dataset}/
+    pretrain_text_dataset: results/llava{llava_dataset}/pretrain_texts.json
+    finetune_text_dataset: results/llava{llava_dataset}/finetune_conversations.json
+    evaluation_text_dataset: results/llava{llava_dataset}/evaluation/{dataset}_conversations.json  # note: for the LLM-benchmark, we set them to all-lowercase
+    combined_processed_data: results/llava_any/combined_processed_data/{model}.npz
+    pretrained_model_dir: results/llava{llava_dataset}/pretrained/{base_model}__{model}/
+    finetuned_model_dir: results/llava{llava_dataset}/finetuned/{base_model}__{model}/
+    evaluation_results:  results/plots/llava{llava_dataset}/{dataset}/{base_model}__{model}/{prompt_variation}/
   geo_umap: results/plots/geo_umap/{model}/
   ablations:
     models: results/models/ablations/
@@ -50,17 +48,9 @@ datasets:
   - tabula_sapiens
   - tabula_sapiens_100_cells_per_type
   - archs4_geo
+  - development
   - bowel_disease
   - pancreas
-
-zero_shot_validation_transcriptome_model_name: "geneformer"
-
-zero_shot_validation_datasets:
-  - immgen
-  - human_disease
-  - tabula_sapiens
-  - pancreas
-  - tabula_sapiens_well_studied_celltypes
 
 metadata_cols_per_zero_shot_validation_dataset:
   immgen:
@@ -70,24 +60,70 @@ metadata_cols_per_zero_shot_validation_dataset:
     - Tissue
   pancreas:
     - celltype
+  aida:
+    - celltype
   tabula_sapiens:
     - celltype
     - organ_tissue
   tabula_sapiens_well_studied_celltypes:
     - celltype
+  tabula_sapiens_100_cells_per_type:
+    - celltype
+    - organ_tissue
 
-retrieval_validation_sets:
+llava_eval:
+  question_celltype: "Which cell type is this cell?"
+  response_prefix_celltype: "This cell is a "
+  pre_prompt_topgenes:
+    - from: human
+      value: "Respond to my request regarding a sample of cells characterized by its top-expressed genes being {}"
+    - from: gpt
+      value: "Sure. What's your request?"
+  question_topgenes: "Which are the 50 most strongly expressed genes in this sample of cells?"
+  response_prefix_topgenes: "The 50 most strongly expressed genes are {}"
+
+retrieval_deduplicated_sets:
   - immgen_deduplicated
   - human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling
 
 model_name_path_map:
+  cellwhisperer: cellwhisperer_clip_v1
+  cellwhisperer_geneformer: cellwhisperer_clip_v1  # wandb run ID t9kkor63
+  cellwhisperer_uce: cellwhisperer_clip_v2_uce  # a57mxh0e (4 epochs)
+  cellwhisperer_scgpt: cellwhisperer_clip_v2_scgpt  #  eejwiodj (4 epochs)
+
   geneformer: resources/geneformer-12L-30M
-  biogpt: microsoft/biogpt
-  bert: dmis-lab/biobert-v1.1
   scgpt: resources/scGPT_human
-  cellwhisperer: cellwhisperer_clip_v1  # wandb run ID t9kkor63
-  llava_base_llm: Mistral-7B-Instruct-v0.2
+  uce: resources/UCE/33layer_model.torch
+  uce4layer: resources/UCE/4layer_model.torch
+
+  biogpt: microsoft/biogpt
+  bert: dmis-lab/biobert-v1.1  # Big limitation in our code: `text_model.config.model_type` will always be `bert` because that's the architecture. Thus, the two below are set up for failure -.-. Thus I can only use this one key here
+
+  llava_base_llm: Mistral-7B-Instruct-v0.2  # NOTE: could load from `resources` as well
+
   mixtral: resources/mixtral-8x7b-instruct-v0.1.Q5_K_M.gguf
+
+  # manually downloaded with `git clone` (requires license agreement)
+  mistral: resources/Mistral-7B-Instruct-v0.2
+  llama33: resources/Llama-3.3-70B-Instruct
+
+uce_paths:
+  protein_embeddings_dir: resources/UCE/protein_embeddings
+  offset_pkl_path: resources/UCE/species_offsets.pkl
+  spec_chrom_csv_path: resources/UCE/species_chrom.csv
+
+  tokens: resources/UCE/all_tokens.torch
+
+  tmp_pe_idx_path: results/UCE/{name}_pe_idx.torch
+  tmp_chroms_path: results/UCE/{name}_chroms.pkl
+  tmp_starts_path: results/UCE/{name}_starts.pkl
+  tmp_feature_path: results/UCE
+
+scfms:
+  - "geneformer"
+  - "scgpt"
+  - "uce"
 
 genesets:
   - "Azimuth_2023"
@@ -119,3 +155,29 @@ top20_lung_liver_blood_celltypes:
   - "memory b cell"
   - "respiratory goblet cell"
   - "basophil"
+
+celltype_terms:
+  "erythrocyte": "red blood cells"
+  "erythrocyte": "erythrocyte"
+  "nk cell": "Natural killer cells"
+  "t cell": "T cells"
+  "b cell": "B cells"
+  "platelet": "blood platelets"
+
+llm_apis:
+  gpt4:
+    api_key_env: OPENAI_API_KEY
+    base_url: https://api.openai.com/v1/
+    model_name: gpt-4o-2024-11-20
+  claudesonnet:
+    api_key_env: ANTHROPIC_API_KEY
+    base_url: null
+    model_name: claude-3-5-sonnet-20241022
+  llama33:
+    api_key_env: OLLAMA_API_KEY
+    base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
+    model_name: llama3.3:70b
+  mistral7b:
+    api_key_env: OLLAMA_API_KEY
+    base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
+    model_name: mistral:7b-instruct-v0.2-fp16

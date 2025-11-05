@@ -13,7 +13,7 @@ H5AD_URL = "https://figshare.com/ndownloader/files/40067134"
 
 rule all:
     input:
-        [PROJECT_DIR / config["paths"][dataset_type].format(dataset=dataset_name) for dataset_type in ["read_count_table", "processed_annotations"] for dataset_name in ["tabula_sapiens", "tabula_sapiens_100_cells_per_type"]]
+        [PROJECT_DIR / config["paths"][dataset_type].format(dataset=dataset_name) for dataset_type in ["read_count_table", "processed_annotations"] for dataset_name in ["tabula_sapiens", "tabula_sapiens_100_cells_per_type", "tabula_sapiens_well_studied_celltypes"]]
 
 rule download_data:
     output:
@@ -23,7 +23,7 @@ rule download_data:
     conda: "../../../envs/unzip.yaml"
     shell:
         """
-        wget -O {output[0]}.zip {params.url}
+        wget --user-agent="Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36" -O {output[0]}.zip {params.url}
         unzip {output[0]}.zip
         rm {output[0]}.zip
         """
@@ -40,9 +40,9 @@ rule process_data:
     script:
         "scripts/process_data.py"
 
-
 rule subsample_data:
     """
+    Subsample 100 cell per cell type
     """
     input:
         read_count_table_full=rules.process_data.output[0]
@@ -50,10 +50,24 @@ rule subsample_data:
         read_count_table_100_cells_per_type=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="tabula_sapiens_100_cells_per_type"),
         structured_annotations_100percelltype = PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="tabula_sapiens_100_cells_per_type"),
     conda:
-        # PROJECT_DIR / "envs" / "main.yaml"
         "cellwhisperer"
     script:
         "scripts/subsample_data.py"
+
+rule subsample_data_well_studied_celltypes:
+    """
+    """
+    input:
+        read_count_table_full=rules.process_data.output[0]
+    output:
+        read_count_table_well_studied_celltypes=PROJECT_DIR / config["paths"]["read_count_table"].format(dataset="tabula_sapiens_well_studied_celltypes"),
+        structured_annotations_well_studied_celltypes = PROJECT_DIR / config["paths"]["structured_annotations"].format(dataset="tabula_sapiens_well_studied_celltypes"),
+    params:
+        well_studied_celltypes=config["top20_lung_liver_blood_celltypes"]  # is all-lowercase
+    conda:
+        "cellwhisperer"
+    script:
+        "scripts/subsample_data_well_studied_celltypes.py"
 
 rule processed_annotations:
     """

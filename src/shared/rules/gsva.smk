@@ -1,6 +1,6 @@
 rule prepare_gsva_dataset:
     """
-
+    TODO might need to use layers["counts"]
     """
     input:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],

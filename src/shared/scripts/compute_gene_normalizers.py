@@ -4,6 +4,7 @@ from scipy import sparse
 import pickle
 from tqdm import tqdm
 import concurrent.futures
+from cellwhisperer.utils.processing import ensure_raw_counts_adata
 
 
 # Function to calculate mean log1p for a single gene
@@ -14,6 +15,9 @@ def calculate_mean_log1p(column):
 
 # Read the data
 adata = anndata.read_h5ad(snakemake.input.read_count_table)
+
+ensure_raw_counts_adata(adata)
+
 adata.X = sparse.csc_matrix(adata.X)
 
 # Extract the columns (genes) from the sparse matrix

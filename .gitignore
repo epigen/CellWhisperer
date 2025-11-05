@@ -26,3 +26,11 @@ llava_logs/
 /src/experiments/205_llava_tuning_dataset/getting_mixtral_output.org
 
 *.mp4
+*nohup.out
+*.old.*
+*hidden*.html
+*.log
+*html*hidden
+lsyncd*.conf
+.aider*
+.env

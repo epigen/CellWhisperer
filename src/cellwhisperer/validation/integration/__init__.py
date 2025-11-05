@@ -24,7 +24,7 @@ class SingleCellIntegrationScoreCalculator:
         Args:
             sc_dataset: a SingleCellDataSetForValidationScoring object.
             tokenizer_name: name of the tokenizer to use for the text. Must be a key in the config file.
-            transcriptome_tokenizer_type: type of tokenizer to use for the transcriptome. Must be one of "geneformer" or "scgpt".
+            transcriptome_tokenizer_type: type of tokenizer to use for the transcriptome. Must be one of "geneformer", "scgpt" or "uce".
             transcriptome_processor_kwargs: kwargs to pass to the transcriptome processor. Default: None for geneformer, \
                 {"gene_col":"gene_name"} for scgpt.
         """

@@ -1,8 +1,6 @@
-from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
-HTTP = HTTPRemoteProvider()
-
 rule geo_umap_plots:
     """
+    TODO would still need to be updated for UCE-style model
     """
     input:
         adata=HTTP.remote(f"{config['precomputing_base_url']}/datasets/archs4_geo/cellxgene.h5ad", keep_local=True)[0],
@@ -15,7 +13,9 @@ rule geo_umap_plots:
         mem_mb=300000,  # for good measure
         slurm="cpus-per-task=2"
     params:
-        highlight_clusters=["Active Myeloid Differentiation in HSPCs", "K562 Erythroleukemia Cells in Culture", "Obese adipose tissue immune and metabolic state"]  # optional: "Undifferentiated Human Pluripotent Stem cells", "Active Myeloid and T Cell Immune Response",
+        highlight_clusters=["CD34+ HSPCs with broad differentiation potential",
+        "K562 leukemia cells cultured in supplemented RPMI 1640",
+        "Active remodeling and immune response in cells"]
     conda:
         "cellwhisperer"
     log:
@@ -34,7 +34,7 @@ rule final_model_retrieval_scores:
 
     """
     input:
-        csv=HTTP.remote(f"{config['precomputing_base_url']}/human_disease_dedup_recall_at_5_wandb_export.csv", keep_local=False)[0],
+        csv=HTTP.remote(f"{config['precomputing_base_url']}/misc/human_disease_dedup_recall_at_5_wandb_export.csv", keep_local=False)[0],
         # model=PROJECT_DIR / config["paths"]["jointemb_models"] / f"{CLIP_MODEL}.ckpt",  # needed in theory to compute the retrieval scores
         mpl_style=ancient(PROJECT_DIR / config["plot_style"])
     output:
@@ -44,7 +44,7 @@ rule final_model_retrieval_scores:
         "cellwhisperer"
     resources:
         mem_mb=20000,
-        # slurm="cpus-per-task=5 gres=gpu:a100:1 qos=a100 partition=gpu"
+        # slurm=slurm_gres()
     notebook:
         "../notebooks/final_model_retrieval_scores.py.ipynb"
 
@@ -53,7 +53,7 @@ rule plot_ablation_wandb:
     The plotted scores here were originally exported from wandb. We provide them for your convenience now, but you can run the full ablations using the pipeline in `src/ablation_study`
     """
     input:
-        csv=HTTP.remote(f"{config['precomputing_base_url']}/ablation_study_wandb_export.csv", keep_local=True)[0]
+        csv=HTTP.remote(f"{config['precomputing_base_url']}/misc/ablation_study_wandb_export.csv", keep_local=True)[0]
     output:
         top_models_metrics_details=PROJECT_DIR / config["paths"]["ablations"]["plots"] / "top_models_metrics_details.pdf",
         all_models_comparison=PROJECT_DIR / config["paths"]["ablations"]["plots"] / "all_models_comparison.pdf",
@@ -69,3 +69,11 @@ rule plot_ablation_wandb:
         "cellwhisperer"
     notebook:
         "../notebooks/plot_wandb.py.ipynb"
+
+rule fig1_main:
+    input:
+        rules.geo_umap_plots.output.cluster_labeled.format(model=CLIP_MODEL),
+        # Figure S1
+        rules.final_model_retrieval_scores.output.barplot,
+        rules.final_model_retrieval_scores.output.lineplot,
+        rules.plot_ablation_wandb.output.all_models_comparison,  # Ablation study

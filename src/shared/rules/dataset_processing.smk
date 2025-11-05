@@ -12,8 +12,8 @@ rule compute_gene_normalizers:
         gene_mean_log1ps=PROJECT_DIR / "results" / "gene_normalizers" / "{dataset}.pickle"
     resources:
         mem_mb=500000,
-        slurm="cpus-per-task=64"
-    threads: 64
+        slurm="cpus-per-task=32"
+    threads: 32
     conda:
         "cellwhisperer"
     script:
@@ -26,13 +26,13 @@ rule process_full_dataset:
     input:
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         model=ancient(PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt"),
-        geneformer_model=ancient(PROJECT_DIR / "resources" / "geneformer-12L-30M" / "pytorch_model.bin")  # making sure that geneformer is downloaded
+        base_model=lambda wildcards: ancient(PROJECT_DIR / config["model_name_path_map"]["scgpt" if "scgpt" in wildcards.model else ("uce" if "uce" in wildcards.model else "geneformer")]),
     output:
-        model_outputs=protected(PROJECT_DIR / config["paths"]["model_processed_dataset"]),
+        model_outputs=protected(str(PROJECT_DIR / config["paths"]["model_processed_dataset"]).replace("{model}", "{model,cellwhisperer.*}")),
     resources:
-        mem_mb=600000,  # could be made more efficient...
-        slurm=f"cpus-per-task=5 gres=gpu:{GPU_TYPE}:1 qos={GPU_TYPE} partition=gpu"
-    threads: 64
+        mem_mb=900000,  # could be made more efficient...
+        slurm=slurm_gres("large")
+    threads: 8  # NOTE increase this without GPU
     log:
         notebook="../logs/notebooks/process_full_dataset_{dataset}_{model}.py.ipynb",
         log_file="../logs/process_full_dataset_{dataset}_{model}.log"
@@ -41,6 +41,24 @@ rule process_full_dataset:
     notebook:
         "../notebooks/process_full_dataset.py.ipynb"
 
+rule scfm_processed_dataset:
+    """
+    Simply copy over `transcriptome_features` to `transcriptome_embeds`to be able to use the same code for the processed dataset.
+
+    """
+    input:
+        processed_dataset=lambda wildcards: str(PROJECT_DIR / config["paths"]["model_processed_dataset"]).format(model=config["model_name_path_map"][f"cellwhisperer_{wildcards.model}"], dataset=wildcards.dataset)
+    output:
+        model_outputs=protected(str(PROJECT_DIR / config["paths"]["model_processed_dataset"]).replace("{model}", "{model,%s}" % "|".join(config["scfms"]))),
+    resources:
+        mem_mb=100000,
+        slurm=f"cpus-per-task=1 partition=cpu"
+    threads: 1
+    conda:
+        "cellwhisperer"
+    notebook:
+        "../notebooks/scfm_processed_dataset.py.ipynb"
+
 rule combine_processed_data:
     """
     Combine the processed data from all datasets used in LLaVA (CellWhisperer LLM) to be able to train and validate on them.
@@ -48,11 +66,12 @@ rule combine_processed_data:
     Since we use `orig_ids` to match the data, we can't simply concatenate the arrays.
     """
     input:
-        expand(rules.process_full_dataset.output.model_outputs, dataset=["archs4_geo", "tabula_sapiens", "cellxgene_census", "human_disease"], model="{model}"),
+        expand(rules.process_full_dataset.output.model_outputs, dataset=["archs4_geo", "tabula_sapiens", "cellxgene_census", "human_disease", "immgen", "pancreas"], model="{model}"),
     output:
         combined=PROJECT_DIR / config["paths"]["llava"]["combined_processed_data"]
     resources:
-        mem_mb=100000
+        mem_mb=100000,
+        slurm=slurm_gres("large", num_gpus=1, num_cpus=10)
     run:
         import numpy as np
         datas = [dict(np.load(dataset_fn, allow_pickle=True)) for dataset_fn in input]
@@ -83,7 +102,7 @@ rule compute_top_genes:
     params:
         top_n_genes=100,
     resources:
-        mem_mb=500000,
+        mem_mb=750000, # 500000 failed for archs4_geo
         slurm="cpus-per-task=2"
     conda:
         "cellwhisperer"

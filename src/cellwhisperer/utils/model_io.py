@@ -25,7 +25,7 @@ def load_cellwhisperer_model(
         model_path: Path to the model. Can be None if transcriptome_model_type is specified.
         eval: Whether to set the model to eval mode.
         cache: Convert both models into frozencached models to enable caching
-        transcriptome_model_type: Type of the transcriptome model. Must be one of "geneformer" or "scgpt", or None. If None, model_path must be specified.
+        transcriptome_model_type: Type of the transcriptome model. Must be one of "geneformer", "scgpt", "uce" or None. If None, model_path must be specified.
     Returns:
         pl_model: The loaded TranscriptomeTextDualEncoderLightning model.
         tokenizer: The tokenizer used for the model.
