@@ -5,14 +5,14 @@
 HEST_DATASETS = ["IDC", "PRAD", "PAAD", "SKCM", "COAD", "READ", "CCRCC", "HCC", "LUNG", "LYMPH_IDC"]
 
 # Path structure with dataset-specific folders using config paths
-HEST_RESULTS = PROJECT_DIR / config["hest_benchmark"]["results"]
+HEST_RESULTS = PROJECT_DIR / config["paths"]["hest_benchmark"]["results"]
 HEST_MODEL_RESULTS = HEST_RESULTS / "{model}"
 HEST_DATASET_RESULTS = HEST_MODEL_RESULTS / "{dataset}"
 
 # Data paths from config
-HEST_DATA_ROOT = PROJECT_DIR / config["hest_benchmark"]["data_root"]
-HEST_DATA_PREP = PROJECT_DIR / config["hest_benchmark"]["data_processed"]
-HEST_EMBED_ROOT = PROJECT_DIR / config["hest_benchmark"]["embed_root"]
+HEST_DATA_ROOT = PROJECT_DIR / config["paths"]["hest_benchmark"]["data_root"]
+HEST_DATA_PREP = PROJECT_DIR / config["paths"]["hest_benchmark"]["data_processed"]
+HEST_EMBED_ROOT = PROJECT_DIR / config["paths"]["hest_benchmark"]["embed_root"]
 
 rule prepare_hest_data:
     """
