@@ -256,7 +256,7 @@ def create_visualization_plots(high_detectability_df, output_dir=Path(".")):
     plt.style.use(snakemake.input.mpl_style)
     sns.set_palette("husl")
 
-    fig, axes = plt.subplots(3, 3, figsize=(11, 10))
+    fig, axes = plt.subplots(3, 3, figsize=(10, 9))
     fig.suptitle(
         "High Detectability Diseases: Comprehensive Analysis by F1 Change Category",
         fontsize=16,
