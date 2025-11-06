@@ -355,21 +355,18 @@ def create_visualization_plots(high_detectability_df, output_dir=Path(".")):
                 color=colors[i],
             )
 
-            # Add text labels for disease names
+            # Add text labels for disease names only if sum of coordinates > 0.1
             for _, row in category_data.iterrows():
-                # Truncate long disease names for readability
-                disease_name = row["disease_name"]
-                if len(disease_name) > 20:
-                    disease_name = disease_name[:17] + "..."
-
-                texts.append(
-                    ax.annotate(
-                        disease_name,
-                        (row["f1_bimodal"], row["f1_trimodal"]),
-                        fontsize=8,
-                        alpha=0.8,
+                coord_sum = row["f1_bimodal"] + row["f1_trimodal"]
+                if coord_sum > 0.1:
+                    texts.append(
+                        ax.annotate(
+                            row["disease_name"],
+                            (row["f1_bimodal"], row["f1_trimodal"]),
+                            fontsize=8,
+                            alpha=0.8,
+                        )
                     )
-                )
 
     # Add diagonal line (no improvement)
     min_val = min(
