@@ -2384,7 +2384,7 @@ packages:
 - pypi: .
   name: cellwhisperer
   version: 0.1.0
-  sha256: c4cc93c75b865e0e7a0ad89d193c974f21cbd76463933430038ac6015a1a644d
+  sha256: a5b8ee076f84f7e32b5382b09a6ea4b7aea8cab907c4dad604336590a3ae8072
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/noarch/certifi-2025.8.3-pyhd8ed1ab_0.conda
   sha256: a1ad5b0a2a242f439608f22a538d2175cac4444b7b3f4e2b8c090ac337aaea40

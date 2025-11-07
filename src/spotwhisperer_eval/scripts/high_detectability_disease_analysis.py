@@ -256,7 +256,7 @@ def create_visualization_plots(high_detectability_df, output_dir=Path(".")):
     plt.style.use(snakemake.input.mpl_style)
     sns.set_palette("husl")
 
-    fig, axes = plt.subplots(3, 3, figsize=(10, 9))
+    fig, axes = plt.subplots(3, 3, figsize=(11, 10))
     fig.suptitle(
         "High Detectability Diseases: Comprehensive Analysis by F1 Change Category",
         fontsize=16,
@@ -363,7 +363,6 @@ def create_visualization_plots(high_detectability_df, output_dir=Path(".")):
                         ax.annotate(
                             row["disease_name"],
                             (row["f1_bimodal"], row["f1_trimodal"]),
-                            fontsize=8,
                             alpha=0.8,
                         )
                     )
