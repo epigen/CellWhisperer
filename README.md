@@ -28,6 +28,15 @@ Installing a local copy of CellWhisperer allows you to analyze your own datasets
 - Conda or Miniconda installed
 - (Optional) CUDA 12 compatible GPU for faster processing
 
+### Install via uv (preferred/GPU-support)
+
+```bash
+uv venv
+pixi exec -s gfortran -s cxx-compiler uv pip install -r requirements.txt
+```
+
+NOTE: requirements.txt could also be integrated into pyproject.toml (would be better actually)
+
 ### Install via pixi
 
 For most your purposes, the pixi based environment will do the job. See `CONVENTIONS.md` for instructions on how to use it.

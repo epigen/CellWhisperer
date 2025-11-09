@@ -1,0 +1,61 @@
+# Scientific computing and data analysis
+numpy>=1.25.0
+scipy>=1.13.0
+anndata==0.10.2.*
+scanpy==1.9.5.*
+umap-learn==0.5.3.*
+pynndescent==0.5.11.*
+biopython==1.83.*
+
+# Machine learning and deep learning
+transformers==4.36.*
+safetensors==0.5.2.*
+torch==2.7.*  # pytorch in pip is torch
+torchvision==0.22.*
+torchmetrics==1.2.0.*
+lightning==2.1.0.*
+datasets==2.12.0.*
+
+# Development and debugging tools
+ipdb==0.13.13.*
+ipykernel==6.25.2.*
+notebook==7.0.8.*
+typing-extensions>=4.14.1
+
+# Other utilities
+langchain==0.0.314.*
+multiprocess==0.70.14.*
+snakemake==7.32.4.*
+httpcore==1.0.7.*
+
+# PyPI dependencies specified in original file
+louvain
+timm==0.9.8
+open-clip-torch==2.32.0
+fairscale==0.4.13
+backports-tarfile==1.2.0
+igraph==0.11.4
+leidenalg==0.10.2
+openai>=1.55.3
+pydantic>=2.8.0
+anthropic>=0.45.2
+loompy==3.0.7
+tdigest==0.5.2.2
+plotly==5.20.0
+kaleido==0.2.1
+wandb==0.*
+jsonargparse[signatures]==4.27.0
+orbax==0.1.7
+scvi-tools>=1.0.0
+scikit-misc>=0.2.0
+cell-gears==0.0.2
+pybiomart==0.2.0
+matplotlib-venn==0.11.10
+openslide-python==1.4.2
+openslide-bin==4.0.0.8
+
+# Git dependencies
+uni @ git+https://github.com/mahmoodlab/UNI.git@42715efc11722a496e0a67f3369505a8f277206c
+
+# Local package in editable mode
+-e .
