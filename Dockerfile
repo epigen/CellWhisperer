@@ -33,6 +33,7 @@ RUN rm -rf /var/lib/apt/lists/*
 # Define the version of Miniconda to install
 ENV MINICONDA_VERSION=py310_24.7.1-0
 ENV PYTHON_VERSION=3.10
+ENV CONDA_OVERRIDE_CUDA=12.5
 
 # Define the Miniconda installer filename
 ENV INSTALLER=Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh
@@ -66,22 +67,18 @@ WORKDIR /opt/cellwhisperer
 # Ignore SSL issues arising from proxy-ing (also for wget)
 RUN npm config set strict-ssl false
 
-# Install the dependencies
-RUN conda env create -f envs/main.yaml
-RUN conda env create -f envs/llava.yaml
-RUN conda env create -f envs/llama_cpp.yaml
 
 # Activate the environment
 COPY entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 
+# Install the dependencies
+RUN /entrypoint.sh bash envs/setup.sh
+
 # Build the web app
 RUN git config --global --add safe.directory /opt/cellwhisperer/modules/cellxgene
 RUN git config --global --add safe.directory /opt/cellwhisperer
 RUN cd modules/cellxgene && CONDA_ENV=cellwhisperer /entrypoint.sh make build-for-server-dev
-
-# [Optional] Install scgpt
-# RUN CONDA_ENV=cellwhisperer /entrypoint.sh bash envs/install_scgpt_after_env_creation.sh
 
 # Initialize an empty git repo (the original one is ignored by .dockerignore), such that all the `git rev-parse` commands works
 RUN git init

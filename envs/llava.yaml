@@ -13,9 +13,13 @@ dependencies:
   - pyarrow=16.1.0
   - pip=24.0
   - transformers=4.37.2
+  - safetensors=0.5.2 # 0.6.1 fails with "AttributeError: module 'torch' has no attribute 'uint64'"
   - numpy=1.26.4
   - httpx=0.24.0
   - httpcore=0.17.3
+  - openpyxl=3.1.5
   - pip:
     - -e ../modules/LLaVA/[train]
     - anndata==0.10.7
+    - torchmetrics==1.7.1
+    - seaborn==0.13.2

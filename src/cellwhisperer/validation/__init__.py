@@ -61,8 +61,8 @@ def initialize_validation_functions(
         ),
     }
 
-    # Add retrieval validation tests for the deduplicated validation-sets
-    for name in config["retrieval_validation_sets"]:
+    # Add retrieval tests for the deduplicated validation-sets
+    for name in config["retrieval_deduplicated_sets"]:
         dm = JointEmbedDataModule(
             tokenizer=text_model_type,
             transcriptome_processor=transcriptome_model_type,

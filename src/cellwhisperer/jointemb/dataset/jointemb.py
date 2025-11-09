@@ -6,6 +6,7 @@ from itertools import zip_longest
 import torch
 import random
 import logging
+import pandas as pd
 
 import torch
 from torch.utils.data import ConcatDataset
@@ -16,7 +17,7 @@ from cellwhisperer.jointemb.processing import TranscriptomeTextDualEncoderProces
 
 from cellwhisperer.config import get_path, model_path_from_name
 
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
     def __init__(
         self,
-        tokenizer="biogpt",
+        tokenizer="bert",
         transcriptome_processor="geneformer",
         dataset_names="human_disease",
         batch_size=32,
@@ -82,8 +83,9 @@ class JointEmbedDataModule(pl.LightningDataModule):
             "model_max_length": 128  # 128 seems to be a decent fit (previously 100)
         },  # see https://github.com/epigen/cellwhisperer/issues/193
         min_genes=100,
-        train_fraction=0.95,
+        train_fraction: Union[str, float] = 0.95,
         use_replicates: bool = True,
+        include_labels: Optional[str] = None,
     ):
         """
 
@@ -98,6 +100,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             min_genes: minimum number of genes to use for a sample. A larger value may increase the dataset quality. Choose a value > 0 to prevent NaNs, which can occur when the number of genes is 0
             train_fraction: fraction of the data to use for training. The rest will be used for validation.
             use_replicates: whether to use replicates for the transcriptome and annotation data.
+            include_labels: name of the column in the AnnData object to use as labels. If None, no labels will be included
         """
         super().__init__()
         self.batch_size = batch_size
@@ -110,6 +113,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.transcriptome_processor_kwargs = transcriptome_processor_kwargs.copy()
         self.tokenizer_kwargs = tokenizer_kwargs.copy()
         self.use_replicates = use_replicates
+        self.include_labels = include_labels
 
     def _processed_path(self, dataset_name):
         return get_path(
@@ -118,8 +122,10 @@ class JointEmbedDataModule(pl.LightningDataModule):
             hash="_".join(
                 [
                     self.transcriptome_processor,
-                    self.tokenizer,
+                    "" if not self.tokenizer else self.tokenizer.replace("/", "__"),
                     str(self.min_genes),
+                    str(self.use_replicates),
+                    self.include_labels or "",
                 ]
             ),
         )
@@ -141,7 +147,11 @@ class JointEmbedDataModule(pl.LightningDataModule):
         # Load data and processor
         processor = TranscriptomeTextDualEncoderProcessor(
             self.transcriptome_processor,
-            AutoTokenizer.from_pretrained(self.tokenizer, **self.tokenizer_kwargs),
+            (
+                AutoTokenizer.from_pretrained(self.tokenizer, **self.tokenizer_kwargs)
+                if self.tokenizer
+                else None
+            ),
         )
         adata = anndata.read_h5ad(
             (get_path(["paths", "full_dataset"], dataset=dataset_name))
@@ -149,7 +159,11 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
         # Fixed size embedding (https://huggingface.co/docs/transformers/en/pad_truncation), as we combine multiple datasets
         inputs = processor(
-            text=list(adata.obs["natural_language_annotation"]),
+            text=(
+                list(adata.obs["natural_language_annotation"])
+                if self.tokenizer
+                else None
+            ),
             transcriptomes=adata,
             return_tensors="pt",
             padding="max_length",
@@ -165,7 +179,24 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 # add 1 if no weights are available
                 inputs[modality_weights_key] = torch.ones(len(adata.obs))
 
-        replicate_inputs = self._prepare_replicate_inputs(inputs, adata, processor)
+        logging.info("Preparing replicates")
+        if self.use_replicates:
+            replicate_inputs = self._prepare_replicate_inputs(inputs, adata, processor)
+        else:
+            replicate_inputs = {}
+
+        if self.include_labels is not None:
+            if adata.obs[self.include_labels].dtype.name != "category":
+                adata.obs[self.include_labels] = pd.Categorical(
+                    adata.obs[self.include_labels]
+                )
+                # NOTE maybe save the categorical as well for later?
+
+            # Add labels to the inputs.
+            inputs["labels"] = torch.tensor(
+                adata.obs[self.include_labels].astype("category").cat.codes.values,
+                dtype=torch.long,
+            )
 
         # Filter for empty inputs (NOTE: empty inputs should be avoided)
         if self.transcriptome_processor == "geneformer":
@@ -174,6 +205,10 @@ class JointEmbedDataModule(pl.LightningDataModule):
             n_genes_filter = (inputs["expression_key_padding_mask"] == False).sum(
                 dim=1
             ) >= self.min_genes
+        elif self.transcriptome_processor == "uce":
+            n_genes_filter = (inputs["expression_key_padding_mask"] == False).sum(
+                dim=1
+            ) >= 1  # self.min_genes  # NOTE the mask cannot be used unfortunately for filtering
         else:
             raise ValueError(
                 "Transcriptome processor {self.transcriptome_processor} not supported"
@@ -228,7 +263,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             for col_name in replicate_df:
                 replicate_annotations = replicate_df[col_name]
                 replicate_input = processor(
-                    text=replicate_annotations.to_list(),
+                    text=replicate_annotations.to_list() if self.tokenizer else None,
                     return_tensors="pt",
                     padding="max_length",  # enforces fixed size (https://huggingface.co/docs/transformers/en/pad_truncation)
                     max_length=max_length,
@@ -264,14 +299,26 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.val_datasets = []
         for dataset_name in self.dataset_names:
             (inputs, replicate_inputs) = torch.load(self._processed_path(dataset_name))
-            # Assuming you want to split the data into train and val for simplicity
-            train_size = int(self.train_fraction * len(inputs["input_ids"]))
-            # randomly sample train_size indices for train and use the rest for val
-            # fix the seed
-            random.seed(42)
-            total_ids = list(range(len(inputs["input_ids"])))
-            train_ids = random.sample(total_ids, train_size)
-            val_ids = sorted(list(set(total_ids) - set(train_ids)))
+
+            if isinstance(self.train_fraction, (int, float)):
+                # Assuming you want to split the data into train and val for simplicity
+                train_size = int(self.train_fraction * len(inputs["input_ids"]))
+                # randomly sample train_size indices for train and use the rest for val
+                # fix the seed
+                random.seed(42)
+                total_ids = list(range(len(inputs["input_ids"])))
+                train_ids = random.sample(total_ids, train_size)
+                val_ids = sorted(list(set(total_ids) - set(train_ids)))
+            elif isinstance(self.train_fraction, str):
+                total_ids = list(range(len(inputs["input_ids"])))
+                if dataset_name == self.train_fraction:
+                    train_ids = total_ids
+                    val_ids = []
+                else:
+                    train_ids = []
+                    val_ids = total_ids
+            else:
+                raise ValueError("train_fraction must be either a float or string")
 
             self.train_datasets.append(
                 JointEmbedDataset(
@@ -321,7 +368,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             ConcatDataset(self.val_datasets),
             batch_size=self.batch_size,
             num_workers=self.nproc,
-            drop_last=False,
+            drop_last=False,  # more accurate if we don't drop the last
             shuffle=False,
         )
 

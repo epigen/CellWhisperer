@@ -27,6 +27,30 @@ logger = logging.getLogger(__name__)
 PAD_TOKEN_ID = 0
 MODEL_INPUT_SIZE = 2048
 
+VERY_COMMON_GENES = {
+    "FABP3",
+    "FAM151A",
+    "TACSTD2",
+    "S100A6",
+    "S100A16",
+    "S100A14",
+    "RGS5",
+    "LEFTY1",
+    "PARP1",
+    "ACTA1",
+    "SLC7A3",
+    "BEX1",
+    "CAPN6",
+    "GPC4",
+    "PNMA5",
+    "USP9X",
+    "MAGED2",
+    "TSIX",
+    "VGLL1",
+    "TKTL1",
+    "GAPDH",
+}
+
 
 class GeneformerTranscriptomeProcessor(ProcessorMixin):
     attributes = []
@@ -82,39 +106,20 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
                 )
             adata_var["ensembl_id"] = ensembl_ids
         else:
-            assert (
-                len(
-                    {
-                        "FABP3",
-                        "FAM151A",
-                        "TACSTD2",
-                        "S100A6",
-                        "S100A16",
-                        "S100A14",
-                        "RGS5",
-                        "LEFTY1",
-                        "PARP1",
-                        "ACTA1",
-                        "SLC7A3",
-                        "BEX1",
-                        "CAPN6",
-                        "GPC4",
-                        "PNMA5",
-                        "USP9X",
-                        "MAGED2",
-                        "TSIX",
-                        "VGLL1",
-                        "TKTL1",
-                        "GAPDH",
-                    }
-                    & set(adata.var.index)
-                )
-                > 0
-            ), "adata.var.index should contain a gene symbols but none are found"
+            if "gene_name" in adata.var.columns:
+                assert (
+                    len(VERY_COMMON_GENES & set(adata_var["gene_name"])) > 0
+                ), f"adata.var['gene_name] should contain gene symbols but none are found. (checking these: {VERY_COMMON_GENES})"
+                gene_names = adata_var["gene_name"]
+            else:
+                assert (
+                    len(VERY_COMMON_GENES & set(adata_var.index)) > 0
+                ), f"adata.var.index should contain gene symbols but none are found. (checking these: {VERY_COMMON_GENES})"
+                gene_names = adata_var.index
 
             adata_var["ensembl_id"] = [
                 self.annot["ensembl_gene_id"].get(gene_name, "")
-                for gene_name in adata_var.index.values
+                for gene_name in gene_names
             ]
 
         adata.var = adata_var

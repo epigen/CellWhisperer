@@ -5,11 +5,13 @@ from typing import Optional, Tuple, Union, Any, List
 from cellwhisperer.config import model_path_from_name
 from cellwhisperer.jointemb.frozen_model import FrozenCachedModel
 from cellwhisperer.jointemb.processing import TranscriptomeTextDualEncoderProcessor
+from cellwhisperer.config import get_path
 
 
 import torch
 from .geneformer_model import GeneformerConfig, GeneformerModel
 from .scgpt_model import ScGPTConfig, ScGPTModel
+from .uce_model import UCEConfig, UCEModel
 from .loss.discriminator import GlobalDiscriminatorDot
 
 from transformers.modeling_utils import PreTrainedModel
@@ -39,9 +41,11 @@ class CLIPOutput(ModelOutput):
 
     def to_tuple(self) -> Tuple[Any]:
         return tuple(
-            self[k]
-            if k not in ["text_features", "transcriptome_features"]
-            else getattr(self, k).to_tuple()
+            (
+                self[k]
+                if k not in ["text_features", "transcriptome_features"]
+                else getattr(self, k).to_tuple()
+            )
             for k in self.keys()
         )
 
@@ -83,9 +87,11 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                 transcriptome_model = GeneformerModel(config.transcriptome_config)
             elif isinstance(config.transcriptome_config, ScGPTConfig):
                 transcriptome_model = ScGPTModel(config.transcriptome_config)
+            elif isinstance(config.transcriptome_config, UCEConfig):
+                transcriptome_model = UCEModel(config.transcriptome_config)
             else:
                 raise NotImplementedError(
-                    "Only geneformer and scgpt are supported for now"
+                    "Only geneformer, scgpt and uce are supported for now"
                 )
 
         if text_model is None:
@@ -97,7 +103,10 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         self.transcriptome_model.config = self.config.transcriptome_config
         self.text_model.config = self.config.text_config
 
-        self.transcriptome_embed_dim = config.transcriptome_config.hidden_size
+        try:
+            self.transcriptome_embed_dim = config.transcriptome_config.hidden_size
+        except AttributeError:  # UCE
+            self.transcriptome_embed_dim = config.transcriptome_config.output_dim
         self.text_embed_dim = config.text_config.hidden_size
         self.projection_dim = config.projection_dim
 
@@ -275,8 +284,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         assert (
             expression_tokens is not None and expression_token_lengths is not None
         ) or (
-            expression_gene is not None
-            and expression_expr is not None
+            expression_expr is not None
+            # and expression_gene is not None  # not needed for UCE
             and expression_key_padding_mask is not None
         ), "Either expression_tokens and expression_token_lengths or expression_gene, expression_expr and expression_key_padding_mask must be provided"
 
@@ -417,6 +426,17 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                     # *model_args,  # these args are not supported by geneformer
                     **kwargs_transcriptome,
                 )
+            elif kwargs_transcriptome["config"]["model_type"] == "uce":
+                kwargs_transcriptome["config"] = UCEConfig(
+                    **kwargs_transcriptome["config"]
+                )
+
+                transcriptome_model = UCEModel.from_pretrained(
+                    transcriptome_model_name_or_path,
+                    get_path(["uce_paths", "tokens"]),
+                    config=kwargs_transcriptome["config"],
+                )
+
             else:
                 raise NotImplementedError("Only geneformer and scgpt are supported")
                 kwargs_transcriptome["config"] = transcriptome_config

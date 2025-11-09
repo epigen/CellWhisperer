@@ -9,8 +9,8 @@ HTTP = HTTPRemoteProvider()
 PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
 configfile: PROJECT_DIR / "config.yaml"
 
-COUNT_TABLE_URL = "https://medical-epigenomics.org/papers/schaefer2024/data/datasets/human_disease/rnaseq._.samples.h5ad"
-ANNOTATITON_URL = "https://medical-epigenomics.org/papers/schaefer2024/data/datasets/human_disease/manually_annotated_samples.rnaseq.annotated.tsv"
+COUNT_TABLE_URL = config["precomputing_base_url"] + "/datasets/human_disease/rnaseq._.samples.h5ad"
+ANNOTATITON_URL = config["precomputing_base_url"] + "/datasets/human_disease/manually_annotated_samples.rnaseq.annotated.tsv"
 
 
 rule all:

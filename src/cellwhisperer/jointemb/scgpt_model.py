@@ -111,7 +111,7 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
             adata_n_hvgs (int): The number of highly variable genes to select. Defaults to None (no selection).
             adata_hvg_flavor (str): The flavor of highly variable gene selection. Defaults to "seurat_v3". Expects logarithmized data, except when flavor='seurat_v3', in which count data is expected. Ignored if adata_n_hvgs is None.
             gene_col (str): The column name of the gene names in the anndata object. Defaults to "gene_name".
-            vocab_path (str): The path to the vocabulary file. Default: Use get_path(["model_name_path_map", "scgpt"]) / "vocab.json"
+            vocab_path (str): The path to the vocabulary file. Default: Use get_path(["model_name_path_map", "scgpt"]) / "vocab.json". Unused/deprecated
             pad_token (str): The padding token. Defaults to "<pad>".
             nproc (int): The number of processes to use for tokenization. Defaults to 10.
         """
@@ -127,12 +127,14 @@ class ScGPTTranscriptomeProcessor(ProcessorMixin):
         self.adata_n_hvgs = adata_n_hvgs
         self.adata_hvg_flavor = adata_hvg_flavor
 
-        self.vocab_path = vocab_path
+        self.vocab_path = str(
+            get_path(["model_name_path_map", "scgpt"]) / "vocab.json"
+        )  # unused/deprecated
         self.pad_token = pad_token
         self.gene_col = gene_col
         self.nproc = 0
 
-        self.vocab = load_vocab(self.pad_token, self.vocab_path)
+        self.vocab = load_vocab(self.pad_token)
 
         super().__init__(*args, **kwargs)
 
@@ -387,7 +389,9 @@ class ScGPTConfig(PretrainedConfig):
 
         self.pad_token = pad_token
         self.input_emb_style = input_emb_style
-        self.vocab_path = vocab_path
+        self.vocab_path = str(
+            get_path(["model_name_path_map", "scgpt"]) / "vocab.json"
+        )  # unused/workaround
         self.fast_transformer = fast_transformer
         self.nlayers = nlayers
         self.nheads = nheads
@@ -413,13 +417,15 @@ class ScGPTConfig(PretrainedConfig):
         self.normalize_features = normalize_features
 
 
-def load_vocab(pad_token, vocab_path):
+def load_vocab(pad_token):
     """
     Load the vocabulary for scGPT. Adapted from https://github.com/bowang-lab/scGPT/blob/418b0f623fb1f17641a12c9e50f72f4419311745/scgpt/tasks/cell_emb.py#L148
     """
     # LOAD VOCAB
     special_tokens = [pad_token, "<cls>", "<eoc>"]
-    vocab = GeneVocab.from_file(vocab_path)
+    vocab = GeneVocab.from_file(
+        str(get_path(["model_name_path_map", "scgpt"]) / "vocab.json")
+    )
     for s in special_tokens:
         if s not in vocab:
             vocab.append_token(s)
@@ -450,7 +456,7 @@ class ScGPTModel(PreTrainedModel):
         )
 
         # LOAD VOCAB
-        self.vocab = load_vocab(self.config.pad_token, self.config.vocab_path)
+        self.vocab = load_vocab(self.config.pad_token)
 
         # CREATE MODEL
         allowed_args = list(inspect.signature(TransformerModel).parameters.keys())

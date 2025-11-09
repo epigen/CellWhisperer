@@ -37,7 +37,7 @@ rule train:
         "cellwhisperer_fixed"  # NOTE: not subject to automatic updates
     resources:
         mem_mb=lambda wildcards: 1000000 if wildcards.run_config == "scgpt" else 120000,
-        slurm="cpus-per-task=20 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
+        slurm=slurm_gres("large", num_cpus=20)
     shell: """
         cellwhisperer fit --config {input.base_config} --config {input.delta_config} --seed_everything {wildcards.seed} --last_model_path {output} --wandb {wildcards.run_config}_{wildcards.seed}
     """
@@ -53,7 +53,7 @@ rule test:
         "cellwhisperer"
     resources:
         mem_mb=lambda wildcards: 1000000 if wildcards.run_config == "scgpt" else 400000,
-        slurm="cpus-per-task=20 gres=gpu:a100-sxm4-80gb:1 qos=a100-sxm4-80gb partition=gpu"
+        slurm=slurm_gres("large", num_cpus=20)
     shell: """
         cellwhisperer test --config {input.base_config} --config {input.delta_config} --model_ckpt {input.model_path} --wandb {wildcards.run_config}_{wildcards.seed} --trainer.logger.init_args.group ablation_study3_test --seed_everything {wildcards.seed} > {output}
     """

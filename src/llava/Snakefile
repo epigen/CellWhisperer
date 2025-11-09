@@ -1,21 +1,9 @@
 """
 """
 
-# snakemake remote HTTP object
-from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
-import glob
+include: "../shared/config.smk"
+
 import pandas as pd
-import subprocess
-
-
-PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
-configfile: PROJECT_DIR / "config.yaml"
-
-HTTP = HTTPRemoteProvider()
-
-GPU_TYPE = "a100"
-# GPU_TYPE = "a100-sxm4-80gb"  # used for the data_processing and conversation generation rules
-CLIP_MODEL = config["model_name_path_map"]["cellwhisperer"]
 
 # For snakemake efficiency, extract the samples once and store them
 if not os.path.exists("./gsva_samples.csv"):
@@ -34,18 +22,35 @@ DETAILED_SAMPLES = ARCHS4_GSVA_SAMPLES.to_list()[NUM_COMPLEX_SAMPLES:CONVERSATIO
 scattergather:
     split=128
 
-MODELS = [config["model_name_path_map"]["cellwhisperer"]]
+MODELS = [model_path for model_name, model_path in config["model_name_path_map"].items() if "cellwhisperer" in model_name]
 BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
 
 
 include: "../shared/rules/dataset_processing.smk"
 include: "../shared/rules/training_sample_weights.smk"
+include: "../shared/rules/genesets.smk"
 include: "../shared/rules/gsva.smk"
 include: "rules/dataset.smk"
 include: "rules/training.smk"
 
 rule all:
     input:
-        rules.finetune_llava.output.output_dir.format(base_model="", model=BASE_MODEL)
+        expand(rules.finetune_llava.output.output_dir,
+               base_model=[BASE_MODEL],
+               model=["uce",
+                      "scgpt",
+                      "geneformer",
+                      config["model_name_path_map"]["cellwhisperer_uce"],
+                      config["model_name_path_map"]["cellwhisperer_scgpt"],
+                      config["model_name_path_map"]["cellwhisperer_geneformer"]
+                      ],
+               llava_dataset=["_celltype", "_default"]
+               ),
+        expand(rules.finetune_llava.output.output_dir,
+               base_model=[BASE_MODEL],
+               model=["uce",  # doesn't matter which one, as it is unused..
+                      ],
+               llava_dataset=["_top50genescelltype"]
+               )
 
     default_target: True
