@@ -1,0 +1,103 @@
+{
+  "brain": [
+    "neurons",
+    "astrocytes",
+    "oligodendrocytes",
+    "microglia",
+    "opcs",
+    "endothelial cells",
+    "ependymal cells",
+    "pericytes",
+    "gabaergic neurons",
+    "glutamatergic neurons"
+  ],
+  "breast": [
+    "luminal epithelial cells",
+    "basal cells",
+    "myoepithelial cells",
+    "fibroblasts",
+    "adipocytes",
+    "endothelial cells",
+    "macrophages",
+    "t cells",
+    "b cells",
+    "nk cells"
+  ],
+  "gut": [
+    "enterocytes",
+    "goblet cells",
+    "paneth cells",
+    "enteroendocrine cells",
+    "stem cells",
+    "transit amplifying cells",
+    "tuft cells",
+    "m cells",
+    "fibroblasts",
+    "macrophages"
+  ],
+  "heart": [
+    "cardiomyocytes",
+    "fibroblasts",
+    "endothelial cells",
+    "smooth muscle cells",
+    "pericytes",
+    "macrophages",
+    "t cells",
+    "epicardial cells",
+    "adipocytes",
+    "schwann cells"
+  ],
+  "lung": [
+    "type i pneumocytes",
+    "type ii pneumocytes",
+    "club cells",
+    "ciliated cells",
+    "goblet cells",
+    "basal cells",
+    "alveolar macrophages",
+    "endothelial cells",
+    "fibroblasts",
+    "t cells"
+  ],
+  "skin": [
+    "keratinocytes",
+    "melanocytes",
+    "fibroblasts",
+    "langerhans cells",
+    "merkel cells",
+    "sebocytes",
+    "endothelial cells",
+    "t cells",
+    "dermal dendritic cells",
+    "macrophages"
+  ],
+  "mouse_bonemarrow": [
+    "hematopoietic stem cellst cells",
+    "dermal dendritic cells",
+    "macrophages"
+  ],
+  "mouse_bonemarrow": [
+    "hematopoietic stem cells",
+    "myeloid progenitors",
+    "lymphoid progenitors",
+    "neutrophils",
+    "monocytes",
+    "b cells",
+    "t cells",
+    "erythroid cells",
+    "megakaryocytes",
+    "nk cells"
+  ],
+  "mouse_kidney": [
+    "podocytes",
+    "proximal tubule cells",
+    "distal tubule cells",
+    "loop of henle cells",
+    "collecting duct cells",
+    "endothelial cells",
+    "fibroblasts",
+    "mesangial cells",
+    "macrophages",
+    "dendritic cells"
+  ]
+}
