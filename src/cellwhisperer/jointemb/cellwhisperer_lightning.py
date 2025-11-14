@@ -95,8 +95,9 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
         self.val_batch_size = val_batch_size
 
-        # Storage for test outputs for retrieval evaluation
+        # Storage for outputs for retrieval evaluation
         self.test_outputs = []
+        self.val_outputs = []
 
         self.save_hyperparameters()
 
@@ -223,16 +224,11 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             outputs["transcriptome_weights"] = None
             outputs["annotation_weights"] = None
 
-        # outputs = {k: v.to(device) if v is not None else None for k, v in outputs.items()}
         combined_loss = torch.tensor(0.0, device=self.device)
 
         for loss in self.loss_functions:
-            # Calculate the loss for the current batch using the specific loss function.
-
             loss_value = loss["fn"](**outputs)
-            combined_loss = combined_loss + (loss_value * loss["lambda"])
-
-            # Log the individual loss value for monitoring.
+            combined_loss = combined_loss + (loss_value * loss["lambda"]) 
             self.log(
                 f"{step_type}/{loss['name']}_loss",
                 loss_value,
@@ -242,7 +238,6 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                 logger=True,
             )
 
-        # After processing all loss functions, log the total combined loss.
         self.log(
             f"{step_type}/loss",
             combined_loss,
@@ -251,18 +246,34 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             prog_bar=False,
             logger=True,
         )
-        # NOTE: this is a hack to avoid NaNs in the loss. We should fix this properly.
         if torch.isnan(combined_loss):
             logger.warning("NaN loss detected. Setting loss to 0.0.")
-            return torch.tensor(0.0, device=self.device, requires_grad=True)
+            return torch.tensor(0.0, device=self.device, requires_grad=True), outputs
 
-        return combined_loss
+        return combined_loss, outputs
 
     def training_step(self, batch, batch_idx):
-        return self.process_step(batch, batch_idx, "train")
+        loss, _ = self.process_step(batch, batch_idx, "train")
+        return loss
 
     def validation_step(self, batch, batch_idx):
-        return self.process_step(batch, batch_idx, "val")
+        loss, outputs = self.process_step(batch, batch_idx, "val")
+        # Collect outputs for validation retrieval evaluation
+        with torch.no_grad():
+            self.val_outputs.append(
+                {
+                    "text_embeds": (
+                        outputs.text_embeds.detach().cpu() if outputs.text_embeds is not None else None
+                    ),
+                    "transcriptome_embeds": (
+                        outputs.transcriptome_embeds.detach().cpu() if outputs.transcriptome_embeds is not None else None
+                    ),
+                    "image_embeds": (
+                        outputs.image_embeds.detach().cpu() if outputs.image_embeds is not None else None
+                    ),
+                }
+            )
+        return loss
 
     def setup(self, stage=None):
         # We do this here because during __init__ self.trainer is not yet available
@@ -320,6 +331,10 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                         table = Table(dataframe=val_results[1].reset_index())
                         artifact.add(table, "performance_metrics")
                         self.logger.experiment.log_artifact(artifact)
+            # Run retrieval evaluation for validation if we have collected outputs
+            if self.val_outputs:
+                self._run_retrieval_evaluation(self.val_outputs, stage="val")
+                self.val_outputs = []
 
     def on_train_batch_start(self, *args):
         if (
@@ -357,27 +372,20 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         self.model.store_cache()
 
     def test_step(self, batch, batch_idx):
-        loss = self.process_step(batch, batch_idx, "test")
+        loss, outputs = self.process_step(batch, batch_idx, "test")
 
         # Store outputs for retrieval evaluation
         with torch.no_grad():
-            outputs = self(**batch)
             self.test_outputs.append(
                 {
                     "text_embeds": (
-                        outputs.text_embeds.detach().cpu()
-                        if outputs.text_embeds is not None
-                        else None
+                        outputs.text_embeds.detach().cpu() if outputs.text_embeds is not None else None
                     ),
                     "transcriptome_embeds": (
-                        outputs.transcriptome_embeds.detach().cpu()
-                        if outputs.transcriptome_embeds is not None
-                        else None
+                        outputs.transcriptome_embeds.detach().cpu() if outputs.transcriptome_embeds is not None else None
                     ),
                     "image_embeds": (
-                        outputs.image_embeds.detach().cpu()
-                        if outputs.image_embeds is not None
-                        else None
+                        outputs.image_embeds.detach().cpu() if outputs.image_embeds is not None else None
                     ),
                 }
             )
@@ -389,20 +397,20 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
         # Run retrieval evaluation if we have collected test outputs
         if self.test_outputs:
-            self._run_retrieval_evaluation()
+            self._run_retrieval_evaluation(self.test_outputs, stage="test")
             # Clear stored outputs
             self.test_outputs = []
 
-    def _run_retrieval_evaluation(self):
-        """Run retrieval evaluation using stored test outputs."""
-        logger.info("Running retrieval evaluation")
+    def _run_retrieval_evaluation(self, outputs: List[Dict[str, Optional[torch.Tensor]]], stage: str):
+        """Run retrieval evaluation using stored outputs (val or test)."""
+        logger.info(f"Running {stage} retrieval evaluation")
 
         # Concatenate all stored embeddings
         text_embeds = []
         transcriptome_embeds = []
         image_embeds = []
 
-        for output in self.test_outputs:
+        for output in outputs:
             if output["text_embeds"] is not None:
                 text_embeds.append(output["text_embeds"])
             if output["transcriptome_embeds"] is not None:
@@ -439,7 +447,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             modalities[0] = modalities[0][orig_indices]
             modalities[1] = modalities[1][orig_indices]
             logger.info(
-                "Using a random subsample of 20000 data points for retrieval evaluation."
+                f"Using a random subsample of 20000 data points for {stage} retrieval evaluation."
             )
         else:
             orig_indices = torch.arange(modalities[0].shape[0])
@@ -449,7 +457,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             range(min(modalities[0].shape[0], modalities[1].shape[0]))
         )
 
-        # Text as queries, transcriptome as targets
+        # Left as queries, right as targets
         scores_left_right, _ = score_left_vs_right(
             left_input=modalities[0],
             right_input=modalities[1],
@@ -462,7 +470,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             use_image_data=False,
         )
 
-        # Transcriptome as queries, text as targets
+        # Right as queries, left as targets
         scores_right_left, _ = score_left_vs_right(
             left_input=modalities[1],
             right_input=modalities[0],
@@ -498,10 +506,11 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             report_per_class_metrics=False,
         )
 
+        prefix = f"{stage}_retrieval/"
         # the first is the target, the second the query (I believe)
         for metric in metrics_left_right:
             self.log(
-                f"test_retrieval/" + "_".join(metric_name) + f"/{metric}",
+                prefix + "_".join(metric_name) + f"/{metric}",
                 metrics_left_right[metric],
                 on_step=False,
                 on_epoch=True,
@@ -510,7 +519,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             )
         for metric in metrics_right_left:
             self.log(
-                f"test_retrieval/" + "_".join(reversed(metric_name)) + f"/{metric}",
+                prefix + "_".join(reversed(metric_name)) + f"/{metric}",
                 metrics_right_left[metric],
                 on_step=False,
                 on_epoch=True,
@@ -518,19 +527,24 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                 logger=True,
             )
 
-        # Save individual CLIP scores for per-class analysis (using precomputed scores). NOTE: might be that `report_per_class_metrics` does the same, but not sure
-        self._save_individual_clip_scores_from_precomputed(
-            scores_left_right, scores_right_left, metric_name, orig_indices
-        )
+        # Save individual CLIP scores (test only by default)
+        if stage == "test":
+            combined_dataset = self.trainer.datamodule.test_dataloader().dataset
+            self._save_individual_clip_scores_from_precomputed(
+                scores_left_right, scores_right_left, metric_name, orig_indices, combined_dataset, stage
+            )
+        elif stage == "val":
+            # Skip CSV saving for validation to reduce overhead
+            pass
 
-        logger.info(f"Retrieval evaluation completed.")
+        logger.info(f"{stage.capitalize()} retrieval evaluation completed.")
 
     def _save_individual_clip_scores_from_precomputed(
-        self, scores_left_right, scores_right_left, metric_name, orig_indices
+        self, scores_left_right, scores_right_left, metric_name, orig_indices, combined_dataset, stage: str
     ):
         """Save individual CLIP scores for per-class analysis using precomputed scores."""
 
-        combined_dataset = self.trainer.datamodule.test_dataloader().dataset
+        # combined_dataset is expected to be a ConcatDataset of component datasets
         orig_ids = [
             v for dataset in combined_dataset.datasets for v in dataset.orig_ids
         ]
@@ -540,14 +554,10 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             for v in [getattr(dataset, "i", None)] * len(dataset)
         ]
 
-        # for i, batch in self.trainer.datamodule.test_dataloader():
-        # Create DataFrame with individual scores
         n_samples = min(scores_left_right.shape[1], scores_right_left.shape[0])
         individual_scores = []
 
         for i in range(n_samples):
-
-            # Score for correct pair
             correct_score_lr = scores_left_right[i, i].item()
             correct_score_rl = scores_right_left[i, i].item()
 
@@ -573,7 +583,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             if isinstance(logger, lightning.pytorch.loggers.csv_logs.CSVLogger)
         ][0]
         scores_df.to_csv(
-            Path(csv_logger.log_dir) / "individual_clip_scores.csv", index=False
+            Path(csv_logger.log_dir) / f"{stage}_individual_clip_scores.csv", index=False
         )
 
     def configure_optimizers(self):

@@ -146,7 +146,7 @@ rule hest_per_class_analysis:
     output:
         analysis=report(HEST_RESULTS / "comparison" / "per_class_analysis.csv", category="per_class_analysis", subcategory="transcriptome-image", labels={"Analysis": "HEST Benchmark (retrieval-based)", "Format": "csv"}),
         plot=report(HEST_RESULTS / "comparison" / "per_class_analysis.pdf", category="per_class_analysis", subcategory="transcriptome-image", labels={"Analysis": "HEST Benchmark (retrieval-based)", "Format": "plot"}),
-        clip_scores=report(HEST_RESULTS / "comparison" / "individual_clip_scores.csv", category="per_class_analysis", subcategory="transcriptome-image", labels={"Analysis": "HEST Benchmark (retrival-based)", "Format": "csv (CLIP scores)"})
+        clip_scores=report(HEST_RESULTS / "comparison" / "test_individual_clip_scores.csv", category="per_class_analysis", subcategory="transcriptome-image", labels={"Analysis": "HEST Benchmark (retrival-based)", "Format": "csv (CLIP scores)"})
     params:
         datasets=HEST_DATASETS,
         model_types=["trimodal", "bimodal_mismatch1", "bimodal_mismatch2", "bimodal_matching"]
