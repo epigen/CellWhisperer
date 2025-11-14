@@ -23,7 +23,7 @@ class OpenSlideWrapper:
         logger.info(f"Level downsamples: {self.slide.level_downsamples}")
 
         # Handle magnification scaling
-        if "detailed" not in dataset_name:
+        if "detailed" not in dataset_name and "singlecell" not in dataset_name:
             # For standard resolution, use level 1 if available (2x downsampled)
             if self.slide.level_count > 1:
                 self._level = 1

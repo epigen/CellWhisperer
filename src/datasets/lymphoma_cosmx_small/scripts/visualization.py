@@ -1,5 +1,7 @@
 """Visualization utilities for lymphoma CosMx data processing."""
 
+"copy, outdated, use notebooks/visualization.py instead"
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np

@@ -2,12 +2,11 @@
 authors = ["Moritz Schaefer <mail@moritzs.de>"]
 channels = ["conda-forge", "pytorch", "bioconda", "nodefaults"]
 name = "cellwhisperer-aarch64"
-platforms = ["linux-aarch64", "linux-64"]
+platforms = ["linux-aarch64", "linux-64", "osx-arm64"]
 version = "0.1.0"
 
 
 [dependencies]
-gcc = "13.*"
 gfortran = "*"
 python = "3.10.*"
 anndata = "0.10.2.*"

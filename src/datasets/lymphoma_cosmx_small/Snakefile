@@ -25,9 +25,11 @@ rule process_data:
     input:
         read_count_table=PROJECT_DIR / "resources/lymphoma_cosmx_small/read_count_table.h5ad",
         image=PROJECT_DIR / "resources/lymphoma_cosmx_small/CosMx_1K_CART_1__61360.svs",
+        cell_barcode_core_assignment=PROJECT_DIR / "src/datasets/lymphoma_cosmx_small/cell_barcode_core_assignment.csv",
     output:
         adata=PROJECT_DIR / config["paths"]["full_dataset"],
         image=PROJECT_DIR / config["paths"]["histo_image"],
+        patch_dir=directory(PROJECT_DIR / "results/{dataset}/patches"),
         report_patches=report(
             [PROJECT_DIR / f"results/{{dataset}}/test_patch_{i}.png" for i in range(3)],
             category="Quality Control"
@@ -47,8 +49,14 @@ rule process_data:
         scale_factor=0.79488464508,
         filter_good_quality=False,  # Filter for good_quality cells as annotated by pathologists
         min_num_cells=5,  # filter out patches with fewer reads
-    script:
-        "scripts/process_data.py"
+        pixel_size_um=lambda wildcards: config["he_configs"][config["dataset_he_mapping"][wildcards.dataset]]["target_pixel_size"],
+        small_patch_diameter_um=15.0,
+        medium_patch_pixels=224,
+        large_patch_pixels=448,
+        max_patches_per_scale=lambda wildcards: 10 if wildcards.dataset.endswith("_singlecell") else None,
+    notebook:
+        "notebooks/process_data.py.ipynb"   # snakemake --edit-notebook <output_file>
+        # "scripts/process_data.py"
 
 rule plot_transcriptome_umap:
     """
@@ -70,7 +78,7 @@ rule plot_transcriptome_umap:
 
 rule all:
     input:
-        expand(rules.process_data.output.adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed"]),
+        expand(rules.process_data.output.adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell"]),
         expand(rules.plot_transcriptome_umap.output.umap_plot, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed"])
     default_target: True
 

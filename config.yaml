@@ -80,6 +80,7 @@ he_configs:  # TODO this is potentially not in sync with uni_model.py currently
 dataset_he_mapping:
   lymphoma_cosmx_small: visium_resolution
   lymphoma_cosmx_small_detailed: detailed_resolution
+  lymphoma_cosmx_small_singlecell: detailed_resolution
   hest1k: visium_resolution
   quilt1m: visium_resolution
 
@@ -108,6 +109,7 @@ datasets:
   - sthelar
   - lymphoma_cosmx_small
   - lymphoma_cosmx_small_detailed
+  - lymphoma_cosmx_small_singlecell
 
 metadata_cols_per_zero_shot_validation_dataset:
   immgen:

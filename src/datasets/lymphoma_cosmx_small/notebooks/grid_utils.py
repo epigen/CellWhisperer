@@ -116,8 +116,14 @@ def aggregate_expression_data(adata_hr, filtered_coords, spot_diameter_pixels):
                 fov_info.append("")
 
             # Get unique core values and join with comma
-            if "core" in cells_obs.columns:
-                unique_cores = cells_obs["core"].dropna().unique()
+            core_column = None
+            for candidate in ["core", "core_id", "cores"]:
+                if candidate in cells_obs.columns:
+                    core_column = candidate
+                    break
+
+            if core_column:
+                unique_cores = cells_obs[core_column].dropna().unique()
                 core_info.append(",".join(map(str, sorted(unique_cores))))
             else:
                 core_info.append("")
