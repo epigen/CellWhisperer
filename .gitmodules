@@ -8,5 +8,5 @@
         path = modules/LLaVA
         url = https://github.com/epigen/llava
 [submodule "modules/UCE"]
-        path = modules/UCE
-        url = https://github.com/epigen/UCE
+	path = modules/UCE
+	url = https://github.com/epigen/UCE
