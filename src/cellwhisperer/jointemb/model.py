@@ -131,10 +131,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         except AttributeError:  # UCE
             self.transcriptome_embed_dim = config.transcriptome_config.output_dim
         self.text_embed_dim = config.text_config.hidden_size
-        # Multi-scaling: UNI embeddings are concatenated from multiple scales
-        self.image_embed_dim = self.config.image_config.embed_dim * len(
-            self.config.image_config.scale_factors
-        )
+        # Image embedding dimension equals UNI embed_dim (cell CNN output)
+        self.image_embed_dim = self.config.image_config.embed_dim
         self.projection_dim = config.projection_dim
 
         self.discriminator = GlobalDiscriminatorDot(
@@ -315,7 +313,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
 
     def get_image_features(
         self,
-        patches=None,
+        patches_ctx=None,
+        patches_cell=None,
         normalize_embeds=False,
         **kwargs,
     ):
@@ -325,7 +324,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             applying the projection layer to the pooled output of [`CLIPImageModel`].
         """
         image_features = self.image_model(
-            patches=patches,
+            patches_ctx=patches_ctx,
+            patches_cell=patches_cell,
             return_dict=False,
         )[1]
 
@@ -345,7 +345,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         expression_gene: Optional[torch.LongTensor] = None,
         expression_expr: Optional[torch.LongTensor] = None,
         expression_key_padding_mask: Optional[torch.LongTensor] = None,
-        patches: Optional[torch.FloatTensor] = None,
+        patches_ctx: Optional[torch.FloatTensor] = None,
+        patches_cell: Optional[torch.FloatTensor] = None,
         text_batch_mask: Optional[torch.BoolTensor] = None,
         image_batch_mask: Optional[torch.BoolTensor] = None,
         transcriptome_batch_mask: Optional[torch.BoolTensor] = None,
@@ -392,7 +393,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         #             [
         #                 input_ids is not None,
         #                 expression_tokens is not None,
-        #                 patches is not None,
+        #                 patches_ctx is not None and patches_cell is not None,
         #             ]
         #         )
         #         == 2
@@ -421,9 +422,11 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                 return_dict=False,
             )[1]
 
-        if patches is not None:
+        if patches_ctx is not None:
+            assert patches_cell is not None
             image_features = self.image_model(
-                patches=patches,
+                patches_ctx=patches_ctx,
+                patches_cell=patches_cell,
                 return_dict=False,
             )[1]
 

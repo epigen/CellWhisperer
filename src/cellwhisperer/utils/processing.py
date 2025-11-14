@@ -39,89 +39,56 @@ def adata_to_embeds(
     has_whole_slide_image = "he_slide" in adata.uns
     has_image_model = hasattr(model, "image_model") and model.image_model is not None
 
+    if has_image_patches:
+        raise NotImplementedError(
+            "Pre-computed image patches not implemented right now."
+        )
+
     if use_image_data and has_image_model:
-        if has_image_patches:
-            logging.info("Using pre-computed image patches")
-            # Extract image patches and process them
-            image_patches = adata.obsm["patches"]
-            image_embeds = []
-
-            # Process patches in batches
-            num_patches = len(image_patches)
-            for i in tqdm(
-                range(0, num_patches, batch_size),
-                desc="Processing image patches",
-                total=(num_patches + batch_size - 1) // batch_size,
-                disable=num_patches < 2 * batch_size,
-            ):
-                batch_patches = image_patches[i : i + batch_size]
-
-                # Process the batch of patches
-                processed_batch = processor.image_processor(
-                    images=batch_patches, return_tensors="pt"
-                )
-
-                # Move to device and get embeddings
-                batch_inputs = {
-                    k: v.to(model.device) for k, v in processed_batch.items()
-                }
-                _, image_embeds_batch = model.get_image_features(
-                    **batch_inputs, normalize_embeds=True
-                )
-                image_embeds.append(image_embeds_batch.detach().cpu())
-
-            image_embeds = torch.cat(image_embeds, dim=0)
-            return image_embeds
-
-        elif has_whole_slide_image:
-            logging.info("Extracting patches from whole slide image using UniProcessor")
-            # Import here to avoid circular imports
+        if has_whole_slide_image:
+            logging.info("Extracting patches from whole slide image using UNIProcessor")
             from cellwhisperer.jointemb.uni_model import UNIProcessor
 
-            # Extract patches using UniProcessor
             uni_processor = UNIProcessor()
+            image_embeds = []
 
-            # For combined datasets with multiple WSI images, we need to process each sample separately
             if "wsi_images" in adata.uns and "sample_id" in adata.obs:
-                # Multi-sample dataset - process each sample with its corresponding WSI
                 logging.info("Processing multi-sample dataset with multiple WSI images")
-                all_patches = []
                 sample_ids = adata.obs["sample_id"].unique()
 
                 for sample_id in sample_ids:
                     if sample_id in adata.uns["wsi_images"]:
                         sample_mask = adata.obs["sample_id"] == sample_id
                         sample_adata = adata[sample_mask].copy()
-
-                        # Set the correct WSI for this sample
                         sample_adata.uns["he_slide"] = adata.uns["wsi_images"][
                             sample_id
                         ]
 
-                        # Extract patches for this sample
-                        patches_data = uni_processor(sample_adata, return_tensors="pt")
-                        all_patches.append(patches_data["patches"])
-
-                        logging.info(
-                            f"Extracted {len(patches_data['patches'])} patches for sample {sample_id}"
+                        patches = uni_processor(sample_adata, return_tensors="pt")
+                        batch_inputs = {
+                            k: v.to(model.device) for k, v in patches.items()
+                        }
+                        _, image_embeds_batch = model.get_image_features(
+                            **batch_inputs, normalize_embeds=True
                         )
+                        image_embeds.append(image_embeds_batch.detach().cpu())
 
-                # Combine patches from all samples
-                if all_patches:
-                    combined_patches = torch.cat(all_patches, dim=0)
-                    adata.obsm["patches"] = combined_patches
+                if image_embeds:
+                    return torch.cat(image_embeds, dim=0)
                 else:
-                    logging.warning("No patches extracted from multi-sample dataset")
+                    logging.warning(
+                        "No patches extracted from multi-sample dataset; falling back to transcriptome"
+                    )
             else:
-                # Single WSI dataset - use default processing
-                patches_data = uni_processor(adata, return_tensors="pt")
-                adata.obsm["patches"] = patches_data["patches"]
-
-            # Now process the extracted patches (recursive call with patches now available)
-            return adata_to_embeds(adata, model, batch_size, use_image_data=True)
+                patches = uni_processor(adata, return_tensors="pt")
+                batch_inputs = {k: v.to(model.device) for k, v in patches.items()}
+                _, image_embeds = model.get_image_features(
+                    **batch_inputs, normalize_embeds=True
+                )
+                return image_embeds
         else:
             logging.warning(
-                "Image data requested but no patches or whole slide image found, falling back to transcriptome"
+                "Image data requested but no whole slide image found, falling back to transcriptome"
             )
     elif use_image_data and not has_image_model:
         logging.warning(

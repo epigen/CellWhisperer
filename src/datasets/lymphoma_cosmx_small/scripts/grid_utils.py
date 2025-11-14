@@ -1,4 +1,7 @@
-"""Grid generation and filtering utilities for lymphoma CosMx data processing."""
+"""Grid generation and filtering utilities for lymphoma CosMx data processing.
+
+Coordinates stored in `x_pixel`/`y_pixel` represent tile centers (not top-left).
+"""
 
 import numpy as np
 import pandas as pd
@@ -9,14 +12,20 @@ logger = logging.getLogger(__name__)
 
 
 def create_grid_coordinates(image_width, image_height, spot_diameter_pixels):
-    """Create a grid of coordinates over the image."""
-    x_coords = np.arange(0, image_width, spot_diameter_pixels)
-    y_coords = np.arange(0, image_height, spot_diameter_pixels)
+    """Create a grid of center coordinates over the image.
+
+    Returns a DataFrame with columns: x_array, y_array, x_pixel, y_pixel,
+    where x_pixel/y_pixel are CENTER coordinates for tiles of size `spot_diameter_pixels`.
+    """
+    half = spot_diameter_pixels // 2
+    # Ensure centers stay fully inside the image bounds
+    x_centers = np.arange(half, image_width - half + 1, spot_diameter_pixels)
+    y_centers = np.arange(half, image_height - half + 1, spot_diameter_pixels)
 
     grid_coords = []
-    for i, x in enumerate(x_coords):
-        for j, y in enumerate(y_coords):
-            grid_coords.append((i, j, x, y))
+    for i, x in enumerate(x_centers):
+        for j, y in enumerate(y_centers):
+            grid_coords.append((i, j, int(x), int(y)))
 
     coord_df = pd.DataFrame(
         grid_coords, columns=["x_array", "y_array", "x_pixel", "y_pixel"]
@@ -28,15 +37,21 @@ def create_grid_coordinates(image_width, image_height, spot_diameter_pixels):
 def filter_background_tiles(
     coord_df, slide_wrapper, spot_diameter_pixels, white_cutoff, crop_tile_func
 ):
-    """Filter out white/background tiles."""
+    """Filter out white/background tiles using CENTER coordinates.
+
+    Converts centers to top-left for cropping.
+    """
     is_white = []
-    logger.info("Filtering background tiles...")
+    logger.info("Filtering background tiles (center-anchored)...")
+    half = spot_diameter_pixels // 2
 
     for _, row in tqdm(coord_df.iterrows(), total=len(coord_df)):
-        x = int(row.x_pixel)
-        y = int(row.y_pixel)
+        x_center = int(row.x_pixel)
+        y_center = int(row.y_pixel)
+        x_start = x_center - half
+        y_start = y_center - half
 
-        tile = crop_tile_func(slide_wrapper, x, y, spot_diameter_pixels)
+        tile = crop_tile_func(slide_wrapper, x_start, y_start, spot_diameter_pixels)
         tile = tile[:, :, :3]  # Drop alpha if present
         whiteness = np.mean(tile)
         is_white.append(whiteness > white_cutoff)
@@ -48,19 +63,25 @@ def filter_background_tiles(
 
 
 def aggregate_expression_data(adata_hr, filtered_coords, spot_diameter_pixels):
-    """Aggregate expression data for each tile."""
+    """Aggregate expression data for each center-anchored tile.
+
+    Uses center coordinates to compute tile bounds.
+    """
     aggregated_counts = []
     cell_counts_per_tile = []
     fov_info = []
     core_info = []
 
-    # Use the converted spatial coordinates
+    # Use the converted spatial coordinates (cell centers)
     hr_spatial_coords = adata_hr.obsm["spatial"]
 
-    logger.info("Aggregating expression data onto grid...")
+    logger.info("Aggregating expression data onto grid (center-anchored)...")
+    half = spot_diameter_pixels // 2
     for _, row in tqdm(filtered_coords.iterrows(), total=len(filtered_coords)):
-        x_min = row.x_pixel
-        y_min = row.y_pixel
+        x_center = int(row.x_pixel)
+        y_center = int(row.y_pixel)
+        x_min = x_center - half
+        y_min = y_center - half
         x_max = x_min + spot_diameter_pixels
         y_max = y_min + spot_diameter_pixels
 

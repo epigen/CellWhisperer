@@ -150,17 +150,24 @@ class FrozenCachedModel(nn.Module):
             logger.error("Unable to save cache. Aborting.")
 
     def compute_sample_hashes(self, **kwargs):
-        batch_size = len([x for x in kwargs.values() if isinstance(x, torch.Tensor)][0])
-        # batch_size = len(next(iter(kwargs.values())))
+        # Determine batch size from the first tensor in kwargs (tensor-only inputs)
+        tensor_values = [v for v in kwargs.values() if isinstance(v, torch.Tensor)]
+        if not tensor_values:
+            raise ValueError("No tensor inputs found when computing sample hashes")
+        batch_size = tensor_values[0].shape[0]
+
         sample_hashes = []
         for i in range(batch_size):
-            sample_kwargs = {
-                k: v[i] if hasattr(v, "__getitem__") else v for k, v in kwargs.items()
-            }
-            sample_kwargs_hash = hash_object(sample_kwargs)
-            sample_hashes.append(sample_kwargs_hash)
+            sample_kwargs = {}
+            for k, v in kwargs.items():
+                if isinstance(v, torch.Tensor):
+                    sample_kwargs[k] = v[i]
+                else:
+                    sample_kwargs[k] = v
+            sample_hashes.append(hash_object(sample_kwargs))
 
         return sample_hashes
+
 
     def forward(self, *args, **kwargs):
         """
@@ -177,10 +184,12 @@ class FrozenCachedModel(nn.Module):
 
         assert len(args) == 0, "not implemented for positional args"
 
-        active_device = [x for x in kwargs.values() if isinstance(x, torch.Tensor)][
-            0
-        ].device
-        batch_size = len([x for x in kwargs.values() if isinstance(x, torch.Tensor)][0])
+        # Determine active device and batch size from tensor kwargs (tensor-only inputs)
+        tensor_values = [v for v in kwargs.values() if isinstance(v, torch.Tensor)]
+        if not tensor_values:
+            raise ValueError("No tensor inputs found for FrozenCachedModel forward")
+        active_device = tensor_values[0].device
+        batch_size = tensor_values[0].shape[0]
 
         # First, we need to hash the inputs per sample (not per batch)
         sample_hashes = self.compute_sample_hashes(**kwargs)

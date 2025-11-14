@@ -3,6 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 from .jsd_info_max import JSDInfoMaxLoss
 from typing import Optional
+import logging
 
 
 class JSDInfoMaxLossCellWhisperer(JSDInfoMaxLoss):
@@ -97,10 +98,22 @@ class ClipLoss(nn.Module):
         total_loss = torch.tensor(0.0, device=device)
         num_valid_pairs = 0
 
-        # assert that weights are None
-        assert (
-            transcriptome_weights is None and annotation_weights is None
-        ), "Weights are not supported in multi-modal ClipLoss."  # because we would need to filter them accordingly
+        # If multiple modality pairs are present, ignore weights for safety
+        num_pairs = sum(
+            t is not None
+            for t in [
+                logits_transcriptome_text,
+                logits_transcriptome_image,
+                logits_text_image,
+            ]
+        )
+        if num_pairs > 1:
+            if transcriptome_weights is not None or annotation_weights is not None:
+                logging.error(
+                    "When multiple modality pairs are provided, transcriptome_weights and annotation_weights must be None. Setting to None"
+                )
+            transcriptome_weights = None
+            annotation_weights = None
 
         # Handle the new multi-modal logits
         if logits_transcriptome_text is not None:

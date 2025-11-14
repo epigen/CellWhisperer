@@ -248,15 +248,23 @@ class SpotWhispererInferenceEncoder:
         # Process image patches
         # SpotWhisperer expects multi-scale patches: (batch_size, n_scales, 3, 224, 224)
         batch_size = patches.shape[0]
-        n_scales = len(self.model.image_model.config.scale_factors)
-
-        # Replicate patches across all scales (simple approach)
-        multi_scale_patches = patches.unsqueeze(1).expand(-1, n_scales, -1, -1, -1)
+        # Build views dict for UNIModel (context and cell)
+        views = {
+            "context": patches,                    # (B,3,224,224)
+            "cell": torch.nn.functional.interpolate(
+                patches, size=(56, 56), mode="bilinear", align_corners=False
+            ),
+        }
 
         # Get image embeddings using SpotWhisperer's get_image_features method
         _, image_embeds = self.model.get_image_features(
-            patches=multi_scale_patches, normalize_embeds=True
+            patches_ctx=patches,
+            patches_cell=torch.nn.functional.interpolate(
+                patches, size=(56, 56), mode="bilinear", align_corners=False
+            ),
+            normalize_embeds=True,
         )
+
         results["image_embeds"] = image_embeds
 
         # Process transcriptome data if provided

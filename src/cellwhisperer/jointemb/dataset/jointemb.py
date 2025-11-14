@@ -50,7 +50,7 @@ def multi_modal_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
 
     # Define modality keys for each type
     text_keys = ["input_ids", "attention_mask", "token_type_ids"]
-    image_keys = ["patches"]
+    image_keys = ["patches_ctx", "patches_cell"]
     transcriptome_keys = [
         "expression_tokens",
         "expression_token_lengths",
@@ -67,13 +67,14 @@ def multi_modal_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
     image_mask = torch.zeros(batch_size, dtype=torch.bool)
     transcriptome_mask = torch.zeros(batch_size, dtype=torch.bool)
 
-    # Collect all keys present in the batch
+    # Collect all keys present in the updated batch
     all_keys = set()
     for sample in batch:
         all_keys.update(sample.keys())
 
     # For each key, collate the values
     for key in all_keys:
+
         values = []
         key_present = []
 
@@ -261,16 +262,6 @@ class JointEmbedDatasetDisk(Dataset):
 
         # Load the sample from disk
         sample = torch.load(sample_path, map_location="cpu")
-
-        # TODO hack here since I precomputed the files as triple-scale but only use the 1.0 scale now <- delete after recompute; or control this with a parameter..
-        if "patches" in sample:
-            assert (
-                len(sample["patches"].shape) == 4
-            ), f"Unexpected patch shape: {sample['patches'].shape}"
-            if sample["patches"].shape[0] == 3:
-                sample["patches"] = sample["patches"][
-                    1:2, :, :, :
-                ]  # keep only the 1.0 scale
 
         return sample
 
@@ -571,34 +562,15 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
         valid_datapoints_filter = n_genes_filter
 
-        if self.image_processor.startswith("uni") and "patches" in inputs:
-            # Check if the 1.0 scale patch (original resolution) is all zeros
-            # Find the index of 1.0 in scale_factors, default to index 1 if not found
+        if self.image_processor.startswith("uni") and "patches_ctx" in inputs:
+            # Check the context view for non-zero content (original resolution)
             try:
-                # Get scale_factors from processor config
-                scale_factors = getattr(
-                    self.processor.image_processor, "scale_factors", [0.6, 1.0, 4.0]
-                )
-                original_scale_idx = (
-                    scale_factors.index(1.0) if 1.0 in scale_factors else 1
-                )
-                # Tensor shape is (n_patches, n_scales, 3, 224, 224)
-                non_zero_original_patches = (
-                    inputs["patches"][:, original_scale_idx, :, :, :].sum(dim=(1, 2, 3))
-                    > 0
-                )  # Check only the 1.0 scale patches
-                valid_datapoints_filter = (
-                    valid_datapoints_filter & non_zero_original_patches
-                )
-            except IndexError:
-                # Fallback to checking all scales if indexing fails
+                non_zero_context = inputs["patches_ctx"].sum(dim=(1, 2, 3)) > 0
+                valid_datapoints_filter = valid_datapoints_filter & non_zero_context
+            except Exception:
                 logger.warning(
-                    "Could not find 1.0 scale patch, falling back to checking all scales"
+                    "Could not validate context view; skipping image-based filtering"
                 )
-                non_zero_patches = (
-                    inputs["patches"].sum(dim=(1, 2, 3, 4)) > 0
-                )  # sum over all scales, channels, height, width
-                valid_datapoints_filter = valid_datapoints_filter & non_zero_patches
 
         if sum(valid_datapoints_filter) == len(valid_datapoints_filter):
             logger.info(
@@ -609,7 +581,13 @@ class JointEmbedDataModule(pl.LightningDataModule):
             logger.warning(
                 f"Filtering for {sum(valid_datapoints_filter)} of {len(valid_datapoints_filter)} samples with >={self.min_genes} genes."
             )
-            inputs = {key: val[valid_datapoints_filter] for key, val in inputs.items()}
+            # Apply filtering to inputs for all tensor keys
+            filtered_inputs = {}
+            for key, val in inputs.items():
+                if key == "orig_ids":
+                    continue
+                filtered_inputs[key] = val[valid_datapoints_filter]
+            inputs = filtered_inputs
             inputs["orig_ids"] = adata.obs.index[valid_datapoints_filter]
             if len(replicate_inputs) > 0:
                 for key, rep_value in replicate_inputs.items():
@@ -713,6 +691,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                     continue  # Skip orig_ids as it's metadata
 
                 # Get the data for this specific sample (no padding applied here). Need to clone to prevent storing full tensors in case of views
+                # Write tensors directly per key
                 sample[key] = tensor[j].clone()
 
             # Save individual sample
@@ -768,22 +747,22 @@ class JointEmbedDataModule(pl.LightningDataModule):
                     value=0,
                 )
 
-        return (
-            {
-                key: (
-                    torch.cat([result[0][key] for result in results], dim=0)
-                    if key != "orig_ids"
-                    else pd.Index([v for result in results for v in result[0][key]])
+        # Aggregate results
+        aggregated_inputs = {}
+        for key in results[0][0]:
+            if key == "orig_ids":
+                aggregated_inputs[key] = pd.Index(
+                    [v for result in results for v in result[0][key]]
                 )
-                for key in results[0][0]
-            },
+            else:
+                aggregated_inputs[key] = torch.cat(
+                    [result[0][key] for result in results], dim=0
+                )
+
+        return (
+            aggregated_inputs,
             {
-                # key: [
-                #     torch.cat([result[1][key][i] for result in results], dim=0)
-                #     for i in range(len(next(iter(results[0][1].values()))))
-                # ]
-                # for key in results[0][1]
-                # if len(results[0][1][key]) > 0 and key != "orig_ids"
+                # replicates not supported
             },
         )
 
@@ -847,7 +826,8 @@ class JointEmbedDataModule(pl.LightningDataModule):
                     dataset_name
                 )
 
-                dataset_len = len(next(iter(inputs.values())))
+                # Use orig_ids length to determine dataset size
+                dataset_len = len(inputs["orig_ids"])
                 if isinstance(self.train_fraction, (int, float)):
                     # Assuming you want to split the data into train and val for simplicity
                     train_size = int(self.train_fraction * dataset_len)
@@ -868,13 +848,16 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 else:
                     raise ValueError("train_fraction must be either a float or string")
 
+                # Build train inputs with support for nested image patches dict
+                train_inputs = {}
+                for key, value in inputs.items():
+                    if key == "orig_ids":
+                        continue
+                    train_inputs[key] = value[train_ids]
+
                 self.train_datasets.append(
                     JointEmbedDataset(
-                        {
-                            key: value[train_ids]
-                            for key, value in inputs.items()
-                            if key != "orig_ids"
-                        },
+                        train_inputs,
                         orig_ids=inputs["orig_ids"][train_ids],
                         replicate_inputs={
                             key: [value[i][train_ids] for i in range(len(value))]
@@ -883,13 +866,17 @@ class JointEmbedDataModule(pl.LightningDataModule):
                         },
                     )
                 )
+
+                # Build val inputs with support for nested image patches dict
+                val_inputs = {}
+                for key, value in inputs.items():
+                    if key == "orig_ids":
+                        continue
+                    val_inputs[key] = value[val_ids]
+
                 self.val_datasets.append(
                     JointEmbedDataset(
-                        {
-                            key: value[val_ids]
-                            for key, value in inputs.items()
-                            if key != "orig_ids"
-                        },
+                        val_inputs,
                         orig_ids=inputs["orig_ids"][val_ids],
                     )
                 )

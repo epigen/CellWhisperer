@@ -41,6 +41,11 @@ NOTE: requirements.txt could also be integrated into pyproject.toml (would be be
 
 For most your purposes, the pixi based environment will do the job. See `CONVENTIONS.md` for instructions on how to use it.
 
+```bash
+pixi run --no-progress cellwhisperer fit --config test_uni_small.yaml 
+```
+
+
 ### Install via conda/pip
 
 1. **Clone the repository** with all submodules (required):
@@ -390,6 +395,8 @@ We welcome feedback and contributions to improve CellWhisperer!
 
 # SpotWhisperer
 
+### Coordinates etc.
+`x_pixel` and `y_pixel` are centered coordinates
 ### Using DeepSpot for spatial transcriptomics predictions
 
 CellWhisperer can leverage DeepSpot to predict gene expression from histological images. Follow these steps to process your image data:
@@ -418,3 +425,4 @@ snakemake -c 48 --use-conda --config 'datasets=["<dataset_name>"]'
 The pipeline will use DeepSpot to predict gene expression patterns from your histology image and integrate these predictions with CellWhisperer for interactive analysis.
 
 You can see an example configuration in the resources/deepspot_test/config.json file provided with CellWhisperer.
+

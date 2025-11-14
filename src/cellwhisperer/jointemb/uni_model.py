@@ -34,19 +34,27 @@ class UNIProcessor(ProcessorMixin):
         self.fallback_spot_diameter_fullres = he_config.get(
             "spot_diameter_um", 100
         )  # TODO this corresponds to visium (where spot centers are 105um apart)
-        patch_size = he_config["patch_size_pixels"]
 
         self.config = config_param or UNIConfig()  # Use default config if none provided
-        self.transform = transforms.Compose(
+        # Separate transforms for context (224x224) and cell (56x56) without resizing
+        self.transform_context = transforms.Compose(
             [
-                transforms.Resize(patch_size),
-                transforms.CenterCrop(patch_size),
                 transforms.ToTensor(),
-                transforms.Normalize(  # TODO understand better. not sure if this is too good tbh...
+                transforms.Normalize(
                     mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
                 ),
             ]
         )
+        self.transform_cell = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
+                ),
+            ]
+        )
+        # Backward-compatible transform attribute used by some wrappers
+        self.transform = self.transform_context
 
         super().__init__(*args, **kwargs)
 
@@ -94,61 +102,48 @@ class UNIProcessor(ProcessorMixin):
                     "Image path not available. Perhaps you need to run: `snakemake -R unpack_data` in src/datasets/quilt1m"
                 )
 
-        X = []
-        # Use scale factors from config
-        scale_factors = self.config.scale_factors
+        # Build named views: context (224x224) and cell (56x56)
+        views = self.config.views
+        X_context = []
+        X_cell = []
 
         for i, (obs_index, x, y) in tqdm(
             enumerate(zip(adata.obs_names, x_pixel, y_pixel))
         ):
-            multi_scale_tiles = []
+            # Context view
+            try:
+                tile_ctx = self._crop_tile(image, x, y, views["context"])
+                t_ctx = self.transform_context(Image.fromarray(tile_ctx))
+            except Exception as e:
+                logger.error(
+                    f"Error processing context tile for barcode {obs_index} at ({x}, {y}): {e}"
+                )
+                t_ctx = torch.zeros((3, 224, 224), dtype=torch.float32)
+            X_context.append(t_ctx)
 
-            for scale_factor in scale_factors:
-                try:
-                    tile = self._crop_tile(
-                        image, x, y, spot_diameter_fullres, scale_factor
-                    )
-                    tile = self.transform(
-                        Image.fromarray(tile)
-                    )  # transform is defined below
-                except Exception as e:
-                    logger.error(
-                        f"Error processing tile for barcode {obs_index} at ({x}, {y}) with scale {scale_factor}: {e}"
-                    )
-                    tile = torch.zeros(
-                        (3, 224, 224), dtype=torch.float32
-                    )  # Fallback to zero tensor if transformation fails
-                multi_scale_tiles.append(tile)
+            # Cell view
+            # Note: Only the context view implements physical scale anchoring via crop size.
+            #       The cell view uses a fixed 56x56 pixel crop without physical anchoring.
+            try:
+                tile_cell = self._crop_tile(image, x, y, views["cell"])
+                t_cell = self.transform_cell(Image.fromarray(tile_cell))
+            except Exception as e:
+                logger.error(
+                    f"Error processing cell tile for barcode {obs_index} at ({x}, {y}): {e}"
+                )
+                t_cell = torch.zeros((3, 56, 56), dtype=torch.float32)
+            X_cell.append(t_cell)
 
-                # To check how the crops look like
-                # if scale_factor == 1.0:
-                #     import os
-
-                #     crop_dir = "/scratch/users/moritzs/scale1crops"
-                #     os.makedirs(crop_dir, exist_ok=True)
-                #     crop_path = os.path.join(crop_dir, f"{obs_index}_scale1.png")
-                #     Image.fromarray(
-                #         self._crop_tile(
-                #             image, x, y, spot_diameter_fullres, scale_factor
-                #         )
-                #     ).save(crop_path)
-
-            # Stack the scales for this patch
-            multi_scale_patch = torch.stack(
-                multi_scale_tiles, dim=0
-            )  # (n_scales, 3, 224, 224)
-            X.append(multi_scale_patch)
-
-        X = torch.stack(
-            X, dim=0
-        )  # (n_patches, n_scales, 3, 224, 224) - first dim: patches, second: scale levels, third: RGB channels
+        patches_context = torch.stack(X_context, dim=0)  # (n_patches, 3, 224, 224)
+        patches_cell = torch.stack(X_cell, dim=0)  # (n_patches, 3, 56, 56)
 
         if return_tensors == "pt":
-            return {
-                "patches": X  # Already a torch tensor (n_patches, n_scales, 3, 224, 224)
-            }
+            return {"patches_ctx": patches_context, "patches_cell": patches_cell}
         elif return_tensors is None:
-            return {"patches": X.numpy()}
+            return {
+                "patches_ctx": patches_context.numpy(),
+                "patches_cell": patches_cell.numpy(),
+            }
         else:
             raise ValueError(
                 f"Unsupported return_tensors type: {return_tensors}. Use 'pt' or None."
@@ -156,87 +151,47 @@ class UNIProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
-        return ["patches"]
+        return ["patches_ctx", "patches_cell"]
 
     def _crop_tile(
         self,
         image: Union[Image.Image, openslide.OpenSlide],
-        x_pixel,
-        y_pixel,
-        cell_diameter_pixels,
-        scale_factor=1.0,
+        x_pixel: int,
+        y_pixel: int,
+        crop_diameter_pixels: int,
     ) -> np.ndarray:
-        scaled_diameter = int(cell_diameter_pixels * scale_factor)
-        x = x_pixel - int(scaled_diameter // 2)
-        y = y_pixel - int(scaled_diameter // 2)
+        d = int(crop_diameter_pixels)
+        x = x_pixel - (d // 2)
+        y = y_pixel - (d // 2)
 
         # Handle OpenSlide objects (SVS files)
         if isinstance(image, openslide.OpenSlide):
             img_w, img_h = image.dimensions
         elif isinstance(image, Image.Image):
-            img_h, img_w = image.size[1], image.size[0]
+            img_w, img_h = image.size[0], image.size[1]
         else:
             raise ValueError(f"Unsupported image type: {type(image)}")
 
-        if scale_factor != 1.0:
-            # For non-1.0 scale factors, move the crop to stay within image bounds
-            # while retaining the size
+        # Clamp to image bounds
+        x_start = max(0, x)
+        y_start = max(0, y)
+        x_end = min(img_w, x + d)
+        y_end = min(img_h, y + d)
 
-            # Adjust x coordinates to stay within bounds
-            if x < 0:
-                x = 0
-            elif x + scaled_diameter > img_w:
-                x = img_w - scaled_diameter
-
-            # Adjust y coordinates to stay within bounds
-            if y < 0:
-                y = 0
-            elif y + scaled_diameter > img_h:
-                y = img_h - scaled_diameter
-
-            # Final bounds check - if the scaled diameter is larger than the image,
-            # we still need to crop what we can
-            x_start = max(0, x)
-            y_start = max(0, y)
-            x_end = min(img_w, x + scaled_diameter)
-            y_end = min(img_h, y + scaled_diameter)
-
-            if isinstance(image, openslide.OpenSlide):
-                # Read region directly from OpenSlide
-                region_width = x_end - x_start
-                region_height = y_end - y_start
-                region = image.read_region(
-                    (x_start, y_start), 0, (region_width, region_height)
-                )
-                cell = np.array(region.convert("RGB"))
-            elif isinstance(image, Image.Image):
-                cell = np.array(image)[y_start:y_end, x_start:x_end]
-
-            # If the crop is still smaller than expected, return None to indicate zero tensor needed
-            actual_h, actual_w = cell.shape[:2]
-            if actual_h < scaled_diameter or actual_w < scaled_diameter:
-                raise ValueError("scaled patch is larger than image bounds")
+        if isinstance(image, openslide.OpenSlide):
+            region = image.read_region(
+                (x_start, y_start), 0, (x_end - x_start, y_end - y_start)
+            )
+            crop = np.array(region.convert("RGB"))
         else:
-            # For scale_factor == 1.0, return zero tensor if patch is not fully within image
-            # Calculate the bounds
-            y_start, y_end = y, y + scaled_diameter
-            x_start, x_end = x, x + scaled_diameter
+            crop = np.array(image)[y_start:y_end, x_start:x_end]
 
-            # Check if patch is fully within the image
-            if y_start < 0 or y_end > img_h or x_start < 0 or x_end > img_w:
-                # Return None to indicate zero tensor needed
-                raise ValueError("Patch (scale factor=1.0) is out of image bounds")
-            else:
-                # Crop the image (patch is fully within bounds)
-                if isinstance(image, openslide.OpenSlide):
-                    region = image.read_region(
-                        (x_start, y_start), 0, (scaled_diameter, scaled_diameter)
-                    )
-                    cell = np.array(region.convert("RGB"))
-                elif isinstance(image, Image.Image):
-                    cell = np.array(image)[y_start:y_end, x_start:x_end]
+        # Ensure full crop size; if smaller (out-of-bounds), signal for zero-filling
+        actual_h, actual_w = crop.shape[:2]
+        if actual_h < d or actual_w < d:
+            raise ValueError("crop patch is larger than image bounds")
 
-        return cell[:, :, :3]
+        return crop[:, :, :3]
 
 
 class UNIConfig(PretrainedConfig):
@@ -245,28 +200,35 @@ class UNIConfig(PretrainedConfig):
     def __init__(
         self,
         model_name="vit_giant_patch14_224",
-        scale_factors=[
-            1.0,
-        ],  # quilt1m and hest1k data was computed with 0.6, 1.0, 4.0
+        views: Dict[str, int] = {"context": 224, "cell": 56},
+        cell_level_model=True,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.model_name = model_name
-        self.scale_factors = scale_factors
+        self.views = views
         self.embed_dim = 1536 if model_name == "vit_giant_patch14_224" else 384
+        self.cell_level_model = (
+            cell_level_model  # could be solved more elegantly via `views`, but whatever
+        )
 
-        # Ensure one of the scale factors is 1.0
-        assert 1.0 in scale_factors, "One of the scale factors must be 1.0"
+        # Validate views
         assert (
-            len(scale_factors) == 1
-        ), "Currently only single scale factor is supported"
+            isinstance(self.views, dict)
+            and "context" in self.views
+            and "cell" in self.views
+        ), "views must contain 'context' and 'cell'"
+        for k, v in self.views.items():
+            assert (
+                isinstance(k, str) and isinstance(v, int) and v > 0
+            ), "view keys must be strings and values positive ints"
 
 
 class UNIModel(PreTrainedModel):
     config_class = UNIConfig
     base_model_prefix = "uni2_model"
     is_parallelizable = False
-    main_input_name = "patches"
+    main_input_name = "patches_ctx"
 
     def __init__(self, config: UNIConfig):
         super().__init__(config)
@@ -288,50 +250,70 @@ class UNIModel(PreTrainedModel):
             act_layer=torch.nn.SiLU,
         )
 
-        # Store the embedding dimension from the model
+        # Minimal CNN for 56x56 cell view and FiLM conditioning using context embedding
+        self.cell_cnn = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(64),
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(128),
+        )
+        self.cell_pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.film_gamma = nn.Linear(config.embed_dim, 128)
+        self.film_beta = nn.Linear(config.embed_dim, 128)
+        self.cell_proj = nn.Linear(128, config.embed_dim)
 
         self.post_init()
 
     def forward(
         self,
-        patches: torch.Tensor,
+        patches_ctx: torch.Tensor,
+        patches_cell: torch.Tensor,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
-        # patches: (n_patches, n_scales, 3, 224, 224) - first dim: patches, second: scale levels, third: RGB channels
-        n_scales = len(self.config.scale_factors)
-        assert (
-            patches.ndim == 5  # (B, n_scales, 3, 224, 224)
-            and patches.shape[1] == n_scales  # number of scales
-            and patches.shape[2] == 3  # RGB channels
-            and patches.shape[3:] == (224, 224)
-        ), f"Expected input shape (n_patches, {n_scales}, 3, 224, 224), but got {patches.shape}"
+        # patches_ctx: (B, 3, 224, 224), patches_cell: (B, 3, 56, 56)
+        ctx = patches_ctx
+        cel = patches_cell
+        assert ctx.ndim == 4 and ctx.shape[1:] == (
+            3,
+            224,
+            224,
+        ), f"context shape must be (B,3,224,224), got {ctx.shape}"
+        assert cel.ndim == 4 and cel.shape[1:] == (
+            3,
+            56,
+            56,
+        ), f"cell shape must be (B,3,56,56), got {cel.shape}"
 
-        n_patches, n_scales, channels, height, width = patches.shape
+        # Context through ViT
+        context_embeds = self.model(ctx)
 
-        # Process each scale separately
-        scale_embeddings = []
-        for scale_idx in range(n_scales):
-            # Extract patches for this scale: (n_patches, 3, 224, 224)
-            scale_patches = patches[:, scale_idx, :, :, :]
+        # If cell-level model is disabled, return context (Uni2) embeddings directly
+        if not self.config.cell_level_model:
+            if return_dict:
+                raise NotImplementedError(
+                    "Return dict is not implemented yet. Please use return_dict=False for now."
+                )
+            else:
+                return (None, context_embeds)
 
-            # Process through UNI model
-            scale_outputs = self.model(
-                scale_patches
-            )  # TODO check for the giant model! Does hidden_features work there?
-            scale_embeddings.append(scale_outputs)
-
-        # Concatenate embeddings from all scales
-        # Each scale_outputs has shape (n_patches, embed_dim), so concat along embed_dim
-        concatenated_outputs = torch.cat(
-            scale_embeddings, dim=-1
-        )  # (n_patches, n_scales * embed_dim)
+        # Cell through CNN with FiLM conditioning
+        feat = self.cell_cnn(cel)  # (B,128,H,W)
+        gamma = (
+            self.film_gamma(context_embeds).unsqueeze(-1).unsqueeze(-1)
+        )  # (B,128,1,1)
+        beta = self.film_beta(context_embeds).unsqueeze(-1).unsqueeze(-1)  # (B,128,1,1)
+        feat = feat * gamma + beta
+        pooled = self.cell_pool(feat).squeeze(-1).squeeze(-1)  # (B,128)
+        cell_embeds = self.cell_proj(pooled)  # (B, embed_dim)
 
         if return_dict:
             raise NotImplementedError(
                 "Return dict is not implemented yet. Please use return_dict=False for now."
             )
         else:
-            return (None, concatenated_outputs)
+            return (None, cell_embeds)
 
     @classmethod
     def from_pretrained(

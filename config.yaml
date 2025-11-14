@@ -59,8 +59,11 @@ paths:
 
 plot_style: "src/plot_style/main.style"
 
+
+# Warren's analysis (https://zinagoodlab.slack.com/archives/D094RP6317A/p1762215336551049) should that cells are 5-15um. Thus 56x56 is good (for 40x 224x224 it translates to 13um. For 40x 448x448 it translates to 26um)
+
 # Spatial transcriptomics processing parameters
-he_configs:
+he_configs:  # TODO this is potentially not in sync with uni_model.py currently
   visium_resolution:
     target_pixel_size: 0.5        # μm/pixel (typical 20x magnification)
     patch_size_pixels: 224        # Standard for all vision models

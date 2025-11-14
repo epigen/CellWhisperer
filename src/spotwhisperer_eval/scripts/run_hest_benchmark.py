@@ -38,14 +38,15 @@ class HESTCompatibleUNIWrapper(nn.Module):
         # We need to adapt single-scale HEST patches to multi-scale UNI format
 
         batch_size = patches.shape[0]
-        n_scales = len(self.uni_model.config.scale_factors)
-
-        # Replicate the patches across all scales (simple approach)
-        # In a more sophisticated approach, you might want to actually resize patches
-        multi_scale_patches = patches.unsqueeze(1).expand(-1, n_scales, -1, -1, -1)
-
-        # Forward through UNI model
-        _, embeddings = self.uni_model(multi_scale_patches, return_dict=False)
+        # Build views dict expected by UNIModel
+        # Forward through UNIModel with new flat keys
+        _, embeddings = self.uni_model(
+            patches_ctx=patches,
+            patches_cell=torch.nn.functional.interpolate(
+                patches, size=(56, 56), mode="bilinear", align_corners=False
+            ),
+            return_dict=False,
+        )
 
         return embeddings
 
