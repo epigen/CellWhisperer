@@ -16,10 +16,7 @@ HEST_EMBED_ROOT = PROJECT_DIR / config["paths"]["hest_benchmark"]["embed_root"]
 
 rule prepare_hest_data:
     """
-    Prepare HEST benchmark data for a specific dataset using HEST conda environment
-
-    This step downloads and prepares the HEST benchmark dataset
-    with pre-extracted patches and split files.
+    Download and prepare HEST dataset assets (patches, splits) for a dataset.
     """
     input:
         config_file=PROJECT_DIR / "src/figures/config/bench_config.yaml"
@@ -38,11 +35,7 @@ rule prepare_hest_data:
 
 rule convert_hest_to_spotwhisperer:
     """
-    Convert HEST benchmark dataset to standard SpotWhisperer dataset format
-
-    This creates H5AD files with embedded images that can be used with
-    the standard `cellwhisperer test` command instead of custom evaluation scripts.
-
+    Convert a HEST dataset to SpotWhisperer H5AD format compatible with `cellwhisperer test`.
     """
     input:
         dataset_dir=HEST_DATA_ROOT / "{dataset}"
@@ -64,10 +57,7 @@ rule convert_hest_to_spotwhisperer:
 
 rule hest_spotwhisperer_test:
     """
-    Run SpotWhisperer evaluation on converted HEST dataset using cellwhisperer test
-
-    This uses the standard CellWhisperer testing pipeline on the converted dataset,
-    eliminating the need for custom inference and evaluation scripts.
+    Evaluate the converted HEST dataset using `cellwhisperer test`; writes metrics.
     """
     input:
         converted_dataset=rules.convert_hest_to_spotwhisperer.output.converted_dataset,
@@ -105,7 +95,7 @@ rule hest_spotwhisperer_test:
 
 rule aggregate_hest_results:
     """
-    Aggregate results from all datasets into a single summary
+    Aggregate HEST evaluation metrics across all datasets into a single summary.
     """
     input:
         results_csvs=expand(rules.hest_spotwhisperer_test.output.results_csv,
@@ -132,8 +122,7 @@ rule aggregate_hest_results:
 
 rule hest_per_class_analysis:
     """
-    Generate per-class analysis comparing trimodal vs bimodal models
-    for HEST benchmark datasets (10 organs/9 cancers)
+    Per-class comparison of trimodal vs bimodal models on HEST datasets.
     """
     input:
         # Results from trimodal and bimodal_matching models for HEST datasets
@@ -162,11 +151,13 @@ rule hest_per_class_analysis:
 
 # Main rule to run complete HEST benchmark across all datasets
 rule hest_benchmark_all:
+    """
+    Run the HEST benchmark end-to-end for the selected model.
+    """
     input:
         expand(
             rules.aggregate_hest_results.output.aggregated_summary,
             model=config["model_name_path_map"]["spotwhisperer3"]
         ),
-        # Per-class analysis
         rules.hest_per_class_analysis.output.analysis
     default_target: True

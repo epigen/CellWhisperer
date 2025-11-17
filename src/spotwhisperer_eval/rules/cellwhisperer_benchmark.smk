@@ -17,9 +17,8 @@ CELLWHISPERER_MODEL_RESULTS = CELLWHISPERER_BENCHMARK_RESULTS / "{model}"
 
 rule cellwhisperer_zero_shot_prediction:
     """
-    Zero-shot cell type prediction using trained SpotWhisperer model
-
     NOTE: This might be obsolete due to `cellwhisperer test` command (in main Snakefile)
+    Zero-shot cell type prediction on benchmark datasets using a trained model.
     """
     input:
         processed_dataset=PROJECT_DIR / config["paths"]["model_processed_dataset"],
@@ -49,10 +48,8 @@ rule cellwhisperer_zero_shot_prediction:
 
 rule cellwhisperer_benchmark_summary:
     """
-    Summarize CellWhisperer benchmark performance across all datasets
-
     NOTE: This might be obsolete due to `cellwhisperer test` command (in main Snakefile)
-
+    Summarize zero-shot benchmark performance across all datasets for a model.
     """
     input:
         performance_files=lambda wildcards: expand(
@@ -77,8 +74,7 @@ rule cellwhisperer_benchmark_summary:
 
 rule cellwhisperer_per_class_analysis:
     """
-    Generate per-class analysis comparing trimodal vs bimodal models
-    for CellWhisperer benchmark datasets
+    Per-class comparison of trimodal vs bimodal models on benchmark datasets.
     """
     input:
         # Results from trimodal and bimodal_matching models
@@ -108,7 +104,7 @@ rule cellwhisperer_per_class_analysis:
 
 rule cellwhisperer_benchmark_all:
     """
-    Run complete CellWhisperer benchmark for a given model
+    Run the CellWhisperer benchmark end-to-end for the selected model.
     """
     input:
         # Summary results

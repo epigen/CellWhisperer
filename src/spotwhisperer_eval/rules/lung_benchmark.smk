@@ -7,13 +7,7 @@ METRICS = ["accuracy", "f1", "auroc"]
 
 rule zero_shot_lung_prediction:
     """
-    Zero-shot property prediction with CellWhisperer for lung tissue datasets
-
-    Similar to zero_shot_cellwhisperer_prediction but adapted for spatial transcriptomics data
-
-    NOTE: region-mapping (e.g. NOR -> normal cells) and cell type prefixing ("Sample of {cell type}") is done in the notebook
-
-    NOTE: it would be fair actually to combine infiltrating cells and tls into "immune cells". Furthermore "normal cells" are not really a tissue. best would be to search for "T cells" and "B cells"
+    Zero-shot property prediction for lung tissue datasets; outputs per-cell or per-class predictions.
     """
     input:
         processed_dataset=rules.process_full_dataset.output.model_outputs,
@@ -41,7 +35,7 @@ rule zero_shot_lung_prediction:
 
 rule plot_spotwhisperer_confusion_matrix:
     """
-    Plot confusion matrices for SpotWhisperer predictions
+    Plot confusion matrices and compute performance metrics for lung tissue predictions.
     """
     input:
         predictions=rules.zero_shot_lung_prediction.output.predictions,
@@ -110,7 +104,7 @@ rule plot_spotwhisperer_confusion_matrix:
 # Performance summary across all lung tissue datasets
 rule lung_performance_summary:
     """
-    Compute and aggregate performance metrics
+    Aggregate lung tissue performance metrics into summary and plot.
     """
     input:
         performance_files=expand(

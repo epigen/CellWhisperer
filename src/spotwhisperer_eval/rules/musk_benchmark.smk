@@ -17,10 +17,7 @@ STATIC_MODELS_TXT = "modules/MUSK/benchmarks/models.txt"
 
 rule download_musk_datasets:
     """
-    Download/populate MUSK datasets using Snakemake remote provider.
-    Produces a marker file to indicate the dataset directory is ready.
-
-    NOTE: there is either the precomputed dataset, or there is the list of all large-scale datasets
+    Download and populate MUSK datasets; produce a ready directory marker.
     """
     output:
         directory=directory(DATASET_ROOT),
@@ -42,7 +39,7 @@ def model_descriptor_fn(wildcards, input):
 
 rule musk_zero_shot_classification:
     """
-    Zero-shot classification evaluation using MUSK benchmark
+    Evaluate zero-shot classification on MUSK datasets.
     """
     input:
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
@@ -88,7 +85,7 @@ rule musk_zero_shot_classification:
 
 rule musk_performance_summary:
     """
-    Summarize all MUSK evaluation results
+    Summarize MUSK evaluation metrics into a single JSON report.
     """
     input:
         # # Zero-shot classification results
@@ -138,8 +135,7 @@ rule musk_performance_summary:
 
 rule musk_per_class_analysis:
     """
-    Generate per-class analysis comparing trimodal vs bimodal models
-    for pannuke and skin datasets
+    Per-class comparison of trimodal vs bimodal models for pannuke and skin.
     """
     input:
         # Results from trimodal and bimodal_matching models for pannuke and skin
@@ -167,14 +163,15 @@ rule musk_per_class_analysis:
 
 # Main rule to generate all MUSK evaluation results
 rule musk_all:
+    """
+    Run MUSK evaluation and per-class analysis end-to-end.
+    """
     input:
-        # Performance summary
         expand(
             rules.musk_performance_summary.output.summary,
             model=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"],
             seed=1
         ),
-        # Per-class analysis
         expand(
             rules.musk_per_class_analysis.output.analysis,
             seed=1

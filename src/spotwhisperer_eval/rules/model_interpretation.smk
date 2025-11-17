@@ -6,9 +6,7 @@ MODEL_INTERPRETATION_RESULTS = PROJECT_DIR / "results/spotwhisperer_eval/benchma
 
 rule llm_histopathology_analysis:
     """
-    LLM-based analysis of disease detectability through H&E histopathology
-
-    TODO, I think this still needs to use .env properly
+    Score disease detectability from H&E text using an LLM; outputs classifications, analysis, and plots.
     """
     input:
         per_class_analysis=rules.cellwhisperer_per_class_analysis.output.analysis,
@@ -29,8 +27,7 @@ rule llm_histopathology_analysis:
 
 rule llm_hest_representation_analysis:
     """
-    LLM-based analysis to determine if diseases are likely represented in HEST1K dataset
-    TODO, I think this still needs to use .env properly
+    Assess likely disease representation in HEST via LLM; outputs classifications, description, analysis, and plots.
     """
     input:
         histopathology_classifications=rules.llm_histopathology_analysis.output.classifications,
@@ -52,7 +49,7 @@ rule llm_hest_representation_analysis:
 
 rule correlation_analysis:
     """
-    Correlation analysis between LLM scores and performance improvements
+    Correlate LLM detectability and representation scores with performance changes.
     """
     input:
         per_class_analysis=rules.cellwhisperer_per_class_analysis.output.analysis,
@@ -77,7 +74,7 @@ rule correlation_analysis:
 
 rule high_detectability_disease_analysis:
     """
-    Comprehensive analysis of high detectability diseases grouped by F1 performance changes
+    Analyze high-detectability diseases grouped by F1 changes; output CSVs and plots.
     """
     input:
         hest_representation_analysis=rules.llm_hest_representation_analysis.output.analysis_csv,
@@ -99,7 +96,7 @@ rule high_detectability_disease_analysis:
 
 rule distribution_comparison_analysis:
     """
-    Distribution comparison of detectability scores for top improving diseases
+    Compare detectability score distributions for top-improving diseases; output plots and top lists.
     """
     input:
         per_class_analysis=rules.cellwhisperer_per_class_analysis.output.analysis,
@@ -125,7 +122,7 @@ rule distribution_comparison_analysis:
 
 rule quilt1m_mention_correlation:
     """
-    Analysis of correlation between absolute F1 score changes and Quilt1M disease mentions
+    Correlate Quilt1M disease mentions with performance changes; output data and plot.
     """
     input:
         per_class_analysis=rules.cellwhisperer_per_class_analysis.output.analysis,
@@ -145,7 +142,7 @@ rule quilt1m_mention_correlation:
 
 rule adhoc_per_class_analysis:
     """
-    Adhoc analysis of per-class results for human_disease dataset
+    Exploratory plots for human_disease per-class results.
     """
     input:
         per_class_analysis=rules.cellwhisperer_per_class_analysis.output.analysis,
@@ -166,7 +163,7 @@ rule adhoc_per_class_analysis:
 
 rule model_interpretation_all:
     """
-    Run all model interpretation analyses
+    Run all model interpretation analyses end-to-end.
     """
     input:
         # LLM-based analyses
