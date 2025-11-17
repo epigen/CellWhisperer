@@ -135,9 +135,8 @@ if IS_SINGLECELL:
     filtered_coords = pd.DataFrame(
         {"x_pixel": csv_coords["x_pixel"], "y_pixel": csv_coords["y_pixel"]}
     )
-    filtered_coords.index = (
-        csv_coords.index if "index" not in csv_coords.columns else csv_coords["index"]
-    )
+    # Use cell_id as index to match AnnData obs_names
+    filtered_coords.index = csv_coords["cell_id"]
 
     # Add missing columns to match grid format
     filtered_coords["x_array"] = filtered_coords["x_pixel"] // SPOT_DIAMETER_PIXELS
@@ -149,30 +148,55 @@ else:
         coord_df, slide_wrapper, SPOT_DIAMETER_PIXELS, WHITE_CUTOFF, crop_tile
     )
 
-# Aggregate expression data
-aggregated_counts, cell_counts_per_tile, fov_info, core_info = (
-    aggregate_expression_data(adata_hr, filtered_coords, SPOT_DIAMETER_PIXELS)
-)
+if IS_SINGLECELL:
+    # For single cell data, use the original cell transcriptomes directly
+    logging.info(
+        "Single cell mode: using individual cell transcriptomes (no aggregation)"
+    )
 
-# Create gridded AnnData object
-if aggregated_counts:
-    counts_matrix = np.vstack(aggregated_counts)
+    # Create output AnnData using original cell data
+    adata = adata_hr.copy()
+
+    # Add coordinate information from filtered_coords to match cell order
+    adata.obs["x_array"] = filtered_coords["x_array"]
+    adata.obs["y_array"] = filtered_coords["y_array"]
+    adata.obs["x_pixel"] = filtered_coords["x_pixel"]
+    adata.obs["y_pixel"] = filtered_coords["y_pixel"]
+
+    # For single cell data, each "tile" contains exactly 1 cell
+    adata.obs["n_cells"] = 1
+
+    # Use the existing spatial coordinates
+    adata.obsm["spatial"] = spatial_coords
+
+    # Note: No filtering by min_num_cells for single cell data since each cell is its own "tile"
+
 else:
-    counts_matrix = np.empty((0, adata_hr.n_vars))
+    # For gridded data, aggregate expression counts
+    logging.info("Grid mode: aggregating expression data")
+    aggregated_counts, cell_counts_per_tile, fov_info, core_info = (
+        aggregate_expression_data(adata_hr, filtered_coords, SPOT_DIAMETER_PIXELS)
+    )
 
-adata = anndata.AnnData(counts_matrix, var=adata_hr.var)
-adata.obs.index = filtered_coords.index
-adata.obs["x_array"] = filtered_coords["x_array"]
-adata.obs["y_array"] = filtered_coords["y_array"]
-adata.obs["x_pixel"] = filtered_coords["x_pixel"]
-adata.obs["y_pixel"] = filtered_coords["y_pixel"]
-adata.obs["n_cells"] = cell_counts_per_tile
-adata.obs["fov_info"] = fov_info
-adata.obs["core_info"] = core_info
-adata.obsm["spatial"] = filtered_coords[["x_pixel", "y_pixel"]].values
+    # Create gridded AnnData object
+    if aggregated_counts:
+        counts_matrix = np.vstack(aggregated_counts)
+    else:
+        counts_matrix = np.empty((0, adata_hr.n_vars))
 
-# Filter for min number of cells per tile
-adata = adata[adata.obs["n_cells"] >= snakemake.params["min_num_cells"]].copy()
+    adata = anndata.AnnData(counts_matrix, var=adata_hr.var)
+    adata.obs.index = filtered_coords.index
+    adata.obs["x_array"] = filtered_coords["x_array"]
+    adata.obs["y_array"] = filtered_coords["y_array"]
+    adata.obs["x_pixel"] = filtered_coords["x_pixel"]
+    adata.obs["y_pixel"] = filtered_coords["y_pixel"]
+    adata.obs["n_cells"] = cell_counts_per_tile
+    adata.obs["fov_info"] = fov_info
+    adata.obs["core_info"] = core_info
+    adata.obsm["spatial"] = filtered_coords[["x_pixel", "y_pixel"]].values
+
+    # Filter for min number of cells per tile
+    adata = adata[adata.obs["n_cells"] >= snakemake.params["min_num_cells"]].copy()
 
 # Prepare visualization image and add spatial metadata
 img_np, scale_factor_img = prepare_visualization_image(slide_wrapper)
@@ -226,6 +250,8 @@ if (
         SPOT_DIAMETER_PIXELS,
         snakemake.output.report_patches,
         crop_tile,
+        snakemake.params.pixel_size_um,
+        snakemake.params.small_patch_diameter_um,
     )
 
 # Close the slide

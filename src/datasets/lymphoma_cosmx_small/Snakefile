@@ -29,7 +29,6 @@ rule process_data:
     output:
         adata=PROJECT_DIR / config["paths"]["full_dataset"],
         image=PROJECT_DIR / config["paths"]["histo_image"],
-        patch_dir=directory(PROJECT_DIR / "results/{dataset}/patches"),
         report_patches=report(
             [PROJECT_DIR / f"results/{{dataset}}/test_patch_{i}.png" for i in range(3)],
             category="Quality Control"
