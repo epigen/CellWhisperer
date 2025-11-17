@@ -75,9 +75,28 @@ rule plot_transcriptome_umap:
     script:
         "scripts/plot_transcriptome_umap.py"
 
+rule split_train_test:
+    """
+    Split the processed dataset into training and validation sets by cores.
+    Validation cores are specified in params, training gets the rest.
+    """
+    input:
+        adata=rules.process_data.output.adata
+    output:
+        training_adata=PROJECT_DIR / "results/{dataset}_training/full_data.h5ad",
+        validation_adata=PROJECT_DIR / "results/{dataset}_validation/full_data.h5ad"
+    conda:
+        "cellwhisperer"
+    params:
+        validation_cores=["A4", "B9", "F3", "C8", "F4"]
+    script:
+        "scripts/split_train_test.py"
+
 rule all:
     input:
         expand(rules.process_data.output.adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell"]),
-        expand(rules.plot_transcriptome_umap.output.umap_plot, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed"])
+        expand(rules.plot_transcriptome_umap.output.umap_plot, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed"]),
+        expand(rules.split_train_test.output.training_adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell"]),
+        expand(rules.split_train_test.output.validation_adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell"])
     default_target: True
 

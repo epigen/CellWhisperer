@@ -215,6 +215,7 @@ adata.uns["spatial"] = {
 # Add image_path and pixel_size to uns and copy the SVS file
 adata.uns["image_path"] = str(snakemake.output.image)
 adata.uns["pixel_size"] = adata_hr.uns["pixel_size"]
+adata.uns["dataset"] = dataset
 
 
 # Copy the original SVS file to the output location
