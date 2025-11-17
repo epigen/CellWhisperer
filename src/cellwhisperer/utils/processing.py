@@ -57,15 +57,45 @@ def adata_to_embeds(
 
 
 def ensure_raw_counts_adata(adata):
-    # Check if the values in the X layer are counts (i.e., integers)
-    comp = np.abs(adata.X[:100] - adata.X[:100].astype(int))
-    if isinstance(adata.X, sparse.csr_matrix):
-        comp = comp.toarray()
+    """
+    Ensure that adata.X contains raw (integer) counts.
+    If not, try to switch to adata.layers["counts"].
+    We test on the first 100 cells to keep this cheap.
+    """
 
-    if not np.all(comp < 1e-6):
+    def _is_integer_counts(mat, n_cells: int = 100) -> bool:
+        # Take a small sample of cells
+        sample = mat[:n_cells]
+        # Convert to dense if sparse
+        if sparse.issparse(sample):
+            sample = sample.toarray()
+        else:
+            sample = np.asarray(sample)
+        comp = np.abs(sample - sample.astype(int))
+        return np.all(comp < 1e-6)
+
+    # First, check adata.X
+    if not _is_integer_counts(adata.X):
+        # Try to fall back to raw counts in layers["counts"]
         try:
-            adata.X = adata.layers["counts"]
+            counts = adata.layers["counts"]
         except KeyError:
             logging.error(
-                "adata.X contains non-integer (probably normalized) counts, but raw counts are not provided in adata.layers['counts']."
+                "adata.X contains non-integer (probably normalized) counts, "
+                "but raw counts are not provided in adata.layers['counts']."
             )
+            raise ValueError(
+                "adata.X does not appear to contain raw integer counts, "
+                "and no adata.layers['counts'] is available."
+            )
+
+        if not _is_integer_counts(counts):
+            logging.error(
+                "adata.layers['counts'] also does not appear to contain raw integer counts."
+            )
+            raise ValueError(
+                "Neither adata.X nor adata.layers['counts'] look like raw integer counts."
+            )
+
+        # If we get here, counts looks good → use it as X
+        adata.X = counts
