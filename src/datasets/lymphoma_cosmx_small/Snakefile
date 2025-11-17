@@ -54,9 +54,9 @@ rule process_data:
         medium_patch_pixels=224,
         large_patch_pixels=448,
         max_patches_per_scale=lambda wildcards: 10 if wildcards.dataset.endswith("_singlecell") else None,
-    notebook:
-        "notebooks/process_data.py.ipynb"   # snakemake --edit-notebook <output_file>
-        # "scripts/process_data.py"
+    script:
+        # "notebooks/process_data.py.ipynb"   # snakemake --edit-notebook <output_file>
+        "scripts/process_data.py"
 
 rule plot_transcriptome_umap:
     """

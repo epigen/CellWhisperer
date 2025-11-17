@@ -42,13 +42,36 @@ FILTER_GOOD_QUALITY = snakemake.params.filter_good_quality
 logging.info(
     f"Processing {dataset} with spot_diameter_pixels={SPOT_DIAMETER_PIXELS}, "
     f"white_cutoff={WHITE_CUTOFF}, x_offset={X_OFFSET}, y_offset={Y_OFFSET}, scale_factor={SCALE_FACTOR}, "
-    f"filter_good_quality={FILTER_GOOD_QUALITY}"
+    f"filter_good_quality={FILTER_GOOD_QUALITY}, pixel_size={snakemake.params.pixel_size_um} μm/pixel"
 )
 
 
 # Load data
 logging.info(f"Loading AnnData from {snakemake.input.read_count_table}")
 adata_hr = anndata.read_h5ad(snakemake.input.read_count_table)
+
+# Map cell barcodes to core IDs (optional)
+core_assignment_path = getattr(snakemake.input, "cell_barcode_core_assignment", None)
+if core_assignment_path:
+    logging.info(f"Loading cell barcode to core mapping from {core_assignment_path}")
+    core_df = pd.read_csv(core_assignment_path)
+    required_cols = {"cell_barcode", "core_id"}
+    missing_cols = required_cols - set(core_df.columns)
+    if missing_cols:
+        raise ValueError(f"Missing columns {missing_cols} in {core_assignment_path}")
+    barcode_to_core = dict(
+        zip(core_df["cell_barcode"].astype(str), core_df["core_id"].astype(str))
+    )
+    adata_hr.obs["core_id"] = adata_hr.obs_names.astype(str).map(barcode_to_core)
+    missing_core_ids = adata_hr.obs["core_id"].isna().sum()
+    if missing_core_ids > 0:
+        logging.warning(
+            f"{missing_core_ids} cells did not have a matching core assignment"
+        )
+else:
+    logging.warning(
+        "No cell barcode to core mapping provided; core_id will remain empty"
+    )
 
 # Filter for good quality cells if requested
 if FILTER_GOOD_QUALITY and "good_quality" in adata_hr.obs.columns:
@@ -62,6 +85,9 @@ elif FILTER_GOOD_QUALITY:
     logging.warning(
         "good_quality column not found in adata.obs, skipping quality filtering"
     )
+
+# Record pixel size metadata before any magnification adjustments
+adata_hr.uns["pixel_size"] = snakemake.params.pixel_size_um
 
 logging.info(f"Loading image from {snakemake.input.image}")
 slide_wrapper = OpenSlideWrapper(snakemake.input.image, dataset)
@@ -101,18 +127,21 @@ adata_hr.obsm["spatial"] = spatial_coords
 if IS_SINGLECELL:
     # Read CSV coordinates from input
     logging.info("Single cell mode: reading coordinates from CSV")
-    csv_coords = pd.read_csv(snakemake.input.read_count_table.replace('.h5ad', '_coordinates.csv'))
-    
+    csv_coords = pd.read_csv(
+        snakemake.input.read_count_table.replace(".h5ad", "_coordinates.csv")
+    )
+
     # Create filtered_coords DataFrame with x_pixel and y_pixel from CSV
-    filtered_coords = pd.DataFrame({
-        'x_pixel': csv_coords['x_pixel'],
-        'y_pixel': csv_coords['y_pixel']
-    })
-    filtered_coords.index = csv_coords.index if 'index' not in csv_coords.columns else csv_coords['index']
-    
+    filtered_coords = pd.DataFrame(
+        {"x_pixel": csv_coords["x_pixel"], "y_pixel": csv_coords["y_pixel"]}
+    )
+    filtered_coords.index = (
+        csv_coords.index if "index" not in csv_coords.columns else csv_coords["index"]
+    )
+
     # Add missing columns to match grid format
-    filtered_coords['x_array'] = filtered_coords['x_pixel'] // SPOT_DIAMETER_PIXELS
-    filtered_coords['y_array'] = filtered_coords['y_pixel'] // SPOT_DIAMETER_PIXELS
+    filtered_coords["x_array"] = filtered_coords["x_pixel"] // SPOT_DIAMETER_PIXELS
+    filtered_coords["y_array"] = filtered_coords["y_pixel"] // SPOT_DIAMETER_PIXELS
     coord_df = None  # No coord_df for single cell mode
 else:
     coord_df = create_grid_coordinates(width, height, SPOT_DIAMETER_PIXELS)
@@ -131,26 +160,24 @@ if aggregated_counts:
 else:
     counts_matrix = np.empty((0, adata_hr.n_vars))
 
-gridded_adata = anndata.AnnData(counts_matrix, var=adata_hr.var)
-gridded_adata.obs.index = filtered_coords.index
-gridded_adata.obs["x_array"] = filtered_coords["x_array"]
-gridded_adata.obs["y_array"] = filtered_coords["y_array"]
-gridded_adata.obs["x_pixel"] = filtered_coords["x_pixel"]
-gridded_adata.obs["y_pixel"] = filtered_coords["y_pixel"]
-gridded_adata.obs["n_cells"] = cell_counts_per_tile
-gridded_adata.obs["fov_info"] = fov_info
-gridded_adata.obs["core_info"] = core_info
-gridded_adata.obsm["spatial"] = filtered_coords[["x_pixel", "y_pixel"]].values
+adata = anndata.AnnData(counts_matrix, var=adata_hr.var)
+adata.obs.index = filtered_coords.index
+adata.obs["x_array"] = filtered_coords["x_array"]
+adata.obs["y_array"] = filtered_coords["y_array"]
+adata.obs["x_pixel"] = filtered_coords["x_pixel"]
+adata.obs["y_pixel"] = filtered_coords["y_pixel"]
+adata.obs["n_cells"] = cell_counts_per_tile
+adata.obs["fov_info"] = fov_info
+adata.obs["core_info"] = core_info
+adata.obsm["spatial"] = filtered_coords[["x_pixel", "y_pixel"]].values
 
 # Filter for min number of cells per tile
-gridded_adata = gridded_adata[
-    gridded_adata.obs["n_cells"] >= snakemake.params["min_num_cells"]
-].copy()
+adata = adata[adata.obs["n_cells"] >= snakemake.params["min_num_cells"]].copy()
 
 # Prepare visualization image and add spatial metadata
 img_np, scale_factor_img = prepare_visualization_image(slide_wrapper)
 library_id = "lymphoma_cosmx_small"
-gridded_adata.uns["spatial"] = {
+adata.uns["spatial"] = {
     library_id: {
         "images": {"hires": img_np},
         "scalefactors": {
@@ -161,8 +188,9 @@ gridded_adata.uns["spatial"] = {
     }
 }
 
-# Add image_path to uns and copy the SVS file
-gridded_adata.uns["image_path"] = str(snakemake.output.image)
+# Add image_path and pixel_size to uns and copy the SVS file
+adata.uns["image_path"] = str(snakemake.output.image)
+adata.uns["pixel_size"] = adata_hr.uns["pixel_size"]
 
 
 # Copy the original SVS file to the output location
@@ -185,6 +213,7 @@ if hasattr(snakemake.output, "qc_tile_plot"):
     else:
         # For single cell, just save the image
         from PIL import Image
+
         Image.fromarray(img_np.astype(np.uint8)).save(snakemake.output.qc_tile_plot)
 
 if (
@@ -204,5 +233,5 @@ slide_wrapper.close()
 
 # Save processed data
 logging.info(f"Saving gridded AnnData to {snakemake.output.adata}")
-gridded_adata.write_h5ad(snakemake.output.adata)
+adata.write_h5ad(snakemake.output.adata)
 logging.info("Processing complete.")
