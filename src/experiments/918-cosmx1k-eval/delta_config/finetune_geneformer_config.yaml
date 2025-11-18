@@ -5,3 +5,4 @@ model:
   model_config:
     locking_mode: UUL  # Unlock text and transcriptome, lock image model
   learning_rate: 0.0001  # Reduced learning rate for fine-tuning regime
+batch_size: 128

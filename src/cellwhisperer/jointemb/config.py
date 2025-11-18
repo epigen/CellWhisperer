@@ -54,6 +54,7 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
         image_config: Dict = {},
         locking_mode: str = "LUL",
         unlocked_fp16: bool = False,
+        use_cache: bool = True,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -109,6 +110,8 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
         self.projection_dim = int(
             projection_dim
         )  # workaround Lightning CLI not interpreting the string as int as expected
+
+        self.use_cache = use_cache
 
     @classmethod
     def from_transcriptome_text_image_configs(

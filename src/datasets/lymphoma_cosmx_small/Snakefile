@@ -90,7 +90,7 @@ rule split_train_test:
     conda:
         "cellwhisperer"
     params:
-        validation_cores=["A4", "B9", "F3", "C8", "F4"]
+        validation_cores=["B9", "C1", "C2", "G2", "H2"]  # High-quality cores (>95% good_quality)
     script:
         "scripts/split_train_test.py"
 
@@ -99,6 +99,5 @@ rule all:
         expand(rules.process_data.output.adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell", "lymphoma_cosmx_small_singlecell_corealigned", "lymphoma_cosmx_small_singlecell_goodquality"]),
         expand(rules.plot_transcriptome_umap.output.umap_plot, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed"]),
         expand(rules.split_train_test.output.training_adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell", "lymphoma_cosmx_small_singlecell_corealigned", "lymphoma_cosmx_small_singlecell_goodquality"]),
-        expand(rules.split_train_test.output.validation_adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell", "lymphoma_cosmx_small_singlecell_corealigned", "lymphoma_cosmx_small_singlecell_goodquality"])
     default_target: True
 

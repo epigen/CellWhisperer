@@ -182,7 +182,8 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         expression_gene: Optional[torch.LongTensor] = None,
         expression_expr: Optional[torch.LongTensor] = None,
         expression_key_padding_mask: Optional[torch.LongTensor] = None,
-        patches: Optional[torch.FloatTensor] = None,
+        patches_ctx: Optional[torch.FloatTensor] = None,
+        patches_cell: Optional[torch.FloatTensor] = None,
         transcriptome_weights: Optional[
             torch.FloatTensor
         ] = None,  # TODO expand to images?
@@ -200,7 +201,8 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             expression_gene=expression_gene,
             expression_expr=expression_expr,
             expression_key_padding_mask=expression_key_padding_mask,
-            patches=patches,
+            patches_ctx=patches_ctx,
+            patches_cell=patches_cell,
             text_batch_mask=text_batch_mask,
             image_batch_mask=image_batch_mask,
             transcriptome_batch_mask=transcriptome_batch_mask,
@@ -228,7 +230,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
         for loss in self.loss_functions:
             loss_value = loss["fn"](**outputs)
-            combined_loss = combined_loss + (loss_value * loss["lambda"]) 
+            combined_loss = combined_loss + (loss_value * loss["lambda"])
             self.log(
                 f"{step_type}/{loss['name']}_loss",
                 loss_value,
@@ -263,13 +265,19 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             self.val_outputs.append(
                 {
                     "text_embeds": (
-                        outputs.text_embeds.detach().cpu() if outputs.text_embeds is not None else None
+                        outputs.text_embeds.detach().cpu()
+                        if outputs.text_embeds is not None
+                        else None
                     ),
                     "transcriptome_embeds": (
-                        outputs.transcriptome_embeds.detach().cpu() if outputs.transcriptome_embeds is not None else None
+                        outputs.transcriptome_embeds.detach().cpu()
+                        if outputs.transcriptome_embeds is not None
+                        else None
                     ),
                     "image_embeds": (
-                        outputs.image_embeds.detach().cpu() if outputs.image_embeds is not None else None
+                        outputs.image_embeds.detach().cpu()
+                        if outputs.image_embeds is not None
+                        else None
                     ),
                 }
             )
@@ -379,13 +387,19 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             self.test_outputs.append(
                 {
                     "text_embeds": (
-                        outputs.text_embeds.detach().cpu() if outputs.text_embeds is not None else None
+                        outputs.text_embeds.detach().cpu()
+                        if outputs.text_embeds is not None
+                        else None
                     ),
                     "transcriptome_embeds": (
-                        outputs.transcriptome_embeds.detach().cpu() if outputs.transcriptome_embeds is not None else None
+                        outputs.transcriptome_embeds.detach().cpu()
+                        if outputs.transcriptome_embeds is not None
+                        else None
                     ),
                     "image_embeds": (
-                        outputs.image_embeds.detach().cpu() if outputs.image_embeds is not None else None
+                        outputs.image_embeds.detach().cpu()
+                        if outputs.image_embeds is not None
+                        else None
                     ),
                 }
             )
@@ -401,7 +415,9 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             # Clear stored outputs
             self.test_outputs = []
 
-    def _run_retrieval_evaluation(self, outputs: List[Dict[str, Optional[torch.Tensor]]], stage: str):
+    def _run_retrieval_evaluation(
+        self, outputs: List[Dict[str, Optional[torch.Tensor]]], stage: str
+    ):
         """Run retrieval evaluation using stored outputs (val or test)."""
         logger.info(f"Running {stage} retrieval evaluation")
 
@@ -531,7 +547,12 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         if stage == "test":
             combined_dataset = self.trainer.datamodule.test_dataloader().dataset
             self._save_individual_clip_scores_from_precomputed(
-                scores_left_right, scores_right_left, metric_name, orig_indices, combined_dataset, stage
+                scores_left_right,
+                scores_right_left,
+                metric_name,
+                orig_indices,
+                combined_dataset,
+                stage,
             )
         elif stage == "val":
             # Skip CSV saving for validation to reduce overhead
@@ -540,7 +561,13 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         logger.info(f"{stage.capitalize()} retrieval evaluation completed.")
 
     def _save_individual_clip_scores_from_precomputed(
-        self, scores_left_right, scores_right_left, metric_name, orig_indices, combined_dataset, stage: str
+        self,
+        scores_left_right,
+        scores_right_left,
+        metric_name,
+        orig_indices,
+        combined_dataset,
+        stage: str,
     ):
         """Save individual CLIP scores for per-class analysis using precomputed scores."""
 
@@ -583,7 +610,8 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             if isinstance(logger, lightning.pytorch.loggers.csv_logs.CSVLogger)
         ][0]
         scores_df.to_csv(
-            Path(csv_logger.log_dir) / f"{stage}_individual_clip_scores.csv", index=False
+            Path(csv_logger.log_dir) / f"{stage}_individual_clip_scores.csv",
+            index=False,
         )
 
     def configure_optimizers(self):

@@ -57,10 +57,12 @@ class FrozenCachedModel(nn.Module):
     def __init__(self, model: nn.Module, use_cache: bool = True):
         super(FrozenCachedModel, self).__init__()
         # Avoiding parameter tracking and moving to CPU for memory reduction
-        self._models = [model.eval().cpu()]
+        if use_cache:
+            self._models = [model.eval()]
+        else:
+            self._models = [model.eval().cpu()]
 
         if use_cache:
-
             self.model_hash = hash_object(self.model.parameters())
             logger.info(f"Initializing frozen model with hash {self.model_hash}")
             # logger.debug(f"Corresponding model config: {self.model.config}")
@@ -167,7 +169,6 @@ class FrozenCachedModel(nn.Module):
             sample_hashes.append(hash_object(sample_kwargs))
 
         return sample_hashes
-
 
     def forward(self, *args, **kwargs):
         """

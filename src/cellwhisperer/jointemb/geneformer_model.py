@@ -282,7 +282,7 @@ class GeneformerConfig(PretrainedConfig):
         max_ncells=200,  # refactor-delete
         emb_layer=-1,
         emb_label=["sample_name", "cell type rough", "cell type"],  # refactor-delete
-        forward_batch_size=-1,
+        forward_batch_size=4,
         nproc=4,
         summary_stat=None,
         **kwargs,

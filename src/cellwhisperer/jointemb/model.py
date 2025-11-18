@@ -143,6 +143,18 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             bln=True,  # batch layer norm
         )
 
+    def _freeze_model_parameters(self, model):
+        """
+        Helper method to freeze model parameters without using FrozenCachedModel wrapper.
+
+        Args:
+            model: The model to freeze
+        """
+        for param in model.parameters():
+            param.requires_grad = False
+        model.eval()
+        return model
+
     def prepare_models(
         self, transcriptome_model, text_model, image_model, force_freeze=False
     ):
@@ -158,8 +170,13 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             force_freeze (bool): Whether to force freezing the models even if the config does not indicate it.
         """
         if self.config.locking_mode[0] == "L" or force_freeze:
-            if not isinstance(transcriptome_model, FrozenCachedModel):
-                transcriptome_model = FrozenCachedModel(transcriptome_model)
+            if self.config.use_cache:
+                if not isinstance(transcriptome_model, FrozenCachedModel):
+                    transcriptome_model = FrozenCachedModel(
+                        transcriptome_model, self.config.use_cache
+                    )
+            else:
+                transcriptome_model = self._freeze_model_parameters(transcriptome_model)
         elif self.config.unlocked_fp16:
             transcriptome_model.half()
 
@@ -168,12 +185,18 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         ), "text_model must be provided"  # doesn't make sense that only transcriptome_model gets initialized before
 
         if self.config.locking_mode[1] == "L" or force_freeze:
-            if not isinstance(text_model, FrozenCachedModel):
-                text_model = FrozenCachedModel(text_model)
+            if self.config.use_cache:
+                if not isinstance(text_model, FrozenCachedModel):
+                    text_model = FrozenCachedModel(text_model, self.config.use_cache)
+            else:
+                text_model = self._freeze_model_parameters(text_model)
 
         if self.config.locking_mode[2] == "L" or force_freeze:
-            if not isinstance(image_model, FrozenCachedModel):
-                image_model = FrozenCachedModel(image_model)
+            if self.config.use_cache:
+                if not isinstance(image_model, FrozenCachedModel):
+                    image_model = FrozenCachedModel(image_model, self.config.use_cache)
+            else:
+                image_model = self._freeze_model_parameters(image_model)
         elif self.config.unlocked_fp16:
             text_model.half()
 
@@ -186,26 +209,53 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         Freeze the transcriptome and text model (if they are not marked as "u"). They will get unfrozen after an warmup phase (if marked as "L")
 
         Args:
-            transcriptome_model (*): The transcriptome model to be used.
-            text_model (PreTrainedModel): The text model to be used.
             force_freeze (bool): Whether to force freezing the models even if the config does not indicate it.
         """
         device = self.device
 
         if self.config.locking_mode[0] != "u" or force_freeze:
-            if not isinstance(self.transcriptome_model, FrozenCachedModel):
-                self.transcriptome_model = FrozenCachedModel(self.transcriptome_model)
+            if self.config.use_cache:
+                if not isinstance(self.transcriptome_model, FrozenCachedModel):
+                    self.transcriptome_model = FrozenCachedModel(
+                        self.transcriptome_model, self.config.use_cache
+                    )
+            else:
+                self.transcriptome_model = self._freeze_model_parameters(
+                    self.transcriptome_model
+                )
 
         if self.config.locking_mode[1] != "u" or force_freeze:
-            if not isinstance(self.text_model, FrozenCachedModel):
-                self.text_model = FrozenCachedModel(self.text_model)
+            if self.config.use_cache:
+                if not isinstance(self.text_model, FrozenCachedModel):
+                    self.text_model = FrozenCachedModel(
+                        self.text_model, self.config.use_cache
+                    )
+            else:
+                self.text_model = self._freeze_model_parameters(self.text_model)
 
         if self.config.locking_mode[2] != "u" or force_freeze:
-            if not isinstance(self.image_model, FrozenCachedModel):
-                self.image_model = FrozenCachedModel(self.image_model)
+            if self.config.use_cache:
+                if not isinstance(self.image_model, FrozenCachedModel):
+                    self.image_model = FrozenCachedModel(
+                        self.image_model, self.config.use_cache
+                    )
+            else:
+                self.image_model = self._freeze_model_parameters(self.image_model)
 
         # need to restore .device parameter (it is to cpu() by this operation)
         self.to(device)
+
+    def _unfreeze_model_parameters(self, model):
+        """
+        Helper method to unfreeze model parameters.
+
+        Args:
+            model: The model to unfreeze
+        """
+        for param in model.parameters():
+            param.requires_grad = True
+        model.train()
+        return model
 
     def unfreeze_U_towers(self):
         """
@@ -215,17 +265,34 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         """
 
         if self.config.locking_mode[0] == "U":
-            self.transcriptome_model = self.transcriptome_model.model.train().to(
-                self.device
-            )
+            if isinstance(self.transcriptome_model, FrozenCachedModel):
+                self.transcriptome_model = self.transcriptome_model.model.train().to(
+                    self.device
+                )
+            else:
+                self.transcriptome_model = self._unfreeze_model_parameters(
+                    self.transcriptome_model
+                ).to(self.device)
             if self.config.unlocked_fp16:
                 self.transcriptome_model.half()
+
         if self.config.locking_mode[1] == "U":
-            self.text_model = self.text_model.model.train().to(self.device)
+            if isinstance(self.text_model, FrozenCachedModel):
+                self.text_model = self.text_model.model.train().to(self.device)
+            else:
+                self.text_model = self._unfreeze_model_parameters(self.text_model).to(
+                    self.device
+                )
             if self.config.unlocked_fp16:
                 self.text_model.half()
+
         if self.config.locking_mode[2] == "U":
-            self.image_model = self.image_model.model.train().to(self.device)
+            if isinstance(self.image_model, FrozenCachedModel):
+                self.image_model = self.image_model.model.train().to(self.device)
+            else:
+                self.image_model = self._unfreeze_model_parameters(self.image_model).to(
+                    self.device
+                )
             if self.config.unlocked_fp16:
                 self.image_model.half()
 
@@ -477,15 +544,23 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         """
         Save cached transcriptome and text embeddings/features, if the corresponding models have been frozen.
         """
-        try:
-            self.transcriptome_model.save_cache()
-        except AttributeError:
-            pass
+        if isinstance(self.transcriptome_model, FrozenCachedModel):
+            try:
+                self.transcriptome_model.save_cache()
+            except AttributeError:
+                pass
 
-        try:
-            self.text_model.save_cache()
-        except AttributeError:
-            pass
+        if isinstance(self.text_model, FrozenCachedModel):
+            try:
+                self.text_model.save_cache()
+            except AttributeError:
+                pass
+
+        if isinstance(self.image_model, FrozenCachedModel):
+            try:
+                self.image_model.save_cache()
+            except AttributeError:
+                pass
 
     @classmethod
     def from_pretrained(cls, *args, **kwargs):

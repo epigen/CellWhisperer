@@ -7,26 +7,95 @@
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
 EXPERIMENT_DIR="$PROJECT_ROOT/src/experiments/918-cosmx1k-eval"
 
-# Detect conda installation path dynamically
-if [ -f "$HOME/.mamba/etc/profile.d/conda.sh" ]; then
-    CONDA_PROFILE="$HOME/.mamba/etc/profile.d/conda.sh"
-    CONDA_ENV="cellwhisperer-aarch64"
-elif [ -f "$HOME/miniforge3/etc/profile.d/conda.sh" ]; then
-    CONDA_PROFILE="$HOME/miniforge3/etc/profile.d/conda.sh"
-    CONDA_ENV="cellwhisperer"
-elif [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
-    CONDA_PROFILE="$HOME/miniconda3/etc/profile.d/conda.sh"
-    CONDA_ENV="cellwhisperer"
-else
-    echo "Error: Could not find conda installation"
+# Detect conda installation path via multiple methods
+CONDA_PROFILE=""
+CONDA_ROOT=""
+CONDA_ENV=""
+
+# Method 1: Use environment variables from server (if available)
+if [ -n "$_CONDA_ROOT" ]; then
+    # Use _CONDA_ROOT if available (most reliable on server)
+    CONDA_ROOT="$_CONDA_ROOT"
+    CONDA_PROFILE="$_CONDA_ROOT/etc/profile.d/conda.sh"
+elif [ -n "$CONDA_PREFIX" ] && [ -f "$CONDA_PREFIX/etc/profile.d/conda.sh" ]; then
+    # Use CONDA_PREFIX if it contains conda.sh
+    CONDA_ROOT="$CONDA_PREFIX"
+    CONDA_PROFILE="$CONDA_PREFIX/etc/profile.d/conda.sh"
+elif [ -n "$CONDA_EXE" ]; then
+    # Derive conda root from CONDA_EXE path
+    CONDA_ROOT="$(dirname "$(dirname "$CONDA_EXE")")"
+    CONDA_PROFILE="$CONDA_ROOT/etc/profile.d/conda.sh"
+fi
+
+# Method 2: Fallback to common installation paths if env vars not available
+if [ -z "$CONDA_PROFILE" ] || [ ! -f "$CONDA_PROFILE" ]; then
+    # Try common conda installation paths
+    for path in "$HOME/.mamba" "$HOME/miniforge3" "$HOME/miniconda3" "$HOME/anaconda3"; do
+        if [ -f "$path/etc/profile.d/conda.sh" ]; then
+            CONDA_ROOT="$path"
+            CONDA_PROFILE="$path/etc/profile.d/conda.sh"
+            break
+        fi
+    done
+fi
+
+# Method 3: Try to find conda in PATH
+if [ -z "$CONDA_PROFILE" ] || [ ! -f "$CONDA_PROFILE" ]; then
+    conda_path=$(which conda 2>/dev/null)
+    if [ -n "$conda_path" ]; then
+        # Derive conda root from conda executable path
+        CONDA_ROOT="$(dirname "$(dirname "$conda_path")")"
+        CONDA_PROFILE="$CONDA_ROOT/etc/profile.d/conda.sh"
+    fi
+fi
+
+# Verify conda.sh exists
+if [ -z "$CONDA_PROFILE" ] || [ ! -f "$CONDA_PROFILE" ]; then
+    echo "Error: Could not detect conda installation"
+    echo "Tried the following methods:"
+    echo "  1. Environment variables (_CONDA_ROOT, CONDA_PREFIX, CONDA_EXE)"
+    echo "  2. Common paths (~/.mamba, ~/miniforge3, ~/miniconda3, ~/anaconda3)"
+    echo "  3. PATH lookup"
+    echo ""
+    echo "Available conda env vars:"
+    env | grep -i conda || echo "  (none found)"
+    echo ""
+    echo "Conda in PATH: $(which conda 2>/dev/null || echo "not found")"
     exit 1
+fi
+
+# Detect appropriate conda environment
+# Check if we can access conda and if cellwhisperer variants exist
+if [ -f "$CONDA_PROFILE" ]; then
+    # Source conda to get access to conda command
+    source "$CONDA_PROFILE" 2>/dev/null
+    
+    if command -v conda >/dev/null 2>&1; then
+        # List available environments and choose the best cellwhisperer environment
+        if conda env list 2>/dev/null | grep -q "cellwhisperer-aarch64"; then
+            CONDA_ENV="cellwhisperer-aarch64"
+        elif conda env list 2>/dev/null | grep -q "cellwhisperer"; then
+            CONDA_ENV="cellwhisperer"
+        else
+            echo "Warning: No cellwhisperer environment found"
+            echo "Available environments:"
+            conda env list 2>/dev/null || echo "  (could not list environments)"
+            echo "Defaulting to 'cellwhisperer'"
+            CONDA_ENV="cellwhisperer"
+        fi
+    else
+        # Fall back to common environment name
+        CONDA_ENV="cellwhisperer"
+    fi
+else
+    CONDA_ENV="cellwhisperer"
 fi
 
 # Array of delta config files
 declare -a DELTA_CONFIGS=(
     "disable_cell_level_config.yaml"
     "finetune_geneformer_config.yaml" 
-    "finetune_geneformer_luu_config.yaml"
+    "finetune_uni_config.yaml"
     "good_quality_cells_config.yaml"
     "improved_alignment_config.yaml"
     "ramp_up_cnn_config.yaml"
@@ -35,6 +104,7 @@ declare -a DELTA_CONFIGS=(
 echo "Launching CosMx1K evaluation jobs..."
 echo "Project root: $PROJECT_ROOT"
 echo "Experiment directory: $EXPERIMENT_DIR"
+echo "Conda root: $CONDA_ROOT"
 echo "Conda profile: $CONDA_PROFILE"
 echo "Conda environment: $CONDA_ENV"
 echo "Number of delta configs: ${#DELTA_CONFIGS[@]}"
@@ -63,7 +133,7 @@ submit_job() {
 #SBATCH --job-name=$job_name
 #SBATCH --time=48:00:00
 #SBATCH --partition=cmackall
-#SBATCH --mem=50000
+#SBATCH --mem=150000
 #SBATCH -G 1
 #SBATCH --ntasks-per-node=1
 #SBATCH -c 12
@@ -132,7 +202,7 @@ for config in "${DELTA_CONFIGS[@]}"; do
     case "$config" in
         "disable_cell_level_config.yaml") echo "  - cosmx1k-no-cell-level" ;;
         "finetune_geneformer_config.yaml") echo "  - cosmx1k-finetune-uul" ;;
-        "finetune_geneformer_luu_config.yaml") echo "  - cosmx1k-finetune-luu" ;;
+        "finetune_uni_config.yaml") echo "  - cosmx1k-finetune-luu" ;;
         "good_quality_cells_config.yaml") echo "  - cosmx1k-good-quality-only" ;;
         "improved_alignment_config.yaml") echo "  - cosmx1k-core-aligned" ;;
         "ramp_up_cnn_config.yaml") echo "  - cosmx1k-ramped-cnn" ;;

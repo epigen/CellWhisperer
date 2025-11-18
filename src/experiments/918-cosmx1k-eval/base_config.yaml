@@ -39,6 +39,38 @@ trainer:
   sync_batchnorm: false
   reload_dataloaders_every_n_epochs: 1
   default_root_dir: results/model_training
+  logger:
+    class_path: lightning.pytorch.loggers.WandbLogger
+    init_args:
+      save_dir: results/wandb_logging
+      version: null
+      offline: false
+      dir: null
+      id: null
+      anonymous: null
+      project: SpatialWhisperer
+      log_model: false
+      experiment: null
+      prefix: ''
+      checkpoint_name: null
+      job_type: null
+      config: null
+      entity: single-cellm
+      reinit: null
+      tags: null
+      group: '918-cosmx1keval'
+      notes: null
+      magic: null
+      config_exclude_keys: null
+      config_include_keys: null
+      allow_val_change: null
+      resume: null
+      force: null
+      tensorboard: null
+      sync_tensorboard: null
+      monitor_gym: null
+      save_code: null
+      settings: null
 model:
   model_config:
     projection_dim: 1024
@@ -50,6 +82,7 @@ model:
     image_config: {}
     locking_mode: LUL
     unlocked_fp16: false
+    use_cache: false
   loss_config:
     clip_lambda: 1.0
     clip_lite_lambda: 0.0
@@ -79,8 +112,7 @@ best_model_path: null
 last_model_path: null
 log_level: INFO
 dap_debug: false
-batch_size: 1024
+batch_size: 512
 nproc: 8
 wandb: 'cosmx1k-baseline'
-group: '918-cosmx1keval'
 ckpt_path: null

@@ -314,7 +314,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.tokenizer = model_path_from_name(tokenizer)
         self.transcriptome_processor = transcriptome_processor
         self.image_processor = image_processor
-        self.nproc = nproc
+        self.nproc = int(nproc)
         self.min_genes = min_genes
         self.transcriptome_processor_kwargs = transcriptome_processor_kwargs.copy()
         self.tokenizer_kwargs = tokenizer_kwargs.copy()
@@ -323,6 +323,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.use_disk_loading = use_disk_loading
 
         self.train_fraction = train_fraction
+
         if isinstance(self.train_fraction, str):  # parse option for int/float
             try:
                 self.train_fraction = int(train_fraction)
@@ -788,6 +789,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
                 # For each disk dataset, split into train/val based on train_fraction
                 for disk_dataset in disk_datasets:
+
                     dataset_len = len(disk_dataset.orig_ids)
 
                     if isinstance(self.train_fraction, (int, float)):
