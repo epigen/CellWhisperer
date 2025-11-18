@@ -1,0 +1,6 @@
+# Disable cell-level encoder to test importance of context vs cell-level information
+wandb: 'cosmx1k-no-cell-level'
+model:
+  model_config:
+    image_config:
+      cell_level_model: false

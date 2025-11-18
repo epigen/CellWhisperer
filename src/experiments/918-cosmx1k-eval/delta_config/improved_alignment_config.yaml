@@ -1,0 +1,5 @@
+# Test importance of pixel-perfect H&E alignment
+# Uses datasets with improved core-level alignment (depends on issue #917)
+wandb: 'cosmx1k-core-aligned'
+data:
+  dataset_names: lymphoma_cosmx_small_singlecell_corealigned_training,lymphoma_cosmx_small_singlecell_corealigned_validation

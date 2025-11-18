@@ -14,6 +14,8 @@ include: PROJECT_DIR / "src/shared/config.smk"
 
 # Data is already provided in resources/lymphoma_cosmx_small/. Downloaded from $OAK (CosMx_1K_CART_1__61360.svs, ALL.h5ad) to read_count_table.h5ad
 
+# Rule order to resolve ambiguity between process_data and split_train_test for *_training/*_validation files
+ruleorder: split_train_test > process_data
 
 rule process_data:
     """
@@ -46,7 +48,7 @@ rule process_data:
         x_offset=0.842708,
         y_offset=1.235417,
         scale_factor=0.79488464508,
-        filter_good_quality=False,  # Filter for good_quality cells as annotated by pathologists
+        filter_good_quality=lambda wildcards: "goodquality" in wildcards.dataset,  # Filter for good_quality cells as annotated by pathologists
         min_num_cells=5,  # filter out patches with fewer reads
         pixel_size_um=lambda wildcards: config["he_configs"][config["dataset_he_mapping"][wildcards.dataset]]["target_pixel_size"],
         small_patch_diameter_um=15.0,
@@ -94,9 +96,9 @@ rule split_train_test:
 
 rule all:
     input:
-        expand(rules.process_data.output.adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell"]),
+        expand(rules.process_data.output.adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell", "lymphoma_cosmx_small_singlecell_corealigned", "lymphoma_cosmx_small_singlecell_goodquality"]),
         expand(rules.plot_transcriptome_umap.output.umap_plot, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed"]),
-        expand(rules.split_train_test.output.training_adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell"]),
-        expand(rules.split_train_test.output.validation_adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell"])
+        expand(rules.split_train_test.output.training_adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell", "lymphoma_cosmx_small_singlecell_corealigned", "lymphoma_cosmx_small_singlecell_goodquality"]),
+        expand(rules.split_train_test.output.validation_adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell", "lymphoma_cosmx_small_singlecell_corealigned", "lymphoma_cosmx_small_singlecell_goodquality"])
     default_target: True
 

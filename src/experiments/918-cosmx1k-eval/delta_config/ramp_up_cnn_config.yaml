@@ -1,0 +1,7 @@
+# Ramp up CNN architecture with higher embedding dimensions and more layers
+wandb: 'cosmx1k-ramped-cnn'
+model:
+  model_config:
+    image_config:
+      cnn_embedding_dim: 512  # Increase from 128 to 512
+      cnn_num_layers: 4  # Increase from 2 to 4 layers

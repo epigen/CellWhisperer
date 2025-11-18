@@ -1,0 +1,7 @@
+# Fine-tune Geneformer for CosMx1K vs whole transcriptome issue (option 2)
+# LUU locking mode variant: Lock text, Unlock transcriptome, Unlock image
+wandb: 'cosmx1k-finetune-luu'
+model:
+  model_config:
+    locking_mode: LUU  # Lock text, unlock transcriptome and image models
+  learning_rate: 0.0001  # Reduced learning rate for fine-tuning regime

@@ -316,12 +316,21 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.image_processor = image_processor
         self.nproc = nproc
         self.min_genes = min_genes
-        self.train_fraction = train_fraction
         self.transcriptome_processor_kwargs = transcriptome_processor_kwargs.copy()
         self.tokenizer_kwargs = tokenizer_kwargs.copy()
         self.use_replicates = use_replicates
         self.include_labels = include_labels
         self.use_disk_loading = use_disk_loading
+
+        self.train_fraction = train_fraction
+        if isinstance(self.train_fraction, str):  # parse option for int/float
+            try:
+                self.train_fraction = int(train_fraction)
+            except ValueError:
+                try:
+                    self.train_fraction = float(train_fraction)
+                except ValueError:
+                    pass
 
         # Initialize processor
         self.processor = TranscriptomeTextDualEncoderProcessor(

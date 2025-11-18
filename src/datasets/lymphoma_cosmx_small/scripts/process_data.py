@@ -13,7 +13,8 @@ import pandas as pd
 from pathlib import Path
 from PIL import Image
 
-from coordinate_utils import convert_mm_to_pixel_coordinates
+
+from coordinate_utils import convert_mm_to_pixel_coordinates, perform_core_level_alignment
 from image_utils import (
     OpenSlideWrapper,
     handle_magnification,
@@ -27,11 +28,15 @@ from grid_utils import (
 )
 from visualization import generate_qc_tile_plot, save_example_patches
 
+
+
+
 logging.basicConfig(level=logging.INFO)
 
 # Get parameters from snakemake
 dataset = snakemake.wildcards.dataset
-IS_SINGLECELL = dataset.endswith("_singlecell")
+IS_SINGLECELL = "_singlecell" in dataset
+IS_COREALIGNED = dataset.endswith("_corealigned")
 SPOT_DIAMETER_PIXELS = snakemake.params.spot_diameter_pixels
 WHITE_CUTOFF = snakemake.params.white_cutoff
 X_OFFSET = snakemake.params.x_offset
@@ -76,7 +81,12 @@ else:
 # Filter for good quality cells if requested
 if FILTER_GOOD_QUALITY and "good_quality" in adata_hr.obs.columns:
     n_cells_before = adata_hr.n_obs
-    adata_hr = adata_hr[adata_hr.obs["good_quality"]].copy()
+    # Handle both boolean and categorical ("yes"/"no") values
+    good_quality_mask = adata_hr.obs["good_quality"]
+    if good_quality_mask.dtype == 'object' or good_quality_mask.dtype.name == 'category':
+        # Convert "yes"/"no" to boolean
+        good_quality_mask = good_quality_mask.astype(str).str.lower() == "yes"
+    adata_hr = adata_hr[good_quality_mask].copy()
     n_cells_after = adata_hr.n_obs
     logging.info(
         f"Filtered for good_quality cells: {n_cells_before} -> {n_cells_after} cells"
@@ -115,28 +125,38 @@ if image_was_scaled:
     logging.info(
         f"Scaled coordinates by factors: x={scale_factor_x:.3f}, y={scale_factor_y:.3f}"
     )
+    
+    # Apply core-level alignment if requested
+    if IS_COREALIGNED:
+        logging.info("Applying core-level alignment optimization")
+        spatial_coords = perform_core_level_alignment(adata_hr, slide_wrapper, spatial_coords, dataset)
 else:
     logging.info("Image was not scaled - using direct coordinate transformation")
     spatial_coords = convert_mm_to_pixel_coordinates(
         adata_hr, width, height, X_OFFSET, Y_OFFSET, SCALE_FACTOR
     )
 
+# Apply core-level alignment if requested
+if IS_COREALIGNED:
+    logging.info("Applying core-level alignment optimization")
+    spatial_coords = perform_core_level_alignment(adata_hr, slide_wrapper, spatial_coords, dataset)
+
 adata_hr.obsm["spatial"] = spatial_coords
 
-# Create and filter grid or use CSV coordinates for single cell
+# Create and filter grid or use coordinates from h5ad for single cell
 if IS_SINGLECELL:
-    # Read CSV coordinates from input
-    logging.info("Single cell mode: reading coordinates from CSV")
-    csv_coords = pd.read_csv(
-        snakemake.input.read_count_table.replace(".h5ad", "_coordinates.csv")
-    )
-
-    # Create filtered_coords DataFrame with x_pixel and y_pixel from CSV
+    # Use spatial coordinates that were already computed and stored in adata_hr.obsm["spatial"]
+    logging.info("Single cell mode: using spatial coordinates from h5ad file")
+    
+    # Extract pixel coordinates from the spatial obsm data
+    pixel_coords = adata_hr.obsm["spatial"]  # Already computed above with convert_mm_to_pixel_coordinates
+    
+    # Create filtered_coords DataFrame with x_pixel and y_pixel from spatial coordinates
     filtered_coords = pd.DataFrame(
-        {"x_pixel": csv_coords["x_pixel"], "y_pixel": csv_coords["y_pixel"]}
+        {"x_pixel": pixel_coords[:, 0], "y_pixel": pixel_coords[:, 1]}
     )
-    # Use cell_id as index to match AnnData obs_names
-    filtered_coords.index = csv_coords["cell_id"]
+    # Use AnnData obs_names as index
+    filtered_coords.index = adata_hr.obs_names
 
     # Add missing columns to match grid format
     filtered_coords["x_array"] = filtered_coords["x_pixel"] // SPOT_DIAMETER_PIXELS

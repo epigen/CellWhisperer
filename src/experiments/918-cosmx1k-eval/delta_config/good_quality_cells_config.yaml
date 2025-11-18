@@ -1,0 +1,5 @@
+# Use dataset with good quality cell filtering enabled
+# This tests the importance of pathologist-annotated cell quality
+wandb: 'cosmx1k-good-quality-only'
+data:
+  dataset_names: lymphoma_cosmx_small_singlecell_goodquality_training,lymphoma_cosmx_small_singlecell_goodquality_validation

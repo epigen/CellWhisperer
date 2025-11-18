@@ -81,6 +81,8 @@ dataset_he_mapping:
   lymphoma_cosmx_small: visium_resolution
   lymphoma_cosmx_small_detailed: detailed_resolution
   lymphoma_cosmx_small_singlecell: detailed_resolution
+  lymphoma_cosmx_small_singlecell_corealigned: detailed_resolution
+  lymphoma_cosmx_small_singlecell_goodquality: detailed_resolution
   hest1k: visium_resolution
   quilt1m: visium_resolution
 
