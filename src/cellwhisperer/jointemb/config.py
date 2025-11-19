@@ -82,6 +82,10 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
             from .uce_model import UCEConfig
 
             self.transcriptome_config = UCEConfig(**transcriptome_config)
+        elif transcriptome_model_type == "mlp":
+            from .mlp_model import MLPConfig
+
+            self.transcriptome_config = MLPConfig(**transcriptome_config)
         else:
             raise ValueError(
                 f"Unsupported transcriptome model type: {transcriptome_model_type}"

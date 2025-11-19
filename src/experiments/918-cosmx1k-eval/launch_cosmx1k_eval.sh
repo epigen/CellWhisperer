@@ -97,6 +97,7 @@ declare -a DELTA_CONFIGS=(
     "finetune_geneformer_config.yaml" 
     "finetune_uni_config.yaml"
     "good_quality_cells_config.yaml"
+    "mlp_transcriptome_config.yaml"
     "nonaligned_cores_config.yaml"
     "ramp_up_cnn_config.yaml"
     "cell_cnn_only_config.yaml"
@@ -205,6 +206,7 @@ for config in "${DELTA_CONFIGS[@]}"; do
         "finetune_geneformer_config.yaml") echo "  - cosmx1k-finetune-uul" ;;
         "finetune_uni_config.yaml") echo "  - cosmx1k-finetune-luu" ;;
         "good_quality_cells_config.yaml") echo "  - cosmx1k-good-quality-only" ;;
+        "mlp_transcriptome_config.yaml") echo "  - cosmx1k-mlp-ull" ;;
         "nonaligned_cores_config.yaml") echo "  - cosmx1k-nonaligned-cores" ;;
         "ramp_up_cnn_config.yaml") echo "  - cosmx1k-ramped-cnn" ;;
         "cell_cnn_only_config.yaml") echo "  - cosmx1k-cell-cnn-only" ;;

@@ -81,6 +81,12 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
                 nproc=nproc,
                 **transcriptome_kwargs,
             )
+        elif transcriptome_processor == "mlp":
+            from .mlp_model import MLPTranscriptomeProcessor
+
+            transcriptome_processor = MLPTranscriptomeProcessor(
+                **transcriptome_kwargs,
+            )
         else:
             assert (
                 transcriptome_processor is not None

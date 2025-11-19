@@ -101,9 +101,13 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                 from .uce_model import UCEModel
 
                 transcriptome_model = UCEModel(config.transcriptome_config)
+            elif type(config.transcriptome_config).__name__ == "MLPConfig":
+                from .mlp_model import MLPModel
+
+                transcriptome_model = MLPModel(config.transcriptome_config)
             else:
                 raise NotImplementedError(
-                    "Only geneformer, scgpt and uce are supported for now"
+                    "Only geneformer, scgpt, uce and mlp are supported for now"
                 )
 
         if text_model is None:

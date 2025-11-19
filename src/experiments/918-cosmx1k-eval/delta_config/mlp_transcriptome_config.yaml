@@ -1,0 +1,11 @@
+# MLP transcriptome model for CosMx1K evaluation
+# uLL locking mode variant: Unlock transcriptome, Lock text, Lock image
+wandb: 'cosmx1k-mlp-ull'
+model:
+  model_config:
+    transcriptome_model_type: mlp
+    locking_mode: uLL  # Unlock transcriptome (with random init), Lock text, Lock image
+data:
+  transcriptome_processor: mlp
+  transcriptome_processor_kwargs:
+    input_dim: 1000
