@@ -1,0 +1,6 @@
+# Test impact of core alignment by using non-aligned dataset
+# Uses original dataset without improved core-level alignment for comparison
+wandb: 'cosmx1k-nonaligned-cores'
+data:
+  dataset_names: lymphoma_cosmx_small_singlecell_training,lymphoma_cosmx_small_singlecell_validation
+  train_fraction: lymphoma_cosmx_small_singlecell_training

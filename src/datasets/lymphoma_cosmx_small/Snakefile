@@ -14,8 +14,10 @@ include: PROJECT_DIR / "src/shared/config.smk"
 
 # Data is already provided in resources/lymphoma_cosmx_small/. Downloaded from $OAK (CosMx_1K_CART_1__61360.svs, ALL.h5ad) to read_count_table.h5ad
 
-# Rule order to resolve ambiguity between process_data and split_train_test for *_training/*_validation files
-ruleorder: split_train_test > process_data
+# Rule order to resolve ambiguities:
+# 1. split_train_test > process_data for *_training/*_validation files
+# 2. filter_good_quality > process_data for *_goodquality files (prevents process_data from trying to handle goodquality datasets)
+ruleorder: split_train_test > filter_good_quality > process_data
 
 rule process_data:
     """
@@ -48,7 +50,7 @@ rule process_data:
         x_offset=0.842708,
         y_offset=1.235417,
         scale_factor=0.79488464508,
-        filter_good_quality=lambda wildcards: "goodquality" in wildcards.dataset,  # Filter for good_quality cells as annotated by pathologists
+
         min_num_cells=5,  # filter out patches with fewer reads
         pixel_size_um=lambda wildcards: config["he_configs"][config["dataset_he_mapping"][wildcards.dataset]]["target_pixel_size"],
         small_patch_diameter_um=15.0,
@@ -58,6 +60,22 @@ rule process_data:
     script:
         # "notebooks/process_data.py.ipynb"   # snakemake --edit-notebook <output_file>
         "scripts/process_data.py"
+
+rule filter_good_quality:
+    """
+    Filter processed dataset for high-quality cells only.
+    
+    Takes output from process_data and filters for cells annotated as good_quality by pathologists.
+    Appends '_goodquality' suffix to the output filename.
+    """
+    input:
+        adata=PROJECT_DIR / "results/{dataset}/full_data.h5ad"
+    output:
+        adata=PROJECT_DIR / "results/{dataset}_goodquality/full_data.h5ad"
+    conda:
+        "cellwhisperer"
+    script:
+        "scripts/filter_good_quality.py"
 
 rule plot_transcriptome_umap:
     """
@@ -83,21 +101,22 @@ rule split_train_test:
     Validation cores are specified in params, training gets the rest.
     """
     input:
-        adata=rules.process_data.output.adata
+        adata=PROJECT_DIR / "results/{dataset}/full_data.h5ad"
     output:
         training_adata=PROJECT_DIR / "results/{dataset}_training/full_data.h5ad",
         validation_adata=PROJECT_DIR / "results/{dataset}_validation/full_data.h5ad"
     conda:
         "cellwhisperer"
     params:
-        validation_cores=["B9", "C1", "C2", "G2", "H2"]  # High-quality cores (>95% good_quality)
+        validation_cores=["A10", "E8", "J4", "J5", "K2"]  # High-quality cores (>95% good_quality)
     script:
         "scripts/split_train_test.py"
 
 rule all:
     input:
-        expand(rules.process_data.output.adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell", "lymphoma_cosmx_small_singlecell_corealigned", "lymphoma_cosmx_small_singlecell_goodquality"]),
-        expand(rules.plot_transcriptome_umap.output.umap_plot, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed"]),
-        expand(rules.split_train_test.output.training_adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell", "lymphoma_cosmx_small_singlecell_corealigned", "lymphoma_cosmx_small_singlecell_goodquality"]),
+        # UMAP plots
+        # expand(rules.plot_transcriptome_umap.output.umap_plot, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed"]),
+        # Train/test splits for base datasets
+        expand(rules.split_train_test.output.training_adata, dataset=["lymphoma_cosmx_small", "lymphoma_cosmx_small_detailed", "lymphoma_cosmx_small_singlecell", "lymphoma_cosmx_small_singlecell_corealigned",  "lymphoma_cosmx_small_singlecell_corealigned_goodquality"]),
     default_target: True
 

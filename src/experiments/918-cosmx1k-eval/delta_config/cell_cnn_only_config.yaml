@@ -1,0 +1,8 @@
+# Cell CNN-only mode: Disable UNI context model but keep cell-level CNN
+# This tests the capability of the cell-level CNN without FiLM conditioning from UNI
+wandb: 'cosmx1k-cell-cnn-only'
+model:
+  model_config:
+    image_config:
+      context_model: false  # Disable UNI ViT context model
+      cell_level_model: true  # Keep cell-level CNN (explicit for clarity)

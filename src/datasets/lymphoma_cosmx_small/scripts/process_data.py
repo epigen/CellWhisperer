@@ -42,12 +42,10 @@ WHITE_CUTOFF = snakemake.params.white_cutoff
 X_OFFSET = snakemake.params.x_offset
 Y_OFFSET = snakemake.params.y_offset
 SCALE_FACTOR = snakemake.params.scale_factor
-FILTER_GOOD_QUALITY = snakemake.params.filter_good_quality
-
 logging.info(
     f"Processing {dataset} with spot_diameter_pixels={SPOT_DIAMETER_PIXELS}, "
     f"white_cutoff={WHITE_CUTOFF}, x_offset={X_OFFSET}, y_offset={Y_OFFSET}, scale_factor={SCALE_FACTOR}, "
-    f"filter_good_quality={FILTER_GOOD_QUALITY}, pixel_size={snakemake.params.pixel_size_um} μm/pixel"
+    f"pixel_size={snakemake.params.pixel_size_um} μm/pixel"
 )
 
 
@@ -78,23 +76,6 @@ else:
         "No cell barcode to core mapping provided; core_id will remain empty"
     )
 
-# Filter for good quality cells if requested
-if FILTER_GOOD_QUALITY and "good_quality" in adata_hr.obs.columns:
-    n_cells_before = adata_hr.n_obs
-    # Handle both boolean and categorical ("yes"/"no") values
-    good_quality_mask = adata_hr.obs["good_quality"]
-    if good_quality_mask.dtype == 'object' or good_quality_mask.dtype.name == 'category':
-        # Convert "yes"/"no" to boolean
-        good_quality_mask = good_quality_mask.astype(str).str.lower() == "yes"
-    adata_hr = adata_hr[good_quality_mask].copy()
-    n_cells_after = adata_hr.n_obs
-    logging.info(
-        f"Filtered for good_quality cells: {n_cells_before} -> {n_cells_after} cells"
-    )
-elif FILTER_GOOD_QUALITY:
-    logging.warning(
-        "good_quality column not found in adata.obs, skipping quality filtering"
-    )
 
 # Record pixel size metadata before any magnification adjustments
 adata_hr.uns["pixel_size"] = snakemake.params.pixel_size_um

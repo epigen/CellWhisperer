@@ -98,12 +98,12 @@ model:
   frozen_warmup: null
 data:
   image_processor: uni2
-  dataset_names: lymphoma_cosmx_small_singlecell_training,lymphoma_cosmx_small_singlecell_validation
+  dataset_names: lymphoma_cosmx_small_singlecell_corealigned_training,lymphoma_cosmx_small_singlecell_corealigned_validation
   transcriptome_processor_kwargs: {}
   tokenizer_kwargs:
     model_max_length: 128
   min_genes: 100
-  train_fraction: lymphoma_cosmx_small_singlecell_training
+  train_fraction: lymphoma_cosmx_small_singlecell_corealigned_training
   use_replicates: false
   include_labels: null
   use_disk_loading: true
@@ -112,6 +112,7 @@ best_model_path: null
 last_model_path: null
 log_level: INFO
 dap_debug: false
+omit_validation_functions: true
 batch_size: 512
 nproc: 8
 wandb: 'cosmx1k-baseline'

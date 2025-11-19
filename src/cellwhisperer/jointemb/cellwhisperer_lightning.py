@@ -54,6 +54,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         learning_rate: float = 1e-3,
         lr_warmup: Union[int, float] = 0.03,
         frozen_warmup: Union[int, float, None] = None,
+        use_validation_functions: bool = True,
     ):
         """
         Args:
@@ -65,6 +66,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             learning_rate: learning rate to use for the optimizer.
             lr_warmup: number of steps to use for learning rate warmup. If set to 0, no warmup is used. If set to a float, it is interpreted as a fraction of the total number of steps.
             frozen_warmup: number of steps to use for pure projection layer training. If set to 0, no warmup is used. If set to a float, it is interpreted as a fraction of the total number of steps. If set to None, `lr_warmup` is used.
+            use_validation_functions: whether to run validation functions during training. If False, validation functions are disabled.
         """
         super(TranscriptomeTextDualEncoderLightning, self).__init__()
 
@@ -94,6 +96,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         )
 
         self.val_batch_size = val_batch_size
+        self.use_validation_functions = use_validation_functions
 
         # Storage for outputs for retrieval evaluation
         self.test_outputs = []
@@ -285,13 +288,15 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
     def setup(self, stage=None):
         # We do this here because during __init__ self.trainer is not yet available
-        if not self.trainer.fast_dev_run:
+        if self.use_validation_functions:
             self.validation_functions = initialize_validation_functions(
                 batch_size=self.val_batch_size,
                 transcriptome_model_type=self.model.transcriptome_model.config.model_type,
                 text_model_type=self.model.text_model.config.model_type,
                 image_model_type=self.model.image_model.config.model_type,
             )
+        else:
+            self.validation_functions = {}
         if stage == "fit":
             if isinstance(self.frozen_warmup, float):
                 self.frozen_warmup_steps = int(
@@ -309,8 +314,8 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             self.model.freeze_models()
 
     def on_validation_epoch_end(self):
-        # For convenience (speed), I disable this when "fast_dev_run" is enabled
-        if not self.trainer.fast_dev_run:
+        # Run validation functions if they are enabled and available
+        if self.use_validation_functions:
             logger.info("Running validation functions")
             for val_fn_name, val_fn in self.validation_functions.items():
                 logger.debug(f"Running validation function: {val_fn_name}")
@@ -339,10 +344,10 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                         table = Table(dataframe=val_results[1].reset_index())
                         artifact.add(table, "performance_metrics")
                         self.logger.experiment.log_artifact(artifact)
-            # Run retrieval evaluation for validation if we have collected outputs
-            if self.val_outputs:
-                self._run_retrieval_evaluation(self.val_outputs, stage="val")
-                self.val_outputs = []
+        # Run retrieval evaluation for validation if we have collected outputs
+        if self.val_outputs:
+            self._run_retrieval_evaluation(self.val_outputs, stage="val")
+            self.val_outputs = []
 
     def on_train_batch_start(self, *args):
         if (

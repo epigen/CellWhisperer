@@ -110,32 +110,41 @@ class UNIProcessor(ProcessorMixin):
         for i, (obs_index, x, y) in tqdm(
             enumerate(zip(adata.obs_names, x_pixel, y_pixel))
         ):
-            # Context view
-            try:
-                tile_ctx = self._crop_tile(image, x, y, views["context"])
-                t_ctx = self.transform_context(Image.fromarray(tile_ctx))
-            except Exception as e:
-                logger.error(
-                    f"Error processing context tile for barcode {obs_index} at ({x}, {y}): {e}"
-                )
-                t_ctx = torch.zeros((3, 224, 224), dtype=torch.float32)
-            X_context.append(t_ctx)
+            # Context view (only if context model is enabled)
+            if self.config.context_model:
+                try:
+                    tile_ctx = self._crop_tile(image, x, y, views["context"])
+                    t_ctx = self.transform_context(Image.fromarray(tile_ctx))
+                except Exception as e:
+                    logger.error(
+                        f"Error processing context tile for barcode {obs_index} at ({x}, {y}): {e}"
+                    )
+                    t_ctx = torch.zeros((3, 224, 224), dtype=torch.float32)
+                X_context.append(t_ctx)
 
-            # Cell view
+            # Cell view (only if cell level model is enabled)
             # Note: Only the context view implements physical scale anchoring via crop size.
             #       The cell view uses a fixed 56x56 pixel crop without physical anchoring.
-            try:
-                tile_cell = self._crop_tile(image, x, y, views["cell"])
-                t_cell = self.transform_cell(Image.fromarray(tile_cell))
-            except Exception as e:
-                logger.error(
-                    f"Error processing cell tile for barcode {obs_index} at ({x}, {y}): {e}"
-                )
-                t_cell = torch.zeros((3, 56, 56), dtype=torch.float32)
-            X_cell.append(t_cell)
+            if self.config.cell_level_model:
+                try:
+                    tile_cell = self._crop_tile(image, x, y, views["cell"])
+                    t_cell = self.transform_cell(Image.fromarray(tile_cell))
+                except Exception as e:
+                    logger.error(
+                        f"Error processing cell tile for barcode {obs_index} at ({x}, {y}): {e}"
+                    )
+                    t_cell = torch.zeros((3, 56, 56), dtype=torch.float32)
+                X_cell.append(t_cell)
 
-        patches_context = torch.stack(X_context, dim=0)  # (n_patches, 3, 224, 224)
-        patches_cell = torch.stack(X_cell, dim=0)  # (n_patches, 3, 56, 56)
+        # Create tensors only for enabled models
+        patches_context = (
+            torch.stack(X_context, dim=0) if self.config.context_model 
+            else torch.zeros((len(adata.obs), 3, 224, 224), dtype=torch.float32)
+        )
+        patches_cell = (
+            torch.stack(X_cell, dim=0) if self.config.cell_level_model 
+            else torch.zeros((len(adata.obs), 3, 56, 56), dtype=torch.float32)
+        )
 
         if return_tensors == "pt":
             return {"patches_ctx": patches_context, "patches_cell": patches_cell}
@@ -202,6 +211,7 @@ class UNIConfig(PretrainedConfig):
         model_name="vit_giant_patch14_224",
         views: Dict[str, int] = {"context": 224, "cell": 56},
         cell_level_model=True,
+        context_model=True,
         cnn_embedding_dim=128,
         cnn_num_layers=2,
         **kwargs,
@@ -213,6 +223,7 @@ class UNIConfig(PretrainedConfig):
         self.cell_level_model = (
             cell_level_model  # could be solved more elegantly via `views`, but whatever
         )
+        self.context_model = context_model
         self.cnn_embedding_dim = cnn_embedding_dim
         self.cnn_num_layers = cnn_num_layers
 
@@ -226,6 +237,11 @@ class UNIConfig(PretrainedConfig):
             assert (
                 isinstance(k, str) and isinstance(v, int) and v > 0
             ), "view keys must be strings and values positive ints"
+        
+        # Validate configuration: at least one model must be enabled
+        assert (
+            self.cell_level_model or self.context_model
+        ), "At least one of cell_level_model or context_model must be True"
 
 
 class UNIModel(PreTrainedModel):
@@ -237,51 +253,69 @@ class UNIModel(PreTrainedModel):
     def __init__(self, config: UNIConfig):
         super().__init__(config)
 
-        self.model = timm.create_model(
-            config.model_name,
-            num_classes=0,
-            no_embed_class=True,
-            dynamic_img_size=True,
-            reg_tokens=8,
-            depth=24 if config.model_name == "vit_giant_patch14_224" else None,
-            num_heads=24 if config.model_name == "vit_giant_patch14_224" else None,
-            init_values=1e-5,
-            embed_dim=config.embed_dim,
-            mlp_ratio=(
-                2.66667 * 2 if config.model_name == "vit_giant_patch14_224" else None
-            ),
-            mlp_layer=timm.layers.SwiGLUPacked,
-            act_layer=torch.nn.SiLU,
-        )
+        # Only create ViT model if context model is enabled
+        if config.context_model:
+            self.model = timm.create_model(
+                config.model_name,
+                num_classes=0,
+                no_embed_class=True,
+                dynamic_img_size=True,
+                reg_tokens=8,
+                depth=24 if config.model_name == "vit_giant_patch14_224" else None,
+                num_heads=24 if config.model_name == "vit_giant_patch14_224" else None,
+                init_values=1e-5,
+                embed_dim=config.embed_dim,
+                mlp_ratio=(
+                    2.66667 * 2 if config.model_name == "vit_giant_patch14_224" else None
+                ),
+                mlp_layer=timm.layers.SwiGLUPacked,
+                act_layer=torch.nn.SiLU,
+            )
+        else:
+            self.model = None
 
-        # Configurable CNN for 56x56 cell view and FiLM conditioning using context embedding
-        cnn_layers = []
-        in_channels = 3
-        
-        # Build CNN layers based on config
-        for i in range(config.cnn_num_layers):
-            if i == 0:
-                # First layer: 3 -> 64 channels
-                out_channels = 64
-            elif i == config.cnn_num_layers - 1:
-                # Last layer: previous -> cnn_embedding_dim
-                out_channels = config.cnn_embedding_dim
-            else:
-                # Intermediate layers: double channels progressively
-                out_channels = min(64 * (2 ** i), config.cnn_embedding_dim)
+        # Configurable CNN for 56x56 cell view
+        if config.cell_level_model:
+            cnn_layers = []
+            in_channels = 3
             
-            cnn_layers.extend([
-                nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.BatchNorm2d(out_channels),
-            ])
-            in_channels = out_channels
-        
-        self.cell_cnn = nn.Sequential(*cnn_layers)
-        self.cell_pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.film_gamma = nn.Linear(config.embed_dim, config.cnn_embedding_dim)
-        self.film_beta = nn.Linear(config.embed_dim, config.cnn_embedding_dim)
-        self.cell_proj = nn.Linear(config.cnn_embedding_dim, config.embed_dim)
+            # Build CNN layers based on config
+            for i in range(config.cnn_num_layers):
+                if i == 0:
+                    # First layer: 3 -> 64 channels
+                    out_channels = 64
+                elif i == config.cnn_num_layers - 1:
+                    # Last layer: previous -> cnn_embedding_dim
+                    out_channels = config.cnn_embedding_dim
+                else:
+                    # Intermediate layers: double channels progressively
+                    out_channels = min(64 * (2 ** i), config.cnn_embedding_dim)
+                
+                cnn_layers.extend([
+                    nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
+                    nn.ReLU(inplace=True),
+                    nn.BatchNorm2d(out_channels),
+                ])
+                in_channels = out_channels
+            
+            self.cell_cnn = nn.Sequential(*cnn_layers)
+            self.cell_pool = nn.AdaptiveAvgPool2d((1, 1))
+            
+            # FiLM conditioning layers (only needed if both models are enabled)
+            if config.context_model:
+                self.film_gamma = nn.Linear(config.embed_dim, config.cnn_embedding_dim)
+                self.film_beta = nn.Linear(config.embed_dim, config.cnn_embedding_dim)
+            else:
+                self.film_gamma = None
+                self.film_beta = None
+                
+            self.cell_proj = nn.Linear(config.cnn_embedding_dim, config.embed_dim)
+        else:
+            self.cell_cnn = None
+            self.cell_pool = None
+            self.film_gamma = None
+            self.film_beta = None
+            self.cell_proj = None
 
         self.post_init()
 
@@ -294,45 +328,64 @@ class UNIModel(PreTrainedModel):
         # patches_ctx: (B, 3, 224, 224), patches_cell: (B, 3, 56, 56)
         ctx = patches_ctx
         cel = patches_cell
-        assert ctx.ndim == 4 and ctx.shape[1:] == (
-            3,
-            224,
-            224,
-        ), f"context shape must be (B,3,224,224), got {ctx.shape}"
-        assert cel.ndim == 4 and cel.shape[1:] == (
-            3,
-            56,
-            56,
-        ), f"cell shape must be (B,3,56,56), got {cel.shape}"
+        
+        # Validate inputs only if they're actually needed
+        if self.config.context_model:
+            assert ctx.ndim == 4 and ctx.shape[1:] == (
+                3,
+                224,
+                224,
+            ), f"context shape must be (B,3,224,224), got {ctx.shape}"
+            
+        if self.config.cell_level_model:
+            assert cel.ndim == 4 and cel.shape[1:] == (
+                3,
+                56,
+                56,
+            ), f"cell shape must be (B,3,56,56), got {cel.shape}"
 
-        # Context through ViT
-        context_embeds = self.model(ctx)
+        context_embeds = None
+        cell_embeds = None
 
-        # If cell-level model is disabled, return context (Uni2) embeddings directly
-        if not self.config.cell_level_model:
-            if return_dict:
-                raise NotImplementedError(
-                    "Return dict is not implemented yet. Please use return_dict=False for now."
-                )
-            else:
-                return (None, context_embeds)
+        # Context through ViT (if enabled)
+        if self.config.context_model:
+            context_embeds = self.model(ctx)
 
-        # Cell through CNN with FiLM conditioning
-        feat = self.cell_cnn(cel)  # (B, cnn_embedding_dim, H, W)
-        gamma = (
-            self.film_gamma(context_embeds).unsqueeze(-1).unsqueeze(-1)
-        )  # (B, cnn_embedding_dim, 1, 1)
-        beta = self.film_beta(context_embeds).unsqueeze(-1).unsqueeze(-1)  # (B, cnn_embedding_dim, 1, 1)
-        feat = feat * gamma + beta
-        pooled = self.cell_pool(feat).squeeze(-1).squeeze(-1)  # (B, cnn_embedding_dim)
-        cell_embeds = self.cell_proj(pooled)  # (B, embed_dim)
+        # Cell through CNN (if enabled)
+        if self.config.cell_level_model:
+            feat = self.cell_cnn(cel)  # (B, cnn_embedding_dim, H, W)
+            
+            # Apply FiLM conditioning if both models are enabled
+            if self.config.context_model and context_embeds is not None:
+                gamma = (
+                    self.film_gamma(context_embeds).unsqueeze(-1).unsqueeze(-1)
+                )  # (B, cnn_embedding_dim, 1, 1)
+                beta = self.film_beta(context_embeds).unsqueeze(-1).unsqueeze(-1)  # (B, cnn_embedding_dim, 1, 1)
+                feat = feat * gamma + beta
+                
+            pooled = self.cell_pool(feat).squeeze(-1).squeeze(-1)  # (B, cnn_embedding_dim)
+            cell_embeds = self.cell_proj(pooled)  # (B, embed_dim)
+
+        # Return the appropriate embeddings based on configuration
+        if self.config.context_model and self.config.cell_level_model:
+            # Both models enabled: return cell embeddings (FiLM-conditioned)
+            output_embeds = cell_embeds
+        elif self.config.context_model and not self.config.cell_level_model:
+            # Only context model: return context embeddings
+            output_embeds = context_embeds
+        elif not self.config.context_model and self.config.cell_level_model:
+            # Only cell model: return cell embeddings (no FiLM conditioning)
+            output_embeds = cell_embeds
+        else:
+            # This should never happen due to validation in config
+            raise ValueError("At least one of context_model or cell_level_model must be enabled")
 
         if return_dict:
             raise NotImplementedError(
                 "Return dict is not implemented yet. Please use return_dict=False for now."
             )
         else:
-            return (None, cell_embeds)
+            return (None, output_embeds)
 
     @classmethod
     def from_pretrained(
@@ -353,8 +406,8 @@ class UNIModel(PreTrainedModel):
             )
         model = cls(config, *args, **kwargs)
 
-        # Only load pretrained weights if not uni_small
-        if config.model_name != "vit_small_patch16_224":
+        # Only load pretrained weights if not uni_small and context model is enabled
+        if config.model_name != "vit_small_patch16_224" and config.context_model:
             model.model.load_state_dict(
                 torch.load(pretrained_model_name_or_path, map_location="cpu"),
                 strict=True,

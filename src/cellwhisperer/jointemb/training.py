@@ -88,6 +88,12 @@ class CellWhispererCLI(LightningCLI):
             help="Enable WandB logging. Need to pass a run name",
             type=str,
         )
+        parser.add_argument(
+            "--omit_validation_functions",
+            action="store_true",
+            help="Whether to use validation functions during training.",
+        )
+
         model_config_default = obj_signature(TranscriptomeTextDualEncoderConfig)
         parser.set_defaults(
             {
@@ -141,6 +147,14 @@ class CellWhispererCLI(LightningCLI):
             ["dap_debug", "nproc"],
             "data.nproc",
             lambda dap_debug, nproc: 0 if dap_debug else nproc,
+        )
+
+        # fast_dev_run implies validation_functions=False
+        parser.link_arguments(
+            ["trainer.fast_dev_run", "omit_validation_functions"],
+            "model.use_validation_functions",
+            lambda fast_dev_run, use_validation_functions: (not fast_dev_run)
+            and (not use_validation_functions),
         )
 
         # NOTE: crashed with large batch sizes

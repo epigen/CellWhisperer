@@ -97,8 +97,9 @@ declare -a DELTA_CONFIGS=(
     "finetune_geneformer_config.yaml" 
     "finetune_uni_config.yaml"
     "good_quality_cells_config.yaml"
-    "improved_alignment_config.yaml"
+    "nonaligned_cores_config.yaml"
     "ramp_up_cnn_config.yaml"
+    "cell_cnn_only_config.yaml"
 )
 
 echo "Launching CosMx1K evaluation jobs..."
@@ -197,14 +198,15 @@ echo "Monitor jobs with: squeue -u \$USER"
 echo "Check logs in: $EXPERIMENT_DIR/slurm_logs/"
 echo
 echo "Expected wandb run names:"
-echo "  - cosmx1k-baseline (baseline)"
+echo "  - cosmx1k-baseline-corealigned (baseline with core-aligned data)"
 for config in "${DELTA_CONFIGS[@]}"; do
     case "$config" in
         "disable_cell_level_config.yaml") echo "  - cosmx1k-no-cell-level" ;;
         "finetune_geneformer_config.yaml") echo "  - cosmx1k-finetune-uul" ;;
         "finetune_uni_config.yaml") echo "  - cosmx1k-finetune-luu" ;;
         "good_quality_cells_config.yaml") echo "  - cosmx1k-good-quality-only" ;;
-        "improved_alignment_config.yaml") echo "  - cosmx1k-core-aligned" ;;
+        "nonaligned_cores_config.yaml") echo "  - cosmx1k-nonaligned-cores" ;;
         "ramp_up_cnn_config.yaml") echo "  - cosmx1k-ramped-cnn" ;;
+        "cell_cnn_only_config.yaml") echo "  - cosmx1k-cell-cnn-only" ;;
     esac
 done
