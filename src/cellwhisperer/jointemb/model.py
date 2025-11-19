@@ -154,7 +154,9 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         Args:
             model: The model to freeze
         """
-        for param in model.parameters():
+        for name, param in model.named_parameters():
+            if name.startswith("cell_model."):
+                continue  # hack to keep image cell model unfrozen
             param.requires_grad = False
         model.eval()
         return model

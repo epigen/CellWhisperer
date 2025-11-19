@@ -135,7 +135,7 @@ submit_job() {
 #SBATCH --job-name=$job_name
 #SBATCH --time=48:00:00
 #SBATCH --partition=cmackall
-#SBATCH --mem=150000
+#SBATCH --mem=200000
 #SBATCH -G 1
 #SBATCH --ntasks-per-node=1
 #SBATCH -c 12

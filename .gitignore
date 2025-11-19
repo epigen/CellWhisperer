@@ -47,3 +47,4 @@ hosting/cemm/logging/report-user-activity*
 hosting/cemm/logging/stats.json
 hosting/cemm/logging/dashboard/stats.json
 
+/scratch/

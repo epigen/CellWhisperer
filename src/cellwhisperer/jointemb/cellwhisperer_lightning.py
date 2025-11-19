@@ -313,37 +313,40 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         if self.frozen_warmup_steps > 0:
             self.model.freeze_models()
 
-    def on_validation_epoch_end(self):
-        # Run validation functions if they are enabled and available
-        if self.use_validation_functions:
-            logger.info("Running validation functions")
-            for val_fn_name, val_fn in self.validation_functions.items():
-                logger.debug(f"Running validation function: {val_fn_name}")
-                with torch.no_grad():  # necessary, despite model being in eval mode
-                    val_results = val_fn(self.model)
-                    val_metrics = val_results[0]
-                for metric_name, metric_value in val_metrics.items():
-                    # NOTE enabling sync_dist requires the logged metric to be on GPU
-                    # In our case it doesn't matter, because we are training on a single GPU/node at the moment
-                    # see https://github.com/Lightning-AI/pytorch-lightning/issues/18803
-                    self.log(
-                        f"valfn_{val_fn_name}/{metric_name}",
-                        metric_value,
-                        on_step=False,
-                        on_epoch=True,
-                        prog_bar=False,
-                        logger=True,
-                        # sync_dist=True,  # needs tensor on gpu
+    def _validation_functions(self):
+        logger.info("Running validation functions")
+        for val_fn_name, val_fn in self.validation_functions.items():
+            logger.debug(f"Running validation function: {val_fn_name}")
+            with torch.no_grad():  # necessary, despite model being in eval mode
+                val_results = val_fn(self.model)
+                val_metrics = val_results[0]
+            for metric_name, metric_value in val_metrics.items():
+                # NOTE enabling sync_dist requires the logged metric to be on GPU
+                # In our case it doesn't matter, because we are training on a single GPU/node at the moment
+                # see https://github.com/Lightning-AI/pytorch-lightning/issues/18803
+                self.log(
+                    f"valfn_{val_fn_name}/{metric_name}",
+                    metric_value,
+                    on_step=False,
+                    on_epoch=True,
+                    prog_bar=False,
+                    logger=True,
+                    # sync_dist=True,  # needs tensor on gpu
+                )
+                if val_results[1] is not None:
+                    artifact = Artifact(
+                        f"valfn_{val_fn_name}_per_celltype_run{self.logger.experiment.id}",
+                        type="performance_metrics",
                     )
-                    if val_results[1] is not None:
-                        artifact = Artifact(
-                            f"valfn_{val_fn_name}_per_celltype_run{self.logger.experiment.id}",
-                            type="performance_metrics",
-                        )
-                        # turn the df val_results[1] into a wandb table:
-                        table = Table(dataframe=val_results[1].reset_index())
-                        artifact.add(table, "performance_metrics")
-                        self.logger.experiment.log_artifact(artifact)
+                    # turn the df val_results[1] into a wandb table:
+                    table = Table(dataframe=val_results[1].reset_index())
+                    artifact.add(table, "performance_metrics")
+                    self.logger.experiment.log_artifact(artifact)
+
+    def on_validation_epoch_end(self):
+        if self.use_validation_functions:
+            self._validation_functions()
+
         # Run retrieval evaluation for validation if we have collected outputs
         if self.val_outputs:
             self._run_retrieval_evaluation(self.val_outputs, stage="val")
@@ -412,7 +415,8 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         return loss
 
     def on_test_epoch_end(self):
-        self.on_validation_epoch_end()
+        if self.use_validation_functions:
+            self._validation_functions()
 
         # Run retrieval evaluation if we have collected test outputs
         if self.test_outputs:

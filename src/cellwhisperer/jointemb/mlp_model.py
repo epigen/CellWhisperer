@@ -77,7 +77,7 @@ class MLPTranscriptomeProcessor(ProcessorMixin):
 class MLPConfig(PretrainedConfig):
     """Configuration for the fully-connected MLP transcriptome model."""
 
-    model_type = "mlp_transcriptome"
+    model_type = "mlp"
 
     def __init__(
         self,
