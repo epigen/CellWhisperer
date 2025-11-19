@@ -17,6 +17,7 @@ import timm
 import os
 
 from cellwhisperer.config import config
+from .cell_model import CellLevelModel
 
 logger = logging.getLogger(__name__)
 
@@ -274,48 +275,25 @@ class UNIModel(PreTrainedModel):
         else:
             self.model = None
 
-        # Configurable CNN for 56x56 cell view
+        # Cell-level model for 56x56 cell view
         if config.cell_level_model:
-            cnn_layers = []
-            in_channels = 3
-            
-            # Build CNN layers based on config
-            for i in range(config.cnn_num_layers):
-                if i == 0:
-                    # First layer: 3 -> 64 channels
-                    out_channels = 64
-                elif i == config.cnn_num_layers - 1:
-                    # Last layer: previous -> cnn_embedding_dim
-                    out_channels = config.cnn_embedding_dim
-                else:
-                    # Intermediate layers: double channels progressively
-                    out_channels = min(64 * (2 ** i), config.cnn_embedding_dim)
-                
-                cnn_layers.extend([
-                    nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
-                    nn.ReLU(inplace=True),
-                    nn.BatchNorm2d(out_channels),
-                ])
-                in_channels = out_channels
-            
-            self.cell_cnn = nn.Sequential(*cnn_layers)
-            self.cell_pool = nn.AdaptiveAvgPool2d((1, 1))
-            
-            # FiLM conditioning layers (only needed if both models are enabled)
             if config.context_model:
-                self.film_gamma = nn.Linear(config.embed_dim, config.cnn_embedding_dim)
-                self.film_beta = nn.Linear(config.embed_dim, config.cnn_embedding_dim)
+                # FiLM-conditioned cell model
+                self.cell_model = CellLevelModel.create_film_conditioned(
+                    context_dim=config.embed_dim,
+                    embedding_dim=config.cnn_embedding_dim,
+                    num_layers=config.cnn_num_layers,
+                    output_dim=config.embed_dim
+                )
             else:
-                self.film_gamma = None
-                self.film_beta = None
-                
-            self.cell_proj = nn.Linear(config.cnn_embedding_dim, config.embed_dim)
+                # Standalone cell model
+                self.cell_model = CellLevelModel.create_standalone(
+                    embedding_dim=config.cnn_embedding_dim,
+                    num_layers=config.cnn_num_layers,
+                    output_dim=config.embed_dim
+                )
         else:
-            self.cell_cnn = None
-            self.cell_pool = None
-            self.film_gamma = None
-            self.film_beta = None
-            self.cell_proj = None
+            self.cell_model = None
 
         self.post_init()
 
@@ -353,18 +331,7 @@ class UNIModel(PreTrainedModel):
 
         # Cell through CNN (if enabled)
         if self.config.cell_level_model:
-            feat = self.cell_cnn(cel)  # (B, cnn_embedding_dim, H, W)
-            
-            # Apply FiLM conditioning if both models are enabled
-            if self.config.context_model and context_embeds is not None:
-                gamma = (
-                    self.film_gamma(context_embeds).unsqueeze(-1).unsqueeze(-1)
-                )  # (B, cnn_embedding_dim, 1, 1)
-                beta = self.film_beta(context_embeds).unsqueeze(-1).unsqueeze(-1)  # (B, cnn_embedding_dim, 1, 1)
-                feat = feat * gamma + beta
-                
-            pooled = self.cell_pool(feat).squeeze(-1).squeeze(-1)  # (B, cnn_embedding_dim)
-            cell_embeds = self.cell_proj(pooled)  # (B, embed_dim)
+            cell_embeds = self.cell_model(cel, context_embeds)
 
         # Return the appropriate embeddings based on configuration
         if self.config.context_model and self.config.cell_level_model:
