@@ -8,7 +8,7 @@ trainer:
   precision: bf16-mixed
   callbacks: null
   fast_dev_run: false
-  max_epochs: 5
+  max_epochs: 32
   min_epochs: null
   max_steps: -1
   min_steps: null

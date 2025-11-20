@@ -61,7 +61,7 @@ class MLPTranscriptomeProcessor(ProcessorMixin):
 
         # Create batch with consistent naming for compatibility
         batch = {
-            "expression_data": expression_data,
+            "expression_expr": expression_data,  # Use expression_expr for consistency with other models
             # Add dummy values for compatibility with existing interface
             "expression_tokens": torch.zeros(
                 (expression_data.shape[0], 1), dtype=torch.long
@@ -155,24 +155,28 @@ class MLPModel(PreTrainedModel):
 
     def forward(
         self,
-        expression_data: torch.Tensor,
+        expression_expr: torch.Tensor,
         expression_tokens: Optional[torch.Tensor] = None,  # For compatibility
         expression_token_lengths: Optional[torch.Tensor] = None,  # For compatibility
+        expression_gene: Optional[torch.Tensor] = None,  # For compatibility
+        expression_key_padding_mask: Optional[torch.Tensor] = None,  # For compatibility
         **kwargs,
     ) -> BaseModelOutputWithPooling:
         """
         Forward pass through the MLP.
 
         Args:
-            expression_data: Log-transformed gene expression data [batch_size, input_dim]
+            expression_expr: Log-transformed gene expression data [batch_size, input_dim]
             expression_tokens: Ignored (for compatibility with other models)
             expression_token_lengths: Ignored (for compatibility with other models)
+            expression_gene: Ignored (for compatibility with other models)
+            expression_key_padding_mask: Ignored (for compatibility with other models)
 
         Returns:
             BaseModelOutputWithPooling with last_hidden_state and pooler_output
         """
         # Pass through the MLP
-        hidden_states = self.mlp(expression_data)
+        hidden_states = self.mlp(expression_expr)
 
         # For compatibility with the existing interface, we need to provide both
         # last_hidden_state and pooler_output

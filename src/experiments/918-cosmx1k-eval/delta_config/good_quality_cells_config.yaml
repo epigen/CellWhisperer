@@ -2,5 +2,5 @@
 # This tests the importance of pathologist-annotated cell quality
 wandb: 'cosmx1k-good-quality-only'
 data:
-  dataset_names: lymphoma_cosmx_small_singlecell_corealigned_goodquality_training,lymphoma_cosmx_small_singlecell_goodquality_corealigned_validation
-  train_fraction: lymphoma_cosmx_small_singlecell_goodquality_corealigned_training
+  dataset_names: lymphoma_cosmx_small_singlecell_corealigned_goodquality_training,lymphoma_cosmx_small_singlecell_corealigned_goodquality_validation
+  train_fraction: lymphoma_cosmx_small_singlecell_corealigned_goodquality_training
