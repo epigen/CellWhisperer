@@ -1,0 +1,20 @@
+name: pathgen
+channels:
+  - conda-forge
+  - defaults
+  - bioconda
+dependencies:
+  - python=3.10
+  - pandas
+  - numpy<2
+  - pillow
+  - tqdm
+  - openslide-python
+  - hdf5
+  - h5py
+  - gdc-client
+  - pip
+  - pip:
+    - anndata
+    - scanpy
+    - huggingface_hub

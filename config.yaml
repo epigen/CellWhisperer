@@ -85,10 +85,15 @@ dataset_he_mapping:
   lymphoma_cosmx_small_singlecell_goodquality: detailed_resolution
   hest1k: visium_resolution
   quilt1m: visium_resolution
+  # pathgen: visium_resolution
 
 # Additional dataset-specific parameters
 quilt1m_config:
   crop_center_ratio: 0.5  # Use center 50% of image for cropping
+
+pathgen_config:
+  patch_size: 224  # Use 224x224 patches at 40x magnification (0.25 μm/pixel)
+  max_patches_per_wsi: 50  # Limit patches per WSI to manage size
 
 datasets:
   - immgen
@@ -108,6 +113,7 @@ datasets:
   - lung_tissue
   - hest1k
   - quilt1m
+  - pathgen
   - sthelar
   - lymphoma_cosmx_small
   - lymphoma_cosmx_small_detailed
