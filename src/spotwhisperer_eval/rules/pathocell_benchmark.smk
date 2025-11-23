@@ -68,18 +68,21 @@ rule pathocell_cell_type_prediction:
     """
     Run cell type prediction and evaluation using CellWhisperer model.
     Uses score_left_vs_right() or get_performance_metrics_left_vs_right() 
-    for evaluation.
+    for evaluation. Supports both cell-level and patch-level prediction.
     """
     input:
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
         adata=rules.pathocell_process_data.output.adata,
         image=rules.pathocell_process_data.output.image
     output:
-        results=PATHOCELL_MODEL_RESULTS / "cell_type_prediction_seed{seed}.json",
-        per_class_metrics=PATHOCELL_MODEL_RESULTS / "per_class_metrics_seed{seed}.csv",
-        confusion_matrix=PATHOCELL_MODEL_RESULTS / "confusion_matrix_seed{seed}.csv"
+        results=PATHOCELL_MODEL_RESULTS / "{prediction_level}_prediction_seed{seed}.json",
+        per_class_metrics=PATHOCELL_MODEL_RESULTS / "{prediction_level}_per_class_seed{seed}.csv",
+        confusion_matrix=PATHOCELL_MODEL_RESULTS / "{prediction_level}_confusion_seed{seed}.csv"
+    params:
+        prediction_level="{prediction_level}"  # TODO set this fixed maybe everywhere
     threads: 8
     wildcard_constraints:
+        prediction_level="(cell|patch)",
         seed="\\d+"
     conda:
         "cellwhisperer"
@@ -87,7 +90,7 @@ rule pathocell_cell_type_prediction:
         mem_mb=50000,
         slurm=slurm_gres("medium", num_cpus=8)
     log:
-        notebook="logs/pathocell_cell_type_prediction_{model}_seed{seed}.ipynb"
+        notebook="logs/pathocell_cell_type_prediction_{model}_{prediction_level}_seed{seed}.ipynb"
     notebook:
         "../notebooks/pathocell_cell_type_prediction.py.ipynb"
 
@@ -100,17 +103,18 @@ rule pathocell_aggregate_results:
         results=lambda wildcards: expand(
             rules.pathocell_cell_type_prediction.output.results,
             model=wildcards.model,
+            prediction_level=wildcards.prediction_level,
             seed=SEEDS
         )
     output:
-        summary=PATHOCELL_MODEL_RESULTS / "summary" / "cell_type_classification_summary.json"
+        summary=PATHOCELL_MODEL_RESULTS / "summary" / "{prediction_level}_classification_summary.json"
     conda:
         "cellwhisperer"
     resources:
         mem_mb=10000,
         slurm="cpus-per-task=1"
     log:
-        notebook="logs/pathocell_aggregate_results_{model}.ipynb"
+        notebook="logs/pathocell_aggregate_results_{model}_{prediction_level}.ipynb"
     notebook:
         "../notebooks/pathocell_aggregate_results.py.ipynb"
 
@@ -124,10 +128,13 @@ rule aggregate_pathocell_results:
         performance_summary=lambda wildcards: expand(
             rules.pathocell_aggregate_results.output.summary,
             model="spotwhisperer_{}".format(wildcards.dataset_combo),
+            prediction_level="cell",  # Default to cell-level for backwards compatibility
             allow_missing=True,
         )
     output:
         aggregated_pathocell=BENCHMARKS_DIR / "pathocell" / "{dataset_combo}" / "performance_summary.json"
+    wildcard_constraints:
+        dataset_combo="[^/]+"
     conda:
         "cellwhisperer"
     resources:
@@ -148,16 +155,18 @@ rule pathocell_all:
         # Process the data
         rules.pathocell_process_data.output.adata,
         
-        # Run predictions for key models
+        # Run predictions for key models (both cell and patch level)
         expand(
             rules.pathocell_cell_type_prediction.output.results,
             model=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"],
+            prediction_level=["cell", "patch"],
             seed=SEEDS[0]
         ),
         
         # Aggregate results
         expand(
             rules.pathocell_aggregate_results.output.summary,
-            model=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"]
+            model=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"],
+            prediction_level=["cell", "patch"]
         )
     default_target: True
