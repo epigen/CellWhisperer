@@ -94,7 +94,6 @@ for _, row in tqdm(df.iterrows(), total=len(df), desc="Creating h5ad files"):
     adata = ad.AnnData(X=X, obs=obs_data, var=var_data)
 
     # Store image path and metadata in uns
-    adata.uns["slide_path"] = str(image_path)
     adata.uns["image_width"] = w
     adata.uns["image_height"] = h
     patch_size = he_config["patch_size_pixels"]  # 224

@@ -16,6 +16,7 @@ def initialize_validation_functions(
     transcriptome_model_type: str,
     text_model_type: str,
     image_model_type: str,
+    enable_comprehensive_benchmarks: bool = False,
 ):
     tabsap_sc_dataset = SingleCellDataSetForValidationScoring(
         cell_number_threshold_per_celltype=100
@@ -111,5 +112,28 @@ def initialize_validation_functions(
         training_validation_functions[name] = RetrievalScoreCalculator(
             dm.val_dataloader()
         )
+
+    # Add comprehensive benchmarks only if requested 
+    if enable_comprehensive_benchmarks:
+        from .registry import ValidationRegistry
+        
+        for spec in ValidationRegistry.get_cellwhisperer_benchmarks():
+            # Create dataset lazily using a closure to capture spec
+            def create_validator(spec_copy=spec):
+                sc_dataset = SingleCellDataSetForValidationScoring(
+                    dataset=spec_copy.dataset,
+                    celltype_obs_colname=spec_copy.metadata_col,
+                    **spec_copy.dataset_kwargs
+                )
+                return SingleCellZeroshotValidationScoreCalculator(
+                    sc_dataset=sc_dataset,
+                    batch_size=batch_size,
+                    transcriptome_tokenizer_type=transcriptome_model_type,
+                    tokenizer_name=text_model_type,
+                    image_processor=image_model_type,
+                    **spec_copy.processor_kwargs
+                )
+            
+            training_validation_functions[spec.name] = create_validator()
 
     return training_validation_functions

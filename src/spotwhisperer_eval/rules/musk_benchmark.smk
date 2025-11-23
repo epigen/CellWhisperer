@@ -221,8 +221,29 @@ rule musk_all:
 #             --output {output.results} 2> {log}
 #     """
 
-# rule musk_image_retrieval:
-#     """
+rule aggregate_musk_results:
+    """
+    Copy aggregated MUSK summaries into the benchmarks directory for dataset_combo.
+    This rule is used by the spider plot to access MUSK results.
+    """
+    input:
+        performance_summary=lambda wildcards: expand(
+            rules.musk_performance_summary.output.summary,
+            model="spotwhisperer_{}".format(wildcards.dataset_combo),
+            seed=SEEDS[0],
+            allow_missing=True,
+        )
+    output:
+        aggregated_musk=BENCHMARKS_DIR / "musk" / "{dataset_combo}" / "performance_summary.json"
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=50000,
+        slurm="cpus-per-task=1"
+    shell: """
+        cp {input.performance_summary} {output.aggregated_musk}
+    """
+
 #     Image-to-image retrieval evaluation using MUSK benchmark
 #     """
 #     input:

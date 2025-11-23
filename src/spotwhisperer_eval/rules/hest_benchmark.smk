@@ -161,3 +161,25 @@ rule hest_benchmark_all:
         ),
         rules.hest_per_class_analysis.output.analysis
     default_target: True
+
+rule aggregate_hest_evaluation:
+    """
+    Copy aggregated HEST summaries into the benchmarks directory for dataset_combo.
+    This rule is used by the spider plot to access HEST results.
+    """
+    input:
+        lambda wildcards: expand(
+            rules.aggregate_hest_results.output.aggregated_summary,
+            model="spotwhisperer_{}".format(wildcards.dataset_combo),
+            allow_missing=True,
+        )
+    output:
+        aggregated_hest=BENCHMARKS_DIR / "hest" / "{dataset_combo}" / "aggregated_results.json"
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=50000,
+        slurm="cpus-per-task=1"
+    shell: """
+        cp {input} {output.aggregated_hest}
+    """

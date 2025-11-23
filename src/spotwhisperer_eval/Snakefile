@@ -11,58 +11,17 @@ include: "../shared/rules/dataset_processing.smk"
 include: "rules/common.smk"
 include: "rules/training.smk"
 include: "rules/retrieval_eval.smk"
-include: "rules/plots.smk"
-include: "rules/metadata_and_analysis.smk"
 include: "rules/hest_benchmark.smk"
 include: "rules/lung_benchmark.smk"
 include: "rules/musk_benchmark.smk"
+include: "rules/pathocell_benchmark.smk"
 include: "rules/cellwhisperer_benchmark.smk"
+include: "rules/cellwhisperer_comprehensive_benchmark.smk"
+include: "rules/plots.smk"
+include: "rules/metadata_and_analysis.smk"
 include: "rules/model_interpretation.smk"
 
 
-rule aggregate_hest_evaluation:
-    """
-    Copy aggregated HEST summaries into the benchmarks directory for dataset_combo.
-    """
-    input:
-        lambda wildcards: expand(
-            rules.aggregate_hest_results.output.aggregated_summary,
-            model="spotwhisperer_{}".format(wildcards.dataset_combo),
-            allow_missing=True,
-        )
-    output:
-        aggregated_hest=BENCHMARKS_DIR / "hest" / "{dataset_combo}" / "aggregated_results.json"
-    conda:
-        "cellwhisperer"
-    resources:
-        mem_mb=50000,
-        slurm="cpus-per-task=1"
-    shell: """
-        cp {input} {output.aggregated_hest}
-    """
-
-
-rule aggregate_musk_results:
-    """
-    Copy aggregated MUSK summaries into the benchmarks directory for dataset_combo.
-    """
-    input:
-        performance_summary=lambda wildcards: expand(
-            rules.musk_performance_summary.output.summary,
-            model="spotwhisperer_{}".format(wildcards.dataset_combo),
-            seed=SEEDS[0],
-            allow_missing=True,
-        )
-    output:
-        aggregated_musk=BENCHMARKS_DIR / "musk" / "{dataset_combo}" / "performance_summary.json"
-    conda:
-        "cellwhisperer"
-    resources:
-        mem_mb=50000,
-        slurm="cpus-per-task=1"
-    shell: """
-        cp {input.performance_summary} {output.aggregated_musk}
-    """
 
 
 rule all:
@@ -88,9 +47,21 @@ rule all:
             seed=SEEDS[0],
         ),
 
+        # Per-class comparison for PathoCellBench
+
         # Per-class comparison for CellWhisperer benchmark
         expand(
             rules.cellwhisperer_per_class_analysis.output.analysis,
+            allow_missing=True,
+        ),
+
+        # Comprehensive CellWhisperer benchmarks (NEW)
+        expand(
+            rules.aggregate_comprehensive_benchmarks.output.aggregated_comprehensive,
+            model=[
+                "spotwhisperer_{}".format(MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"]),
+                "spotwhisperer_{}".format(MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"]),
+            ],
             allow_missing=True,
         ),
 

@@ -118,8 +118,27 @@ rule spider_performance_plot:
                 MODEL_MAPPINGS["quilt1m"]["bimodal_matching"],
             ],
         ),
+        # comprehensive_results: Using existing validation metrics instead
+        # expand(
+        #     rules.aggregate_comprehensive_benchmarks.output.aggregated_comprehensive,
+        #     model=[
+        #         "spotwhisperer_{}".format(MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"]),
+        #         "spotwhisperer_{}".format(MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"]),
+        #         "spotwhisperer_{}".format(MODEL_MAPPINGS["hest1k"]["bimodal_matching"]),
+        #         "spotwhisperer_{}".format(MODEL_MAPPINGS["quilt1m"]["bimodal_matching"]),
+        #     ],
+        # ),
         lung_results=expand(
             BENCHMARKS_DIR / "lung" / "{dataset_combo}" / "performance_summary.csv",
+            dataset_combo=[
+                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"],
+                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"],
+                MODEL_MAPPINGS["hest1k"]["bimodal_matching"],
+                MODEL_MAPPINGS["quilt1m"]["bimodal_matching"],
+            ],
+        ),
+        pathocell_results=expand(
+            rules.aggregate_pathocell_results.output.aggregated_pathocell,
             dataset_combo=[
                 MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"],
                 MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"],
@@ -137,11 +156,17 @@ rule spider_performance_plot:
             ("image-text", MODEL_MAPPINGS["quilt1m"]["bimodal_matching"]),
         ],
         metrics_by_modality={
-            "text-image": ["pannuke", "skin", "lung_tissue_region_type_expert_annotation_accuracy", "lung_tissue_cell_type_annotations_accuracy"],
-            "image-transcriptome": ["hest"],
+            "text-image": ["pannuke", "skin", "lung_tissue_region_type_expert_annotation_accuracy", "lung_tissue_cell_type_annotations_accuracy", "pathocell_image_text_retrieval", "pathocell_zero_shot_classification"],
+            "image-transcriptome": ["hest", "pathocell_embedding_quality"],
             "text-transcriptome": [
                 "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
-                "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
+                "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg", 
+                # Use existing comprehensive validation metrics that are already available
+                "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_f1_macroAvg",
+                "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_rocauc_macroAvg",
+                "valfn_immgen_deduplicated/text_as_classes_f1_macroAvg",
+                "valfn_immgen_deduplicated/text_as_classes_rocauc_macroAvg",
+                "valfn_zshot_TabSapWellStudied_cell_lvl/f1_macroAvg",
             ],
         },
         modality_colors=MODALITY_COLORS,

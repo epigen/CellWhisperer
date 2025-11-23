@@ -8,6 +8,7 @@ channels:
 dependencies:
   - gcc=13
   - cuda=12.1
+  - tifffile=2020.6.3
   - python=3.10
   - anndata=0.10.2
   - langchain=0.0.314
