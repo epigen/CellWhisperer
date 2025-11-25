@@ -1,5 +1,39 @@
 # Training rules for SpotWhisperer
 
+rule subsample_dataset:
+    """
+    Create a randomly subsampled version of a dataset (1/nth of the data).
+    Works on the h5ad dataset level for single-file datasets.
+    """
+    input:
+        full_dataset=PROJECT_DIR / config["paths"]["full_dataset"]
+    output:
+        subsampled_dataset=PROJECT_DIR / "results/{dataset}_8thsub/full_data.h5ad"
+    params:
+        n=8,  # subsample to 1/8th
+        seed=SEEDS[0]
+    conda:
+        "cellwhisperer"
+    script:
+        "../scripts/subsample_dataset.py"
+
+rule subsample_multi_file_dataset:
+    """
+    Create a randomly subsampled version of a multi-file dataset (1/nth of the files).
+    Works by symlinking a subset of h5ad files for datasets with multiple files.
+    """
+    input:
+        h5ads_dir=PROJECT_DIR / "results/{dataset}/h5ads"
+    output:
+        subsampled_h5ads=directory(PROJECT_DIR / "results/{dataset}_8thsub/h5ads")
+    params:
+        n=8,  # subsample to 1/8th
+        seed=SEEDS[0]
+    conda:
+        "cellwhisperer"
+    script:
+        "../scripts/subsample_multi_file_dataset.py"
+
 rule train_spotwhisperer:
     """
     Train a SpotWhisperer model for a dataset_combo.

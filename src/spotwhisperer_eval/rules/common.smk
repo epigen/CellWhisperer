@@ -18,15 +18,73 @@ MODALITY_COLORS = {
 # Seeds for reproducibility
 SEEDS = [0]
 
-# Base dataset names
-BASE_DATASETS = ["cellxgene_census__archs4_geo", "hest1k", "quilt1m"]
+# Individual datasets that actually exist (or will exist)
+INDIVIDUAL_DATASETS = ["cellxgene_census", "archs4_geo", "hest1k", "quilt1m"]
 
-# Generate all dataset combinations (1..n) for wildcards
+# Classify datasets by their file structure
+# Multi-file datasets use the h5ads/ directory structure with multiple files
+# Single-file datasets use a single full_data.h5ad file
+MULTI_FILE_DATASETS = ["hest1k", "quilt1m"]  # datasets that have h5ads/ directory structure
+SINGLE_FILE_DATASETS = [d for d in INDIVIDUAL_DATASETS if d not in MULTI_FILE_DATASETS]
+
+# Define modality pairs for logical groupings
+MODALITY_PAIRS = {
+    "transcriptome_text": ["cellxgene_census", "archs4_geo"], 
+    "transcriptome_image": ["hest1k"],
+    "image_text": ["quilt1m"]
+}
+
+# Generate original dataset combinations using existing logic  
+ORIGINAL_BASE_DATASETS = ["cellxgene_census__archs4_geo", "hest1k", "quilt1m"]
+# Keep BASE_DATASETS for backward compatibility with existing rules
+BASE_DATASETS = ORIGINAL_BASE_DATASETS
 DATASET_COMBOS = []
-for r in range(1, len(BASE_DATASETS) + 1):
-    for combo in itertools.combinations(BASE_DATASETS, r):
+for r in range(1, len(ORIGINAL_BASE_DATASETS) + 1):
+    for combo in itertools.combinations(ORIGINAL_BASE_DATASETS, r):
         combo_name = "__".join(sorted(combo))
         DATASET_COMBOS.append(combo_name)
+
+# Define sampling scenarios with individual dataset subsampling
+SAMPLING_SCENARIOS = {
+    # Bimodal with 1/8th data for each modality pair
+    "bimodal_eighth": [
+        # 1/8th transcriptome-text: subsample both cellxgene_census and archs4_geo
+        "cellxgene_census_8thsub__archs4_geo_8thsub",
+        # 1/8th transcriptome-image
+        "hest1k_8thsub", 
+        # 1/8th image-text
+        "quilt1m_8thsub"
+    ],
+    
+    # Trimodal with 1/8th of one modality pair, full for others
+    "trimodal_partial": [
+        # 1/8th transcriptome-text + full others
+        "cellxgene_census_8thsub__archs4_geo_8thsub__hest1k__quilt1m",
+        # 1/8th transcriptome-image + full others
+        "cellxgene_census__archs4_geo__hest1k_8thsub__quilt1m",
+        # 1/8th image-text + full others
+        "cellxgene_census__archs4_geo__hest1k__quilt1m_8thsub"
+    ],
+    
+    # Poor pairs: 1/8th of 2 modality pairs, full for 1
+    "poor_pairs": [
+        # 1/8th transcriptome-text + 1/8th transcriptome-image + full image-text
+        "cellxgene_census_8thsub__archs4_geo_8thsub__hest1k_8thsub__quilt1m",
+        # 1/8th transcriptome-text + 1/8th image-text + full transcriptome-image
+        "cellxgene_census_8thsub__archs4_geo_8thsub__hest1k__quilt1m_8thsub", 
+        # 1/8th transcriptome-image + 1/8th image-text + full transcriptome-text
+        "cellxgene_census__archs4_geo__hest1k_8thsub__quilt1m_8thsub"
+    ],
+    
+    # Poor trimodal: 1/8th of all modality pairs
+    "poor_trimodal": [
+        "cellxgene_census_8thsub__archs4_geo_8thsub__hest1k_8thsub__quilt1m_8thsub"
+    ]
+}
+
+# Extend DATASET_COMBOS to include all sampling scenarios
+for scenario_combos in SAMPLING_SCENARIOS.values():
+    DATASET_COMBOS.extend(scenario_combos)
 
 # Model mapping for each test dataset
 MODEL_MAPPINGS = {

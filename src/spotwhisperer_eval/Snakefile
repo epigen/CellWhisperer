@@ -29,7 +29,19 @@ rule all:
     Default target: run training, evaluations, plots, and analyses end-to-end.
     """
     input:
-        # All trained models
+        # Subsampled datasets - single-file datasets (cell-level subsampling)
+        expand(
+            rules.subsample_dataset.output.subsampled_dataset,
+            dataset=SINGLE_FILE_DATASETS,
+        ),
+        
+        # Subsampled datasets - multi-file datasets (file-level subsampling)
+        expand(
+            rules.subsample_multi_file_dataset.output.subsampled_h5ads,
+            dataset=MULTI_FILE_DATASETS,
+        ),
+        
+        # All trained models (existing + extended scenarios)
         expand(
             rules.train_spotwhisperer.output.model,
             dataset_combo=DATASET_COMBOS,

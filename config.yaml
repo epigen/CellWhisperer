@@ -118,6 +118,10 @@ datasets:
   - lymphoma_cosmx_small
   - lymphoma_cosmx_small_detailed
   - lymphoma_cosmx_small_singlecell
+  - cellxgene_census_8thsub
+  - archs4_geo_8thsub
+  - hest1k_8thsub  
+  - quilt1m_8thsub
 
 metadata_cols_per_zero_shot_validation_dataset:
   immgen:
