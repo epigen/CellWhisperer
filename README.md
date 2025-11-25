@@ -18,8 +18,6 @@ This repository contains detailed instructions on how to run your own CellWhispe
 
 Installing a local copy of CellWhisperer allows you to analyze your own datasets and explore scRNA-seq data interactively using the CellWhisperer AI model. The installation process takes approximately 15 minutes and supports both CPU and GPU (CUDA 12) environments.
 
-1. Download this repository, using `git clone https://github.com/epigen/cellwhisperer.git --recurse-submodules` (*you do need the submodules*), and you can alternatively retrieve them with `git submodule update --init --recursive`)
-
 ### Installation Steps
 
 1. **Clone the repository** with all submodules (required):
