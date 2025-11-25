@@ -146,15 +146,15 @@ class CellWhispererCLI(LightningCLI):
         parser.link_arguments(
             ["dap_debug", "nproc"],
             "data.nproc",
-            lambda dap_debug, nproc: 0 if dap_debug else nproc,
+            lambda dap_debug, nproc: 0 if dap_debug else int(nproc),
         )
 
         # fast_dev_run implies validation_functions=False
         parser.link_arguments(
             ["trainer.fast_dev_run", "omit_validation_functions"],
             "model.use_validation_functions",
-            lambda fast_dev_run, use_validation_functions: (not fast_dev_run)
-            and (not use_validation_functions),
+            lambda fast_dev_run, omit_validation_functions: (not fast_dev_run)
+            and (not omit_validation_functions),
         )
 
         # NOTE: crashed with large batch sizes
