@@ -149,7 +149,7 @@ def prepare_metrics_and_labels(
 
     # Create a dataframe with the scores
     scores_df = pd.DataFrame(
-        scores.cpu().numpy(),
+        scores.float().cpu().numpy(),
         columns=columns,
         index=index,
     )
