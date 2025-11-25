@@ -12,6 +12,8 @@ include: "../../shared/rules/dataset_processing.smk"
 
 df = pd.read_csv("./HEST_v1_1_0.csv")
 df = df.query("st_technology == 'Visium' and species == 'Homo sapiens'")
+# Filter out datasets with resolution > 0.8 μm/pixel
+df = df.query("pixel_size_um_estimated <= 0.8")
 HEST_SAMPLE_IDS = df["id"].tolist()
 
 # HEST-1K sample configuration
