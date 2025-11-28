@@ -111,7 +111,9 @@ class UNIProcessor(ProcessorMixin):
         X_cell = []
 
         for i, (obs_index, x, y) in tqdm(
-            enumerate(zip(adata.obs_names, x_pixel, y_pixel))
+            enumerate(zip(adata.obs_names, x_pixel, y_pixel)),
+            desc="Extracting UNI patches",
+            total=len(adata.obs),
         ):
             # Context view (only if context model is enabled)
             if self.config.context_model:
@@ -141,11 +143,13 @@ class UNIProcessor(ProcessorMixin):
 
         # Create tensors only for enabled models
         patches_context = (
-            torch.stack(X_context, dim=0) if self.config.context_model 
+            torch.stack(X_context, dim=0)
+            if self.config.context_model
             else torch.zeros((len(adata.obs), 3, 224, 224), dtype=torch.float32)
         )
         patches_cell = (
-            torch.stack(X_cell, dim=0) if self.config.cell_level_model 
+            torch.stack(X_cell, dim=0)
+            if self.config.cell_level_model
             else torch.zeros((len(adata.obs), 3, 56, 56), dtype=torch.float32)
         )
 
@@ -181,6 +185,8 @@ class UNIProcessor(ProcessorMixin):
             img_w, img_h = image.dimensions
         elif isinstance(image, Image.Image):
             img_w, img_h = image.size[0], image.size[1]
+        elif isinstance(image, np.ndarray):
+            img_h, img_w = image.shape[0], image.shape[1]
         else:
             raise ValueError(f"Unsupported image type: {type(image)}")
 
@@ -195,6 +201,10 @@ class UNIProcessor(ProcessorMixin):
                 (x_start, y_start), 0, (x_end - x_start, y_end - y_start)
             )
             crop = np.array(region.convert("RGB"))
+        elif isinstance(image, np.ndarray):
+            crop = image[y_start:y_end, x_start:x_end]
+        elif isinstance(image, Image.Image):
+            crop = np.array(image.crop((x_start, y_start, x_end, y_end)))
         else:
             crop = np.array(image)[y_start:y_end, x_start:x_end]
 
@@ -223,7 +233,7 @@ class UNIConfig(PretrainedConfig):
         self.model_name = model_name
         self.views = views
         self.embed_dim = 1536 if model_name == "vit_giant_patch14_224" else 384
-        self.cell_level_model = (
+        self.cell_level_model = bool(
             cell_level_model  # could be solved more elegantly via `views`, but whatever
         )
         self.context_model = context_model
@@ -240,7 +250,7 @@ class UNIConfig(PretrainedConfig):
             assert (
                 isinstance(k, str) and isinstance(v, int) and v > 0
             ), "view keys must be strings and values positive ints"
-        
+
         # Validate configuration: at least one model must be enabled
         assert (
             self.cell_level_model or self.context_model
@@ -269,7 +279,9 @@ class UNIModel(PreTrainedModel):
                 init_values=1e-5,
                 embed_dim=config.embed_dim,
                 mlp_ratio=(
-                    2.66667 * 2 if config.model_name == "vit_giant_patch14_224" else None
+                    2.66667 * 2
+                    if config.model_name == "vit_giant_patch14_224"
+                    else None
                 ),
                 mlp_layer=timm.layers.SwiGLUPacked,
                 act_layer=torch.nn.SiLU,
@@ -285,14 +297,14 @@ class UNIModel(PreTrainedModel):
                     context_dim=config.embed_dim,
                     embedding_dim=config.cnn_embedding_dim,
                     num_layers=config.cnn_num_layers,
-                    output_dim=config.embed_dim
+                    output_dim=config.embed_dim,
                 )
             else:
                 # Standalone cell model
                 self.cell_model = CellLevelModel.create_standalone(
                     embedding_dim=config.cnn_embedding_dim,
                     num_layers=config.cnn_num_layers,
-                    output_dim=config.embed_dim
+                    output_dim=config.embed_dim,
                 )
         else:
             self.cell_model = None
@@ -308,7 +320,7 @@ class UNIModel(PreTrainedModel):
         # patches_ctx: (B, 3, 224, 224), patches_cell: (B, 3, 56, 56)
         ctx = patches_ctx
         cel = patches_cell
-        
+
         # Validate inputs only if they're actually needed
         if self.config.context_model:
             assert ctx.ndim == 4 and ctx.shape[1:] == (
@@ -316,7 +328,7 @@ class UNIModel(PreTrainedModel):
                 224,
                 224,
             ), f"context shape must be (B,3,224,224), got {ctx.shape}"
-            
+
         if self.config.cell_level_model:
             assert cel.ndim == 4 and cel.shape[1:] == (
                 3,
@@ -347,7 +359,9 @@ class UNIModel(PreTrainedModel):
             output_embeds = cell_embeds
         else:
             # This should never happen due to validation in config
-            raise ValueError("At least one of context_model or cell_level_model must be enabled")
+            raise ValueError(
+                "At least one of context_model or cell_level_model must be enabled"
+            )
 
         if return_dict:
             raise NotImplementedError(
