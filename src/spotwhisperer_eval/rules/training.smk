@@ -40,7 +40,7 @@ rule train_spotwhisperer:
     Uses the base config and overrides dataset names; outputs a checkpoint.
     """
     input:
-        base_config=ancient(PROJECT_DIR / "src/spotwhisperer_v3.yaml")
+        base_config=ancient(BASE_CONFIG)
     output:
         model=protected(PROJECT_DIR / config["paths"]["jointemb_models"] / "spotwhisperer_{dataset_combo}.ckpt")
     params:
@@ -59,7 +59,6 @@ rule train_spotwhisperer:
         cellwhisperer fit \
             --config {input.base_config} \
             --data.dataset_names {params.dataset_names} \
-            --nproc 20 \
             {params.test_run_config} \
             --seed_everything {params.seed} \
             --last_model_path {output.model} \

@@ -62,7 +62,7 @@ rule hest_spotwhisperer_test:
     input:
         converted_dataset=rules.convert_hest_to_spotwhisperer.output.converted_dataset,
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
-        base_config=ancient(PROJECT_DIR / "src/spotwhisperer_v3.yaml")
+        base_config=ancient(BASE_CONFIG)
     output:
         # Follow same pattern as spotwhisperer_test rule
         results_csv=PROJECT_DIR / config["paths"]["csv_logs"] / "hest_eval___{model}___{dataset}" / "metrics.csv"

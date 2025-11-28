@@ -7,7 +7,7 @@ rule spotwhisperer_test:
     """
     input:
         model=rules.train_spotwhisperer.output.model,
-        base_config=ancient(PROJECT_DIR / "src/spotwhisperer_v3.yaml")
+        base_config=ancient(BASE_CONFIG)
     output:
         retrieval_and_cwevals=PROJECT_DIR / config["paths"]["csv_logs"] / "sweval___{dataset_combo}___{test_dataset}" / "metrics.csv",
         individual_clip_scores=PROJECT_DIR / config["paths"]["csv_logs"] / "sweval___{dataset_combo}___{test_dataset}" / "test_individual_clip_scores.csv",
