@@ -9,6 +9,8 @@ This script extracts technical specifications from TCGA whole slide images inclu
 - Compression details
 
 The metadata is saved in both JSON and human-readable text formats.
+
+Input files are provided via Snakemake's input.wsi_files from the get_file_ids function.
 """
 
 import json
@@ -246,13 +248,11 @@ def main():
     """Main processing function."""
     print("Extracting SVS metadata for diagnostic purposes...")
 
-    # Get WSI files directory - should be PROJECT_DIR / "resources" / "pathgen" / "wsi_files"
-    # The download_complete file is at PROJECT_DIR / "results" / "pathgen" / ".gdc_downloads_complete"
-    project_dir = Path(snakemake.input.download_complete).parent.parent.parent
-    wsi_files_dir = project_dir / "resources" / "pathgen" / "wsi_files"
+    # Get WSI files directly from Snakemake input
+    svs_files = [Path(f) for f in snakemake.input.wsi_files]
 
-    if not wsi_files_dir.exists():
-        logging.error(f"WSI files directory not found: {wsi_files_dir}")
+    if not svs_files:
+        logging.warning("No WSI files found in input")
         # Create empty output files
         Path(snakemake.output.metadata_json).parent.mkdir(parents=True, exist_ok=True)
         with open(snakemake.output.metadata_json, "w") as f:
@@ -261,9 +261,6 @@ def main():
             f.write("No WSI files found for metadata extraction.\n")
         return
 
-    # Find all SVS files
-    svs_files = list(wsi_files_dir.glob("*.svs"))
-
     logging.info(f"Found {len(svs_files)} SVS files to process")
 
     # Extract metadata from all files
@@ -271,11 +268,22 @@ def main():
     human_readable_parts = []
 
     for svs_file in sorted(svs_files):
-        metadata = extract_svs_metadata(svs_file)
-        all_metadata.append(metadata)
+        try:
+            metadata = extract_svs_metadata(svs_file)
+            all_metadata.append(metadata)
 
-        human_text = format_metadata_for_humans(metadata)
-        human_readable_parts.append(human_text)
+            human_text = format_metadata_for_humans(metadata)
+            human_readable_parts.append(human_text)
+        except Exception as e:
+            logging.error(f"Failed to extract metadata from {svs_file}: {e}")
+            # Add error metadata entry
+            error_metadata = {
+                "file_path": str(svs_file),
+                "error": str(e),
+                "extraction_time": datetime.now().isoformat(),
+            }
+            all_metadata.append(error_metadata)
+            human_readable_parts.append(format_metadata_for_humans(error_metadata))
 
     # Ensure output directories exist
     Path(snakemake.output.metadata_json).parent.mkdir(parents=True, exist_ok=True)

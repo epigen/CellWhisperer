@@ -35,7 +35,8 @@ checkpoint extract_file_ids:
     In testing mode, only extract file IDs for the first 2 unique WSIs.
     """
     input:
-        metadata_json=rules.download_pathgen_metadata.output.metadata_json
+        metadata_json=rules.download_pathgen_metadata.output.metadata_json,
+        broken_ids="broken_datasets"
     output:
         file_ids_list=PROJECT_DIR / "results" / "pathgen" / "gdc_file_ids.txt",
         metadata_summary=PROJECT_DIR / "results" / "pathgen" / "metadata_summary.txt"
@@ -48,10 +49,9 @@ rule download_gdc_file:
     """
     Download individual WSI files from GDC using the gdc-client tool.
 
-    TODO protect them
     """
     output:
-        wsi_file=protected(PROJECT_DIR / "resources" / "pathgen" / "wsi_files" / "{file_id}.svs")
+        wsi_file=protected(PROJECT_DIR / "scratch" / "pathgen" / "wsi_files" / "{file_id}.svs")
     resources:
         mem_mb=8000,
         slurm="cpus-per-task=2 time=04:00:00"
@@ -68,7 +68,24 @@ def get_file_ids(wildcards):
         file_ids = [line.strip() for line in f if line.strip()]
     
     # Return paths for all file IDs (even if empty list)
-    return expand(PROJECT_DIR / "resources" / "pathgen" / "wsi_files" / "{file_id}.svs", 
+    return expand(PROJECT_DIR / "scratch" / "pathgen" / "wsi_files" / "{file_id}.svs", 
+                  file_id=file_ids)
+
+def get_wsi_file_ids(wildcards):
+    """
+    Get list of WSI file IDs (not full paths) for use in expand() patterns.
+    """
+    checkpoint_output = checkpoints.extract_file_ids.get(**wildcards).output[0]
+    with open(checkpoint_output) as f:
+        file_ids = [line.strip() for line in f if line.strip()]
+    return file_ids
+
+def get_wsi_metadata_outputs(wildcards):
+    """
+    Get list of individual metadata JSON files for each available WSI.
+    """
+    file_ids = get_wsi_file_ids(wildcards)
+    return expand(PROJECT_DIR / "results" / "pathgen" / "metadata_per_wsi" / "{file_id}.json",
                   file_id=file_ids)
 
 rule download_all_gdc_files:
@@ -80,25 +97,31 @@ rule download_all_gdc_files:
         complete_marker=touch(PROJECT_DIR / "results" / "pathgen" / ".gdc_downloads_complete")
     shell: """
         echo "All GDC files downloaded successfully"
-        echo "Downloaded $(ls -1 {PROJECT_DIR}/resources/pathgen/wsi_files/*.svs 2>/dev/null | wc -l) WSI files"
+        echo "Downloaded $(ls -1 {PROJECT_DIR}/scratch/pathgen/wsi_files/*.svs 2>/dev/null | wc -l) WSI files"
     """
 
-rule filter_pathgen_metadata:
+checkpoint filter_pathgen_metadata:
     """
-    Filter PathGen metadata to only include entries with successfully downloaded WSI files.
+    Filter PathGen metadata and create individual JSON files per WSI.
     
-    In testing mode, further limit to only 2 WSIs for quick testing.
+    This creates individual metadata files for each WSI, dramatically improving efficiency
+    for downstream processing. Uses the filtered file IDs from extract_file_ids to ensure
+    broken datasets are properly excluded. Also maintains backward compatibility.
     """
     input:
         metadata_json=rules.download_pathgen_metadata.output.metadata_json,
+        file_ids_list=rules.extract_file_ids.output.file_ids_list,
         download_complete=rules.download_all_gdc_files.output.complete_marker
     output:
-        metadata_filtered=PROJECT_DIR / "results" / "pathgen" / "pathgen_filtered.json"
+        metadata_per_wsi_dir=directory(PROJECT_DIR / "results" / "pathgen" / "metadata_per_wsi"),
+        metadata_summary=PROJECT_DIR / "results" / "pathgen" / "metadata_filtering_summary.txt",
+        metadata_filtered=PROJECT_DIR / "results" / "pathgen" / "pathgen_filtered.json"  # Legacy compatibility
     params:
-        wsi_dir=PROJECT_DIR / "resources" / "pathgen" / "wsi_files",
-        testing_mode=TESTING
+        wsi_dir=PROJECT_DIR / "scratch" / "pathgen" / "wsi_files",
+        testing_mode=TESTING,
+        max_patches_per_wsi=float("inf") if not TESTING else 10
     conda: "envs/pathgen.yaml"
-    script: "scripts/filter_metadata.py"
+    script: "scripts/filter_metadata_per_wsi.py"
 
 rule extract_svs_metadata:
     """
@@ -109,7 +132,7 @@ rule extract_svs_metadata:
     The metadata is saved in both JSON and human-readable formats.
     """
     input:
-        download_complete=rules.download_all_gdc_files.output.complete_marker
+        wsi_files=get_file_ids
     output:
         metadata_json=PROJECT_DIR / "results" / "pathgen" / "svs_metadata.json",
         metadata_txt=report(PROJECT_DIR / "results" / "pathgen" / "svs_metadata_report.txt", 
@@ -121,37 +144,80 @@ rule extract_svs_metadata:
         slurm="cpus-per-task=2 time=02:00:00"
     script: "scripts/extract_svs_metadata.py"
 
-rule create_pathgen_h5ads:
+rule create_wsi_h5ad:
     """
-    Create h5ad files from PathGen data following the quilt1m structure.
+    Create h5ad file for a single WSI from PathGen data.
     
-    Each WSI gets its own h5ad file with patches as observations.
+    This rule processes one WSI at a time, creating an h5ad file with patches as observations.
+    Uses individual WSI metadata files for maximum efficiency.
     Image paths are stored in uns["image_path"] and captions in obs["natural_language_annotation"].
-    Coordinates are now center-oriented (x_pixel, y_pixel = patch centers).
+    Coordinates are center-oriented (x_pixel, y_pixel = patch centers).
+
+    TODO: this writes static `0.5` pixel_size into `uns`. Might be better to use th metadata extracted from the SVS files.
     """
     input:
-        metadata_filtered=rules.filter_pathgen_metadata.output.metadata_filtered,
-        download_complete=rules.download_all_gdc_files.output.complete_marker
+        wsi_metadata=PROJECT_DIR / "results" / "pathgen" / "metadata_per_wsi" / "{file_id}.json",
+        wsi_file=PROJECT_DIR / "scratch" / "pathgen" / "wsi_files" / "{file_id}.svs"
     output:
-        h5ads=directory(PROJECT_DIR / "results" / "pathgen" / "h5ads"),
-        report_patches=report([
-            PROJECT_DIR / f"results/pathgen/test_patch_{i}.png" for i in range(5)
-        ], category="Quality Control")
+        h5ad=PROJECT_DIR / "results" / "pathgen" / "h5ads" / "full_data_{file_id}.h5ad"
     params:
-        patch_size=224,  # Use 224x224 patches at 40x magnification (0.5 μm/pixel)
-        max_patches_per_wsi=50 if not TESTING else 5  # Limit in testing mode
+        patch_size=224  # Use 224x224 patches at 40x magnification (0.5 μm/pixel)
     conda: "envs/pathgen.yaml"
     resources:
-        mem_mb=100000,
-        slurm="cpus-per-task=4 time=08:00:00"
-    script: "scripts/create_h5ads.py"
+        mem_mb=32000,
+        slurm="cpus-per-task=2 time=04:00:00"
+    script: "scripts/create_single_h5ad.py"
+
+def get_all_h5ad_outputs(wildcards):
+    """
+    Get list of all h5ad files that should be created based on filtered file IDs.
+    
+    This ensures we only process WSI files that are:
+    1. Not in the broken_datasets list (filtered by extract_file_ids)
+    2. Successfully downloaded (available in wsi_files directory)
+    3. Have metadata files created by filter_pathgen_metadata
+    """
+    # Get available metadata files from the checkpoint
+    checkpoint_output = checkpoints.filter_pathgen_metadata.get(**wildcards).output.metadata_per_wsi_dir
+    metadata_dir = Path(checkpoint_output)
+    
+    if metadata_dir.exists():
+        # Only include files that have metadata files (which means they passed all filtering)
+        file_ids = [f.stem for f in metadata_dir.glob("*.json")]
+    else:
+        file_ids = []
+    
+    return expand(PROJECT_DIR / "results" / "pathgen" / "h5ads" / "full_data_{file_id}.h5ad", 
+                  file_id=file_ids)
+
+rule create_pathgen_h5ads:
+    """
+    Aggregate rule to create all h5ad files and generate QC patches.
+    
+    This rule coordinates the creation of individual h5ad files and generates
+    example patches for quality control reporting.
+
+    """
+    input:
+        h5ads=get_all_h5ad_outputs
+    output:
+        report_patches=report([
+            PROJECT_DIR / f"results/pathgen/test_patch_{i}.png" for i in range(500)
+        ], category="Quality Control")
+    params:
+        patch_size=224
+    conda: "envs/pathgen.yaml"
+    resources:
+        mem_mb=8000,
+        slurm="cpus-per-task=1 time=01:00:00"
+    script: "scripts/create_qc_patches.py"
 
 rule all:
     """
     Default target - create all h5ad files and extract SVS metadata.
     """
     input:
-        rules.create_pathgen_h5ads.output.h5ads,
+        rules.create_pathgen_h5ads.output.report_patches,
         rules.extract_svs_metadata.output.metadata_txt
     default_target: True
 
