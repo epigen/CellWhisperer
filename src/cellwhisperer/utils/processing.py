@@ -36,7 +36,9 @@ def adata_to_embeds(
 
     # Check for image data availability
     has_image_patches = "patches" in adata.obsm
-    has_whole_slide_image = "he_slide" in adata.uns
+    has_whole_slide_image = (
+        "he_slide" in adata.uns or "20x_slide" in adata.uns
+    )  # 20x is legacy for HEST
     has_image_model = hasattr(model, "image_model") and model.image_model is not None
 
     if has_image_patches:

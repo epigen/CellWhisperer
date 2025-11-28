@@ -510,7 +510,11 @@ class JointEmbedDataModule(pl.LightningDataModule):
             transcriptomes=adata if adata.shape[1] > 0 else None,
             image=(
                 adata
-                if ("he_slide" in adata.uns or "image_path" in adata.uns)
+                if (
+                    "he_slide" in adata.uns
+                    or "image_path" in adata.uns
+                    or "20x_slide" in adata.uns
+                )  # 20x_slide is legacy for HEST
                 and self.image_processor
                 else None
             ),  # NOTE Could refactor API to only provide an adata, but not sure if the repository depends on this splitting..

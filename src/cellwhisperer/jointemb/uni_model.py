@@ -84,9 +84,11 @@ class UNIProcessor(ProcessorMixin):
             logging.warning(
                 "Flipping x and y pixel coordinates (because I assume it's the lung dataset)"
             )
-        try:
+        if "he_slide" in adata.uns:
             image = adata.uns["he_slide"]
-        except KeyError:
+        elif "20x_slide" in adata.uns:
+            image = adata.uns["20x_slide"]  # legacy for HEST
+        else:
             # adata.uns["image_path"] = adata.uns["image_path"].replace(
             #     "quilt1m_lowres", "quilt1m/fullres"
             # )  # TODO drop

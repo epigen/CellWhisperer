@@ -52,7 +52,12 @@ class CellxGenePreparationLoader(DataLoader):
 
         inputs = processor(
             text=None,
-            image=read_count_table if "he_slide" in read_count_table.uns else None,
+            image=(
+                read_count_table
+                if "he_slide" in read_count_table.uns
+                or "20x_slide" in read_count_table.uns  # legacy for HEST
+                else None
+            ),
             transcriptomes=read_count_table,
             return_tensors="pt",
             padding="max_length",  # not sure if required (shouldn't actually)
