@@ -20,6 +20,7 @@ include: "rules/cellwhisperer_comprehensive_benchmark.smk"
 include: "rules/plots.smk"
 include: "rules/metadata_and_analysis.smk"
 include: "rules/model_interpretation.smk"
+include: "rules/quilt-vs-pathgen.smk"  # just diagnostics
 
 
 

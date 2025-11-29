@@ -107,13 +107,13 @@ rule lung_performance_summary:
     Aggregate lung tissue performance metrics into summary and plot.
     """
     input:
-        performance_files=expand(
+        performance_files=ancient(expand(  # I've put this on ancient so that it doesn't recompute the quilt1m evaluations (which would need model retraining)
             SPOTWHISPERER_MODEL_RESULTS / "performance" / "{dataset}" / "{metadata_col}_{grouping}_metrics.json",
             dataset=["lung_tissue"],
             metadata_col=LUNG_TISSUE_METADATA_COLS,
             grouping=["by_cell"],
             allow_missing=True
-        )
+        ))
     output:
         summary=SPOTWHISPERER_RESULTS / "performance_summary_{model}.csv",
         plot=SPOTWHISPERER_RESULTS / "performance_summary_{model}.png",
