@@ -24,6 +24,8 @@ from pathlib import Path
 import os
 import yaml
 import logging
+import atexit
+import signal
 from lightning import Trainer, LightningModule
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import Logger, WandbLogger, CSVLogger
@@ -293,8 +295,22 @@ class CellWhispererCLI(LightningCLI):
                     self.config["fit.last_model_path"],
                 )
 
-        def after_test(self) -> None:
-            pass
+        # Explicit cleanup of DataLoader worker processes
+        if hasattr(self, "datamodule") and self.datamodule is not None:
+            # Force cleanup of any remaining worker processes
+            try:
+                import gc
+
+                gc.collect()  # Force garbage collection
+                # Give workers time to shutdown gracefully
+                import time
+
+                time.sleep(0.1)
+            except Exception as e:
+                logger.warning(f"Error during worker cleanup: {e}")
+
+    def after_test(self) -> None:
+        pass
 
 
 class LoggerSaveConfigCallback(SaveConfigCallback):
@@ -318,6 +334,8 @@ def cli_main(args: Optional[List] = None):
     """
     torch.set_float32_matmul_precision("high")  # speed up on ampere-level GPUs
     torch.multiprocessing.set_sharing_strategy("file_system")
+    # Use forkserver as a compromise between fork and spawn - faster than spawn, safer than fork
+    torch.multiprocessing.set_start_method("forkserver", force=True)
     os.environ["TOKENIZERS_PARALLELISM"] = "false"  # disable warning from tokenizers
 
     LOG_DIR = os.path.relpath(

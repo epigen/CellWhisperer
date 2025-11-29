@@ -908,6 +908,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=self.nproc,
+            persistent_workers=self.nproc > 0,  # Keep workers alive to avoid hanging
             drop_last=True,  # drop last batch to avoid batch_size of 1, which fails due to batch-norm
             collate_fn=multi_modal_collate_fn,  # Use custom collator for multi-modal data
         )
@@ -920,6 +921,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             ConcatDataset(self.val_datasets),
             batch_size=self.batch_size,
             num_workers=self.nproc,
+            persistent_workers=self.nproc > 0,  # Keep workers alive to avoid hanging
             drop_last=False,  # more accurate if we don't drop the last
             shuffle=shuffle,
             collate_fn=multi_modal_collate_fn,  # Use custom collator for multi-modal data
