@@ -29,14 +29,13 @@ MODEL_INPUT_SIZE = 2048
 class UNIProcessor(ProcessorMixin):
     attributes = []
 
-    def __init__(self, config_param=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         # Get H&E configuration defaults (use visium_resolution as default)
         he_config = config["he_configs"]["visium_resolution"]
         self.fallback_spot_diameter_fullres = he_config.get(
             "spot_diameter_um", 100
         )  # TODO this corresponds to visium (where spot centers are 105um apart)
 
-        self.config = config_param or UNIConfig()  # Use default config if none provided
         # Separate transforms for context (224x224) and cell (56x56) without resizing
         self.transform_context = transforms.Compose(
             [
@@ -88,25 +87,25 @@ class UNIProcessor(ProcessorMixin):
             image = adata.uns["he_slide"]
         elif "20x_slide" in adata.uns:
             image = adata.uns["20x_slide"]  # legacy for HEST
-        else:
+        elif "image_path" in adata.uns:
             # adata.uns["image_path"] = adata.uns["image_path"].replace(
             #     "quilt1m_lowres", "quilt1m/fullres"
             # )  # TODO drop
-            try:
-                image_path = adata.uns["image_path"]
-                # Check file extension to determine how to load
-                _, ext = os.path.splitext(image_path.lower())
-                if ext in [".svs"]:
-                    image = openslide.OpenSlide(image_path)
-                else:
-                    image = Image.open(image_path).convert("RGB")
-            except FileNotFoundError as e:
-                raise ValueError(
-                    "Image path not available. Perhaps you need to run: `snakemake -R unpack_data` in src/datasets/quilt1m"
-                )
+            image_path = adata.uns["image_path"]
+            # Check file extension to determine how to load
+            _, ext = os.path.splitext(image_path.lower())
+            if ext in [".svs"]:
+                image = openslide.OpenSlide(image_path)
+            else:
+                image = Image.open(image_path).convert("RGB")
+
+        else:
+            raise ValueError(
+                "Image information not available. Perhaps you need to run something like: `snakemake -R unpack_data` in src/datasets/quilt1m?"
+            )
 
         # Build named views: context (224x224) and cell (56x56)
-        views = self.config.views
+
         X_context = []
         X_cell = []
 
@@ -116,42 +115,32 @@ class UNIProcessor(ProcessorMixin):
             total=len(adata.obs),
         ):
             # Context view (only if context model is enabled)
-            if self.config.context_model:
-                try:
-                    tile_ctx = self._crop_tile(image, x, y, views["context"])
-                    t_ctx = self.transform_context(Image.fromarray(tile_ctx))
-                except Exception as e:
-                    logger.error(
-                        f"Error processing context tile for barcode {obs_index} at ({x}, {y}): {e}"
-                    )
-                    t_ctx = torch.zeros((3, 224, 224), dtype=torch.float32)
-                X_context.append(t_ctx)
+            try:
+                tile_ctx = self._crop_tile(image, x, y, UniConfig().views["context"])
+                t_ctx = self.transform_context(Image.fromarray(tile_ctx))
+            except Exception as e:
+                logger.error(
+                    f"Error processing context tile for barcode {obs_index} at ({x}, {y}): {e}"
+                )
+                t_ctx = torch.zeros((3, 224, 224), dtype=torch.float32)
+            X_context.append(t_ctx)
 
             # Cell view (only if cell level model is enabled)
             # Note: Only the context view implements physical scale anchoring via crop size.
             #       The cell view uses a fixed 56x56 pixel crop without physical anchoring.
-            if self.config.cell_level_model:
-                try:
-                    tile_cell = self._crop_tile(image, x, y, views["cell"])
-                    t_cell = self.transform_cell(Image.fromarray(tile_cell))
-                except Exception as e:
-                    logger.error(
-                        f"Error processing cell tile for barcode {obs_index} at ({x}, {y}): {e}"
-                    )
-                    t_cell = torch.zeros((3, 56, 56), dtype=torch.float32)
-                X_cell.append(t_cell)
+            try:
+                tile_cell = self._crop_tile(image, x, y, UniConfig().views["cell"])
+                t_cell = self.transform_cell(Image.fromarray(tile_cell))
+            except Exception as e:
+                logger.error(
+                    f"Error processing cell tile for barcode {obs_index} at ({x}, {y}): {e}"
+                )
+                t_cell = torch.zeros((3, 56, 56), dtype=torch.float32)
+            X_cell.append(t_cell)
 
         # Create tensors only for enabled models
-        patches_context = (
-            torch.stack(X_context, dim=0)
-            if self.config.context_model
-            else torch.zeros((len(adata.obs), 3, 224, 224), dtype=torch.float32)
-        )
-        patches_cell = (
-            torch.stack(X_cell, dim=0)
-            if self.config.cell_level_model
-            else torch.zeros((len(adata.obs), 3, 56, 56), dtype=torch.float32)
-        )
+        patches_context = torch.stack(X_context, dim=0)
+        patches_cell = torch.stack(X_cell, dim=0)
 
         if return_tensors == "pt":
             return {"patches_ctx": patches_context, "patches_cell": patches_cell}
@@ -318,43 +307,50 @@ class UNIModel(PreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         # patches_ctx: (B, 3, 224, 224), patches_cell: (B, 3, 56, 56)
-        ctx = patches_ctx
-        cel = patches_cell
-
-        # Validate inputs only if they're actually needed
-        if self.config.context_model:
-            assert ctx.ndim == 4 and ctx.shape[1:] == (
-                3,
-                224,
-                224,
-            ), f"context shape must be (B,3,224,224), got {ctx.shape}"
-
-        if self.config.cell_level_model:
-            assert cel.ndim == 4 and cel.shape[1:] == (
-                3,
-                56,
-                56,
-            ), f"cell shape must be (B,3,56,56), got {cel.shape}"
-
-        context_embeds = None
-        cell_embeds = None
-
-        # Context through ViT (if enabled)
-        if self.config.context_model:
-            context_embeds = self.model(ctx)
-
-        # Cell through CNN (if enabled)
-        if self.config.cell_level_model:
-            cell_embeds = self.cell_model(cel, context_embeds)
 
         # Return the appropriate embeddings based on configuration
-        if self.config.context_model and self.config.cell_level_model:
+        context_enabled = getattr(self.config, "context_model", True)
+        cell_enabled = getattr(self.config, "cell_level_model", False)
+
+        # Context through ViT (if enabled)
+        if context_enabled:
+            assert (
+                patches_ctx is not None
+                and patches_ctx.ndim == 4
+                and patches_ctx.shape[1:]
+                == (
+                    3,
+                    224,
+                    224,
+                )
+            ), f"context shape must be (B,3,224,224), got {patches_ctx.shape}"
+
+            context_embeds = self.model(patches_ctx)
+
+        # Cell through CNN (if enabled)
+        if cell_enabled:
+            raise ValueError("this should be disabled for now")
+
+            assert (
+                patches_cell is not None
+                and patches_cell.ndim == 4
+                and patches_cell.shape[1:]
+                == (
+                    3,
+                    56,
+                    56,
+                )
+            ), f"cell shape must be (B,3,56,56), got {patches_cell.shape}"
+
+            cell_embeds = self.cell_model(patches_cell, context_embeds)
+
+        if context_enabled and cell_enabled:
             # Both models enabled: return cell embeddings (FiLM-conditioned)
             output_embeds = cell_embeds
-        elif self.config.context_model and not self.config.cell_level_model:
+        elif context_enabled and not cell_enabled:
             # Only context model: return context embeddings
             output_embeds = context_embeds
-        elif not self.config.context_model and self.config.cell_level_model:
+        elif not context_enabled and cell_enabled:
             # Only cell model: return cell embeddings (no FiLM conditioning)
             output_embeds = cell_embeds
         else:

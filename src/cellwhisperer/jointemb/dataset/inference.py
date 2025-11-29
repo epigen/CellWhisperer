@@ -56,6 +56,7 @@ class CellxGenePreparationLoader(DataLoader):
                 read_count_table
                 if "he_slide" in read_count_table.uns
                 or "20x_slide" in read_count_table.uns  # legacy for HEST
+                or "image_path" in read_count_table.uns
                 else None
             ),
             transcriptomes=read_count_table,
