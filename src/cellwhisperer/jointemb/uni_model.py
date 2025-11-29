@@ -245,6 +245,11 @@ class UNIConfig(PretrainedConfig):
             self.cell_level_model or self.context_model
         ), "At least one of cell_level_model or context_model must be True"
 
+        # assert that views are not modified (only default supported at the moment because we use it in the Processor)
+        assert self.views == {
+            "context": 224,
+            "cell": 56,
+        }, "Only default views {'context':224, 'cell':56} are supported currently"
 
 class UNIModel(PreTrainedModel):
     config_class = UNIConfig
