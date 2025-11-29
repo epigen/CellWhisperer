@@ -577,23 +577,18 @@ class JointEmbedDataModule(pl.LightningDataModule):
         valid_datapoints_filter = n_genes_filter
 
         if self.image_processor.startswith("uni") and "patches_ctx" in inputs:
-            # Check the context view for non-zero content (original resolution)
-            try:
-                non_zero_context = inputs["patches_ctx"].sum(dim=(1, 2, 3)) > 0
-                valid_datapoints_filter = valid_datapoints_filter & non_zero_context
-            except Exception:
-                logger.warning(
-                    "Could not validate context view; skipping image-based filtering"
-                )
+            # Check the context view for actual white/empty patches (not just negative sums)
+            valid_patches = self._filter_invalid_patches(inputs["patches_ctx"])
+            valid_datapoints_filter = valid_datapoints_filter & valid_patches
 
         if sum(valid_datapoints_filter) == len(valid_datapoints_filter):
             logger.info(
-                f"No samples were filtered out (All cells had >= {self.min_genes} genes)"  # inaccurate comment, now that we have non-gene datasets
+                f"No samples were filtered out (All cells had >= {self.min_genes} genes and/or non-white content)"
             )
             inputs["orig_ids"] = adata.obs.index[valid_datapoints_filter]
         else:
             logger.warning(
-                f"Filtering for {sum(valid_datapoints_filter)} of {len(valid_datapoints_filter)} samples with >={self.min_genes} genes."
+                f"Filtering for {sum(valid_datapoints_filter)} of {len(valid_datapoints_filter)} samples with >={self.min_genes} genes and valid image content"
             )
             # Apply filtering to inputs for all tensor keys
             filtered_inputs = {}
@@ -677,6 +672,38 @@ class JointEmbedDataModule(pl.LightningDataModule):
         adata.X = X
 
         return replicate_inputs
+
+    def _filter_invalid_patches(self, patches):
+        """
+        Filter out invalid patches based on standard deviation.
+        
+        Low standard deviation indicates uniform patches (empty, white background, etc.)
+        This replaces the flawed sum-based filtering which incorrectly removed patches
+        with color bias (e.g., reddish tissue with negative total sums).
+        
+        Args:
+            patches (torch.Tensor): Context patches tensor of shape (N, 3, H, W)
+            
+        Returns:
+            torch.Tensor: Boolean mask of shape (N,) indicating valid patches
+        """
+        # Check for patches with sufficient variation across pixels
+        # Empty, white, or uniform patches will have very low standard deviation
+        patch_std = patches.std(dim=(1, 2, 3))  # Standard deviation per patch
+        std_threshold = 0.1  # Patches with std < 0.1 are likely uniform/invalid
+        
+        valid_patches = patch_std > std_threshold
+        
+        # Log filtering details
+        total_patches = len(patches)
+        filtered_count = (~valid_patches).sum().item()
+        
+        logger.info(
+            f"Image filtering: {filtered_count}/{total_patches} patches filtered "
+            f"(std < {std_threshold})"
+        )
+        
+        return valid_patches
 
     def _generate_individual_sample_files(self, inputs, dataset_name, sample_id):
         logging.info(
