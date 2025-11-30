@@ -45,6 +45,8 @@ rule pathocell_process_data:
     Process PathoCell data into CellWhisperer format.
     Converts the first TMA from HDF5 format to AnnData with spatial coordinates.
     Creates a dataset compatible with the lymphoma_cosmx_small format.
+
+    TODO not yet working
     """
     input:
         dataset_marker=rules.pathocell_download_dataset.output.dataset_marker,
