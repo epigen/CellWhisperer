@@ -4,7 +4,7 @@ rule download_genesets:
     output:
         geneset_gmt=PROJECT_DIR / config["paths"]["geneset_gmt"],
     conda:
-        "../envs/download_genesets.yaml"
+        "cellwhisperer"
     script:
         "../scripts/download_genesets.py"
 
