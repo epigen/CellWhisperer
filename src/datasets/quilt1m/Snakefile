@@ -8,6 +8,9 @@ configfile: PROJECT_DIR / "config.yaml"
 include: "../../shared/config.smk"
 include: "../../shared/rules/dataset_processing.smk"
 
+scattergather:
+    split=64
+
 rule download_data:
     """
     Download individual QUILT-1M sample from HuggingFace.
@@ -15,7 +18,9 @@ rule download_data:
     env needs rclone!
     """
     output:
-        full_res=expand(PROJECT_DIR / "resources" / "quilt1m" / "fullres" / "{fn}", fn=["quilt_1M_lookup.csv", "quilt_instruct.zip"] + ["images_part_{i}.zip".format(i=i) for i in range(1, 10)]),
+        full_res=expand(PROJECT_DIR / "resources" / "quilt1m" / "fullres" / "{fn}", fn=["images_part_{i}.zip".format(i=i) for i in range(1, 11)]),
+        csv=PROJECT_DIR / "resources" / "quilt1m" / "quilt_1M_lookup.csv",
+
         reduced_res=directory(PROJECT_DIR / "resources" / "quilt1m" / "reducedres")
     params:
         zenodo_token=lambda w: os.getenv("ZENODO_TOKEN"),
@@ -64,14 +69,16 @@ rule filter_metadata:
 rule define_crops:
     """
     Derive h5ad files with the crops indicated in the the unpacked QUILT-1M dataset.
+
+    NOTE: There are two levels of redundancy here: quilt1m already defines 10 captions per image. And we now make 10 crops out of each of them... It's super inefficient, because we create 10x more h5ads than needed. Keeping as is anyways though..
     """
     input:
-        full_res_unpacked=rules.unpack_data.output.full_res_unpacked,  # TODO use this!!
-        metadata_filtered=rules.filter_metadata.output.metadata_filtered,
+        full_res_unpacked=rules.unpack_data.output.full_res_unpacked,
+        metadata_filtered=lambda wildcards: rules.aggregate_curated_metadata.output.curated_metadata if "curated" in wildcards.dataset else rules.filter_metadata.output.metadata_filtered,
     output:
-        cropped_images=directory(PROJECT_DIR / "results" / "quilt1m" / "h5ads"),  # TODO should be scratch, but this way it conforms with `full_dataset_multi`
+        cropped_images=directory(PROJECT_DIR / "results" / "{dataset}" / "h5ads"),
         report_patches=report(
-            [PROJECT_DIR / f"results/quilt1m/test_patch_{i}.png" for i in range(5)],
+            [PROJECT_DIR / f"results/{{dataset}}/test_patch_{i}.png" for i in range(5)],
             category="Quality Control"
         )
     params:
@@ -86,7 +93,82 @@ rule define_crops:
     script:
         "scripts/define_crops.py"
 
-# rule all:
-#     input:
-#         expand(str(PROJECT_DIR / config["paths"]["full_dataset_multi"]), dataset="quilt1m", i=QUILT1M_SAMPLE_IDS)
-#     default_target: True
+rule prepare_curation_splits:
+    """
+    Split CSV metadata into batches for parallel processing
+    """
+    input:
+        metadata_filtered=rules.filter_metadata.output.metadata_filtered
+    output:
+        splits=scatter.split(PROJECT_DIR / "results" / "quilt1m_curated" / "splits" / "{scatteritem}.csv")
+    run:
+        import pandas as pd
+        
+        # Read the filtered metadata
+        df = pd.read_csv(input.metadata_filtered)
+        
+        # Split rows across scatteritems
+        for split_fn in output.splits:
+            split_i, split_n = map(int, Path(split_fn).stem.split('-of-'))
+            split_i -= 1  # 0-indexing
+            
+            # Take every split_n-th row starting from split_i
+            split_df = df.iloc[split_i::split_n]
+            
+            Path(split_fn).parent.mkdir(parents=True, exist_ok=True)
+            split_df.to_csv(split_fn, index=False)
+
+rule process_curation_batch:
+    """
+    Process a batch of CSV metadata with LLM curation
+    """
+    input:
+        split_csv=PROJECT_DIR / "results" / "quilt1m_curated" / "splits" / "{scatteritem}.csv",
+        prompt_file=PROJECT_DIR / "src" / "datasets" / "quilt1m" / "prompts" / "curation.txt"
+    output:
+        processed_csv=PROJECT_DIR / "results" / "quilt1m_curated" / "processed" / "{scatteritem}.csv"
+    log:
+        PROJECT_DIR / "results" / "quilt1m_curated" / "logs" / "{scatteritem}.log"
+    params:
+        model_path="openai/gpt-oss-120b", # "meta-llama/Llama-4-Scout-17B-16E-Instruct",  # openai/gpt-oss-120b
+        quantization=None,  # "fp8"
+        max_num_seqs=16
+    conda:
+        "../../../envs/vllm.yaml"
+    resources:
+        mem_mb=100000,
+        slurm=slurm_gres("large")
+    threads: 8
+    script:
+        "scripts/curation_processing.py"
+
+rule aggregate_curated_metadata:
+    """
+    Aggregate all processed CSV splits into a single curated metadata file
+    """
+    input:
+        processed_csvs=gather.split(PROJECT_DIR / "results" / "quilt1m_curated" / "processed" / "{scatteritem}.csv")
+    output:
+        curated_metadata=PROJECT_DIR / "results" / "quilt1m_curated" / "quilt_1M_lookup_curated.csv"
+    run:
+        import pandas as pd
+
+        # Read and concatenate all processed CSVs
+        all_dfs = []
+        for csv_file in input.processed_csvs:
+            if Path(csv_file).exists() and Path(csv_file).stat().st_size > 0:
+                df = pd.read_csv(csv_file)
+                if not df.empty:
+                    all_dfs.append(df)
+
+        if all_dfs:
+            combined_df = pd.concat(all_dfs, ignore_index=True)
+            combined_df.to_csv(output.curated_metadata, index=False)
+        else:
+            # Create empty file if no data
+            pd.DataFrame().to_csv(output.curated_metadata, index=False)
+
+rule all:
+    input:
+        quilt1m=expand(rules.define_crops.output.cropped_images, dataset=["quilt1m", "quilt1m_curated"]),
+    default_target: True

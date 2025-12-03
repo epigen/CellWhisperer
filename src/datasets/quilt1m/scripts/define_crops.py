@@ -99,7 +99,7 @@ for _, row in tqdm(df.iterrows(), total=len(df), desc="Creating h5ad files"):
     patch_size = he_config["patch_size_pixels"]  # 224
     adata.uns["patch_size"] = patch_size  # Use config value
     adata.uns["spot_diameter_fullres"] = snakemake.params.crop_size
-    adata.uns["dataset"] = "quilt1m"
+    adata.uns["dataset"] = snakemake.wildcards.dataset
     adata.uns["modality"] = "image_text"
     adata.uns["image_path"] = image_path.as_posix()
     adata.uns["image_fn_stem"] = image_path.stem
