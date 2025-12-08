@@ -5,41 +5,50 @@ trainer:
   devices: auto
   num_nodes: 1
   precision: bf16-mixed
-  # logger:
-  #   class_path: lightning.pytorch.loggers.WandbLogger
-  #   init_args:
-  #     save_dir: results/wandb_logging
-  #     version: null
-  #     offline: false
-  #     dir: null
-  #     id: null
-  #     anonymous: null
-  #     project: SpatialWhisperer
-  #     log_model: false
-  #     experiment: null
-  #     prefix: ''
-  #     checkpoint_name: null
-  #     job_type: null
-  #     config: null
-  #     entity: single-cellm
-  #     reinit: null
-  #     tags: null
-  #     group: 
-  #     notes: null
-  #     magic: null
-  #     config_exclude_keys: null
-  #     config_include_keys: null
-  #     allow_val_change: null
-  #     resume: null
-  #     force: null
-  #     tensorboard: null
-  #     sync_tensorboard: null
-  #     monitor_gym: null
-  #     save_code: null
-  #     settings: null
+  logger:
+  - class_path: lightning.pytorch.loggers.WandbLogger
+    init_args:
+      name: null
+      save_dir: results/wandb_logging
+      version: null
+      offline: false
+      dir: null
+      id: null
+      anonymous: null
+      project: SpatialWhisperer
+      log_model: false
+      experiment: null
+      prefix: ''
+      checkpoint_name: null
+      job_type: null
+      config: null
+      entity: single-cellm
+      reinit: null
+      tags: null
+      group: null
+      notes: null
+      magic: null
+      config_exclude_keys: null
+      config_include_keys: null
+      mode: null
+      allow_val_change: null
+      resume: null
+      force: null
+      tensorboard: null
+      sync_tensorboard: null
+      monitor_gym: null
+      save_code: null
+      settings: null
+  - class_path: lightning.pytorch.loggers.CSVLogger
+    init_args:
+      save_dir: results/spotwhisperer_eval/csv_logging
+      name: csv_logs
+      version: null
+      prefix: ''
+      flush_logs_every_n_steps: 100
   callbacks: null
   fast_dev_run: false
-  max_epochs: 6
+  max_epochs: 4
   min_epochs: null
   max_steps: -1
   min_steps: null
@@ -93,7 +102,7 @@ model:
     sample_weighting: false
   val_batch_size: 32
   gauss_noise_std: 0.0
-  learning_rate: 0.001
+  learning_rate: 0.00001
   lr_warmup: 0.03
   frozen_warmup: null
 data:
@@ -115,4 +124,4 @@ batch_size: 512
 nproc: 0
 wandb: 'spotwhisperer_eval_base'
 ckpt_path: null
-omit_validation_functions: true
+omit_validation_functions: false

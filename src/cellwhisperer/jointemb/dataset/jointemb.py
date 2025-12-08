@@ -207,6 +207,12 @@ class JointEmbedDataset(Dataset):
 
     def __getitem__(self, idx):
         sample = {key: val[idx] for key, val in self.inputs.items()}
+
+        # Legacy support: rename "patches" key to "patches_ctx" if present
+        if "patches" in sample:
+            sample["patches_ctx"] = sample.pop("patches").squeeze(0)
+            sample["patches_cell"] = torch.zeros((3, 56, 56), dtype=torch.float32)
+
         return sample
 
     def set_epoch(self, epoch: int):
@@ -262,6 +268,11 @@ class JointEmbedDatasetDisk(Dataset):
 
         # Load the sample from disk
         sample = torch.load(sample_path, map_location="cpu")
+
+        # Legacy support: rename "patches" key to "patches_ctx" if present
+        if "patches" in sample:
+            sample["patches_ctx"] = sample.pop("patches").squeeze(0)
+            sample["patches_cell"] = torch.zeros((3, 56, 56), dtype=torch.float32)
 
         return sample
 
@@ -608,7 +619,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         # process/generate the individual files
         self._generate_individual_sample_files(inputs, dataset_name, sample_id)
 
-        # save the inputs dict to a file using torch (NOTE: This is partially redundant as we only need the orig_ids)
+        # save the inputs dict to a file using torch (NOTE: In case of loading with JointEmbedDatasetDisk, this is largely redundant as we'd only need the orig_ids. But JointEmbedDataset still uses all from this file actually
         processed_path.parent.mkdir(parents=True, exist_ok=True)
 
         torch.save(
@@ -676,14 +687,14 @@ class JointEmbedDataModule(pl.LightningDataModule):
     def _filter_invalid_patches(self, patches):
         """
         Filter out invalid patches based on standard deviation.
-        
+
         Low standard deviation indicates uniform patches (empty, white background, etc.)
         This replaces the flawed sum-based filtering which incorrectly removed patches
         with color bias (e.g., reddish tissue with negative total sums).
-        
+
         Args:
             patches (torch.Tensor): Context patches tensor of shape (N, 3, H, W)
-            
+
         Returns:
             torch.Tensor: Boolean mask of shape (N,) indicating valid patches
         """
@@ -691,18 +702,18 @@ class JointEmbedDataModule(pl.LightningDataModule):
         # Empty, white, or uniform patches will have very low standard deviation
         patch_std = patches.std(dim=(1, 2, 3))  # Standard deviation per patch
         std_threshold = 0.1  # Patches with std < 0.1 are likely uniform/invalid
-        
+
         valid_patches = patch_std > std_threshold
-        
+
         # Log filtering details
         total_patches = len(patches)
         filtered_count = (~valid_patches).sum().item()
-        
+
         logger.info(
             f"Image filtering: {filtered_count}/{total_patches} patches filtered "
             f"(std < {std_threshold})"
         )
-        
+
         return valid_patches
 
     def _generate_individual_sample_files(self, inputs, dataset_name, sample_id):

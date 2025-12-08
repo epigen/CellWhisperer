@@ -20,7 +20,11 @@ LLAVA_BASE_MODEL = config["model_name_path_map"]["llava_base_llm"]
 
 
 def slurm_gres(
-    gpu_size="medium", num_gpus=1, num_cpus=5, cluster_name=config["cluster_name"]
+    gpu_size="medium",
+    num_gpus=1,
+    num_cpus=5,
+    cluster_name=config["cluster_name"],
+    time="08:00:00",
 ):
     """
     gpu_size: small == 20gb, medium == 40gb, large == 80gb
@@ -56,6 +60,8 @@ def slurm_gres(
             num_gpus=num_gpus, constraint=gpu_type
         )
         qos = ""
+    elif cluster_name == "ilc":
+        pass  # TODO implement blackwell1 and hyperturing2
     else:
         gpu_type = {"small": "3g.20gb", "medium": "a100", "large": "a100-sxm4-80gb"}[
             gpu_size
@@ -65,8 +71,8 @@ def slurm_gres(
             gpu_type=gpu_type, num_gpus=num_gpus
         )
 
-    return "cpus-per-task={num_cpus} {gres} {qos} partition={partition}".format(
-        num_cpus=num_cpus, gres=gres, qos=qos, partition=partition
+    return "cpus-per-task={num_cpus} {gres} {qos} partition={partition} time={time}".format(
+        num_cpus=num_cpus, gres=gres, qos=qos, partition=partition, time=time
     )
 
 

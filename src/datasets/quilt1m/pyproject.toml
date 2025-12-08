@@ -1,0 +1,31 @@
+[project]
+name = "quilt1m-vllm"
+version = "0.1.0"
+description = "vLLM dependencies for QUILT-1M curation processing (B200, sm_100)"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    # Let vLLM pull CUDA 13 torch/vision/audio
+    "vllm[flashinfer]>=0.11.2",
+    "transformers>=4.57,<5",
+    # Optional helpers
+    "accelerate>=1.0.0",
+    "sentencepiece>=0.1.99",
+    # Data processing
+    "pandas>=2.1.3",
+    "snakemake<8",
+    "setuptools",
+    "huggingface-hub>=0.36.0",
+]
+
+[tool.uv]
+# Prefer CUDA 13 wheels; fall back to PyPI
+index-url = "https://download.pytorch.org/whl/cu130"
+extra-index-url = ["https://pypi.org/simple"]
+index-strategy = "unsafe-best-match"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/quilt1m_vllm"]

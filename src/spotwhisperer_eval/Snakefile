@@ -21,6 +21,7 @@ include: "rules/plots.smk"
 include: "rules/metadata_and_analysis.smk"
 include: "rules/model_interpretation.smk"
 include: "rules/quilt-vs-pathgen.smk"  # just diagnostics
+include: "rules/quilt-vs-curated.smk"  # quilt1m vs quilt1m_curated comparison
 
 
 

@@ -116,9 +116,9 @@ class UNIProcessor(ProcessorMixin):
         ):
             # Context view (only if context model is enabled)
             try:
-                tile_ctx = self._crop_tile(image, x, y, UniConfig().views["context"])
+                tile_ctx = self._crop_tile(image, x, y, UNIConfig().views["context"])
                 t_ctx = self.transform_context(Image.fromarray(tile_ctx))
-            except Exception as e:
+            except (IndexError, ValueError) as e:
                 logger.error(
                     f"Error processing context tile for barcode {obs_index} at ({x}, {y}): {e}"
                 )
@@ -129,9 +129,9 @@ class UNIProcessor(ProcessorMixin):
             # Note: Only the context view implements physical scale anchoring via crop size.
             #       The cell view uses a fixed 56x56 pixel crop without physical anchoring.
             try:
-                tile_cell = self._crop_tile(image, x, y, UniConfig().views["cell"])
+                tile_cell = self._crop_tile(image, x, y, UNIConfig().views["cell"])
                 t_cell = self.transform_cell(Image.fromarray(tile_cell))
-            except Exception as e:
+            except (IndexError, ValueError) as e:
                 logger.error(
                     f"Error processing cell tile for barcode {obs_index} at ({x}, {y}): {e}"
                 )
@@ -250,6 +250,7 @@ class UNIConfig(PretrainedConfig):
             "context": 224,
             "cell": 56,
         }, "Only default views {'context':224, 'cell':56} are supported currently"
+
 
 class UNIModel(PreTrainedModel):
     config_class = UNIConfig

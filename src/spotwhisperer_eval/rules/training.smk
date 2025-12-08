@@ -52,8 +52,8 @@ rule train_spotwhisperer:
     conda:
         "cellwhisperer"
     resources:
-        mem_mb=250000,
-        slurm=slurm_gres("large", num_cpus=20)
+        mem_mb=150000,
+        slurm=slurm_gres("large", num_cpus=12, time="48:00:00", num_gpus=1)
     shell: """
         cd {params.project_dir}
         cellwhisperer fit \
@@ -62,5 +62,6 @@ rule train_spotwhisperer:
             {params.test_run_config} \
             --seed_everything {params.seed} \
             --last_model_path {output.model} \
+            --omit_validation_functions \
             --wandb spotwhisperer_eval_{wildcards.dataset_combo}
     """

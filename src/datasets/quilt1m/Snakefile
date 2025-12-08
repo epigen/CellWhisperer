@@ -73,7 +73,7 @@ rule define_crops:
     NOTE: There are two levels of redundancy here: quilt1m already defines 10 captions per image. And we now make 10 crops out of each of them... It's super inefficient, because we create 10x more h5ads than needed. Keeping as is anyways though..
     """
     input:
-        full_res_unpacked=rules.unpack_data.output.full_res_unpacked,
+        full_res_unpacked=ancient(rules.unpack_data.output.full_res_unpacked),
         metadata_filtered=lambda wildcards: rules.aggregate_curated_metadata.output.curated_metadata if "curated" in wildcards.dataset else rules.filter_metadata.output.metadata_filtered,
     output:
         cropped_images=directory(PROJECT_DIR / "results" / "{dataset}" / "h5ads"),
@@ -126,7 +126,7 @@ rule process_curation_batch:
         split_csv=PROJECT_DIR / "results" / "quilt1m_curated" / "splits" / "{scatteritem}.csv",
         prompt_file=PROJECT_DIR / "src" / "datasets" / "quilt1m" / "prompts" / "curation.txt"
     output:
-        processed_csv=PROJECT_DIR / "results" / "quilt1m_curated" / "processed" / "{scatteritem}.csv"
+        processed_csv=protected(PROJECT_DIR / "results" / "quilt1m_curated" / "processed" / "{scatteritem}.csv")
     log:
         PROJECT_DIR / "results" / "quilt1m_curated" / "logs" / "{scatteritem}.log"
     params:
@@ -137,7 +137,7 @@ rule process_curation_batch:
         "../../../envs/vllm.yaml"
     resources:
         mem_mb=100000,
-        slurm=slurm_gres("large")
+        slurm=slurm_gres("large", "ilc")
     threads: 8
     script:
         "scripts/curation_processing.py"

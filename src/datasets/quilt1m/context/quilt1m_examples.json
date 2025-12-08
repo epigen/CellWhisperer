@@ -1,0 +1,2110 @@
+[
+  {
+    "caption": "Red blood cells that appear fragmented and broken within the mesangium.",
+    "image_path": "HckEwJ_mAJE_image_ff8af70b-48bf-480f-b229-50dae7bb7f24.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Renal",
+      "Hematopathology",
+      "Pulmonary"
+    ],
+    "roi_text": [
+      "MPGN pattern",
+      "Red blood cells within the mesangium",
+      "Occluded glomerular lumen",
+      "Abnormality in the wall of a blood vessel",
+      "MPGN pattern",
+      "Red blood cells within the mesangium",
+      "Occluded glomerular lumen",
+      "Abnormality in the wall of a blood vessel"
+    ],
+    "noisy_text": " is, there is, okay. This looks like an MPGN pattern, right? This looks like an MPGN pattern. And Illumina, they are occluded. Okay. But what are they occluded by? They're not occluded by inflammatory cells. It's not exudative. They are not neutrophils. Okay. Had a trichrome. What do you see over here? Lots of red blood cells, which appears to be fragmented and broken within the mesangium. And also completely occluded glomerular Illumina. And what we have, there's a blood vessel in the broken red blood cells. There's something, there's a kind of like abnormality in the wall. And yeah, there's something here. Okay. This is our silver stain. Let's go. What do you think is occluding the lumen? What is occluding a capillary",
+    "corrected_text": " is, there is, okay. This looks like an MPGN pattern, right? This looks like an MPGN pattern. And Illumina, they are occluded. Okay. But what are they occluded by? They're not occluded by inflammatory cells. It's not exudative. They are not neutrophils. Okay. Had a trichrome. What do you see over here? Lots of red blood cells, which appears to be fragmented and broken within the mesangium. And also completely occluded glomerular capillaries. And what we have, there's a blood vessel in the broken red blood cells. There's something, there's a kind of like abnormality in the wall. And yeah, there's something here. Okay. This is our silver stain. Let's go. What do you think is occluding the lumen? What is occluding a capillary",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "presence",
+          "concept_id": "C0150312",
+          "confidence": 1.0
+        },
+        {
+          "entity": "MPGN",
+          "concept_id": "C0017662",
+          "confidence": 1.0
+        },
+        {
+          "entity": "pattern",
+          "concept_id": "C0449774",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "Red blood cells",
+          "concept_id": "C0014772",
+          "confidence": 1.0
+        },
+        {
+          "entity": "mesangium",
+          "concept_id": "C0017655",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "occluded",
+          "concept_id": "C0028778",
+          "confidence": 1.0
+        },
+        {
+          "entity": "glomerular lumen",
+          "concept_id": "C0022663",
+          "confidence": 0.8263139724731445
+        }
+      ],
+      [
+        {
+          "entity": "Abnormality",
+          "concept_id": "C1704258",
+          "confidence": 1.0
+        },
+        {
+          "entity": "wall",
+          "concept_id": "C0677535",
+          "confidence": 1.0
+        },
+        {
+          "entity": "blood vessel",
+          "concept_id": "C0005847",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "diagnosis",
+          "concept_id": "C0011900",
+          "confidence": 0.9999998807907104
+        },
+        {
+          "entity": "unclear",
+          "concept_id": "C4725585",
+          "confidence": 1.0
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 1080.0,
+    "width": 1920.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "A completely occluded glomerular lumen.",
+    "image_path": "HckEwJ_mAJE_image_ff8af70b-48bf-480f-b229-50dae7bb7f24.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Renal",
+      "Hematopathology",
+      "Pulmonary"
+    ],
+    "roi_text": [
+      "MPGN pattern",
+      "Red blood cells within the mesangium",
+      "Occluded glomerular lumen",
+      "Abnormality in the wall of a blood vessel",
+      "MPGN pattern",
+      "Red blood cells within the mesangium",
+      "Occluded glomerular lumen",
+      "Abnormality in the wall of a blood vessel"
+    ],
+    "noisy_text": " is, there is, okay. This looks like an MPGN pattern, right? This looks like an MPGN pattern. And Illumina, they are occluded. Okay. But what are they occluded by? They're not occluded by inflammatory cells. It's not exudative. They are not neutrophils. Okay. Had a trichrome. What do you see over here? Lots of red blood cells, which appears to be fragmented and broken within the mesangium. And also completely occluded glomerular Illumina. And what we have, there's a blood vessel in the broken red blood cells. There's something, there's a kind of like abnormality in the wall. And yeah, there's something here. Okay. This is our silver stain. Let's go. What do you think is occluding the lumen? What is occluding a capillary",
+    "corrected_text": " is, there is, okay. This looks like an MPGN pattern, right? This looks like an MPGN pattern. And Illumina, they are occluded. Okay. But what are they occluded by? They're not occluded by inflammatory cells. It's not exudative. They are not neutrophils. Okay. Had a trichrome. What do you see over here? Lots of red blood cells, which appears to be fragmented and broken within the mesangium. And also completely occluded glomerular capillaries. And what we have, there's a blood vessel in the broken red blood cells. There's something, there's a kind of like abnormality in the wall. And yeah, there's something here. Okay. This is our silver stain. Let's go. What do you think is occluding the lumen? What is occluding a capillary",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "presence",
+          "concept_id": "C0150312",
+          "confidence": 1.0
+        },
+        {
+          "entity": "MPGN",
+          "concept_id": "C0017662",
+          "confidence": 1.0
+        },
+        {
+          "entity": "pattern",
+          "concept_id": "C0449774",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "Red blood cells",
+          "concept_id": "C0014772",
+          "confidence": 1.0
+        },
+        {
+          "entity": "mesangium",
+          "concept_id": "C0017655",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "occluded",
+          "concept_id": "C0028778",
+          "confidence": 1.0
+        },
+        {
+          "entity": "glomerular lumen",
+          "concept_id": "C0022663",
+          "confidence": 0.8263139724731445
+        }
+      ],
+      [
+        {
+          "entity": "Abnormality",
+          "concept_id": "C1704258",
+          "confidence": 1.0
+        },
+        {
+          "entity": "wall",
+          "concept_id": "C0677535",
+          "confidence": 1.0
+        },
+        {
+          "entity": "blood vessel",
+          "concept_id": "C0005847",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "diagnosis",
+          "concept_id": "C0011900",
+          "confidence": 0.9999998807907104
+        },
+        {
+          "entity": "unclear",
+          "concept_id": "C4725585",
+          "confidence": 1.0
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 1080.0,
+    "width": 1920.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "Abnormality in the wall of a blood vessel.",
+    "image_path": "HckEwJ_mAJE_image_ff8af70b-48bf-480f-b229-50dae7bb7f24.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Renal",
+      "Hematopathology",
+      "Pulmonary"
+    ],
+    "roi_text": [
+      "MPGN pattern",
+      "Red blood cells within the mesangium",
+      "Occluded glomerular lumen",
+      "Abnormality in the wall of a blood vessel",
+      "MPGN pattern",
+      "Red blood cells within the mesangium",
+      "Occluded glomerular lumen",
+      "Abnormality in the wall of a blood vessel"
+    ],
+    "noisy_text": " is, there is, okay. This looks like an MPGN pattern, right? This looks like an MPGN pattern. And Illumina, they are occluded. Okay. But what are they occluded by? They're not occluded by inflammatory cells. It's not exudative. They are not neutrophils. Okay. Had a trichrome. What do you see over here? Lots of red blood cells, which appears to be fragmented and broken within the mesangium. And also completely occluded glomerular Illumina. And what we have, there's a blood vessel in the broken red blood cells. There's something, there's a kind of like abnormality in the wall. And yeah, there's something here. Okay. This is our silver stain. Let's go. What do you think is occluding the lumen? What is occluding a capillary",
+    "corrected_text": " is, there is, okay. This looks like an MPGN pattern, right? This looks like an MPGN pattern. And Illumina, they are occluded. Okay. But what are they occluded by? They're not occluded by inflammatory cells. It's not exudative. They are not neutrophils. Okay. Had a trichrome. What do you see over here? Lots of red blood cells, which appears to be fragmented and broken within the mesangium. And also completely occluded glomerular capillaries. And what we have, there's a blood vessel in the broken red blood cells. There's something, there's a kind of like abnormality in the wall. And yeah, there's something here. Okay. This is our silver stain. Let's go. What do you think is occluding the lumen? What is occluding a capillary",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "presence",
+          "concept_id": "C0150312",
+          "confidence": 1.0
+        },
+        {
+          "entity": "MPGN",
+          "concept_id": "C0017662",
+          "confidence": 1.0
+        },
+        {
+          "entity": "pattern",
+          "concept_id": "C0449774",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "Red blood cells",
+          "concept_id": "C0014772",
+          "confidence": 1.0
+        },
+        {
+          "entity": "mesangium",
+          "concept_id": "C0017655",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "occluded",
+          "concept_id": "C0028778",
+          "confidence": 1.0
+        },
+        {
+          "entity": "glomerular lumen",
+          "concept_id": "C0022663",
+          "confidence": 0.8263139724731445
+        }
+      ],
+      [
+        {
+          "entity": "Abnormality",
+          "concept_id": "C1704258",
+          "confidence": 1.0
+        },
+        {
+          "entity": "wall",
+          "concept_id": "C0677535",
+          "confidence": 1.0
+        },
+        {
+          "entity": "blood vessel",
+          "concept_id": "C0005847",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "diagnosis",
+          "concept_id": "C0011900",
+          "confidence": 0.9999998807907104
+        },
+        {
+          "entity": "unclear",
+          "concept_id": "C4725585",
+          "confidence": 1.0
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 1080.0,
+    "width": 1920.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "The likely diagnosis is unclear.",
+    "image_path": "HckEwJ_mAJE_image_ff8af70b-48bf-480f-b229-50dae7bb7f24.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Renal",
+      "Hematopathology",
+      "Pulmonary"
+    ],
+    "roi_text": [
+      "MPGN pattern",
+      "Red blood cells within the mesangium",
+      "Occluded glomerular lumen",
+      "Abnormality in the wall of a blood vessel",
+      "MPGN pattern",
+      "Red blood cells within the mesangium",
+      "Occluded glomerular lumen",
+      "Abnormality in the wall of a blood vessel"
+    ],
+    "noisy_text": " is, there is, okay. This looks like an MPGN pattern, right? This looks like an MPGN pattern. And Illumina, they are occluded. Okay. But what are they occluded by? They're not occluded by inflammatory cells. It's not exudative. They are not neutrophils. Okay. Had a trichrome. What do you see over here? Lots of red blood cells, which appears to be fragmented and broken within the mesangium. And also completely occluded glomerular Illumina. And what we have, there's a blood vessel in the broken red blood cells. There's something, there's a kind of like abnormality in the wall. And yeah, there's something here. Okay. This is our silver stain. Let's go. What do you think is occluding the lumen? What is occluding a capillary",
+    "corrected_text": " is, there is, okay. This looks like an MPGN pattern, right? This looks like an MPGN pattern. And Illumina, they are occluded. Okay. But what are they occluded by? They're not occluded by inflammatory cells. It's not exudative. They are not neutrophils. Okay. Had a trichrome. What do you see over here? Lots of red blood cells, which appears to be fragmented and broken within the mesangium. And also completely occluded glomerular capillaries. And what we have, there's a blood vessel in the broken red blood cells. There's something, there's a kind of like abnormality in the wall. And yeah, there's something here. Okay. This is our silver stain. Let's go. What do you think is occluding the lumen? What is occluding a capillary",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "presence",
+          "concept_id": "C0150312",
+          "confidence": 1.0
+        },
+        {
+          "entity": "MPGN",
+          "concept_id": "C0017662",
+          "confidence": 1.0
+        },
+        {
+          "entity": "pattern",
+          "concept_id": "C0449774",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "Red blood cells",
+          "concept_id": "C0014772",
+          "confidence": 1.0
+        },
+        {
+          "entity": "mesangium",
+          "concept_id": "C0017655",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "occluded",
+          "concept_id": "C0028778",
+          "confidence": 1.0
+        },
+        {
+          "entity": "glomerular lumen",
+          "concept_id": "C0022663",
+          "confidence": 0.8263139724731445
+        }
+      ],
+      [
+        {
+          "entity": "Abnormality",
+          "concept_id": "C1704258",
+          "confidence": 1.0
+        },
+        {
+          "entity": "wall",
+          "concept_id": "C0677535",
+          "confidence": 1.0
+        },
+        {
+          "entity": "blood vessel",
+          "concept_id": "C0005847",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "diagnosis",
+          "concept_id": "C0011900",
+          "confidence": 0.9999998807907104
+        },
+        {
+          "entity": "unclear",
+          "concept_id": "C4725585",
+          "confidence": 1.0
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 1080.0,
+    "width": 1920.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "Identification of yeast with a capsule and halo, consistent with cryptococcosis.",
+    "image_path": "BiQPiolpP0A_image_bc8d5683-e5ce-40fe-a909-6f647e7143bd.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Dermatopathology",
+      "Soft tissue",
+      "Hematopathology"
+    ],
+    "roi_text": [
+      "Identification of yeast with a capsule and halo, consistent with cryptococcosis."
+    ],
+    "noisy_text": " and compatible with the size of what we would expect a yeast. So these are little yeasts, and they are surrounded by a halo, right? And so this halo is actually a capsule. And so if we were to stain, we don't have special stains here with us, but this yeast would stain positive with PAS, with GMS, and with Fontana stain. And the capsule will stain positive with Alsium Blue and Musycarmin. So the diagnosis here is that of cryptococcosis. So you have a very flora example of cryptococcosis, where you",
+    "corrected_text": " and compatible with the size of what we would expect a yeast. So these are little yeasts, and they are surrounded by a halo, right? And so this halo is actually a capsule. And so if we were to stain, we don't have special stains here with us, but this yeast would stain positive with PAS, with GMS, and with Fontana stain. And the capsule will stain positive with alcian blue and mucicarmine. So the diagnosis here is that of cryptococcosis. So you have a very flora example of cryptococcosis, where you",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "Identification",
+          "concept_id": "C0020792",
+          "confidence": 1.0
+        },
+        {
+          "entity": "yeast",
+          "concept_id": "C0036025",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "capsule",
+          "concept_id": "C0006935",
+          "confidence": 1.0
+        },
+        {
+          "entity": "halo",
+          "concept_id": "C0271188",
+          "confidence": 1.0
+        },
+        {
+          "entity": "consistent with",
+          "concept_id": "C0332290",
+          "confidence": 1.0
+        },
+        {
+          "entity": "cryptococcosis",
+          "concept_id": "C0010414",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "Special stains",
+          "concept_id": "C0038128",
+          "confidence": 0.7105166912078857
+        },
+        {
+          "entity": "PAS",
+          "concept_id": "C0030125",
+          "confidence": 1.0
+        },
+        {
+          "entity": "GMS",
+          "concept_id": "C4764197",
+          "confidence": 0.6768916845321655
+        },
+        {
+          "entity": "Fontana stain",
+          "concept_id": "C1293973",
+          "confidence": 0.6575832366943359
+        },
+        {
+          "entity": "positive",
+          "concept_id": "C1446409",
+          "confidence": 1.0
+        },
+        {
+          "entity": "yeast",
+          "concept_id": "C0036025",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "alcian blue",
+          "concept_id": "C0001933",
+          "confidence": 1.0
+        },
+        {
+          "entity": "mucicarmine",
+          "concept_id": "C0066912",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "positive",
+          "concept_id": "C1446409",
+          "confidence": 1.0
+        },
+        {
+          "entity": "capsule",
+          "concept_id": "C0006935",
+          "confidence": 1.0
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 576.0,
+    "width": 1280.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "Special stains such as PAS, GMS, and Fontana stain would be positive for the yeast, while alcian blue and mucicarmine would be positive for the capsule.",
+    "image_path": "BiQPiolpP0A_image_bc8d5683-e5ce-40fe-a909-6f647e7143bd.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Dermatopathology",
+      "Soft tissue",
+      "Hematopathology"
+    ],
+    "roi_text": [
+      "Identification of yeast with a capsule and halo, consistent with cryptococcosis."
+    ],
+    "noisy_text": " and compatible with the size of what we would expect a yeast. So these are little yeasts, and they are surrounded by a halo, right? And so this halo is actually a capsule. And so if we were to stain, we don't have special stains here with us, but this yeast would stain positive with PAS, with GMS, and with Fontana stain. And the capsule will stain positive with Alsium Blue and Musycarmin. So the diagnosis here is that of cryptococcosis. So you have a very flora example of cryptococcosis, where you",
+    "corrected_text": " and compatible with the size of what we would expect a yeast. So these are little yeasts, and they are surrounded by a halo, right? And so this halo is actually a capsule. And so if we were to stain, we don't have special stains here with us, but this yeast would stain positive with PAS, with GMS, and with Fontana stain. And the capsule will stain positive with alcian blue and mucicarmine. So the diagnosis here is that of cryptococcosis. So you have a very flora example of cryptococcosis, where you",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "Identification",
+          "concept_id": "C0020792",
+          "confidence": 1.0
+        },
+        {
+          "entity": "yeast",
+          "concept_id": "C0036025",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "capsule",
+          "concept_id": "C0006935",
+          "confidence": 1.0
+        },
+        {
+          "entity": "halo",
+          "concept_id": "C0271188",
+          "confidence": 1.0
+        },
+        {
+          "entity": "consistent with",
+          "concept_id": "C0332290",
+          "confidence": 1.0
+        },
+        {
+          "entity": "cryptococcosis",
+          "concept_id": "C0010414",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "Special stains",
+          "concept_id": "C0038128",
+          "confidence": 0.7105166912078857
+        },
+        {
+          "entity": "PAS",
+          "concept_id": "C0030125",
+          "confidence": 1.0
+        },
+        {
+          "entity": "GMS",
+          "concept_id": "C4764197",
+          "confidence": 0.6768916845321655
+        },
+        {
+          "entity": "Fontana stain",
+          "concept_id": "C1293973",
+          "confidence": 0.6575832366943359
+        },
+        {
+          "entity": "positive",
+          "concept_id": "C1446409",
+          "confidence": 1.0
+        },
+        {
+          "entity": "yeast",
+          "concept_id": "C0036025",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "alcian blue",
+          "concept_id": "C0001933",
+          "confidence": 1.0
+        },
+        {
+          "entity": "mucicarmine",
+          "concept_id": "C0066912",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "positive",
+          "concept_id": "C1446409",
+          "confidence": 1.0
+        },
+        {
+          "entity": "capsule",
+          "concept_id": "C0006935",
+          "confidence": 1.0
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 576.0,
+    "width": 1280.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "Description of different patterns and subtypes of angiosarcoma, including epithelioid and spindle cell types.",
+    "image_path": "FsWFQKwCJr8_image_1bc319fa-11a6-4210-a755-c5b183e62787.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Dermatopathology",
+      "Soft tissue",
+      "Hematopathology"
+    ],
+    "roi_text": [
+      "Epithelioid type cells that look like a breast cancer aggregation."
+    ],
+    "noisy_text": " This pattern here, which is kind of interesting, is more like the epithelioid type. So notice these cells are cuboidal and they kind of look like an epithelium. That almost looks like a breast cancer aggregation there a little bit, right? Just like that case we just saw. So they can look like an epithelium. It's still angiosarcoma, but it looks like an epithelium. So that's just an epithelium. And then there's another type that can be mostly spindle cells. So they can be very poorly differentiated. So there can be a number of different subtypes of angiosarcoma. This is the pattern you really want to look for, these slit-like spaces here and this very diffuse pattern with these very atypical cells like this. This is pretty",
+    "corrected_text": " This pattern here, which is kind of interesting, is more like the epithelioid type. So notice these cells are cuboidal and they kind of look like an epithelium. That almost looks like a breast cancer aggregation there a little bit, right? Just like that case we just saw. So they can look like an epithelium. It's still angiosarcoma, but it looks like an epithelium. So that's just an epithelium. And then there's another type that can be mostly spindle cells. So they can be very poorly differentiated. So there can be a number of different subtypes of angiosarcoma. This is the pattern you really want to look for, these slit-like spaces here and this very diffuse pattern with these very atypical cells like this. This is pretty",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "Description",
+          "concept_id": "C0678257",
+          "confidence": 1.0
+        },
+        {
+          "entity": "patterns",
+          "concept_id": "C0449774",
+          "confidence": 1.0
+        },
+        {
+          "entity": "subtypes",
+          "concept_id": "C0449560",
+          "confidence": 1.0
+        },
+        {
+          "entity": "angiosarcoma",
+          "concept_id": "C0018923",
+          "confidence": 1.0
+        },
+        {
+          "entity": "epithelioid",
+          "concept_id": "C0014603",
+          "confidence": 0.8891293406486511
+        },
+        {
+          "entity": "spindle cell",
+          "concept_id": "C0682540",
+          "confidence": 0.9999999403953552
+        }
+      ],
+      [
+        {
+          "entity": "Identification",
+          "concept_id": "C0020792",
+          "confidence": 1.0
+        },
+        {
+          "entity": "slit-like spaces",
+          "concept_id": "C0205356",
+          "confidence": 0.8726169466972351
+        },
+        {
+          "entity": "diffuse",
+          "concept_id": "C0205219",
+          "confidence": 1.0
+        },
+        {
+          "entity": "atypical cells",
+          "concept_id": "C0333865",
+          "confidence": 1.0
+        },
+        {
+          "entity": "features",
+          "concept_id": "C1521970",
+          "confidence": 1.0
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 1040.0,
+    "width": 1920.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "Identification of slit-like spaces and diffuse pattern with atypical cells as important features to look for.",
+    "image_path": "FsWFQKwCJr8_image_1bc319fa-11a6-4210-a755-c5b183e62787.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Dermatopathology",
+      "Soft tissue",
+      "Hematopathology"
+    ],
+    "roi_text": [
+      "Epithelioid type cells that look like a breast cancer aggregation."
+    ],
+    "noisy_text": " This pattern here, which is kind of interesting, is more like the epithelioid type. So notice these cells are cuboidal and they kind of look like an epithelium. That almost looks like a breast cancer aggregation there a little bit, right? Just like that case we just saw. So they can look like an epithelium. It's still angiosarcoma, but it looks like an epithelium. So that's just an epithelium. And then there's another type that can be mostly spindle cells. So they can be very poorly differentiated. So there can be a number of different subtypes of angiosarcoma. This is the pattern you really want to look for, these slit-like spaces here and this very diffuse pattern with these very atypical cells like this. This is pretty",
+    "corrected_text": " This pattern here, which is kind of interesting, is more like the epithelioid type. So notice these cells are cuboidal and they kind of look like an epithelium. That almost looks like a breast cancer aggregation there a little bit, right? Just like that case we just saw. So they can look like an epithelium. It's still angiosarcoma, but it looks like an epithelium. So that's just an epithelium. And then there's another type that can be mostly spindle cells. So they can be very poorly differentiated. So there can be a number of different subtypes of angiosarcoma. This is the pattern you really want to look for, these slit-like spaces here and this very diffuse pattern with these very atypical cells like this. This is pretty",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "Description",
+          "concept_id": "C0678257",
+          "confidence": 1.0
+        },
+        {
+          "entity": "patterns",
+          "concept_id": "C0449774",
+          "confidence": 1.0
+        },
+        {
+          "entity": "subtypes",
+          "concept_id": "C0449560",
+          "confidence": 1.0
+        },
+        {
+          "entity": "angiosarcoma",
+          "concept_id": "C0018923",
+          "confidence": 1.0
+        },
+        {
+          "entity": "epithelioid",
+          "concept_id": "C0014603",
+          "confidence": 0.8891293406486511
+        },
+        {
+          "entity": "spindle cell",
+          "concept_id": "C0682540",
+          "confidence": 0.9999999403953552
+        }
+      ],
+      [
+        {
+          "entity": "Identification",
+          "concept_id": "C0020792",
+          "confidence": 1.0
+        },
+        {
+          "entity": "slit-like spaces",
+          "concept_id": "C0205356",
+          "confidence": 0.8726169466972351
+        },
+        {
+          "entity": "diffuse",
+          "concept_id": "C0205219",
+          "confidence": 1.0
+        },
+        {
+          "entity": "atypical cells",
+          "concept_id": "C0333865",
+          "confidence": 1.0
+        },
+        {
+          "entity": "features",
+          "concept_id": "C1521970",
+          "confidence": 1.0
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 1040.0,
+    "width": 1920.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "Poroma is commonly found in feet and is connected with the epidermis.",
+    "image_path": "1kHjnpFxKLg_image_a9f7ca17-49a6-44f2-8ca2-2d4a25301427.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Dermatopathology",
+      "Soft tissue",
+      "Breast"
+    ],
+    "roi_text": [
+      "epidermis",
+      "epidermis",
+      "feet",
+      "acrosyringial cells",
+      "ductal differentiation"
+    ],
+    "noisy_text": " epidermis, very, very important, it is connected with epidermis and commonly found in feet. And this is a low power for boroma with connection with epidermis. Higher power picture shows the acrosyringial cells and very important, the ductal differentiation. Next entity, very important, is hydroacanthoma simplex. Basically it",
+    "corrected_text": " epidermis, very, very important, it is connected with epidermis and commonly found in feet. And this is a low power for poroma with connection with epidermis. Higher power picture shows the acrosyringial cells and very important, the ductal differentiation is seen. Next entity, very important, is poroma simplex. Basically it",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "Poroma",
+          "concept_id": "C1533161",
+          "confidence": 1.0
+        },
+        {
+          "entity": "feet",
+          "concept_id": "C0016504",
+          "confidence": 1.0
+        },
+        {
+          "entity": "epidermis",
+          "concept_id": "C0014520",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "Acrosyringial cells",
+          "concept_id": "C0227651",
+          "confidence": 0.5514036417007446
+        },
+        {
+          "entity": "ductal differentiation",
+          "concept_id": "C0007589",
+          "confidence": 0.8548269867897034
+        },
+        {
+          "entity": "poroma",
+          "concept_id": "C1533161",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "Poroma simplex",
+          "concept_id": "C2338991",
+          "confidence": 0.7964189052581787
+        },
+        {
+          "entity": "entity",
+          "concept_id": "C1551338",
+          "confidence": 1.0
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 480.0,
+    "width": 736.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "The organ being described is the pancreas, which has lobes and lobules and glandular areas surrounded by connective tissue.",
+    "image_path": "TZLGiODqtUM_image_959e17ec-1572-438a-9ed0-cf21c03fed9f.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Endocrine",
+      "Gastrointestinal",
+      "Renal"
+    ],
+    "roi_text": [
+      "pancreas",
+      "acini"
+    ],
+    "noisy_text": " Here is a mysterious organ. It appears to have lobes and lobules and connective tissue surrounding little glandular areas. That makes it a classical exocrine type of gland, doesn't it? In fact, this is a pancreas. Here are the acini. This whole thing could be considered",
+    "corrected_text": " Here is a mysterious organ. It appears to have lobes and lobules and connective tissue surrounding little glandular areas. That makes it a classical exocrine type of gland, doesn't it? In fact, this is a pancreas. Here are the acini. This whole thing could be considered",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "organ",
+          "concept_id": "C0178784",
+          "confidence": 1.0
+        },
+        {
+          "entity": "pancreas",
+          "concept_id": "C0030274",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "lobes",
+          "concept_id": "C0796494",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "lobules",
+          "concept_id": "C0921005",
+          "confidence": 1.0
+        },
+        {
+          "entity": "glandular areas",
+          "concept_id": "C0225353",
+          "confidence": 0.8188822269439697
+        },
+        {
+          "entity": "surrounded",
+          "concept_id": "C1282914",
+          "confidence": 1.0
+        },
+        {
+          "entity": "connective tissue",
+          "concept_id": "C0009780",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "acini",
+          "concept_id": "C0596030",
+          "confidence": 0.7628078460693359
+        },
+        {
+          "entity": "pancreas",
+          "concept_id": "C0030274",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "visible",
+          "concept_id": "C0205379",
+          "confidence": 0.9999998807907104
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 480.0,
+    "width": 522.0,
+    "not_histology": 0,
+    "single_wsi": 1
+  },
+  {
+    "caption": "Exocytosis can be seen in the epithelium with some dyskeratotic or dying cells.",
+    "image_path": "x_a_1lAW0SM_image_356d399c-5658-4bbc-a798-35af8094784f.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Gynecologic",
+      "Dermatopathology",
+      "Hematopathology"
+    ],
+    "roi_text": [
+      "exocytosis into the epithelium",
+      "dyskeratotic or dying cells"
+    ],
+    "noisy_text": " of the Reedy ridges. As we go into higher magnification, I think you can see that there is some exocytosis into the epithelium, but not to the degree we had there in the vaginal mucosa. You can find perhaps a few dyskeratotic or dying cells here. But this inflammatory infiltrate is almost purely lymphocytic, and we're not seeing any eosinophils involved here. We do have",
+    "corrected_text": " of the rete ridges. As we go into higher magnification, I think you can see that there is some exocytosis into the epithelium, but not to the degree we had there in the vaginal mucosa. You can find perhaps a few dyskeratotic or dying cells here. But this inflammatory infiltrate is almost purely lymphocytic, and we're not seeing any eosinophils involved here. We do have",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "Exocytosis",
+          "concept_id": "C0015283",
+          "confidence": 1.0
+        },
+        {
+          "entity": "epithelium",
+          "concept_id": "C0014609",
+          "confidence": 1.0
+        },
+        {
+          "entity": "dyskeratotic",
+          "concept_id": "C0334062",
+          "confidence": 1.0
+        },
+        {
+          "entity": "dying cells",
+          "concept_id": "C0007584",
+          "confidence": 0.6256436705589294
+        }
+      ],
+      [
+        {
+          "entity": "Inflammatory infiltrate",
+          "concept_id": "C3887644",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "lymphocytic",
+          "concept_id": "C0024264",
+          "confidence": 1.0
+        },
+        {
+          "entity": "eosinophils",
+          "concept_id": "C0014467",
+          "confidence": 1.0
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 1080.0,
+    "width": 1920.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "Description of lung histology with type I and type II pneumocytes, connective tissue, endothelial cells, and macrophages.",
+    "image_path": "myeWsX0MuH8_image_2403bd8b-4e93-49d7-ae10-96deef6ac207.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Hematopathology",
+      "Pulmonary",
+      "Renal"
+    ],
+    "roi_text": [
+      "Description of lung histology with type I and type II pneumocytes, connective tissue, endothelial cells, and macrophages.",
+      "Description of lung histology with type I and type II pneumocytes, connective tissue, endothelial cells, and macrophages.",
+      "Presence of nucleated red blood cells in the air space."
+    ],
+    "noisy_text": " two pneumocyte and type one pneumocyte, connective tissue. You can see the endothelial cell, nuclear survey blood cells going through there right adjacent to the air space. And so we can see those, that's what we're seeing, those macrophages in through there, which was given rise from the monocytes. Also in the bone marrow, we see the megakaryocytes, multi-nucleated cell as opposed",
+    "corrected_text": " two pneumocyte and type one pneumocyte, connective tissue. You can see the endothelial cell, nucleated red blood cells going through there right adjacent to the air space. And so we can see those, that's what we're seeing, those macrophages in through there, which was given rise from the monocytes. Also in the bone marrow, we see the megakaryocytes, megakaryocyte as opposed",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "Description",
+          "concept_id": "C0678257",
+          "confidence": 1.0
+        },
+        {
+          "entity": "lung",
+          "concept_id": "C0024109",
+          "confidence": 1.0
+        },
+        {
+          "entity": "type I",
+          "concept_id": "C0441729",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "type II pneumocytes",
+          "concept_id": "C0225700",
+          "confidence": 1.0
+        },
+        {
+          "entity": "connective tissue",
+          "concept_id": "C0009780",
+          "confidence": 1.0
+        },
+        {
+          "entity": "endothelial cells",
+          "concept_id": "C0225336",
+          "confidence": 1.0
+        },
+        {
+          "entity": "macrophages",
+          "concept_id": "C0024432",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "Presence",
+          "concept_id": "C0150312",
+          "confidence": 1.0
+        },
+        {
+          "entity": "nucleated red blood cells",
+          "concept_id": "C0014762",
+          "confidence": 0.9999998807907104
+        },
+        {
+          "entity": "air space",
+          "concept_id": "C0816942",
+          "confidence": 0.8549877405166626
+        }
+      ],
+      [
+        {
+          "entity": "Presence",
+          "concept_id": "C0150312",
+          "confidence": 1.0
+        },
+        {
+          "entity": "megakaryocytes",
+          "concept_id": "C0025166",
+          "confidence": 1.0
+        },
+        {
+          "entity": "bone marrow",
+          "concept_id": "C0005953",
+          "confidence": 1.0
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 480.0,
+    "width": 640.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "The epithelium is thinning out and becoming a simple columnar form.",
+    "image_path": "Lhe0y5zQr9c_image_d9c99dee-5e02-41be-ae4f-98825294aaf7.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Pulmonary",
+      "Head and Neck",
+      "Ophthalmic"
+    ],
+    "roi_text": [
+      "epithelium",
+      "goblet cells",
+      "bronchial muscle",
+      "tertiary bronchus",
+      "mucin granules",
+      "ciliary draft",
+      "ciliary beat",
+      "epithelium",
+      "goblet cells",
+      "bronchial muscle",
+      "tertiary bronchus",
+      "mucin granules",
+      "ciliary draft",
+      "ciliary beat"
+    ],
+    "noisy_text": " are becoming less and less numerous. So this simply demonstrates or illustrates quite well how the epithelium's thinning out, becoming a simple columnar form. The cilia are retained at this point, but the goblet cells are much, much less frequent in number. And of course, the bronchial muscle retains its prominence and will become a major supporting element of the bronchial wall. One can see that this is pretty rapidly transitioning into a simple columnar epithelium that is ciliated, and the goblet cells are much, much less numerous than they were in higher subdivisions of the bronchial tree. One can see by careful examination of the epithelium lining this tertiary or distal bronchus, its most distal extent, that the epithelium forms a simple, more of a simple columnar lining epithelium that is still ciliated, so it's simple, pretty much ciliated, with only occasional scattered goblet cells. One is shown and indicated by the pointer, these gray-looking mucin granules that I've taken up the dye. Another is shown here. So the goblet cells in this distal portion of the bronchus are much less numerous, and this is how it should be. If you think about it, the mucous blanket is getting less and less thick. You want it to decrease and disappear at this point, and you have a ciliary draft or a ciliary beat going on distal to it. Returning now to the scanning-powered objective, we looked at the tertiary bronchus, the terminal part",
+    "corrected_text": " are becoming less and less numerous. So this simply demonstrates or illustrates quite well how the epithelium's thinning out, becoming a simple columnar form. The cilia are retained at this point, but the goblet cells are much, much less frequent in number. And of course, the bronchial muscle retains its prominence and will become a major supporting element of the bronchial wall. One can see that this is pretty rapidly transitioning into a simple columnar epithelium that is ciliated, and the goblet cells are much, much less numerous than they were in higher subdivisions of the bronchial tree. One can see by careful examination of the epithelium lining this tertiary or distal bronchus, its most distal extent, that the epithelium forms a simple, more of a simple columnar lining epithelium that is still ciliated, so it's simple, pretty much ciliated, with only occasional scattered goblet cells. One is shown and indicated by the pointer, these gray-looking mucin granules that I've taken up the dye. Another is shown here. So the goblet cells in this distal portion of the bronchus are much less numerous, and this is how it should be. If you think about it, the mucous blanket is getting less and less thick. You want it to decrease and disappear at this point, and you have a ciliary draft or a ciliary beat going on distal to it. Returning now to the scanning-powered objective, we looked at the tertiary bronchus, the terminal part",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "epithelium",
+          "concept_id": "C0014609",
+          "confidence": 1.0
+        },
+        {
+          "entity": "thinning",
+          "concept_id": "C0332528",
+          "confidence": 1.0
+        },
+        {
+          "entity": "columnar form",
+          "concept_id": "C1182672",
+          "confidence": 0.857712984085083
+        }
+      ],
+      [
+        {
+          "entity": "goblet cells",
+          "concept_id": "C0506994",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "frequent",
+          "concept_id": "C0332183",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "bronchial muscle",
+          "concept_id": "C0225605",
+          "confidence": 1.0
+        },
+        {
+          "entity": "element",
+          "concept_id": "C0013879",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "bronchial wall",
+          "concept_id": "C0506973",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "epithelium",
+          "concept_id": "C0014609",
+          "confidence": 1.0
+        },
+        {
+          "entity": "lining",
+          "concept_id": "C0205132",
+          "confidence": 1.0
+        },
+        {
+          "entity": "tertiary",
+          "concept_id": "C0205372",
+          "confidence": 1.0
+        },
+        {
+          "entity": "distal bronchus",
+          "concept_id": "C0006255",
+          "confidence": 0.8269273042678833
+        },
+        {
+          "entity": "columnar lining",
+          "concept_id": "C1182672",
+          "confidence": 0.8462374210357666
+        },
+        {
+          "entity": "ciliated",
+          "concept_id": "C1182794",
+          "confidence": 1.0
+        },
+        {
+          "entity": "goblet",
+          "concept_id": "C0506994",
+          "confidence": 0.8473865389823914
+        }
+      ],
+      [
+        {
+          "entity": "mucous blanket",
+          "concept_id": "C0179330",
+          "confidence": 0.7922388911247253
+        }
+      ],
+      [
+        {
+          "entity": "ciliary",
+          "concept_id": "C0229167",
+          "confidence": 0.862384557723999
+        },
+        {
+          "entity": "draft",
+          "concept_id": "C1547277",
+          "confidence": 1.0
+        },
+        {
+          "entity": "ciliary beat",
+          "concept_id": "C0229167",
+          "confidence": 0.6577289700508118
+        },
+        {
+          "entity": "distal",
+          "concept_id": "C0205108",
+          "confidence": 0.9999999403953552
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 480.0,
+    "width": 640.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "The goblet cells are much less frequent in number.",
+    "image_path": "Lhe0y5zQr9c_image_d9c99dee-5e02-41be-ae4f-98825294aaf7.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Pulmonary",
+      "Head and Neck",
+      "Ophthalmic"
+    ],
+    "roi_text": [
+      "epithelium",
+      "goblet cells",
+      "bronchial muscle",
+      "tertiary bronchus",
+      "mucin granules",
+      "ciliary draft",
+      "ciliary beat",
+      "epithelium",
+      "goblet cells",
+      "bronchial muscle",
+      "tertiary bronchus",
+      "mucin granules",
+      "ciliary draft",
+      "ciliary beat"
+    ],
+    "noisy_text": " are becoming less and less numerous. So this simply demonstrates or illustrates quite well how the epithelium's thinning out, becoming a simple columnar form. The cilia are retained at this point, but the goblet cells are much, much less frequent in number. And of course, the bronchial muscle retains its prominence and will become a major supporting element of the bronchial wall. One can see that this is pretty rapidly transitioning into a simple columnar epithelium that is ciliated, and the goblet cells are much, much less numerous than they were in higher subdivisions of the bronchial tree. One can see by careful examination of the epithelium lining this tertiary or distal bronchus, its most distal extent, that the epithelium forms a simple, more of a simple columnar lining epithelium that is still ciliated, so it's simple, pretty much ciliated, with only occasional scattered goblet cells. One is shown and indicated by the pointer, these gray-looking mucin granules that I've taken up the dye. Another is shown here. So the goblet cells in this distal portion of the bronchus are much less numerous, and this is how it should be. If you think about it, the mucous blanket is getting less and less thick. You want it to decrease and disappear at this point, and you have a ciliary draft or a ciliary beat going on distal to it. Returning now to the scanning-powered objective, we looked at the tertiary bronchus, the terminal part",
+    "corrected_text": " are becoming less and less numerous. So this simply demonstrates or illustrates quite well how the epithelium's thinning out, becoming a simple columnar form. The cilia are retained at this point, but the goblet cells are much, much less frequent in number. And of course, the bronchial muscle retains its prominence and will become a major supporting element of the bronchial wall. One can see that this is pretty rapidly transitioning into a simple columnar epithelium that is ciliated, and the goblet cells are much, much less numerous than they were in higher subdivisions of the bronchial tree. One can see by careful examination of the epithelium lining this tertiary or distal bronchus, its most distal extent, that the epithelium forms a simple, more of a simple columnar lining epithelium that is still ciliated, so it's simple, pretty much ciliated, with only occasional scattered goblet cells. One is shown and indicated by the pointer, these gray-looking mucin granules that I've taken up the dye. Another is shown here. So the goblet cells in this distal portion of the bronchus are much less numerous, and this is how it should be. If you think about it, the mucous blanket is getting less and less thick. You want it to decrease and disappear at this point, and you have a ciliary draft or a ciliary beat going on distal to it. Returning now to the scanning-powered objective, we looked at the tertiary bronchus, the terminal part",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "epithelium",
+          "concept_id": "C0014609",
+          "confidence": 1.0
+        },
+        {
+          "entity": "thinning",
+          "concept_id": "C0332528",
+          "confidence": 1.0
+        },
+        {
+          "entity": "columnar form",
+          "concept_id": "C1182672",
+          "confidence": 0.857712984085083
+        }
+      ],
+      [
+        {
+          "entity": "goblet cells",
+          "concept_id": "C0506994",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "frequent",
+          "concept_id": "C0332183",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "bronchial muscle",
+          "concept_id": "C0225605",
+          "confidence": 1.0
+        },
+        {
+          "entity": "element",
+          "concept_id": "C0013879",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "bronchial wall",
+          "concept_id": "C0506973",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "epithelium",
+          "concept_id": "C0014609",
+          "confidence": 1.0
+        },
+        {
+          "entity": "lining",
+          "concept_id": "C0205132",
+          "confidence": 1.0
+        },
+        {
+          "entity": "tertiary",
+          "concept_id": "C0205372",
+          "confidence": 1.0
+        },
+        {
+          "entity": "distal bronchus",
+          "concept_id": "C0006255",
+          "confidence": 0.8269273042678833
+        },
+        {
+          "entity": "columnar lining",
+          "concept_id": "C1182672",
+          "confidence": 0.8462374210357666
+        },
+        {
+          "entity": "ciliated",
+          "concept_id": "C1182794",
+          "confidence": 1.0
+        },
+        {
+          "entity": "goblet",
+          "concept_id": "C0506994",
+          "confidence": 0.8473865389823914
+        }
+      ],
+      [
+        {
+          "entity": "mucous blanket",
+          "concept_id": "C0179330",
+          "confidence": 0.7922388911247253
+        }
+      ],
+      [
+        {
+          "entity": "ciliary",
+          "concept_id": "C0229167",
+          "confidence": 0.862384557723999
+        },
+        {
+          "entity": "draft",
+          "concept_id": "C1547277",
+          "confidence": 1.0
+        },
+        {
+          "entity": "ciliary beat",
+          "concept_id": "C0229167",
+          "confidence": 0.6577289700508118
+        },
+        {
+          "entity": "distal",
+          "concept_id": "C0205108",
+          "confidence": 0.9999999403953552
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 480.0,
+    "width": 640.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "The bronchial muscle retains its prominence and becomes a major supporting element of the bronchial wall.",
+    "image_path": "Lhe0y5zQr9c_image_d9c99dee-5e02-41be-ae4f-98825294aaf7.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Pulmonary",
+      "Head and Neck",
+      "Ophthalmic"
+    ],
+    "roi_text": [
+      "epithelium",
+      "goblet cells",
+      "bronchial muscle",
+      "tertiary bronchus",
+      "mucin granules",
+      "ciliary draft",
+      "ciliary beat",
+      "epithelium",
+      "goblet cells",
+      "bronchial muscle",
+      "tertiary bronchus",
+      "mucin granules",
+      "ciliary draft",
+      "ciliary beat"
+    ],
+    "noisy_text": " are becoming less and less numerous. So this simply demonstrates or illustrates quite well how the epithelium's thinning out, becoming a simple columnar form. The cilia are retained at this point, but the goblet cells are much, much less frequent in number. And of course, the bronchial muscle retains its prominence and will become a major supporting element of the bronchial wall. One can see that this is pretty rapidly transitioning into a simple columnar epithelium that is ciliated, and the goblet cells are much, much less numerous than they were in higher subdivisions of the bronchial tree. One can see by careful examination of the epithelium lining this tertiary or distal bronchus, its most distal extent, that the epithelium forms a simple, more of a simple columnar lining epithelium that is still ciliated, so it's simple, pretty much ciliated, with only occasional scattered goblet cells. One is shown and indicated by the pointer, these gray-looking mucin granules that I've taken up the dye. Another is shown here. So the goblet cells in this distal portion of the bronchus are much less numerous, and this is how it should be. If you think about it, the mucous blanket is getting less and less thick. You want it to decrease and disappear at this point, and you have a ciliary draft or a ciliary beat going on distal to it. Returning now to the scanning-powered objective, we looked at the tertiary bronchus, the terminal part",
+    "corrected_text": " are becoming less and less numerous. So this simply demonstrates or illustrates quite well how the epithelium's thinning out, becoming a simple columnar form. The cilia are retained at this point, but the goblet cells are much, much less frequent in number. And of course, the bronchial muscle retains its prominence and will become a major supporting element of the bronchial wall. One can see that this is pretty rapidly transitioning into a simple columnar epithelium that is ciliated, and the goblet cells are much, much less numerous than they were in higher subdivisions of the bronchial tree. One can see by careful examination of the epithelium lining this tertiary or distal bronchus, its most distal extent, that the epithelium forms a simple, more of a simple columnar lining epithelium that is still ciliated, so it's simple, pretty much ciliated, with only occasional scattered goblet cells. One is shown and indicated by the pointer, these gray-looking mucin granules that I've taken up the dye. Another is shown here. So the goblet cells in this distal portion of the bronchus are much less numerous, and this is how it should be. If you think about it, the mucous blanket is getting less and less thick. You want it to decrease and disappear at this point, and you have a ciliary draft or a ciliary beat going on distal to it. Returning now to the scanning-powered objective, we looked at the tertiary bronchus, the terminal part",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "epithelium",
+          "concept_id": "C0014609",
+          "confidence": 1.0
+        },
+        {
+          "entity": "thinning",
+          "concept_id": "C0332528",
+          "confidence": 1.0
+        },
+        {
+          "entity": "columnar form",
+          "concept_id": "C1182672",
+          "confidence": 0.857712984085083
+        }
+      ],
+      [
+        {
+          "entity": "goblet cells",
+          "concept_id": "C0506994",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "frequent",
+          "concept_id": "C0332183",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "bronchial muscle",
+          "concept_id": "C0225605",
+          "confidence": 1.0
+        },
+        {
+          "entity": "element",
+          "concept_id": "C0013879",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "bronchial wall",
+          "concept_id": "C0506973",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "epithelium",
+          "concept_id": "C0014609",
+          "confidence": 1.0
+        },
+        {
+          "entity": "lining",
+          "concept_id": "C0205132",
+          "confidence": 1.0
+        },
+        {
+          "entity": "tertiary",
+          "concept_id": "C0205372",
+          "confidence": 1.0
+        },
+        {
+          "entity": "distal bronchus",
+          "concept_id": "C0006255",
+          "confidence": 0.8269273042678833
+        },
+        {
+          "entity": "columnar lining",
+          "concept_id": "C1182672",
+          "confidence": 0.8462374210357666
+        },
+        {
+          "entity": "ciliated",
+          "concept_id": "C1182794",
+          "confidence": 1.0
+        },
+        {
+          "entity": "goblet",
+          "concept_id": "C0506994",
+          "confidence": 0.8473865389823914
+        }
+      ],
+      [
+        {
+          "entity": "mucous blanket",
+          "concept_id": "C0179330",
+          "confidence": 0.7922388911247253
+        }
+      ],
+      [
+        {
+          "entity": "ciliary",
+          "concept_id": "C0229167",
+          "confidence": 0.862384557723999
+        },
+        {
+          "entity": "draft",
+          "concept_id": "C1547277",
+          "confidence": 1.0
+        },
+        {
+          "entity": "ciliary beat",
+          "concept_id": "C0229167",
+          "confidence": 0.6577289700508118
+        },
+        {
+          "entity": "distal",
+          "concept_id": "C0205108",
+          "confidence": 0.9999999403953552
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 480.0,
+    "width": 640.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "The epithelium lining the tertiary or distal bronchus forms a simple, more of a simple columnar lining epithelium that is still ciliated, with only occasional scattered goblet cells.",
+    "image_path": "Lhe0y5zQr9c_image_d9c99dee-5e02-41be-ae4f-98825294aaf7.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Pulmonary",
+      "Head and Neck",
+      "Ophthalmic"
+    ],
+    "roi_text": [
+      "epithelium",
+      "goblet cells",
+      "bronchial muscle",
+      "tertiary bronchus",
+      "mucin granules",
+      "ciliary draft",
+      "ciliary beat",
+      "epithelium",
+      "goblet cells",
+      "bronchial muscle",
+      "tertiary bronchus",
+      "mucin granules",
+      "ciliary draft",
+      "ciliary beat"
+    ],
+    "noisy_text": " are becoming less and less numerous. So this simply demonstrates or illustrates quite well how the epithelium's thinning out, becoming a simple columnar form. The cilia are retained at this point, but the goblet cells are much, much less frequent in number. And of course, the bronchial muscle retains its prominence and will become a major supporting element of the bronchial wall. One can see that this is pretty rapidly transitioning into a simple columnar epithelium that is ciliated, and the goblet cells are much, much less numerous than they were in higher subdivisions of the bronchial tree. One can see by careful examination of the epithelium lining this tertiary or distal bronchus, its most distal extent, that the epithelium forms a simple, more of a simple columnar lining epithelium that is still ciliated, so it's simple, pretty much ciliated, with only occasional scattered goblet cells. One is shown and indicated by the pointer, these gray-looking mucin granules that I've taken up the dye. Another is shown here. So the goblet cells in this distal portion of the bronchus are much less numerous, and this is how it should be. If you think about it, the mucous blanket is getting less and less thick. You want it to decrease and disappear at this point, and you have a ciliary draft or a ciliary beat going on distal to it. Returning now to the scanning-powered objective, we looked at the tertiary bronchus, the terminal part",
+    "corrected_text": " are becoming less and less numerous. So this simply demonstrates or illustrates quite well how the epithelium's thinning out, becoming a simple columnar form. The cilia are retained at this point, but the goblet cells are much, much less frequent in number. And of course, the bronchial muscle retains its prominence and will become a major supporting element of the bronchial wall. One can see that this is pretty rapidly transitioning into a simple columnar epithelium that is ciliated, and the goblet cells are much, much less numerous than they were in higher subdivisions of the bronchial tree. One can see by careful examination of the epithelium lining this tertiary or distal bronchus, its most distal extent, that the epithelium forms a simple, more of a simple columnar lining epithelium that is still ciliated, so it's simple, pretty much ciliated, with only occasional scattered goblet cells. One is shown and indicated by the pointer, these gray-looking mucin granules that I've taken up the dye. Another is shown here. So the goblet cells in this distal portion of the bronchus are much less numerous, and this is how it should be. If you think about it, the mucous blanket is getting less and less thick. You want it to decrease and disappear at this point, and you have a ciliary draft or a ciliary beat going on distal to it. Returning now to the scanning-powered objective, we looked at the tertiary bronchus, the terminal part",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "epithelium",
+          "concept_id": "C0014609",
+          "confidence": 1.0
+        },
+        {
+          "entity": "thinning",
+          "concept_id": "C0332528",
+          "confidence": 1.0
+        },
+        {
+          "entity": "columnar form",
+          "concept_id": "C1182672",
+          "confidence": 0.857712984085083
+        }
+      ],
+      [
+        {
+          "entity": "goblet cells",
+          "concept_id": "C0506994",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "frequent",
+          "concept_id": "C0332183",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "bronchial muscle",
+          "concept_id": "C0225605",
+          "confidence": 1.0
+        },
+        {
+          "entity": "element",
+          "concept_id": "C0013879",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "bronchial wall",
+          "concept_id": "C0506973",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "epithelium",
+          "concept_id": "C0014609",
+          "confidence": 1.0
+        },
+        {
+          "entity": "lining",
+          "concept_id": "C0205132",
+          "confidence": 1.0
+        },
+        {
+          "entity": "tertiary",
+          "concept_id": "C0205372",
+          "confidence": 1.0
+        },
+        {
+          "entity": "distal bronchus",
+          "concept_id": "C0006255",
+          "confidence": 0.8269273042678833
+        },
+        {
+          "entity": "columnar lining",
+          "concept_id": "C1182672",
+          "confidence": 0.8462374210357666
+        },
+        {
+          "entity": "ciliated",
+          "concept_id": "C1182794",
+          "confidence": 1.0
+        },
+        {
+          "entity": "goblet",
+          "concept_id": "C0506994",
+          "confidence": 0.8473865389823914
+        }
+      ],
+      [
+        {
+          "entity": "mucous blanket",
+          "concept_id": "C0179330",
+          "confidence": 0.7922388911247253
+        }
+      ],
+      [
+        {
+          "entity": "ciliary",
+          "concept_id": "C0229167",
+          "confidence": 0.862384557723999
+        },
+        {
+          "entity": "draft",
+          "concept_id": "C1547277",
+          "confidence": 1.0
+        },
+        {
+          "entity": "ciliary beat",
+          "concept_id": "C0229167",
+          "confidence": 0.6577289700508118
+        },
+        {
+          "entity": "distal",
+          "concept_id": "C0205108",
+          "confidence": 0.9999999403953552
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 480.0,
+    "width": 640.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "The mucous blanket is getting less and less thick.",
+    "image_path": "Lhe0y5zQr9c_image_d9c99dee-5e02-41be-ae4f-98825294aaf7.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Pulmonary",
+      "Head and Neck",
+      "Ophthalmic"
+    ],
+    "roi_text": [
+      "epithelium",
+      "goblet cells",
+      "bronchial muscle",
+      "tertiary bronchus",
+      "mucin granules",
+      "ciliary draft",
+      "ciliary beat",
+      "epithelium",
+      "goblet cells",
+      "bronchial muscle",
+      "tertiary bronchus",
+      "mucin granules",
+      "ciliary draft",
+      "ciliary beat"
+    ],
+    "noisy_text": " are becoming less and less numerous. So this simply demonstrates or illustrates quite well how the epithelium's thinning out, becoming a simple columnar form. The cilia are retained at this point, but the goblet cells are much, much less frequent in number. And of course, the bronchial muscle retains its prominence and will become a major supporting element of the bronchial wall. One can see that this is pretty rapidly transitioning into a simple columnar epithelium that is ciliated, and the goblet cells are much, much less numerous than they were in higher subdivisions of the bronchial tree. One can see by careful examination of the epithelium lining this tertiary or distal bronchus, its most distal extent, that the epithelium forms a simple, more of a simple columnar lining epithelium that is still ciliated, so it's simple, pretty much ciliated, with only occasional scattered goblet cells. One is shown and indicated by the pointer, these gray-looking mucin granules that I've taken up the dye. Another is shown here. So the goblet cells in this distal portion of the bronchus are much less numerous, and this is how it should be. If you think about it, the mucous blanket is getting less and less thick. You want it to decrease and disappear at this point, and you have a ciliary draft or a ciliary beat going on distal to it. Returning now to the scanning-powered objective, we looked at the tertiary bronchus, the terminal part",
+    "corrected_text": " are becoming less and less numerous. So this simply demonstrates or illustrates quite well how the epithelium's thinning out, becoming a simple columnar form. The cilia are retained at this point, but the goblet cells are much, much less frequent in number. And of course, the bronchial muscle retains its prominence and will become a major supporting element of the bronchial wall. One can see that this is pretty rapidly transitioning into a simple columnar epithelium that is ciliated, and the goblet cells are much, much less numerous than they were in higher subdivisions of the bronchial tree. One can see by careful examination of the epithelium lining this tertiary or distal bronchus, its most distal extent, that the epithelium forms a simple, more of a simple columnar lining epithelium that is still ciliated, so it's simple, pretty much ciliated, with only occasional scattered goblet cells. One is shown and indicated by the pointer, these gray-looking mucin granules that I've taken up the dye. Another is shown here. So the goblet cells in this distal portion of the bronchus are much less numerous, and this is how it should be. If you think about it, the mucous blanket is getting less and less thick. You want it to decrease and disappear at this point, and you have a ciliary draft or a ciliary beat going on distal to it. Returning now to the scanning-powered objective, we looked at the tertiary bronchus, the terminal part",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "epithelium",
+          "concept_id": "C0014609",
+          "confidence": 1.0
+        },
+        {
+          "entity": "thinning",
+          "concept_id": "C0332528",
+          "confidence": 1.0
+        },
+        {
+          "entity": "columnar form",
+          "concept_id": "C1182672",
+          "confidence": 0.857712984085083
+        }
+      ],
+      [
+        {
+          "entity": "goblet cells",
+          "concept_id": "C0506994",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "frequent",
+          "concept_id": "C0332183",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "bronchial muscle",
+          "concept_id": "C0225605",
+          "confidence": 1.0
+        },
+        {
+          "entity": "element",
+          "concept_id": "C0013879",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "bronchial wall",
+          "concept_id": "C0506973",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "epithelium",
+          "concept_id": "C0014609",
+          "confidence": 1.0
+        },
+        {
+          "entity": "lining",
+          "concept_id": "C0205132",
+          "confidence": 1.0
+        },
+        {
+          "entity": "tertiary",
+          "concept_id": "C0205372",
+          "confidence": 1.0
+        },
+        {
+          "entity": "distal bronchus",
+          "concept_id": "C0006255",
+          "confidence": 0.8269273042678833
+        },
+        {
+          "entity": "columnar lining",
+          "concept_id": "C1182672",
+          "confidence": 0.8462374210357666
+        },
+        {
+          "entity": "ciliated",
+          "concept_id": "C1182794",
+          "confidence": 1.0
+        },
+        {
+          "entity": "goblet",
+          "concept_id": "C0506994",
+          "confidence": 0.8473865389823914
+        }
+      ],
+      [
+        {
+          "entity": "mucous blanket",
+          "concept_id": "C0179330",
+          "confidence": 0.7922388911247253
+        }
+      ],
+      [
+        {
+          "entity": "ciliary",
+          "concept_id": "C0229167",
+          "confidence": 0.862384557723999
+        },
+        {
+          "entity": "draft",
+          "concept_id": "C1547277",
+          "confidence": 1.0
+        },
+        {
+          "entity": "ciliary beat",
+          "concept_id": "C0229167",
+          "confidence": 0.6577289700508118
+        },
+        {
+          "entity": "distal",
+          "concept_id": "C0205108",
+          "confidence": 0.9999999403953552
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 480.0,
+    "width": 640.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "There is a ciliary draft or a ciliary beat going on distal to it.",
+    "image_path": "Lhe0y5zQr9c_image_d9c99dee-5e02-41be-ae4f-98825294aaf7.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Pulmonary",
+      "Head and Neck",
+      "Ophthalmic"
+    ],
+    "roi_text": [
+      "epithelium",
+      "goblet cells",
+      "bronchial muscle",
+      "tertiary bronchus",
+      "mucin granules",
+      "ciliary draft",
+      "ciliary beat",
+      "epithelium",
+      "goblet cells",
+      "bronchial muscle",
+      "tertiary bronchus",
+      "mucin granules",
+      "ciliary draft",
+      "ciliary beat"
+    ],
+    "noisy_text": " are becoming less and less numerous. So this simply demonstrates or illustrates quite well how the epithelium's thinning out, becoming a simple columnar form. The cilia are retained at this point, but the goblet cells are much, much less frequent in number. And of course, the bronchial muscle retains its prominence and will become a major supporting element of the bronchial wall. One can see that this is pretty rapidly transitioning into a simple columnar epithelium that is ciliated, and the goblet cells are much, much less numerous than they were in higher subdivisions of the bronchial tree. One can see by careful examination of the epithelium lining this tertiary or distal bronchus, its most distal extent, that the epithelium forms a simple, more of a simple columnar lining epithelium that is still ciliated, so it's simple, pretty much ciliated, with only occasional scattered goblet cells. One is shown and indicated by the pointer, these gray-looking mucin granules that I've taken up the dye. Another is shown here. So the goblet cells in this distal portion of the bronchus are much less numerous, and this is how it should be. If you think about it, the mucous blanket is getting less and less thick. You want it to decrease and disappear at this point, and you have a ciliary draft or a ciliary beat going on distal to it. Returning now to the scanning-powered objective, we looked at the tertiary bronchus, the terminal part",
+    "corrected_text": " are becoming less and less numerous. So this simply demonstrates or illustrates quite well how the epithelium's thinning out, becoming a simple columnar form. The cilia are retained at this point, but the goblet cells are much, much less frequent in number. And of course, the bronchial muscle retains its prominence and will become a major supporting element of the bronchial wall. One can see that this is pretty rapidly transitioning into a simple columnar epithelium that is ciliated, and the goblet cells are much, much less numerous than they were in higher subdivisions of the bronchial tree. One can see by careful examination of the epithelium lining this tertiary or distal bronchus, its most distal extent, that the epithelium forms a simple, more of a simple columnar lining epithelium that is still ciliated, so it's simple, pretty much ciliated, with only occasional scattered goblet cells. One is shown and indicated by the pointer, these gray-looking mucin granules that I've taken up the dye. Another is shown here. So the goblet cells in this distal portion of the bronchus are much less numerous, and this is how it should be. If you think about it, the mucous blanket is getting less and less thick. You want it to decrease and disappear at this point, and you have a ciliary draft or a ciliary beat going on distal to it. Returning now to the scanning-powered objective, we looked at the tertiary bronchus, the terminal part",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "epithelium",
+          "concept_id": "C0014609",
+          "confidence": 1.0
+        },
+        {
+          "entity": "thinning",
+          "concept_id": "C0332528",
+          "confidence": 1.0
+        },
+        {
+          "entity": "columnar form",
+          "concept_id": "C1182672",
+          "confidence": 0.857712984085083
+        }
+      ],
+      [
+        {
+          "entity": "goblet cells",
+          "concept_id": "C0506994",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "frequent",
+          "concept_id": "C0332183",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "bronchial muscle",
+          "concept_id": "C0225605",
+          "confidence": 1.0
+        },
+        {
+          "entity": "element",
+          "concept_id": "C0013879",
+          "confidence": 0.9999999403953552
+        },
+        {
+          "entity": "bronchial wall",
+          "concept_id": "C0506973",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "epithelium",
+          "concept_id": "C0014609",
+          "confidence": 1.0
+        },
+        {
+          "entity": "lining",
+          "concept_id": "C0205132",
+          "confidence": 1.0
+        },
+        {
+          "entity": "tertiary",
+          "concept_id": "C0205372",
+          "confidence": 1.0
+        },
+        {
+          "entity": "distal bronchus",
+          "concept_id": "C0006255",
+          "confidence": 0.8269273042678833
+        },
+        {
+          "entity": "columnar lining",
+          "concept_id": "C1182672",
+          "confidence": 0.8462374210357666
+        },
+        {
+          "entity": "ciliated",
+          "concept_id": "C1182794",
+          "confidence": 1.0
+        },
+        {
+          "entity": "goblet",
+          "concept_id": "C0506994",
+          "confidence": 0.8473865389823914
+        }
+      ],
+      [
+        {
+          "entity": "mucous blanket",
+          "concept_id": "C0179330",
+          "confidence": 0.7922388911247253
+        }
+      ],
+      [
+        {
+          "entity": "ciliary",
+          "concept_id": "C0229167",
+          "confidence": 0.862384557723999
+        },
+        {
+          "entity": "draft",
+          "concept_id": "C1547277",
+          "confidence": 1.0
+        },
+        {
+          "entity": "ciliary beat",
+          "concept_id": "C0229167",
+          "confidence": 0.6577289700508118
+        },
+        {
+          "entity": "distal",
+          "concept_id": "C0205108",
+          "confidence": 0.9999999403953552
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 480.0,
+    "width": 640.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "Necrosis was observed, but no tumor was found.",
+    "image_path": "qz51pvzw4fQ_image_0a13fa2b-bfd4-43dd-9525-d15ec098d3a7.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Pulmonary",
+      "Hematopathology",
+      "Dermatopathology"
+    ],
+    "roi_text": [],
+    "noisy_text": " that they had. And with necrosis, but I couldn't find the tumor here. And I found that that funny thing that doesn't do the kind of thing that I would say, is this really something aspirated or not? Maybe somebody that knows more would have this and say, this is a part of. And I keep watching pictures, DJ Rose and Atlas, for example, but they are very non-specific thing. Yeah. No, at least for me, this is not anything that I want to say.",
+    "corrected_text": " that they had. And with necrosis, but I couldn't find the tumor here. And I found that that funny thing that doesn't do the kind of thing that I would say, is this really something aspirated or not? Maybe somebody that knows more would have this and say, this is a part of. And I keep watching pictures, DJ Rose and Atlas, for example, but they are very non-specific thing. Yeah. No, at least for me, this is not anything that I want to say.",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "Necrosis",
+          "concept_id": "C0027540",
+          "confidence": 1.0
+        },
+        {
+          "entity": "observed",
+          "concept_id": "C1441672",
+          "confidence": 1.0
+        },
+        {
+          "entity": "tumor",
+          "concept_id": "C0027651",
+          "confidence": 0.9999999403953552
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 1080.0,
+    "width": 1920.0,
+    "not_histology": 0,
+    "single_wsi": 0
+  },
+  {
+    "caption": "Nissl substance, nucleus, nucleolus, and protective satellite cells can be seen in these neurons.",
+    "image_path": "oTPqAYqMsFk_image_be4bdcac-0f38-421b-8d2b-240277c34b39.jpg",
+    "subset": "quilt",
+    "split": "train",
+    "pathology": [
+      "Neuropathology",
+      "Soft tissue",
+      "Hematopathology"
+    ],
+    "roi_text": [
+      "nucleus"
+    ],
+    "noisy_text": " can be classified by generally function and shape. And these neurons, which you can see, are classical neurons. You can see nistle substance. You can see a nucleus. You could see a good nucleolus. And you can see a little rim of protective satellite cells which are a special type of glial cells for dorsal root ganglia. They protect and nourish and help these big neurons, much in the same way astrocytes do in the central nervous system. And",
+    "corrected_text": " can be classified by generally function and shape. And these neurons, which you can see, are classical neurons. You can see nissl substance. You can see a nucleus. You could see a good nucleolus. And you can see a little rim of protective satellite cells which are a special type of glial cells for dorsal root ganglia. They protect and nourish and help these big neurons, much in the same way astrocytes do in the central nervous system. And",
+    "med_umls_ids": [
+      [
+        {
+          "entity": "neurons",
+          "concept_id": "C0027882",
+          "confidence": 1.0
+        },
+        {
+          "entity": "function",
+          "concept_id": "C0031843",
+          "confidence": 1.0
+        },
+        {
+          "entity": "shape",
+          "concept_id": "C0332479",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "Nissl substance",
+          "concept_id": "C0028117",
+          "confidence": 1.0
+        },
+        {
+          "entity": "nucleus",
+          "concept_id": "C0007610",
+          "confidence": 1.0
+        },
+        {
+          "entity": "nucleolus",
+          "concept_id": "C0007609",
+          "confidence": 1.0
+        },
+        {
+          "entity": "neurons",
+          "concept_id": "C0027882",
+          "confidence": 1.0
+        }
+      ],
+      [
+        {
+          "entity": "Satellite cells",
+          "concept_id": "C0205868",
+          "confidence": 1.0
+        },
+        {
+          "entity": "glial cells",
+          "concept_id": "C0027836",
+          "confidence": 1.0
+        },
+        {
+          "entity": "dorsal root ganglia",
+          "concept_id": "C0017070",
+          "confidence": 1.0
+        },
+        {
+          "entity": "protect",
+          "concept_id": "C1609184",
+          "confidence": 0.7768303155899048
+        },
+        {
+          "entity": "nourish",
+          "concept_id": "C4477479",
+          "confidence": 0.9999998807907104
+        },
+        {
+          "entity": "neurons",
+          "concept_id": "C0027882",
+          "confidence": 1.0
+        }
+      ]
+    ],
+    "magnification": 2.0,
+    "height": 720.0,
+    "width": 680.0,
+    "not_histology": 0,
+    "single_wsi": 1
+  }
+]

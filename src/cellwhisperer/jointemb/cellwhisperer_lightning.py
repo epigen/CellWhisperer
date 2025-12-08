@@ -308,6 +308,18 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             else:
                 self.frozen_warmup_steps = self.frozen_warmup
 
+    def on_test_start(self):
+        assert (
+            len(
+                [
+                    logger
+                    for logger in self.loggers
+                    if isinstance(logger, lightning.pytorch.loggers.csv_logs.CSVLogger)
+                ]
+            )
+            == 1
+        ), "Expected one CSVLogger to be present for logging the results."
+
     def on_fit_start(self):
         # freeze for first epoch to train only the projection layer
         if self.frozen_warmup_steps > 0:
@@ -460,9 +472,10 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             metric_name.append("text")
 
         if len(modalities) != 2:
-            raise ValueError(
+            logger.error(
                 "Both text, transcriptome and image embeddings are provided. retrieval is only implemented for two modalities."
             )
+            return
 
         # Obtain a subsample of max. 20000 data points (for performance)
         if modalities[0].shape[0] != modalities[1].shape[0]:

@@ -267,3 +267,4 @@ llm_apis:
     api_key_env: OLLAMA_API_KEY
     base_url: http://s0-n02.hpc.meduniwien.ac.at:8080/v1/  # Internal server
     model_name: mistral:7b-instruct-v0.2-fp16
+
