@@ -54,7 +54,7 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
         image_config: Dict = {},
         locking_mode: str = "LUL",
         unlocked_fp16: bool = False,
-        use_cache: bool = False,  # for some reason, the config.yaml does not properly set this value right now TODO probably related to default settings in training.py
+        use_cache: bool = True,  # Changed default to True to fix checkpoint compatibility with old format checkpoints
         **kwargs,
     ):
         super().__init__(**kwargs)

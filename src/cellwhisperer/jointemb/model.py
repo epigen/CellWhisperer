@@ -176,10 +176,12 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             force_freeze (bool): Whether to force freezing the models even if the config does not indicate it.
         """
         if self.config.locking_mode[0] == "L" or force_freeze:
-            if self.config.use_cache:
+            # Backward compatibility for use_cache attribute - default to True for old checkpoints
+            use_cache = getattr(self.config, "use_cache", True)
+            if use_cache:
                 if not isinstance(transcriptome_model, FrozenCachedModel):
                     transcriptome_model = FrozenCachedModel(
-                        transcriptome_model, self.config.use_cache
+                        transcriptome_model, use_cache
                     )
             else:
                 transcriptome_model = self._freeze_model_parameters(transcriptome_model)
@@ -191,16 +193,20 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         ), "text_model must be provided"  # doesn't make sense that only transcriptome_model gets initialized before
 
         if self.config.locking_mode[1] == "L" or force_freeze:
-            if self.config.use_cache:
+            # Backward compatibility for use_cache attribute - default to True for old checkpoints
+            use_cache = getattr(self.config, "use_cache", True)
+            if use_cache:
                 if not isinstance(text_model, FrozenCachedModel):
-                    text_model = FrozenCachedModel(text_model, self.config.use_cache)
+                    text_model = FrozenCachedModel(text_model, use_cache)
             else:
                 text_model = self._freeze_model_parameters(text_model)
 
         if self.config.locking_mode[2] == "L" or force_freeze:
-            if self.config.use_cache:
+            # Backward compatibility for use_cache attribute - default to True for old checkpoints
+            use_cache = getattr(self.config, "use_cache", True)
+            if use_cache:
                 if not isinstance(image_model, FrozenCachedModel):
-                    image_model = FrozenCachedModel(image_model, self.config.use_cache)
+                    image_model = FrozenCachedModel(image_model, use_cache)
             else:
                 image_model = self._freeze_model_parameters(image_model)
         elif self.config.unlocked_fp16:
@@ -220,10 +226,12 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         device = self.device
 
         if self.config.locking_mode[0] != "u" or force_freeze:
-            if self.config.use_cache:
+            # Backward compatibility for use_cache attribute - default to True for old checkpoints
+            use_cache = getattr(self.config, "use_cache", True)
+            if use_cache:
                 if not isinstance(self.transcriptome_model, FrozenCachedModel):
                     self.transcriptome_model = FrozenCachedModel(
-                        self.transcriptome_model, self.config.use_cache
+                        self.transcriptome_model, use_cache
                     )
             else:
                 self.transcriptome_model = self._freeze_model_parameters(
@@ -231,20 +239,20 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                 )
 
         if self.config.locking_mode[1] != "u" or force_freeze:
-            if self.config.use_cache:
+            # Backward compatibility for use_cache attribute - default to True for old checkpoints
+            use_cache = getattr(self.config, "use_cache", True)
+            if use_cache:
                 if not isinstance(self.text_model, FrozenCachedModel):
-                    self.text_model = FrozenCachedModel(
-                        self.text_model, self.config.use_cache
-                    )
+                    self.text_model = FrozenCachedModel(self.text_model, use_cache)
             else:
                 self.text_model = self._freeze_model_parameters(self.text_model)
 
         if self.config.locking_mode[2] != "u" or force_freeze:
-            if self.config.use_cache:
+            # Backward compatibility for use_cache attribute - default to True for old checkpoints
+            use_cache = getattr(self.config, "use_cache", True)
+            if use_cache:
                 if not isinstance(self.image_model, FrozenCachedModel):
-                    self.image_model = FrozenCachedModel(
-                        self.image_model, self.config.use_cache
-                    )
+                    self.image_model = FrozenCachedModel(self.image_model, use_cache)
             else:
                 self.image_model = self._freeze_model_parameters(self.image_model)
 
