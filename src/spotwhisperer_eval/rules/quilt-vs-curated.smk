@@ -56,11 +56,3 @@ rule quilt_curated_bimodal_bridge_plot:
         notebook="../logs/quilt_curated_bimodal_bridge_comparison.ipynb"
     notebook:
         "../notebooks/quilt_curated_bimodal_bridge_comparison.py.ipynb"
-
-rule quilt_curated_comparison_all:
-    """
-    Main rule to run complete quilt1m vs quilt1m_curated benchmark comparison.
-    """
-    input:
-        rules.quilt_curated_bimodal_bridge_plot.output.plot
-    default_target: True
