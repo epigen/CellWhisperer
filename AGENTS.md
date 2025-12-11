@@ -6,6 +6,7 @@
 
 ## Command Execution
 - Prepend the launcher command `pixi run --no-progress` to anything you wanna run. E.g. for running `python`, run `pixi run --no-progress python`; if you need to `cd` somewhere do `cd` first, e.g. `cd src/datasets/<name> && pixi run --no-progress snakemake` for running `snakemake` in a specific directory.
+- If you encounter this issue: `/lib64/libgcc_s.so.1: version 'GCC_7.0.0' not found` then `import pyarrow` in the *first* row of the python code/script.
 
 # Coding Conventions
 

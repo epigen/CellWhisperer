@@ -631,7 +631,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             for logger in self.loggers
             if isinstance(logger, lightning.pytorch.loggers.csv_logs.CSVLogger)
         ][0]
-        scores_df.to_csv(
+        scores_df.to_csv(  # TODO this one does not respect PROJECT_DIR
             Path(csv_logger.log_dir) / f"{stage}_individual_clip_scores.csv",
             index=False,
         )
