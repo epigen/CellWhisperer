@@ -1,8 +1,6 @@
 # HEST benchmark evaluation pipeline for SpotWhisperer
 # Three-step pipeline per dataset: (1) patch extraction (2) inference (3) evaluation
-
-# Define datasets to benchmark
-HEST_DATASETS = ["IDC", "PRAD", "PAAD", "SKCM", "COAD", "READ", "CCRCC", "HCC", "LUNG", "LYMPH_IDC"]
+# HEST_DATASETS is defined in common.smk
 
 # Path structure with dataset-specific folders using config paths
 HEST_RESULTS = PROJECT_DIR / config["paths"]["hest_benchmark"]["results"]
