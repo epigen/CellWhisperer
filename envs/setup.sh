@@ -13,7 +13,7 @@ cd modules/cellxgene
 make build-for-server-dev
 
 # Install scGPT
-pip install "flash-attn<1.0.5" --no-build-isolation
+# pip install "flash-attn<1.0.5" --no-build-isolation  # required for scgpt, but causes issues in some environments
 pip install --no-deps scgpt==0.1.9
 
 # Install remaining LLaVA packages
