@@ -212,7 +212,7 @@ class UNIConfig(PretrainedConfig):
         self,
         model_name="vit_giant_patch14_224",
         views: Dict[str, int] = {"context": 224, "cell": 56},
-        cell_level_model=True,
+        cell_level_model=False,
         context_model=True,
         cnn_embedding_dim=128,
         cnn_num_layers=2,
@@ -262,7 +262,7 @@ class UNIModel(PreTrainedModel):
         super().__init__(config)
 
         # Only create ViT model if context model is enabled
-        if config.context_model:
+        if getattr(config, "context_model", True):
             self.model = timm.create_model(
                 config.model_name,
                 num_classes=0,
@@ -285,7 +285,7 @@ class UNIModel(PreTrainedModel):
             self.model = None
 
         # Cell-level model for 56x56 cell view
-        if config.cell_level_model:
+        if getattr(config, "cell_level_model", False):
             if config.context_model:
                 # FiLM-conditioned cell model
                 self.cell_model = CellLevelModel.create_film_conditioned(
