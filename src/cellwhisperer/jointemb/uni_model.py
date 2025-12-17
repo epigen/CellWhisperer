@@ -197,10 +197,15 @@ class UNIProcessor(ProcessorMixin):
         else:
             crop = np.array(image)[y_start:y_end, x_start:x_end]
 
-        # Ensure full crop size; if smaller (out-of-bounds), signal for zero-filling
+        # Ensure exact crop size d x d; if smaller (out-of-bounds), signal for zero-filling
         actual_h, actual_w = crop.shape[:2]
         if actual_h < d or actual_w < d:
             raise ValueError("crop patch is larger than image bounds")
+        if actual_h != d or actual_w != d:
+            # Center-crop to exact size if larger than requested
+            y0 = (actual_h - d) // 2
+            x0 = (actual_w - d) // 2
+            crop = crop[y0 : y0 + d, x0 : x0 + d]
 
         return crop[:, :, :3]
 
