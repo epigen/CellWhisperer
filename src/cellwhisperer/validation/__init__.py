@@ -5,6 +5,7 @@ from .zero_shot.single_cell_annotation import (
 )
 from .integration import SingleCellIntegrationScoreCalculator
 from .zero_shot.retrieval import RetrievalScoreCalculator
+from .registry import ValidationRegistry
 from torch.utils.data import DataLoader
 from cellwhisperer.config import get_path, config
 from cellwhisperer.jointemb.dataset.jointemb import JointEmbedDataModule
@@ -17,6 +18,7 @@ def initialize_validation_functions(
     text_model_type: str,
     image_model_type: str,
     enable_comprehensive_benchmarks: bool = False,
+    nproc: int = 8,
 ):
     tabsap_sc_dataset = SingleCellDataSetForValidationScoring(
         cell_number_threshold_per_celltype=100
@@ -24,7 +26,7 @@ def initialize_validation_functions(
     tabsap_wellstudied_sc_dataset = SingleCellDataSetForValidationScoring(
         celltypes=config["top20_lung_liver_blood_celltypes"]
     )
-    
+
     # Lung tissue datasets for validation
     lung_tissue_dataset = SingleCellDataSetForValidationScoring(
         dataset="lung_tissue",
@@ -33,7 +35,7 @@ def initialize_validation_functions(
         auto_create_batch_obs_colname=False,  # Spatial data doesn't have donor/method structure
         use_image_data=True,  # Enable image data usage for lung tissue
     )
-    
+
     lung_tissue_region_dataset = SingleCellDataSetForValidationScoring(
         dataset="lung_tissue",
         celltype_obs_colname="region_type_expert_annotation",
@@ -88,14 +90,13 @@ def initialize_validation_functions(
             transcriptome_tokenizer_type=transcriptome_model_type,
             image_processor=image_model_type,
         ),
-        #"zshot_LungTissue_region_lvl": SingleCellZeroshotValidationScoreCalculator(
+        # "zshot_LungTissue_region_lvl": SingleCellZeroshotValidationScoreCalculator(
         #    sc_dataset=lung_tissue_region_dataset,
         #    batch_size=batch_size,
         #    transcriptome_tokenizer_type=transcriptome_model_type,
         #    tokenizer_name=text_model_type,
         #    image_processor=image_model_type,
-        #),
-
+        # ),
     }
 
     # Add retrieval tests for the deduplicated validation-sets
@@ -106,6 +107,7 @@ def initialize_validation_functions(
             dataset_names=name,
             batch_size=batch_size,
             train_fraction=0.0,
+            nproc=nproc,
         )
         dm.prepare_data()
         dm.setup()
@@ -113,10 +115,8 @@ def initialize_validation_functions(
             dm.val_dataloader()
         )
 
-    # Add comprehensive benchmarks only if requested 
+    # Add comprehensive benchmarks only if requested
     if enable_comprehensive_benchmarks:
-        from .registry import ValidationRegistry
-        
         for spec in ValidationRegistry.get_cellwhisperer_benchmarks():
             # Create dataset lazily using a closure to capture spec
             def create_validator(spec_copy=spec):
@@ -133,7 +133,7 @@ def initialize_validation_functions(
                     image_processor=image_model_type,
                     **spec_copy.processor_kwargs
                 )
-            
+
             training_validation_functions[spec.name] = create_validator()
 
     return training_validation_functions

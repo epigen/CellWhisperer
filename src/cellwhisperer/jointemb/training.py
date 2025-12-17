@@ -383,7 +383,7 @@ def cli_main(args: Optional[List] = None):
                         save_dir=os.path.relpath(
                             get_path(["paths", "wandb_logs"]), os.getcwd()
                         ),
-                        project="JointEmbed_Training",
+                        project="SpatialWhisperer",
                         entity="single-cellm",
                         log_model=False,
                     ),

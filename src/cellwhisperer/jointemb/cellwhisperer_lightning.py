@@ -294,6 +294,7 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                 transcriptome_model_type=self.model.transcriptome_model.config.model_type,
                 text_model_type=self.model.text_model.config.model_type,
                 image_model_type=self.model.image_model.config.model_type,
+                nproc=self.trainer.datamodule.nproc,
             )
         else:
             self.validation_functions = {}

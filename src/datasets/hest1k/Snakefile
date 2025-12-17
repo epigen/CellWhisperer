@@ -27,7 +27,6 @@ HEST_SAMPLE_IDS = df["id"].tolist()
 # ]
 
 
-
 rule download_data:
     """
     Download individual HEST-1K sample from HuggingFace using the HEST library.

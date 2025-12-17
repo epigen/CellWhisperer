@@ -255,7 +255,7 @@ df = pd.concat(dfs).drop_duplicates().reset_index(drop=True)
 df["relative_path"] = df["sample_id"].apply(
     lambda sample_id: (
         output_dir.relative_to(Path(snakemake.output.converted_dataset).parent)
-        / f"{sample_id}.h5ad"
+        / f"full_data_{sample_id}.h5ad"
     ).as_posix()
 )
 

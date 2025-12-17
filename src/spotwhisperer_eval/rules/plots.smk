@@ -128,15 +128,15 @@ rule spider_performance_plot:
         #         "spotwhisperer_{}".format(MODEL_MAPPINGS["quilt1m"]["bimodal_matching"]),
         #     ],
         # ),
-        lung_results=expand(
-            BENCHMARKS_DIR / "lung" / "{dataset_combo}" / "performance_summary.csv",
-            dataset_combo=[
-                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"],
-                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"],
-                MODEL_MAPPINGS["hest1k"]["bimodal_matching"],
-                MODEL_MAPPINGS["quilt1m"]["bimodal_matching"],
-            ],
-        ),
+        # lung_results=expand(
+        #     BENCHMARKS_DIR / "lung" / "{dataset_combo}" / "performance_summary.csv",
+        #     dataset_combo=[
+        #         MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"],
+        #         MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"],
+        #         MODEL_MAPPINGS["hest1k"]["bimodal_matching"],
+        #         MODEL_MAPPINGS["quilt1m"]["bimodal_matching"],
+        #     ],
+        # ),
         pathocell_results=expand(
             rules.aggregate_pathocell_results.output.aggregated_pathocell,
             dataset_combo=[

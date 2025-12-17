@@ -27,29 +27,23 @@ logger = logging.getLogger(__name__)
 PAD_TOKEN_ID = 0
 MODEL_INPUT_SIZE = 2048
 
-VERY_COMMON_GENES = {
-    "FABP3",
-    "FAM151A",
-    "TACSTD2",
-    "S100A6",
-    "S100A16",
-    "S100A14",
-    "RGS5",
-    "LEFTY1",
-    "PARP1",
-    "ACTA1",
-    "SLC7A3",
-    "BEX1",
-    "CAPN6",
-    "GPC4",
-    "PNMA5",
-    "USP9X",
-    "MAGED2",
-    "TSIX",
-    "VGLL1",
-    "TKTL1",
-    "GAPDH",
-}
+# Load gene symbols
+if get_path(["paths", "ensembl_gene_symbol_map"]).exists():
+    ANNOT = pd.read_csv(get_path(["paths", "ensembl_gene_symbol_map"]), index_col=0)
+else:
+    # Assuming gene symbol names. Use biomart to get ensembl_ids
+    # use_cache=False to avoid the error sqlite3.OperationalError: database is locked
+
+    # Download
+    annot = sc.queries.biomart_annotations(
+        "hsapiens", ["ensembl_gene_id", "external_gene_name"], use_cache=False
+    ).set_index("external_gene_name")
+
+    annot_drop_dups = annot.reset_index().drop_duplicates(subset="external_gene_name")
+    annot_drop_dups = annot_drop_dups.set_index("external_gene_name")
+
+    annot_drop_dups.to_csv(get_path(["paths", "ensembl_gene_symbol_map"]))
+    ANNOT = annot_drop_dups
 
 
 class GeneformerTranscriptomeProcessor(ProcessorMixin):
@@ -60,25 +54,6 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
             custom_attr_name_dict={k: k for k in emb_label},  # refactor-delete
             nproc=nproc,
         )
-        # Download
-        if get_path(["paths", "ensembl_gene_symbol_map"]).exists():
-            self.annot = pd.read_csv(
-                get_path(["paths", "ensembl_gene_symbol_map"]), index_col=0
-            )
-        else:
-            # Assuming gene symbol names. Use biomart to get ensembl_ids
-            # use_cache=False to avoid the error sqlite3.OperationalError: database is locked
-            annot = sc.queries.biomart_annotations(
-                "hsapiens", ["ensembl_gene_id", "external_gene_name"], use_cache=False
-            ).set_index("external_gene_name")
-
-            annot_drop_dups = annot.reset_index().drop_duplicates(
-                subset="external_gene_name"
-            )
-            annot_drop_dups = annot_drop_dups.set_index("external_gene_name")
-
-            annot_drop_dups.to_csv(get_path(["paths", "ensembl_gene_symbol_map"]))
-            self.annot = annot_drop_dups
 
         super().__init__(*args, **kwargs)
 
@@ -111,18 +86,16 @@ class GeneformerTranscriptomeProcessor(ProcessorMixin):
                 gene_names = adata_var["gene_name"]
             else:
                 gene_names = adata_var.index
-                if gene_names[0].startswith("GRCH38_"):
-                    # Some datasets have gene names prefixed with "GRCH38______"
-                    gene_names = gene_names.str.replace("GRCH38_+", "", regex=True)
+            if gene_names[0].startswith("GRCH38_"):
+                # Some datasets have gene names prefixed with "GRCH38______"
+                gene_names = gene_names.str.replace("GRCH38_+", "", regex=True)
 
             assert (
-                len(VERY_COMMON_GENES & set(gene_names))
-                > 0  # could use self.annot.index
-            ), f"gene_names should contain gene symbols but none are found. (checking these: {VERY_COMMON_GENES})"
+                len(set(ANNOT.index) & set(gene_names)) > 10  # could use ANNOT.index
+            ), f"gene_names should contain gene symbols but none are found."
 
             adata_var["ensembl_id"] = [
-                self.annot["ensembl_gene_id"].get(gene_name, "")
-                for gene_name in gene_names
+                ANNOT["ensembl_gene_id"].get(gene_name, "") for gene_name in gene_names
             ]
 
         adata.var = adata_var
