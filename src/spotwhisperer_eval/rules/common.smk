@@ -23,6 +23,9 @@ SEEDS = [0]
 # Individual datasets that actually exist (or will exist)
 INDIVIDUAL_DATASETS = ["cellxgene_census", "archs4_geo", "hest1k", "quilt1m"]
 
+# HEST benchmark datasets (tissue types)
+HEST_DATASETS = ["IDC", "PRAD", "PAAD", "SKCM", "COAD", "READ", "CCRCC", "HCC", "LUNG", "LYMPH_IDC"]
+
 # Classify datasets by their file structure
 # Multi-file datasets use the h5ads/ directory structure with multiple files
 # Single-file datasets use a single full_data.h5ad file

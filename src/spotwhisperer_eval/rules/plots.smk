@@ -157,7 +157,7 @@ rule spider_performance_plot:
         ],
         metrics_by_modality={
             "text-image": ["pannuke", "skin", "lung_tissue_region_type_expert_annotation_accuracy", "lung_tissue_cell_type_annotations_accuracy", "pathocell_image_text_retrieval", "pathocell_zero_shot_classification"],
-            "image-transcriptome": ["hest", "pathocell_embedding_quality"],
+            "image-transcriptome": [f"hest_{dataset}" for dataset in HEST_DATASETS] + ["pathocell_embedding_quality"],
             "text-transcriptome": [
                 "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
                 "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg", 
