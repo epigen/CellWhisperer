@@ -64,5 +64,7 @@ pybiomart = "==0.2.0"
 matplotlib-venn = "==0.11.10"
 openslide-python = "==1.4.2"
 openslide-bin = "==4.0.0.8"
+scIB = ">=1.1.5"
 uni = { git = "https://github.com/mahmoodlab/UNI.git", rev = "42715efc11722a496e0a67f3369505a8f277206c" }
 cellwhisperer = { path = ".", editable = true }
+cellxgene-local = { path = "modules/cellxgene", editable = true }
