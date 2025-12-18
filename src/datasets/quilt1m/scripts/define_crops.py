@@ -68,7 +68,9 @@ for _, row in tqdm(df.iterrows(), total=len(df), desc="Creating h5ad files"):
     random.seed(42)  # For reproducible results
     crop_coordinates = []
 
-    for i in range(snakemake.params.num_crops_per_image):
+    for i in range(
+        snakemake.params.num_crops_per_image
+    ):  # NOTE should make sure that these are within 224/2 padding (not implemented here, which leads to errors during processing in jointemb.py)
         y = random.randint(start_y, max_y)
         x = random.randint(start_x, max_x)
         crop_coordinates.append((x, y, i))
