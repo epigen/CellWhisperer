@@ -203,7 +203,7 @@ class CellWhispererCLI(LightningCLI):
             else:
                 if (
                     self.model.model.image_model.config.model_name
-                    != "vit_small_patch16_224"
+                    == "vit_small_patch16_224"
                 ):  # would be nicer to check for model_type
                     image_model_path = None
                 else:
