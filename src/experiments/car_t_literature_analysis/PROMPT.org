@@ -1,0 +1,54 @@
+* Context
+I have this CAR T cell atlas defined here and want to identify patient-specific signals.
+
+The h5ad already contains computed cellwhisperer embeddings (in .obsm)
+
+** filtering
+- We are only interested in these cells:
+  - .obs["timepoint"] == "B_Product"
+- Filter out patients with high tumor burden (LHA). See file...
+* Task
+- using the model and the dataset, annotate all cells with the search queries defined below using cellwhisperer. You can use `score_left_vs_right` or cellwhisperer.validation.zero_shot.functions.get_performance_metrics_left_vs_right
+- once you have them, perform a patient level aggregation (try multiple: mean value, num cells above threshold, (anything else?))
+- then do some statistical testing for patient groups split by "Response_3m" (OR vs NR)
+- For the variables with significant difference generate violin plots with the indivual patient dots visible
+* Search queries
+
+**T cell subsets:**
+- Memory T cells
+- Naive T cells
+- Effector T cells
+- Regulatory T cells
+- Senescent T cells
+
+**Functional states:**
+- Activated T cells
+- Anergic cells
+- Cytotoxic T cells
+- Th1 cells
+- Th17 cells
+
+**Cell cycle & survival:**
+- Proliferating cells
+- Apoptotic cells
+- Quiescent cells
+
+**Manufacturing/engineering:**
+- Transduced cells
+- CAR-expressing cells
+
+**Stress/dysfunction:**
+- Hypoxic cells
+- Damaged cells
+
+**Metabolic states:**
+- Glycolytic cells
+- Oxidative cells
+
+**Differentiation:**
+- Stem cell-like T cells
+- Terminally differentiated cells
+
+**Antigen experience:**
+- Antigen-experienced cells
+- Antigen-naive cells

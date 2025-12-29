@@ -35,9 +35,7 @@ def adata_to_embeds(
     )
 
     has_whole_slide_image = (
-        "he_slide" in adata.uns 
-        or "20x_slide" in adata.uns 
-        or "image_path" in adata.uns
+        "he_slide" in adata.uns or "20x_slide" in adata.uns or "image_path" in adata.uns
     )  # 20x_slide is legacy for HEST, image_path for file-based images
     has_image_model = hasattr(model, "image_model") and model.image_model is not None
 
@@ -133,7 +131,7 @@ def ensure_raw_counts_adata(adata):
     We test on the first 100 cells to keep this cheap.
     """
 
-    def _is_integer_counts(mat, n_cells: int = 100) -> bool:
+    def _is_raw_counts(mat, n_cells: int = 1000) -> bool:
         # Take a small sample of cells
         sample = mat[:n_cells]
         # Convert to dense if sparse
@@ -142,10 +140,17 @@ def ensure_raw_counts_adata(adata):
         else:
             sample = np.asarray(sample)
         comp = np.abs(sample - sample.astype(int))
-        return np.all(comp < 1e-6)
+        if np.all(comp < 1e-6):
+            return True
+        else:
+            # check if there are values > 30
+            if np.any(sample > 30):
+                return True
+            else:
+                return False
 
     # First, check adata.X
-    if not _is_integer_counts(adata.X):
+    if not _is_raw_counts(adata.X):
         # Try to fall back to raw counts in layers["counts"]
         try:
             counts = adata.layers["counts"]
@@ -159,7 +164,7 @@ def ensure_raw_counts_adata(adata):
                 "and no adata.layers['counts'] is available."
             )
 
-        if not _is_integer_counts(counts):
+        if not _is_raw_counts(counts):
             logging.error(
                 "adata.layers['counts'] also does not appear to contain raw integer counts."
             )

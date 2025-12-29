@@ -449,43 +449,44 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 ):
                     needs_preparation = True
                 else:
-                    pass  # checking for the individual files takes a couple of seconds, which is an overhead we are not willing to take (rather just crash the whole thing :))
-                    # # Check if individual sample files exist and are complete
-                    # individual_samples_dir = get_path(
-                    #     ["paths", "data_loading_individual_samples"],
-                    #     dataset_name=dataset_name,
-                    #     i=sample_id,
-                    # )
+                    # checking for the individual files takes a couple of seconds, which is an overhead we are not willing to take (rather just crash the whole thing :))
+                    if False:  # TODO disable for time reasons
+                        # Check if individual sample files exist and are complete
+                        individual_samples_dir = get_path(
+                            ["paths", "data_loading_individual_samples"],
+                            dataset_name=dataset_name,
+                            i=sample_id,
+                        )
 
-                    # if not individual_samples_dir.exists():
-                    #     needs_preparation = True
-                    # else:
-                    #     # Load the processed file to get orig_ids and check if all individual files exist
-                    #     try:
-                    #         result = torch.load(str(processed_path), mmap=True)
-                    #         orig_ids = result[0][
-                    #             "orig_ids"
-                    #         ]  # result[0] is inputs dict, result[1] is replicate_inputs dict
+                        if not individual_samples_dir.exists():
+                            needs_preparation = True
+                        else:
+                            # Load the processed file to get orig_ids and check if all individual files exist
+                            try:
+                                result = torch.load(str(processed_path), mmap=True)
+                                orig_ids = result[0][
+                                    "orig_ids"
+                                ]  # result[0] is inputs dict, result[1] is replicate_inputs dict
 
-                    #         # Check if all individual sample files exist
-                    #         missing_files = [
-                    #             orig_id
-                    #             for orig_id in orig_ids
-                    #             if not (
-                    #                 individual_samples_dir / f"{orig_id}.pt"
-                    #             ).exists()
-                    #         ]
+                                # Check if all individual sample files exist
+                                missing_files = [
+                                    orig_id
+                                    for orig_id in orig_ids
+                                    if not (
+                                        individual_samples_dir / f"{orig_id}.pt"
+                                    ).exists()
+                                ]
 
-                    #         if missing_files:
-                    #             logger.info(
-                    #                 f"Missing {len(missing_files)} individual sample files for {dataset_name} - {sample_id}"
-                    #             )
-                    #             needs_preparation = True
-                    #     except Exception as e:
-                    #         logger.warning(
-                    #             f"Error checking individual files for {dataset_name} - {sample_id}: {e}"
-                    #         )
-                    #         needs_preparation = True
+                                if missing_files:
+                                    logger.info(
+                                        f"Missing {len(missing_files)} individual sample files for {dataset_name} - {sample_id}"
+                                    )
+                                    needs_preparation = True
+                            except Exception as e:
+                                logger.warning(
+                                    f"Error checking individual files for {dataset_name} - {sample_id}: {e}"
+                                )
+                                needs_preparation = True
 
                 if needs_preparation:
                     filtered_sample_ids.append(sample_id)

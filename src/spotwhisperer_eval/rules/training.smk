@@ -52,8 +52,8 @@ rule train_spotwhisperer:
     conda:
         "cellwhisperer"
     resources:
-        mem_mb=150000,
-        slurm=slurm_gres("large", num_cpus=12, time="48:00:00", num_gpus=1)
+        mem_mb=lambda wildcards: 250000 if "archs4_geo" in wildcards.dataset_combo else 150000,
+        slurm=slurm_gres("large", num_cpus=12, time="70:00:00", num_gpus=1)
     shell: """
         cd {params.project_dir}
         cellwhisperer fit \

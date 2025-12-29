@@ -45,12 +45,3 @@ rule quilt_pathgen_paired_barplots:
         notebook="../logs/quilt_pathgen_comparison_plots.ipynb"
     notebook:
         "../notebooks/quilt_pathgen_comparison_plots.py.ipynb"
-
-rule quilt_pathgen_comparison_all:
-    """
-    Main rule to run complete quilt1m vs pathgen benchmark comparison.
-    """
-    input:
-        rules.quilt_pathgen_paired_barplots.output.plots,
-        rules.quilt_pathgen_paired_barplots.output.summary_table
-    default_target: True

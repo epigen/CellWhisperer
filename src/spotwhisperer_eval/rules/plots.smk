@@ -137,15 +137,16 @@ rule spider_performance_plot:
         #         MODEL_MAPPINGS["quilt1m"]["bimodal_matching"],
         #     ],
         # ),
-        pathocell_results=expand(
-            rules.aggregate_pathocell_results.output.aggregated_pathocell,
-            dataset_combo=[
-                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"],
-                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"],
-                MODEL_MAPPINGS["hest1k"]["bimodal_matching"],
-                MODEL_MAPPINGS["quilt1m"]["bimodal_matching"],
-            ],
-        )
+        # TODO not yet functional 
+        # pathocell_results=expand(
+        #     rules.aggregate_pathocell_results.output.aggregated_pathocell,
+        #     dataset_combo=[
+        #         MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"],
+        #         MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"],
+        #         MODEL_MAPPINGS["hest1k"]["bimodal_matching"],
+        #         MODEL_MAPPINGS["quilt1m"]["bimodal_matching"],
+        #     ],
+        # )
     output:
         plot=report(BENCHMARKS_DIR / "spider_plot" / "model_comparison_radar.png", category="aggregated", subcategory="all_modalities", labels={"Analysis": "Radar comparison", "Format": "plot"}),
     params:
@@ -160,7 +161,7 @@ rule spider_performance_plot:
             "image-transcriptome": [f"hest_{dataset}" for dataset in HEST_DATASETS] + ["pathocell_embedding_quality"],
             "text-transcriptome": [
                 "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
-                "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg", 
+                "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
                 # Use existing comprehensive validation metrics that are already available
                 "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_f1_macroAvg",
                 "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_rocauc_macroAvg",

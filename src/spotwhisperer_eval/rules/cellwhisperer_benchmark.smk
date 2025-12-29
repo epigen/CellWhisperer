@@ -39,7 +39,7 @@ rule cellwhisperer_zero_shot_prediction:
     conda:
         "cellwhisperer"
     resources:
-        mem_mb=400000,
+        mem_mb=230000,
         slurm=slurm_gres()
     log:
         notebook="../logs/cellwhisperer_zero_shot_prediction_{model}_{dataset}_{metadata_col}_{normed}.ipynb"

@@ -56,7 +56,12 @@ def load_cellwhisperer_model(
             text_model_name_or_path=model_path_from_name(
                 pl_model.model.text_model.config.model_type
             ),
+            image_model_name_or_path=model_path_from_name(
+                pl_model.model.image_model.config.model_type
+            ),
         )
+
+
 
     # this is for freezing.
     pl_model.freeze()

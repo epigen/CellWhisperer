@@ -23,9 +23,6 @@ include: "rules/model_interpretation.smk"
 include: "rules/quilt-vs-pathgen.smk"  # just diagnostics
 include: "rules/quilt-vs-curated.smk"  # quilt1m vs quilt1m_curated comparison
 
-
-
-
 rule all:
     """
     Default target: run training, evaluations, plots, and analyses end-to-end.
@@ -36,13 +33,13 @@ rule all:
             rules.subsample_dataset.output.subsampled_dataset,
             dataset=SINGLE_FILE_DATASETS,
         ),
-        
+
         # Subsampled datasets - multi-file datasets (file-level subsampling)
         expand(
             rules.subsample_multi_file_dataset.output.subsampled_h5ads,
             dataset=MULTI_FILE_DATASETS,
         ),
-        
+
         # All trained models (existing + extended scenarios)
         expand(
             rules.train_spotwhisperer.output.model,
@@ -79,12 +76,12 @@ rule all:
             allow_missing=True,
         ),
 
-        # Sample metadata extraction
-        expand(
-            rules.extract_sample_metadata.output.metadata,
-            dataset=[dataset for base_dataset in BASE_DATASETS for dataset in base_dataset.split("__")],
-            allow_missing=True,
-        ),
+        # Sample metadata extraction (too many files/slow)
+        # expand(
+        #     rules.extract_sample_metadata.output.metadata,
+        #     dataset=[dataset for base_dataset in BASE_DATASETS for dataset in base_dataset.split("__")],
+        #     allow_missing=True,
+        # ),
 
         # Per-class comparison for retrieval analysis
         expand(
