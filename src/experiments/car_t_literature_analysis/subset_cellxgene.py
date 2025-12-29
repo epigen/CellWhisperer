@@ -28,17 +28,29 @@ adata_b = adata_b[final_mask]
 emb = np.asarray(adata_b.obsm["transcriptome_embeds"], dtype=np.float32)
 obs = adata_b.obs.copy()
 
-# Build minimal AnnData (small X to reduce memory)
-X = np.zeros((emb.shape[0], 1), dtype=np.float32)
-var = pd.DataFrame(index=["dummy"]) 
-adata_min = ad.AnnData(X=X, obs=obs, var=var)
-adata_min.obsm["transcriptome_embeds"] = emb
+# Materialize to memory to carry counts and var
+adata_b = adata_b.to_memory(copy=True)
+# Ensure float32 embedding array is preserved
+emb = np.asarray(adata_b.obsm["transcriptome_embeds"], dtype=np.float32)
+adata_b.obsm["transcriptome_embeds"] = emb
+
+# Create counts layer by inverting log1p in X
+X = adata_b.X
+arr = X.A if hasattr(X, "A") else X
+base = None
+if "log1p" in adata_b.uns and isinstance(adata_b.uns["log1p"], dict):
+    base = adata_b.uns["log1p"].get("base", None)
+if base is None or base == "e" or base == np.e:
+    counts = np.expm1(arr)
+else:
+    counts = np.power(base, arr) - 1
+adata_b.layers["counts"] = counts.astype(np.float32)
 
 # Preserve useful keys if present
 for key in ["X_cellwhisperer_umap"]:
     if key in adata_b.obsm_keys():
         umap = np.asarray(adata_b.obsm[key], dtype=np.float32)
-        adata_min.obsm[key] = umap
+        adata_b.obsm[key] = umap
 
-adata_min.write_h5ad(OUT_PATH, compression="lzf")
-print(f"Wrote subset: {OUT_PATH} with {adata_min.n_obs} cells")
+adata_b.write_h5ad(OUT_PATH, compression="lzf")
+print(f"Wrote subset: {OUT_PATH} with {adata_b.n_obs} cells")
