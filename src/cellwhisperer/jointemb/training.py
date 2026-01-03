@@ -257,7 +257,10 @@ class CellWhispererCLI(LightningCLI):
         ]:  # model loading needs to be done implicitly
             logger.warning("Loading model from checkpoint. All other args are ignored")
             self.model = TranscriptomeTextDualEncoderLightning.load_from_checkpoint(
-                self.config["test.model_ckpt"]
+                self.config["test.model_ckpt"],
+                use_validation_functions=self.config[
+                    "test.model.use_validation_functions"
+                ],
             )
 
     def after_fit(self) -> None:
