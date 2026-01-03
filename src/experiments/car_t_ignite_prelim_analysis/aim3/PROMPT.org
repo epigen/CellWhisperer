@@ -1,0 +1,12 @@
+* Context
+ 
+I have this CAR T cell atlas defined here (see folder above) with different patients. For each patient, I also have their clinical variables (see excel sheet a folder above). In general, the source code in ../aim2/ shows well how to work with the data.
+* Task
+ 
+- Pick *one* patient (at random; make sure it is amongst the filtered subset (see /home/moritz/code/cellwhisperer/src/experiments/car_t_ignite_prelim_analysis/aim2/subset_cellxgene.py).
+- log all information about the patient (clinical variables)
+- We previously used cellwhisperer to obtain features for its (and the whole cohorts) infusion product (see aim2/results) and `/home/moritz/code/cellwhisperer/src/experiments/car_t_ignite_prelim_analysis/aim2/run_patient_signal_analysis.py`
+- You should now set the patient's signals in relation to the cohort's measurements (see aim2/results). You could, for example, calculate the quantile of the patient's feature within the cohort distribution.
+- Combine the resulting information with the clinical variables for this patients:
+  - Perform biomedically grounded reasoning on how the patient's properties (relative to the cohort's) relate with his clinical variables in explaining his phenotype.
+  - If possible, draw mechanistic conclusions on the patient's phenotype(s)
