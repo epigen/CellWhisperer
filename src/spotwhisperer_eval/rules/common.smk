@@ -20,6 +20,9 @@ BASE_CONFIG = PROJECT_DIR / "src/spotwhisperer_eval/base_config.yaml"
 # Seeds for reproducibility
 SEEDS = [0]
 
+# Subsampling ratios used across plots
+SUBSAMPLING_RATIOS = [1, 8, 64, 512]
+
 # Individual datasets that actually exist (or will exist)
 INDIVIDUAL_DATASETS = ["cellxgene_census", "archs4_geo", "hest1k", "quilt1m"]
 

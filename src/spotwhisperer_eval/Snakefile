@@ -22,6 +22,7 @@ include: "rules/metadata_and_analysis.smk"
 include: "rules/model_interpretation.smk"
 include: "rules/quilt-vs-pathgen.smk"  # just diagnostics
 include: "rules/quilt-vs-curated.smk"  # quilt1m vs quilt1m_curated comparison
+include: "rules/subset_performance.smk"
 
 rule all:
     """
@@ -32,15 +33,17 @@ rule all:
         expand(
             rules.subsample_dataset.output.subsampled_dataset,
             dataset=SINGLE_FILE_DATASETS,
+            subratio=8,
         ),
 
         # Subsampled datasets - multi-file datasets (file-level subsampling)
         expand(
             rules.subsample_multi_file_dataset.output.subsampled_h5ads,
             dataset=MULTI_FILE_DATASETS,
+            subratio=8,
         ),
 
-        # All trained models (existing + extended scenarios)
+        # All trained models (existing + extended scenarios)  # actually not necessary, because we use the models directly in validations
         expand(
             rules.train_spotwhisperer.output.model,
             dataset_combo=DATASET_COMBOS,
@@ -51,6 +54,7 @@ rule all:
         expand(rules.create_retrieval_plots.output.plots, test_dataset=BASE_DATASETS),
         rules.spider_performance_plot.output.plot,
         rules.bimodal_bridge_plot.output.plot,
+        rules.subset_performance_trend_grid.output.plot,
 
         # Per-class comparison for MUSK
         expand(
