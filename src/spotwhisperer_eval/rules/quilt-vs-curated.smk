@@ -56,3 +56,71 @@ rule quilt_curated_bimodal_bridge_plot:
         notebook="../logs/quilt_curated_bimodal_bridge_comparison.ipynb"
     notebook:
         "../notebooks/quilt_curated_bimodal_bridge_comparison.py.ipynb"
+
+
+rule quilt_curated_trimodal_spider_plot:
+    """
+    Radar plot comparing trimodal vs trimodal_curated across grouped metrics.
+    Uses same metric groups as spider_performance_plot but overlays two trimodal models.
+    """
+    input:
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
+        hest_results=expand(
+            rules.aggregate_hest_evaluation.output.aggregated_hest,
+            dataset_combo=[
+                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"],
+                MODEL_MAPPINGS_CURATED["cellxgene_census__archs4_geo"]["trimodal"],
+            ],
+        ),
+        musk_results=expand(
+            rules.aggregate_musk_results.output.aggregated_musk,
+            dataset_combo=[
+                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"],
+                MODEL_MAPPINGS_CURATED["cellxgene_census__archs4_geo"]["trimodal"],
+            ],
+        ),
+        cwevals_results=expand(
+            rules.aggregate_spotwhisperer_test.output.aggregated_cwevals,
+            dataset_combo=[
+                MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"],
+                MODEL_MAPPINGS_CURATED["cellxgene_census__archs4_geo"]["trimodal"],
+            ],
+        )
+    output:
+        plot=report(CURATED_COMPARISON_RESULTS / "trimodal_spider_comparison.png", category="comparison", subcategory="quilt_curated", labels={"Analysis": "Trimodal spider comparison", "Format": "plot"}),
+        plot_svg=report(CURATED_COMPARISON_RESULTS / "trimodal_spider_comparison.svg", category="comparison", subcategory="quilt_curated", labels={"Analysis": "Trimodal spider comparison", "Format": "plot"}),
+    params:
+        model_configs=[
+            ("trimodal", MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"]),
+            ("trimodal_curated", MODEL_MAPPINGS_CURATED["cellxgene_census__archs4_geo"]["trimodal"]),
+        ],
+        metrics_by_modality={
+            "text-image": [
+                "pannuke",
+                "skin",
+                "lung_tissue_region_type_expert_annotation_accuracy",
+                "lung_tissue_cell_type_annotations_accuracy",
+                "pathocell_image_text_retrieval",
+                "pathocell_zero_shot_classification",
+            ],
+            "image-transcriptome": [f"hest_{dataset}" for dataset in HEST_DATASETS] + ["pathocell_embedding_quality"],
+            "text-transcriptome": [
+                "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
+                "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
+                "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_f1_macroAvg",
+                "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_rocauc_macroAvg",
+                "valfn_immgen_deduplicated/text_as_classes_f1_macroAvg",
+                "valfn_immgen_deduplicated/text_as_classes_rocauc_macroAvg",
+                "valfn_zshot_TabSapWellStudied_cell_lvl/f1_macroAvg",
+            ],
+        },
+        modality_colors=MODALITY_COLORS,
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=50000,
+        slurm="cpus-per-task=4"
+    log:
+        notebook="../logs/quilt_curated_trimodal_spider_plot.ipynb"
+    notebook:
+        "../notebooks/quilt_curated_trimodal_spider_plot.py.ipynb"
