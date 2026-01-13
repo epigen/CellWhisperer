@@ -41,8 +41,8 @@ metrics_by_pair = {
         "hest/overall_performance",
     ],
     "image-text": [
-        "musk/pannuke_macro_avg_f1",
-        "musk/skin_macro_avg_f1",
+        "musk/pannuke_macro_avg_rocauc",
+        "musk/skin_macro_avg_rocauc",
     ],
 }
 
@@ -131,16 +131,16 @@ def extract_metrics_for_combo(modality_pair: str, combo: str) -> dict:
         musk_path = benchmarks_dir / "musk" / combo / "performance_summary.json"
         with open(musk_path, "r") as f:
             musk_json = json.load(f)
-        out["musk/pannuke_macro_avg_f1"] = float(
-            musk_json["task_summaries"]["zeroshot_classification"]["macro_avg_f1"][
+        out["musk/pannuke_macro_avg_rocauc"] = float(
+            musk_json["task_summaries"]["zeroshot_classification"]["macro_avg_rocauc"][
                 "pannuke"
             ]
-        )  # macro avg f1
-        out["musk/skin_macro_avg_f1"] = float(
-            musk_json["task_summaries"]["zeroshot_classification"]["macro_avg_f1"][
+        )  # macro avg rocauc
+        out["musk/skin_macro_avg_rocauc"] = float(
+            musk_json["task_summaries"]["zeroshot_classification"]["macro_avg_rocauc"][
                 "skin"
             ]
-        )  # macro avg f1
+        )  # macro avg rocauc
 
     return out
 
