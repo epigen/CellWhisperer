@@ -34,10 +34,6 @@ test_dataset_map = {
 # Metrics per modality pair (rows). Keep concise small set matching existing subset_performance script.
 metrics_by_pair = {
     "transcriptome-text": [
-        "test_retrieval/left_right/rocauc_macroAvg",
-        "test_retrieval/right_left/rocauc_macroAvg",
-        "test_retrieval/left_right/recall_at_50_macroAvg",
-        "test_retrieval/right_left/recall_at_50_macroAvg",
         "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
         "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
     ],
@@ -149,6 +145,25 @@ def extract_metrics_for_combo(modality_pair: str, combo: str) -> dict:
     return out
 
 
+# Baseline combos per modality pair
+
+
+def get_baseline_combo(modality_pair: str, model: str) -> str:
+    if model == "trimodal":
+        return "cellxgene_census__archs4_geo__hest1k__quilt1m"
+    elif model == "bimodal_bridge":
+        if modality_pair == "transcriptome-text":
+            return "hest1k__quilt1m"
+        elif modality_pair == "transcriptome-image":
+            return "cellxgene_census__archs4_geo__quilt1m"
+        elif modality_pair == "image-text":
+            return "cellxgene_census__archs4_geo__hest1k"
+        else:
+            raise ValueError(f"Unknown modality_pair: {modality_pair}")
+    else:
+        raise ValueError(f"Unknown baseline model: {model}")
+
+
 # Determine grid size: top-aligned per column
 ncols = len(modality_pairs)
 nrows = max(len(metrics_by_pair[mp]) for mp in modality_pairs)
@@ -178,19 +193,55 @@ for col, mp in enumerate(modality_pairs):
             pair_only_values_by_metric[m].append(vals_pair_only[m])
             with_bridge_values_by_metric[m].append(vals_with_bridge[m])
 
+    # Baseline combos for horizontal lines
+    trimodal_combo = get_baseline_combo(mp, "trimodal")
+    bimodal_bridge_combo = get_baseline_combo(mp, "bimodal_bridge")
+    trimodal_vals = extract_metrics_for_combo(mp, trimodal_combo)
+    bimodal_bridge_vals = extract_metrics_for_combo(mp, bimodal_bridge_combo)
+
     # Place plots at the top, fill remaining rows with empty axes
     for row in range(nrows):
         ax = axs[row, col] if nrows > 1 else axs[col]
         if row < len(metrics):
             metric = metrics[row]
-            ax.plot(ratios, pair_only_values_by_metric[metric], marker="o", color=pair_only_color, label="pair-only" if (row == 0 and col == 0) else None)
-            ax.plot(ratios, with_bridge_values_by_metric[metric], marker="o", color=with_bridge_color, label="with-bridge" if (row == 0 and col == 0) else None)
+            ax.plot(
+                ratios,
+                pair_only_values_by_metric[metric],
+                marker="o",
+                color=pair_only_color,
+                label="pair-only" if (row == 0 and col == 0) else None,
+            )
+            ax.plot(
+                ratios,
+                with_bridge_values_by_metric[metric],
+                marker="o",
+                color=with_bridge_color,
+                label="with-bridge" if (row == 0 and col == 0) else None,
+            )
             ax.set_ylim(bottom=0)
             ax.set_xscale("log")
             ax.set_xticks(ratios)
             ax.set_xticklabels(["1", "1/8", "1/64", "1/512"])  # label fractions
             ax.set_xlim(ratios[0], ratios[-1])
             ax.set_title(metric)
+            # Add horizontal baselines: trimodal and bimodal_bridge (constant across ratios)
+            trimodal_baseline = float(trimodal_vals[metric])
+            bimodal_bridge_baseline = float(bimodal_bridge_vals[metric])
+            ax.axhline(
+                trimodal_baseline,
+                color="#333333",
+                linestyle="--",
+                linewidth=1.2,
+                label="trimodal baseline" if (row == 0 and col == 0) else None,
+            )
+            ax.axhline(
+                bimodal_bridge_baseline,
+                color="#777777",
+                linestyle="--",
+                linewidth=1.2,
+                label="bimodal_bridge baseline" if (row == 0 and col == 0) else None,
+            )
+
         else:
             ax.axis("off")
         ax.set_ylabel("")
@@ -207,4 +258,7 @@ if handles:
     plt.subplots_adjust(bottom=0.08)
 
 plt.tight_layout()
-plt.savefig(snakemake.output.plot)
+out_path = Path(snakemake.output.plot)
+plt.savefig(out_path)
+plt.savefig(out_path.with_suffix(".svg"))
+plt.savefig(out_path.with_suffix(".pdf"))
