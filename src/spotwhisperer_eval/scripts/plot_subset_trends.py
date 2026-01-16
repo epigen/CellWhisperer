@@ -2,13 +2,15 @@
 """
 Generate a single subplot grid of performance vs subsampling proportion across modality pairs.
 Each axis is a simple lineplot where x is subsampling proportion [1, 8, 64, 512],
-y is performance for a given metric, and two lines compare:
+y is performance for a given metric, and three lines compare:
 - Pair-only training (only the target modality pair data)
 - With-bridge training (target pair data + the other modality pairs included)
+- Trimodal-all-subset (trimodal model with all datasets subsetted)
 
 Inputs via Snakemake params:
 - snakemake.params.benchmarks_dir: base directory for aggregated results
 - snakemake.params.ratios: list of subsampling ratios, e.g., [1, 8, 64, 256]
+- snakemake.params.plot_trimodal_all_subset: bool toggle to include third line
 
 Output:
 - snakemake.output.plot: path to save the grid plot PNG
@@ -20,6 +22,7 @@ import matplotlib.pyplot as plt
 
 benchmarks_dir = Path(snakemake.params.benchmarks_dir)
 ratios = list(snakemake.params.ratios)
+plot_trimodal_all_subset = bool(snakemake.params.plot_trimodal_all_subset)
 
 # Define modality pairs (columns)
 modality_pairs = ["transcriptome-text", "transcriptome-image", "image-text"]
@@ -36,6 +39,7 @@ metrics_by_pair = {
     "transcriptome-text": [
         "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
         "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
+        "valfn_zshot_HumanDisease_disease_subtype/rocauc_macroAvg",
     ],
     "transcriptome-image": [
         "hest/overall_performance",
@@ -93,6 +97,13 @@ def build_combo(modality_pair: str, ratio: int, include_bridge: bool) -> str:
         raise ValueError(f"Unknown modality_pair: {modality_pair}")
 
 
+def build_trimodal_all_subset_combo(ratio: int) -> str:
+    if ratio == 1:
+        return "cellxgene_census__archs4_geo__hest1k__quilt1m"
+    suffix = f"{ratio}thsub"
+    return f"cellxgene_census_{suffix}__archs4_geo_{suffix}__hest1k_{suffix}__quilt1m_{suffix}"
+
+
 # Helper: extract metrics for a combo and pair
 
 
@@ -115,6 +126,7 @@ def extract_metrics_for_combo(modality_pair: str, combo: str) -> dict:
         for cw_key in [
             "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
             "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
+            "valfn_zshot_HumanDisease_disease_subtype/rocauc_macroAvg",
         ]:
             out[cw_key] = float(df_cw.loc[cw_key])
 
@@ -175,14 +187,16 @@ fig, axs = plt.subplots(
 # Define line styles/colors
 pair_only_color = "#4e79a7"
 with_bridge_color = "#e15759"
+trimodal_all_color = "#59a14f"
 
 # Plot grid, one column at a time, top-aligned
 for col, mp in enumerate(modality_pairs):
     metrics = metrics_by_pair[mp]
 
-    # Precompute metrics across ratios for both lines
+    # Precompute metrics across ratios for required lines
     pair_only_values_by_metric = {m: [] for m in metrics}
     with_bridge_values_by_metric = {m: [] for m in metrics}
+    trimodal_all_values_by_metric = {m: [] for m in metrics}
 
     for ratio in ratios:
         combo_pair_only = build_combo(mp, ratio, include_bridge=False)
@@ -192,6 +206,11 @@ for col, mp in enumerate(modality_pairs):
         for m in metrics:
             pair_only_values_by_metric[m].append(vals_pair_only[m])
             with_bridge_values_by_metric[m].append(vals_with_bridge[m])
+        if plot_trimodal_all_subset:
+            combo_trimodal_all = build_trimodal_all_subset_combo(ratio)
+            vals_trimodal_all = extract_metrics_for_combo(mp, combo_trimodal_all)
+            for m in metrics:
+                trimodal_all_values_by_metric[m].append(vals_trimodal_all[m])
 
     # Baseline combos for horizontal lines
     trimodal_combo = get_baseline_combo(mp, "trimodal")
@@ -218,6 +237,14 @@ for col, mp in enumerate(modality_pairs):
                 color=with_bridge_color,
                 label="with-bridge" if (row == 0 and col == 0) else None,
             )
+            if plot_trimodal_all_subset:
+                ax.plot(
+                    ratios,
+                    trimodal_all_values_by_metric[metric],
+                    marker="o",
+                    color=trimodal_all_color,
+                    label="trimodal-all-subset" if (row == 0 and col == 0) else None,
+                )
             ax.set_ylim(bottom=0)
             ax.set_xscale("log")
             ax.set_xticks(ratios)
@@ -254,8 +281,9 @@ handles, labels = (
     else axs[0].get_legend_handles_labels()
 )
 if handles:
-    fig.legend(handles, labels, loc="lower center", ncol=2)
-    plt.subplots_adjust(bottom=0.08)
+    legend_ncol = 3 if plot_trimodal_all_subset else 2
+    fig.legend(handles, labels, loc="lower center", ncol=legend_ncol)
+    plt.subplots_adjust(bottom=0.1)
 
 plt.tight_layout()
 out_path = Path(snakemake.output.plot)

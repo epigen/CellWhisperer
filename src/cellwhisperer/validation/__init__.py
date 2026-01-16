@@ -27,6 +27,12 @@ def initialize_validation_functions(
         celltypes=config["top20_lung_liver_blood_celltypes"]
     )
 
+    human_disease_dataset = SingleCellDataSetForValidationScoring(
+        dataset="human_disease",
+        celltype_obs_colname="Disease_subtype",
+        auto_create_batch_obs_colname=False,  # No donor/method structure
+    )
+
     # Lung tissue datasets for validation
     lung_tissue_dataset = SingleCellDataSetForValidationScoring(
         dataset="lung_tissue",
@@ -88,6 +94,14 @@ def initialize_validation_functions(
             sc_dataset=tabsap_sc_dataset,
             tokenizer_name=text_model_type,
             transcriptome_tokenizer_type=transcriptome_model_type,
+            image_processor=image_model_type,
+        ),
+        # Human Disease - Disease Subtype
+        "zshot_HumanDisease_disease_subtype": SingleCellZeroshotValidationScoreCalculator(
+            sc_dataset=human_disease_dataset,
+            batch_size=batch_size,
+            transcriptome_tokenizer_type=transcriptome_model_type,
+            tokenizer_name=text_model_type,
             image_processor=image_model_type,
         ),
         # "zshot_LungTissue_region_lvl": SingleCellZeroshotValidationScoreCalculator(

@@ -39,6 +39,7 @@ def models_for_pair(modality_pair, subratio):
 
 # Later ratios to consider (comment): 4, 16
 
+PLOT_TRIMODAL_ALL_SUBSET = config.get("plot_trimodal_all_subset", False)
 
 rule subset_performance:
     """
@@ -124,13 +125,25 @@ rule subset_performance_trend_grid:
     for each metric and modality pair, comparing pair-only vs with-bridge training.
     """
     input:
-        retrieval_files=lambda wildcards: expand(
+        retrieval_files=lambda wildcards: expand(  # can probably be dropped
             BENCHMARKS_DIR / "retrieval" / "{combo}" / "aggregated_retrieval.csv",
-            combo=combos_for_grid(SUBSAMPLING_RATIOS)
+            combo=combos_for_grid(SUBSAMPLING_RATIOS) + (
+                [
+                    (f"cellxgene_census_{r}thsub__archs4_geo_{r}thsub__hest1k_{r}thsub__quilt1m_{r}thsub")
+                    for r in SUBSAMPLING_RATIOS if r != 1
+                ] if PLOT_TRIMODAL_ALL_SUBSET else []
+            ),
+            allow_missing=True,
         ),
         cwevals_files=lambda wildcards: expand(
             BENCHMARKS_DIR / "retrieval" / "{combo}" / "aggregated_cwevals.csv",
-            combo=combos_for_grid(SUBSAMPLING_RATIOS)
+            combo=combos_for_grid(SUBSAMPLING_RATIOS) + (
+                [
+                    (f"cellxgene_census_{r}thsub__archs4_geo_{r}thsub__hest1k_{r}thsub__quilt1m_{r}thsub")
+                    for r in SUBSAMPLING_RATIOS if r != 1
+                ] if PLOT_TRIMODAL_ALL_SUBSET else []
+            ),
+            allow_missing=True,
         ),
         hest_files=lambda wildcards: expand(
             BENCHMARKS_DIR / "hest" / "{combo}" / "aggregated_results.json",
@@ -140,7 +153,13 @@ rule subset_performance_trend_grid:
             ] + [
                 ("hest1k" if r == 1 else f"hest1k_{r}thsub")
                 for r in SUBSAMPLING_RATIOS
-            ]
+            ] + (
+                [
+                    (f"cellxgene_census_{r}thsub__archs4_geo_{r}thsub__hest1k_{r}thsub__quilt1m_{r}thsub")
+                    for r in SUBSAMPLING_RATIOS if r != 1
+                ] if PLOT_TRIMODAL_ALL_SUBSET else []
+            ),
+            allow_missing=True,
         ),
         musk_files=lambda wildcards: expand(
             BENCHMARKS_DIR / "musk" / "{combo}" / "performance_summary.json",
@@ -150,13 +169,20 @@ rule subset_performance_trend_grid:
             ] + [
                 ("quilt1m" if r == 1 else f"quilt1m_{r}thsub")
                 for r in SUBSAMPLING_RATIOS
-            ]
+            ] + (
+                [
+                    (f"cellxgene_census_{r}thsub__archs4_geo_{r}thsub__hest1k_{r}thsub__quilt1m_{r}thsub")
+                    for r in SUBSAMPLING_RATIOS if r != 1
+                ] if PLOT_TRIMODAL_ALL_SUBSET else []
+            ),
+            allow_missing=True,
         )
     output:
         plot=BENCHMARKS_DIR / "subset_performance" / "trend_grid.png"
     params:
         benchmarks_dir=BENCHMARKS_DIR,
-        ratios=SUBSAMPLING_RATIOS
+        ratios=SUBSAMPLING_RATIOS,
+        plot_trimodal_all_subset=PLOT_TRIMODAL_ALL_SUBSET
     conda:
         "cellwhisperer"
     resources:
