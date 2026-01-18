@@ -39,7 +39,7 @@ metrics_by_pair = {
     "transcriptome-text": [
         "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
         "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
-        "valfn_zshot_HumanDisease_disease_subtype/rocauc_macroAvg",
+        # "valfn_zshot_HumanDisease_disease/rocauc_macroAvg",
     ],
     "transcriptome-image": [
         "hest/overall_performance",
@@ -126,7 +126,7 @@ def extract_metrics_for_combo(modality_pair: str, combo: str) -> dict:
         for cw_key in [
             "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
             "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
-            "valfn_zshot_HumanDisease_disease_subtype/rocauc_macroAvg",
+            # "valfn_zshot_HumanDisease_disease/rocauc_macroAvg",
         ]:
             out[cw_key] = float(df_cw.loc[cw_key])
 

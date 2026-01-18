@@ -163,8 +163,8 @@ rule spider_performance_plot:
                 "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
                 "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
                 # Use existing comprehensive validation metrics that are already available
-                "valfn_zshot_HumanDisease_disease_subtype/f1_macroAvg"
-                "valfn_zshot_HumanDisease_disease_subtype/rocauc_macroAvg"
+                "valfn_zshot_HumanDisease_disease/f1_macroAvg"
+                "valfn_zshot_HumanDisease_disease/rocauc_macroAvg"
                 # "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_f1_macroAvg",
                 # "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_rocauc_macroAvg",
                 "valfn_immgen_deduplicated/text_as_classes_f1_macroAvg",

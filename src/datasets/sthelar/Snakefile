@@ -6,7 +6,7 @@ include: "../../shared/rules/dataset_processing.smk"
 # STHELAR slide configuration
 STHELAR_SLIDE_IDS = [
     "bone_marrow_s0",
-    "bone_marrow_s1", 
+    "bone_marrow_s1",
     "bone_s0",
     "brain_s0",
     "breast_s0",

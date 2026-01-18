@@ -29,7 +29,7 @@ def initialize_validation_functions(
 
     human_disease_dataset = SingleCellDataSetForValidationScoring(
         dataset="human_disease",
-        celltype_obs_colname="Disease_subtype",
+        celltype_obs_colname="Disease",
         auto_create_batch_obs_colname=False,  # No donor/method structure
     )
 
@@ -97,11 +97,12 @@ def initialize_validation_functions(
             image_processor=image_model_type,
         ),
         # Human Disease - Disease Subtype
-        "zshot_HumanDisease_disease_subtype": SingleCellZeroshotValidationScoreCalculator(
+        "zshot_HumanDisease_disease": SingleCellZeroshotValidationScoreCalculator(
             sc_dataset=human_disease_dataset,
             batch_size=batch_size,
             transcriptome_tokenizer_type=transcriptome_model_type,
             tokenizer_name=text_model_type,
+            average_mode=None,
             image_processor=image_model_type,
         ),
         # "zshot_LungTissue_region_lvl": SingleCellZeroshotValidationScoreCalculator(
