@@ -193,50 +193,73 @@ exclude = {
 }
 classes = [c for c in classes_trimodal if c not in exclude]
 
-# Helper to compute per-class F1 given logits DataFrame
+# Helper to compute per-class metrics given logits DataFrame
+from sklearn.metrics import roc_auc_score
 
 
-def compute_f1_by_class(df: pd.DataFrame, class_cols: list[str]) -> pd.DataFrame:
-    # predicted class = argmax over class_cols
-    preds = df[class_cols].astype(float).values
-    pred_idx = np.argmax(preds, axis=1)
-    pred_labels_raw = [class_cols[i] for i in pred_idx]
-    pred_labels = [normalize_label(s) for s in pred_labels_raw]
+def compute_metrics_by_class(df: pd.DataFrame, class_cols: list[str]) -> pd.DataFrame:
+    # scores matrix and normalization
+    scores = df[class_cols].astype(float).values
+    scores = apply_score_norm(scores, mode=score_norm)
+
     # ground truth labels from truth_map
     y_true_raw = [
         truth_map.get((row["dataset_id"], row["spot_id"])) for _, row in df.iterrows()
     ]
     y_true = [normalize_label(str(s)) if s is not None else None for s in y_true_raw]
+
     # restrict to classes of interest and drop missing
-    pairs = [
-        (t, p)
-        for t, p in zip(y_true, pred_labels)
-        if (t is not None) and (t in classes)
-    ]
-    if len(pairs) == 0:
-        return pd.DataFrame({"class_label": classes, "f1": [np.nan] * len(classes)})
-    y_t = [t for (t, _) in pairs]
-    y_p = [p for (_, p) in pairs]
-    # compute per-class F1 manually
-    f1_values = []
-    for cls in classes:
-        tp = sum((t == cls) and (p == cls) for t, p in zip(y_t, y_p))
-        fp = sum((t != cls) and (p == cls) for t, p in zip(y_t, y_p))
-        fn = sum((t == cls) and (p != cls) for t, p in zip(y_t, y_p))
-        denom = 2 * tp + fp + fn
-        f1 = (2 * tp / denom) if denom > 0 else np.nan
-        f1_values.append(f1)
-    return pd.DataFrame({"class_label": classes, "f1": f1_values})
+    keep_idx = [i for i, t in enumerate(y_true) if (t is not None) and (t in classes)]
+    if len(keep_idx) == 0:
+        return pd.DataFrame({"class_label": classes, metric: [np.nan] * len(classes)})
+    y_true_filt = [y_true[i] for i in keep_idx]
+    scores_filt = scores[keep_idx, :]
+
+    # compute per-class metric
+    vals = []
+    for j, cls in enumerate(class_cols):
+        cls_norm = normalize_label(cls)
+        if cls_norm not in classes:
+            continue
+        # one-vs-rest true labels
+        y_bin = np.array([1 if t == cls_norm else 0 for t in y_true_filt])
+        s = scores_filt[:, j]
+        if metric == "f1":
+            # argmax prediction
+            pred_idx = np.argmax(scores_filt, axis=1)
+            y_pred_bin = (pred_idx == j).astype(int)
+            tp = int(((y_bin == 1) & (y_pred_bin == 1)).sum())
+            fp = int(((y_bin == 0) & (y_pred_bin == 1)).sum())
+            fn = int(((y_bin == 1) & (y_pred_bin == 0)).sum())
+            denom = 2 * tp + fp + fn
+            val = (2 * tp / denom) if denom > 0 else np.nan
+        elif metric == "auroc":
+            try:
+                val = roc_auc_score(y_bin, s)
+            except Exception:
+                val = np.nan
+        else:
+            val = np.nan
+        vals.append((cls_norm, val))
+
+    # Fill missing classes with NaN
+    val_map = {k: v for k, v in vals}
+    out_vals = [val_map.get(cls, np.nan) for cls in classes]
+    return pd.DataFrame({"class_label": classes, metric: out_vals})
 
 
-conch_f1 = compute_f1_by_class(conch_df, conch_classes).rename(columns={"f1": "conch"})
-plip_f1 = compute_f1_by_class(plip_df, plip_classes).rename(columns={"f1": "plip"})
+conch_scores = compute_metrics_by_class(conch_df, conch_classes).rename(
+    columns={metric: "conch"}
+)
+plip_scores = compute_metrics_by_class(plip_df, plip_classes).rename(
+    columns={metric: "plip"}
+)
 
 # Merge all (include quilt1m)
 merged = (
     trimodal_agg.merge(quilt_agg, on="class_label", how="inner")
-    .merge(conch_f1, on="class_label", how="inner")
-    .merge(plip_f1, on="class_label", how="inner")
+    .merge(conch_scores, on="class_label", how="inner")
+    .merge(plip_scores, on="class_label", how="inner")
 )
 # Keep classes in the chosen order
 # order = [c for c in classes if c in merged["class_label"].tolist()]
