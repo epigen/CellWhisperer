@@ -103,7 +103,7 @@ agg["se"] = agg["std"] / np.sqrt(agg["count"])
 order = agg.sort_values("mean", ascending=False)["class_label"].tolist()
 
 # Plot mean bar with uncertainty (SE)
-plt.figure(figsize=(max(3.8, len(order) * 0.15), 3))
+plt.figure(figsize=(max(3, len(order) * 0.12), 3))
 # Read p-values before plotting for coloring
 comp_base = Path(per_class_a[0]).parent.parent  # PATHOCELL_RESULTS
 comp_csv = (
@@ -155,7 +155,7 @@ plt.xlabel("Cell type")
 plt.title(f"Per-class mean delta for {metric} | {prediction_level}")
 # Clean display labels: drop leading 'A sample of '
 cleaned_labels = [re.sub(r"^A sample of\s+", "", cls) for cls in order]
-ax.set_xticklabels(cleaned_labels, rotation=60, ha="right")
+ax.set_xticklabels(cleaned_labels, rotation=90, ha="right")
 plt.tight_layout()
 
 # Annotate p-values from comparison CSV produced by pathocell_compare_models
