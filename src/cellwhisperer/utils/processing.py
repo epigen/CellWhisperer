@@ -60,13 +60,16 @@ def adata_to_embeds(
                         ]
 
                         patches = uni_processor(sample_adata, return_tensors="pt")
-                        batch_inputs = {
-                            k: v.to(model.device) for k, v in patches.items()
-                        }
-                        _, image_embeds_batch = model.get_image_features(
-                            **batch_inputs, normalize_embeds=True
-                        )
-                        image_embeds.append(image_embeds_batch.detach().cpu())
+                        n_images = next(iter(patches.values())).shape[0]
+                        for i in range(0, n_images, batch_size):
+                            batch_inputs = {
+                                k: v[i : i + batch_size].to(model.device)
+                                for k, v in patches.items()
+                            }
+                            _, image_embeds_batch = model.get_image_features(
+                                **batch_inputs, normalize_embeds=True
+                            )
+                            image_embeds.append(image_embeds_batch.detach().cpu())
 
                 if image_embeds:
                     return torch.cat(image_embeds, dim=0)
@@ -76,11 +79,18 @@ def adata_to_embeds(
                     )
             else:
                 patches = uni_processor(adata, return_tensors="pt")
-                batch_inputs = {k: v.to(model.device) for k, v in patches.items()}
-                _, image_embeds = model.get_image_features(
-                    **batch_inputs, normalize_embeds=True
-                )
-                return image_embeds
+                image_embeds = []
+                n_images = next(iter(patches.values())).shape[0]
+                for i in range(0, n_images, batch_size):
+                    batch_inputs = {
+                        k: v[i : i + batch_size].to(model.device)
+                        for k, v in patches.items()
+                    }
+                    _, image_embeds_batch = model.get_image_features(
+                        **batch_inputs, normalize_embeds=True
+                    )
+                    image_embeds.append(image_embeds_batch)
+                return torch.cat(image_embeds, dim=0)
         else:
             logging.warning(
                 "Image data requested but no whole slide image found, falling back to transcriptome"
