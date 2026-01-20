@@ -8,6 +8,7 @@ Inputs (Snakemake):
 - snakemake.input.cwevals_files: list of aggregated_cwevals.csv for 5 combos
 - snakemake.input.hest_files: aggregated_results.json for 5 combos (only for transcriptome-image)
 - snakemake.output.summary: summary CSV path
+- snakemake.input.pathocell_files: performance_summary.json for 5 combos (PathoCellBench)
 - snakemake.output.plot: comparison PNG path
 - snakemake.params.modality_pair: pair string
 """
@@ -86,44 +87,45 @@ for i in range(len(snakemake.input.retrieval_files)):
 
     elif modality_pair == "transcriptome-image":
         # Small set: HEST overall metric from aggregated_results.json
-        # Note: specific per-dataset HEST metrics can be added (commented below)
         with open(snakemake.input.hest_files[i], "r") as f:
             hest_json = json.load(f)
-        # Assume aggregated JSON has an "overall_performance" or similar key
-        for key in ["overall_performance"]:
-            if key in hest_json:
-                rows.append(
-                    {
-                        "metric": f"hest/{key}",
-                        "model": label,
-                        "value": float(hest_json[key]),
-                    }
-                )
-        # Comprehensive options: include per-dataset f1/rocauc
-        # for dataset in ["IDC","PRAD","PAAD","SKCM","COAD","READ","CCRCC","HCC","LUNG","LYMPH_IDC"]:
-        #     for m in ["f1_macroAvg","rocauc_macroAvg"]:
-        #         key = f"{dataset}/{m}"
-        #         if key in hest_json:
-        #             rows.append({"metric": f"hest/{key}", "model": label, "value": float(hest_json[key])})
+        # HEST overall performance
+        rows.append(
+            {
+                "metric": "hest/overall_performance",
+                "model": label,
+                "value": float(hest_json["overall_performance"]),
+            }
+        )
+        # PathoCellBench: include zero-shot classification (f1) metric from performance_summary.json
+        with open(snakemake.input.pathocell_files[i], "r") as f:
+            patho = json.load(f)
+        rows.append(
+            {
+                "metric": "pathocell/zero_shot_classification",
+                "model": label,
+                "value": float(patho["pathocell_zero_shot_classification"]),
+            }
+        )
 
     elif modality_pair == "image-text":
-        # Small set: MUSK pannuke/skin rocauc (rocauc is enough)
+        # Small set: MUSK pannuke/skin ROC-AUC (use ROC-AUC for subset plot consistency)
         with open(snakemake.input.musk_files[i], "r") as f:
             musk_json = json.load(f)
         for dataset in ["pannuke", "skin"]:
             rows.append(
                 {
-                    "metric": f"musk/{dataset}_macro_avg_f1",
+                    "metric": f"musk/{dataset}_macro_avg_rocauc",
                     "model": label,
                     "value": float(
                         musk_json["task_summaries"]["zeroshot_classification"][
-                            "macro_avg_f1"
+                            "macro_avg_rocauc"
                         ][dataset]
                     ),
                 }
             )
 
-        # Comprehensive options: add retrieval and few-shot metrics (rocauc or recall)
+        # Comprehensive options: add retrieval and few-shot metrics
         # for dataset in ["pathmmu_retrieval", "unitopatho_retrieval"]:
         #     for m in ["rocauc", "recall@1","recall@10","recall@50"]:
         #         key = f"{dataset}_{m}"

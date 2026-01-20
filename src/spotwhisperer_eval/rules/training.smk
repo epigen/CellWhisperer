@@ -6,7 +6,7 @@ rule subsample_dataset:
     Works on h5ad files at the cell level.
     """
     input:
-        full_dataset=PROJECT_DIR / config["paths"]["full_dataset"]
+        full_dataset=ancient(PROJECT_DIR / config["paths"]["full_dataset"])
     output:
         subsampled_dataset=PROJECT_DIR / "results/{dataset}_{subratio}thsub/full_data.h5ad"
     params:
@@ -26,7 +26,7 @@ rule subsample_multi_file_dataset:
     Works by symlinking a subset of h5ad files for datasets with multiple files.
     """
     input:
-        h5ads_dir=PROJECT_DIR / "results/{dataset}/h5ads"
+        h5ads_dir=ancient(PROJECT_DIR / "results/{dataset}/h5ads")
     output:
         subsampled_h5ads=directory(PROJECT_DIR / "results/{dataset}_{subratio}thsub/h5ads")
     params:

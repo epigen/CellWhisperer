@@ -62,6 +62,11 @@ rule subset_performance:
                 combo=models_for_pair(wildcards.modality_pair, wildcards.subratio),
             )
         ),
+        pathocell_files=lambda wildcards: expand(
+            BENCHMARKS_DIR / "pathocell" / "{combo}" / "performance_summary.json",
+            combo=models_for_pair(wildcards.modality_pair, wildcards.subratio),
+            allow_missing=True,
+        ),
         musk_files=lambda wildcards: (
             [] if wildcards.modality_pair != "image-text" else expand(
                 BENCHMARKS_DIR / "musk" / "{combo}" / "performance_summary.json",
@@ -125,6 +130,7 @@ rule subset_performance_trend_grid:
     for each metric and modality pair, comparing pair-only vs with-bridge training.
     """
     input:
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
         retrieval_files=lambda wildcards: expand(  # can probably be dropped
             BENCHMARKS_DIR / "retrieval" / "{combo}" / "aggregated_retrieval.csv",
             combo=combos_for_grid(SUBSAMPLING_RATIOS) + (
@@ -147,6 +153,22 @@ rule subset_performance_trend_grid:
         ),
         hest_files=lambda wildcards: expand(
             BENCHMARKS_DIR / "hest" / "{combo}" / "aggregated_results.json",
+            combo=[
+                ("cellxgene_census__archs4_geo__hest1k__quilt1m" if r == 1 else f"cellxgene_census__archs4_geo__hest1k_{r}thsub__quilt1m")
+                for r in SUBSAMPLING_RATIOS
+            ] + [
+                ("hest1k" if r == 1 else f"hest1k_{r}thsub")
+                for r in SUBSAMPLING_RATIOS
+            ] + (
+                [
+                    (f"cellxgene_census_{r}thsub__archs4_geo_{r}thsub__hest1k_{r}thsub__quilt1m_{r}thsub")
+                    for r in SUBSAMPLING_RATIOS if r != 1
+                ] if PLOT_TRIMODAL_ALL_SUBSET else []
+            ),
+            allow_missing=True,
+        ),
+        pathocell_files=lambda wildcards: expand(
+            BENCHMARKS_DIR / "pathocell" / "{combo}" / "performance_summary.json",
             combo=[
                 ("cellxgene_census__archs4_geo__hest1k__quilt1m" if r == 1 else f"cellxgene_census__archs4_geo__hest1k_{r}thsub__quilt1m")
                 for r in SUBSAMPLING_RATIOS

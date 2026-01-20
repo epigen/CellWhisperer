@@ -20,6 +20,8 @@ import json
 import pandas as pd
 import matplotlib.pyplot as plt
 
+plt.style.use(snakemake.input.mpl_style)
+
 benchmarks_dir = Path(snakemake.params.benchmarks_dir)
 ratios = list(snakemake.params.ratios)
 plot_trimodal_all_subset = bool(snakemake.params.plot_trimodal_all_subset)
@@ -47,6 +49,7 @@ metrics_by_pair = {
     "image-text": [
         "musk/pannuke_macro_avg_rocauc",
         "musk/skin_macro_avg_rocauc",
+        "pathocell/zero_shot_classification",
     ],
 }
 
@@ -138,7 +141,11 @@ def extract_metrics_for_combo(modality_pair: str, combo: str) -> dict:
         out["hest/overall_performance"] = float(
             hest_json["overall_performance"]
         )  # matches metrics_by_pair key
-
+        # PathoCellBench zero-shot classification (optional, if present via aggregate copy)
+        pathocell_path = benchmarks_dir / "pathocell" / combo / "performance_summary.json"
+        with open(pathocell_path, "r") as f:
+            patho = json.load(f)
+        out["pathocell/zero_shot_classification"] = float(patho["pathocell_zero_shot_classification"])
     elif modality_pair == "image-text":
         musk_path = benchmarks_dir / "musk" / combo / "performance_summary.json"
         with open(musk_path, "r") as f:

@@ -69,7 +69,7 @@ rule pathocell_process_data:
         patch_level=lambda wildcards: wildcards.prediction_level=="patch"
     wildcard_constraints:
         prediction_level="(cell|patch)",
-        dataset="[^/]+",
+        dataset="[^/]+"
     resources:
         mem_mb=50000,
         slurm="cpus-per-task=2 partition=cmackall"
@@ -84,8 +84,6 @@ rule pathocell_cell_type_prediction:
     Run cell type prediction and evaluation using CellWhisperer model.
     Uses score_left_vs_right() or get_performance_metrics_left_vs_right()
     for evaluation. Supports both cell-level and patch-level prediction.
-
-    
     """
     input:
         model=PROJECT_DIR / config["paths"]["jointemb_models"] / "{model}.ckpt",
@@ -97,7 +95,6 @@ rule pathocell_cell_type_prediction:
         confusion_matrix=PATHOCELL_MODEL_RESULTS / "{dataset}_{prediction_level}_confusion_seed{seed}.csv"
     params:
         prediction_level="{prediction_level}",
-        cell_type_level="coarse"
     threads: 8
     wildcard_constraints:
         prediction_level="(cell|patch)",
@@ -143,6 +140,7 @@ rule aggregate_pathocell_results:
     """
     Copy aggregated PathoCellBench summaries into the benchmarks directory for dataset_combo.
     This rule is used by the spider plot to access PathoCellBench results.
+
     """
     input:
         performance_summary=lambda wildcards: expand(
@@ -211,11 +209,12 @@ rule pathocell_compare_models:
     script:
         "../scripts/compare_pathocell_models.py"
 
-rule pathocell_per_class_boxplots:
+rule pathocell_per_class:
     """
     Create per-class plots of delta-score (model_a - model_b) for a given metric.
     """
     input:
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
         per_class_a=lambda wildcards: expand(
             PATHOCELL_RESULTS / "{model}" / "{dataset}_{prediction_level}_per_class_seed{seed}.csv",
             model=wildcards.model_a,
@@ -233,7 +232,7 @@ rule pathocell_per_class_boxplots:
             allow_missing=True,
         ),
     output:
-        plot=PATHOCELL_RESULTS / "comparison" / "{prediction_level}" / "plots" / "per_class__{metric}__{model_a}_vs_{model_b}.png",
+        plot=PATHOCELL_RESULTS / "comparison" / "{prediction_level}" / "plots" / "per_class__{metric}__{model_a}_vs_{model_b}.svg",
     params:
         model_a="{model_a}",
         model_b="{model_b}",
@@ -251,13 +250,14 @@ rule pathocell_per_class_boxplots:
         mem_mb=8000,
         slurm="cpus-per-task=1"
     script:
-        "../scripts/plot_pathocell_boxplots.py"
+        "../scripts/plot_pathocell_perclass.py"
 
 rule pathocell_per_class_f1_scatter:
     """
     Scatterplot of per-class mean F1 between two models.
     """
     input:
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
         per_class_a=lambda wildcards: expand(
             PATHOCELL_RESULTS / "{model}" / "{dataset}_{prediction_level}_per_class_seed{seed}.csv",
             model=wildcards.model_a,
@@ -275,11 +275,13 @@ rule pathocell_per_class_f1_scatter:
             allow_missing=True,
         ),
     output:
-        plot=PATHOCELL_RESULTS / "comparison" / "{prediction_level}" / "plots" / "f1_scatter__{model_a}_vs_{model_b}.png",
+        plot=PATHOCELL_RESULTS / "comparison" / "{prediction_level}" / "plots" / "f1_{model_a}_vs_{model_b}.svg",
     params:
         model_a="{model_a}",
         model_b="{model_b}",
         prediction_level="{prediction_level}",
+        plot_type="violin",
+        scatter_unit="dataset"  # 'class' or 'dataset'
     wildcard_constraints:
         prediction_level="(cell|patch)",
         model_a="[^/]+",
@@ -325,7 +327,7 @@ rule pathocell_all:
         # ),
         # Per-class plots for key metrics
         expand(
-            rules.pathocell_per_class_boxplots.output.plot,
+            rules.pathocell_per_class.output.plot,
             model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"],
             model_b=["spotwhisperer_quilt1m"],
             prediction_level=["patch"],

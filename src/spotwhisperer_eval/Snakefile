@@ -29,29 +29,9 @@ rule all:
     Default target: run training, evaluations, plots, and analyses end-to-end.
     """
     input:
-        # Subsampled datasets - single-file datasets (cell-level subsampling)
-        expand(
-            rules.subsample_dataset.output.subsampled_dataset,
-            dataset=SINGLE_FILE_DATASETS,
-            subratio=8,
-        ),
-
-        # Subsampled datasets - multi-file datasets (file-level subsampling)
-        expand(
-            rules.subsample_multi_file_dataset.output.subsampled_h5ads,
-            dataset=MULTI_FILE_DATASETS,
-            subratio=8,
-        ),
-
-        # All trained models (existing + extended scenarios)  # actually not necessary, because we use the models directly in validations
-        expand(
-            rules.train_spotwhisperer.output.model,
-            dataset_combo=DATASET_COMBOS,
-        ),
-
         # Analysis plots
-        expand(rules.create_analysis_plots.output.plots, test_dataset=BASE_DATASETS),
-        expand(rules.create_retrieval_plots.output.plots, test_dataset=BASE_DATASETS),
+        # expand(rules.create_analysis_plots.output.plots, test_dataset=BASE_DATASETS),
+        # expand(rules.create_retrieval_plots.output.plots, test_dataset=BASE_DATASETS),
         rules.spider_performance_plot.output.plot,
         rules.bimodal_bridge_plot.output.plot,
         rules.subset_performance_trend_grid.output.plot,
@@ -61,46 +41,44 @@ rule all:
             rules.musk_per_class_analysis.output.analysis,
             seed=SEEDS[0],
         ),
-
-        # Per-class comparison for PathoCellBench
-
         # Per-class comparison for CellWhisperer benchmark
         expand(
             rules.cellwhisperer_per_class_analysis.output.analysis,
             allow_missing=True,
         ),
 
-        # Comprehensive CellWhisperer benchmarks (NEW)
-        expand(
-            rules.aggregate_comprehensive_benchmarks.output.aggregated_comprehensive,
-            model=[
-                "spotwhisperer_{}".format(MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"]),
-                "spotwhisperer_{}".format(MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"]),
-            ],
-            allow_missing=True,
-        ),
+        # Interpretation/per-class analyses
+        # rules.model_interpretation_all.input,
 
-        # Sample metadata extraction (too many files/slow)
+        # # Comprehensive CellWhisperer benchmarks (NEW)
         # expand(
-        #     rules.extract_sample_metadata.output.metadata,
-        #     dataset=[dataset for base_dataset in BASE_DATASETS for dataset in base_dataset.split("__")],
+        #     rules.aggregate_comprehensive_benchmarks.output.aggregated_comprehensive,
+        #     model=[
+        #         "spotwhisperer_{}".format(MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["trimodal"]),
+        #         "spotwhisperer_{}".format(MODEL_MAPPINGS["cellxgene_census__archs4_geo"]["bimodal_matching"]),
+        #     ],
         #     allow_missing=True,
         # ),
 
-        # Per-class comparison for retrieval analysis
-        expand(
-            rules.retrieval_per_class_analysis.output.analysis,
-            dataset=BASE_DATASETS,
-            allow_missing=True,
-        ),
+        # # Sample metadata extraction (too many files/slow)
+        # # expand(
+        # #     rules.extract_sample_metadata.output.metadata,
+        # #     dataset=[dataset for base_dataset in BASE_DATASETS for dataset in base_dataset.split("__")],
+        # #     allow_missing=True,
+        # # ),
 
-        # Per-class comparison for HEST benchmark
-        expand(
-            rules.hest_per_class_analysis.output.analysis,
-            allow_missing=True,
-        ),
+        # # Per-class comparison for retrieval analysis
+        # expand(
+        #     rules.retrieval_per_class_analysis.output.analysis,
+        #     dataset=BASE_DATASETS,
+        #     allow_missing=True,
+        # ),
 
-        # Model interpretation analyses
-        rules.model_interpretation_all.input,
+        # # Per-class comparison for HEST benchmark
+        # expand(
+        #     rules.hest_per_class_analysis.output.analysis,
+        #     allow_missing=True,
+        # ),
+
 
     default_target: True

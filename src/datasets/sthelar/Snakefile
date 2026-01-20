@@ -86,7 +86,8 @@ rule process_data:
 
 rule all:
     input:
-        expand(str(PROJECT_DIR / config["paths"]["full_dataset_multi"]), dataset="sthelar", i=STHELAR_SLIDE_IDS)
+        # expand(str(PROJECT_DIR / config["paths"]["full_dataset_multi"]), dataset="sthelar", i=STHELAR_SLIDE_IDS)
+        expand(rules.download_data.output[0], dataset="sthelar", sample_id=STHELAR_SLIDE_IDS)
     default_target: True
 
 rule test:
