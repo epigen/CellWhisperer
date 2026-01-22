@@ -14,43 +14,85 @@ import numpy as np
 
 
 class MILinearBlock(nn.Module):
-    def __init__(self, feature_sz, units=2048, bln=True):
+    def __init__(self, feature_sz, units=2048, bln=True, identity_mode=False):
         super(MILinearBlock, self).__init__()
-        # Pre-dot product encoder for "Encode and Dot" arch for 1D feature maps
-        self.feature_nonlinear = nn.Sequential(
-            nn.Linear(feature_sz, units, bias=False),
-            nn.BatchNorm1d(units),
-            nn.ReLU(),
-            nn.Linear(units, units),
-        )
-        self.feature_shortcut = nn.Linear(feature_sz, units)
-        self.feature_block_ln = nn.LayerNorm(units)
+        self.bln = bln and (not identity_mode)
+        self.identity_mode = identity_mode
 
-        # initialize the initial projection to a sort of noisy copy
-        eye_mask = np.zeros(
-            (units, feature_sz), dtype=np.bool_
-        )  ## seems like np.bool is deprecated
-        for i in range(min(feature_sz, units)):
-            eye_mask[i, i] = 1
+        if identity_mode:
+            # Single linear layer initialized to identity (or closest rectangular identity)
+            self.feature_proj = nn.Linear(feature_sz, units, bias=False)
+            # Initialize weights to identity where possible, zeros elsewhere
+            with torch.no_grad():
+                self.feature_proj.weight.zero_()
+                for i in range(min(feature_sz, units)):
+                    self.feature_proj.weight[i, i] = 1.0
+        else:
+            # Original 2-layer block with shortcut and normalization
+            self.feature_nonlinear = nn.Sequential(
+                nn.Linear(feature_sz, units, bias=False),
+                nn.BatchNorm1d(units),
+                nn.ReLU(),
+                nn.Linear(units, units),
+            )
+            self.feature_shortcut = nn.Linear(feature_sz, units)
+            self.feature_block_ln = nn.LayerNorm(units)
 
-        self.feature_shortcut.weight.data.uniform_(-0.01, 0.01)
-        self.feature_shortcut.weight.data.masked_fill_(torch.tensor(eye_mask), 1.0)
-        self.bln = bln
+            # initialize the initial projection to a sort of noisy copy
+            eye_mask = np.zeros((units, feature_sz), dtype=np.bool_)
+            for i in range(min(feature_sz, units)):
+                eye_mask[i, i] = 1
+
+            self.feature_shortcut.weight.data.uniform_(-0.01, 0.01)
+            self.feature_shortcut.weight.data.masked_fill_(torch.tensor(eye_mask), 1.0)
 
     def forward(self, feat):
+        if self.identity_mode:
+            f = feat
+            # f = self.feature_proj(feat)
+            return f
         f = self.feature_nonlinear(feat) + self.feature_shortcut(feat)
         if self.bln:
             f = self.feature_block_ln(f)
-
         return f
 
 
 class GlobalDiscriminatorDot(nn.Module):
-    def __init__(self, transcriptome_sz, text_sz, image_sz, units=2048, bln=True):
+    def __init__(
+        self,
+        transcriptome_sz,
+        text_sz,
+        image_sz,
+        units=2048,
+        bln=True,
+        identity_mode=False,
+    ):
         super(GlobalDiscriminatorDot, self).__init__()
-        self.transcriptome_block = MILinearBlock(transcriptome_sz, units=units, bln=bln)
-        self.text_block = MILinearBlock(text_sz, units=units, bln=bln)
-        self.image_block = MILinearBlock(image_sz, units=units, bln=bln)
+        self.identity_mode = bool(identity_mode)
+        self.units = units
+        # Identity mode uses single-layer identity projection to avoid altering pretrained geometry
+        if self.identity_mode:
+            # Project with a single linear layer initialized to an identity mapping into a common projection space (units)
+            # This avoids changing geometry while keeping a shared dimensionality across modalities for dot products.
+            self.transcriptome_block = MILinearBlock(
+                transcriptome_sz, units=units, bln=bln, identity_mode=True
+            )
+            self.text_block = MILinearBlock(
+                text_sz, units=units, bln=bln, identity_mode=True
+            )
+            self.image_block = MILinearBlock(
+                image_sz, units=units, bln=bln, identity_mode=True
+            )
+        else:
+            self.transcriptome_block = MILinearBlock(
+                transcriptome_sz, units=units, bln=bln, identity_mode=False
+            )
+            self.text_block = MILinearBlock(
+                text_sz, units=units, bln=bln, identity_mode=False
+            )
+            self.image_block = MILinearBlock(
+                image_sz, units=units, bln=bln, identity_mode=False
+            )
         self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
         self.temperature = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
 

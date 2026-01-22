@@ -182,6 +182,10 @@ class CellWhispererCLI(LightningCLI):
         logging.getLogger("root").setLevel(level=log_level.upper())
 
     def before_fit(self) -> None:
+        """
+        TODO perhaps DRY with [[file:cellwhisperer_lightning.py::def load_from_checkpoint(]]
+
+        """
         if not self.config["fit.ckpt_path"] and not self.config["fit.model_ckpt"]:
             # We need to preload this model
             if self.model.model.config.locking_mode[0] == "u":
@@ -194,15 +198,19 @@ class CellWhispererCLI(LightningCLI):
             if self.model.model.config.locking_mode[1] == "u":
                 text_model_path = None
             else:
-                text_model_path = model_path_from_name(
-                    self.model.model.text_model.config.model_type
-                )
+                if self.model.model.text_model.config.model_type == "conch_text":
+                    text_model_path = None
+                else:
+                    text_model_path = model_path_from_name(
+                        self.model.model.text_model.config.model_type
+                    )
 
             if self.model.model.config.locking_mode[2] == "u":
                 image_model_path = None
             else:
                 if (
-                    self.model.model.image_model.config.model_name
+                    self.model.model.image_model.config.model_type == "conch_image"
+                    or self.model.model.image_model.config.model_name
                     == "vit_small_patch16_224"
                 ):  # would be nicer to check for model_type
                     image_model_path = None

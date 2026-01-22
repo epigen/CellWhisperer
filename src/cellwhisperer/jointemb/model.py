@@ -111,16 +111,23 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                 )
 
         if text_model is None:
-            text_model = AutoModel.from_config(self.config.text_config)
+            if type(self.config.text_config).__name__ == "ConchTextConfig":
+                from .conch_text_model import ConchTextModel
+                text_model = ConchTextModel(self.config.text_config)
+            else:
+                text_model = AutoModel.from_config(self.config.text_config)
 
         if image_model is None:
-            if type(config.image_config).__name__ == "UNIConfig":
+            cfg_name = type(config.image_config).__name__
+            if cfg_name == "UNIConfig":
                 from .uni_model import UNIModel
-
                 image_model = UNIModel(config.image_config)
+            elif cfg_name == "ConchImageConfig":
+                from .conch_image_model import ConchImageModel
+                image_model = ConchImageModel(config.image_config)
             else:
                 raise NotImplementedError(
-                    "Only uni is supported for now as an image model"
+                    "Only uni and conch are supported for now as image models"
                 )
 
         self.prepare_models(transcriptome_model, text_model, image_model)
@@ -145,6 +152,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             image_sz=self.image_embed_dim,
             units=self.projection_dim,
             bln=True,  # batch layer norm
+            identity_mode=getattr(config, "identity_projection", False),
         )
 
     def _freeze_model_parameters(self, model):
@@ -726,6 +734,13 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                     )
                 else:  # uni_small
                     image_model = UNIModel(kwargs_image["config"])
+            elif kwargs_image["config"]["model_type"] == "conch_image":
+                from .conch_image_model import ConchImageConfig, ConchImageModel
+                kwargs_image["config"] = ConchImageConfig(**kwargs_image["config"])
+                image_model = ConchImageModel.from_pretrained(
+                    image_model_name_or_path,
+                    config=kwargs_image["config"],
+                )
             else:
                 image_model = AutoModel.from_pretrained(
                     image_model_name_or_path, *model_args, **kwargs

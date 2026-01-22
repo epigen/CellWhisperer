@@ -93,17 +93,29 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
             ), "You have to specify a transcriptome processor."
             transcriptome_processor = transcriptome_processor
 
-        if image_processor.startswith("uni"):
+        if isinstance(image_processor, str) and image_processor.startswith("uni"):
             from .uni_model import UNIProcessor
 
             image_processor = UNIProcessor(
                 **transcriptome_kwargs,
             )
+        elif isinstance(image_processor, str) and (
+            image_processor == "conch_image"
+            or image_processor.startswith("conch_image")
+        ):
+            from .conch_processor import ConchProcessor
+
+            image_processor = ConchProcessor(**transcriptome_kwargs)
         elif image_processor is None:
             image_processor = None
 
         if isinstance(tokenizer, str):
-            tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+            if tokenizer == "conch_text":
+                from .conch_text_processor import ConchTextProcessor
+
+                tokenizer = ConchTextProcessor()
+            else:
+                tokenizer = AutoTokenizer.from_pretrained(tokenizer)
         if tokenizer is None:
             raise ValueError("You have to specify a tokenizer.")
 

@@ -483,6 +483,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/3c/ee/d68a3de23867a9156bab7e0a22fb9a0305067ee639032a22982cf7f725e7/cattrs-24.1.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/46/d6/2d226b34ba45815f9d31c9a8e71601713aca92f6f4376d3e1724d571f471/cell-gears-0.0.2.tar.gz
       - pypi: https://files.pythonhosted.org/packages/03/5f/3b0fd7ea23aa13a61430256234cf43895c29d6d0bbe7e98b68c6eaebbd48/chex-0.1.7-py3-none-any.whl
+      - pypi: git+https://github.com/mahmoodlab/CONCH#141cc09c7d4ff33d8eda562bd75169b457f71a62
       - pypi: https://files.pythonhosted.org/packages/45/f3/49770c523067d2179a600f236ea6d55f0a02909a424d055dbc50e04c4860/dcor-0.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/84/d0/205d54408c08b13550c733c4b85429e7ead111c7f0014309637425520a9a/deprecated-1.3.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -1022,6 +1023,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/3c/ee/d68a3de23867a9156bab7e0a22fb9a0305067ee639032a22982cf7f725e7/cattrs-24.1.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/46/d6/2d226b34ba45815f9d31c9a8e71601713aca92f6f4376d3e1724d571f471/cell-gears-0.0.2.tar.gz
       - pypi: https://files.pythonhosted.org/packages/03/5f/3b0fd7ea23aa13a61430256234cf43895c29d6d0bbe7e98b68c6eaebbd48/chex-0.1.7-py3-none-any.whl
+      - pypi: git+https://github.com/mahmoodlab/CONCH#141cc09c7d4ff33d8eda562bd75169b457f71a62
       - pypi: https://files.pythonhosted.org/packages/45/f3/49770c523067d2179a600f236ea6d55f0a02909a424d055dbc50e04c4860/dcor-0.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/84/d0/205d54408c08b13550c733c4b85429e7ead111c7f0014309637425520a9a/deprecated-1.3.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -1573,6 +1575,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/3c/ee/d68a3de23867a9156bab7e0a22fb9a0305067ee639032a22982cf7f725e7/cattrs-24.1.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/46/d6/2d226b34ba45815f9d31c9a8e71601713aca92f6f4376d3e1724d571f471/cell-gears-0.0.2.tar.gz
       - pypi: https://files.pythonhosted.org/packages/03/5f/3b0fd7ea23aa13a61430256234cf43895c29d6d0bbe7e98b68c6eaebbd48/chex-0.1.7-py3-none-any.whl
+      - pypi: git+https://github.com/mahmoodlab/CONCH#141cc09c7d4ff33d8eda562bd75169b457f71a62
       - pypi: https://files.pythonhosted.org/packages/45/f3/49770c523067d2179a600f236ea6d55f0a02909a424d055dbc50e04c4860/dcor-0.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/84/d0/205d54408c08b13550c733c4b85429e7ead111c7f0014309637425520a9a/deprecated-1.3.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -3450,7 +3453,7 @@ packages:
 - pypi: .
   name: cellwhisperer
   version: 0.1.0
-  sha256: a5b8ee076f84f7e32b5382b09a6ea4b7aea8cab907c4dad604336590a3ae8072
+  sha256: 5dd83c074a65777c783f81ea6a0e76155d68fa89704117ff6215980e553df58b
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/noarch/certifi-2025.11.12-pyhd8ed1ab_0.conda
   sha256: 083a2bdad892ccf02b352ecab38ee86c3e610ba9a4b11b073ea769d55a115d32
@@ -4033,6 +4036,22 @@ packages:
   purls: []
   size: 10204065
   timestamp: 1757436348646
+- pypi: git+https://github.com/mahmoodlab/CONCH#141cc09c7d4ff33d8eda562bd75169b457f71a62
+  name: conch
+  version: 0.1.0
+  requires_dist:
+  - torch>=2.0.1
+  - torchvision
+  - transformers
+  - tokenizers
+  - numpy
+  - scikit-learn
+  - timm>=0.9.8
+  - regex
+  - ftfy
+  - h5py
+  - pandas
+  requires_python: '>=3.9'
 - conda: https://conda.anaconda.org/conda-forge/linux-64/conda-gcc-specs-13.4.0-h54dc52d_5.conda
   sha256: cef828507b4a4af14f8b57cc1f0ff59921057664c145acc59d9266bab1a07a2e
   md5: 3453750381b4c17ae629556796cc6593

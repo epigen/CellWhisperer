@@ -54,6 +54,7 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
         image_config: Dict = {},
         locking_mode: str = "LUL",
         unlocked_fp16: bool = False,
+        identity_projection: bool = False,
         use_cache: bool = True,  # Changed default to True to fix checkpoint compatibility with old format checkpoints
         **kwargs,
     ):
@@ -71,6 +72,7 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
 
         self.locking_mode = locking_mode
         self.unlocked_fp16 = unlocked_fp16
+        self.identity_projection = bool(identity_projection)
 
         if transcriptome_model_type == "geneformer":
             self.transcriptome_config = GeneformerConfig(**transcriptome_config)
@@ -94,9 +96,13 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
                 model_path_from_name(transcriptome_model_type), **transcriptome_config
             )
 
-        self.text_config = AutoConfig.from_pretrained(
-            model_path_from_name(text_model_type), **text_config
-        )
+        if text_model_type == "conch_text":
+            from .conch_text_model import ConchTextConfig
+            self.text_config = ConchTextConfig(**text_config)
+        else:
+            self.text_config = AutoConfig.from_pretrained(
+                model_path_from_name(text_model_type), **text_config
+            )
 
         if image_model_type == "uni2":
             self.image_config = UNIConfig(**image_config)
@@ -105,6 +111,9 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
                 model_name="vit_small_patch16_224",  # timm/vit_small_patch16_224.dino
                 **image_config,
             )
+        elif image_model_type == "conch_image":
+            from .conch_image_model import ConchImageConfig
+            self.image_config = ConchImageConfig(**image_config)
         else:
             raise ValueError(f"Unsupported image model type: {image_model_type}")
             self.image_config = AutoConfig.from_pretrained(

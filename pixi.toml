@@ -68,5 +68,6 @@ openslide-bin = "==4.0.0.8"
 scIB = ">=1.1.5"
 uni = { git = "https://github.com/mahmoodlab/UNI.git", rev = "42715efc11722a496e0a67f3369505a8f277206c" }
 cellwhisperer = { path = ".", editable = true }
+conch = { git = "https://github.com/mahmoodlab/CONCH" }
 # cellxgene disabled due to pandas constraint
 # cellxgene = { path = "modules/cellxgene", editable = true }

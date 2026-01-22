@@ -3,8 +3,13 @@ import logging
 import subprocess
 
 
-def start_debugger(wait_for_client=True):
-    for port in range(5678, 5689):
+def start_debugger(wait_for_client=True, port=None):
+    if port is None:
+        ports = range(5678, 5689)
+    else:
+        ports = [port]
+
+    for port in ports:
         try:
             debugpy.listen(("0.0.0.0", port))
             print(f"Debugger listening on port {port}")

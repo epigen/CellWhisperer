@@ -124,13 +124,19 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
             model.model.transcriptome_model.config.model_type
         )
         # if text_model_name_or_path is None:
-        text_model_name_or_path = model_path_from_name(
-            model.model.text_model.config.model_type
-        )
+        if model.model.text_model.config.model_type == "conch_text":
+            text_model_name_or_path = None
+        else:
+            text_model_name_or_path = model_path_from_name(
+                model.model.text_model.config.model_type
+            )
 
-        image_model_name_or_path = model_path_from_name(
-            model.model.image_model.config.model_type
-        )
+        if model.model.image_model.config.model_type == "conch_image":
+            image_model_name_or_path = None
+        else:
+            image_model_name_or_path = model_path_from_name(
+                model.model.image_model.config.model_type
+            )
 
         # make sure that pretrained models are loaded
         model.load_pretrained_models(

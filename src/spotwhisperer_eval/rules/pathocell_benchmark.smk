@@ -14,6 +14,41 @@ PATHOCELL_MODEL_RESULTS = PATHOCELL_RESULTS / "{model}"
 DATASETS = ["reg006_B", "reg014_B", "reg022_B", "reg030_A", "reg037_B", "reg046_A", "reg056_A", "reg007_A", "reg015_A", "reg023_A", "reg030_B", "reg038_A", "reg047_A", "reg058_A", "reg007_B", "reg016_A", "reg023_B", "reg031_A", "reg039_A", "reg048_A", "reg059_A", "reg001_A", "reg008_A", "reg016_B", "reg024_B", "reg031_B", "reg039_B", "reg048_B", "reg059_B", "reg001_B", "reg008_B", "reg017_A", "reg025_A", "reg032_A", "reg040_A", "reg049_A", "reg060_A", "reg002_A", "reg009_A", "reg017_B", "reg025_B", "reg032_B", "reg040_B", "reg050_A", "reg060_B", "reg002_B", "reg009_B", "reg018_A", "reg026_A", "reg033_A", "reg041_A", "reg050_B", "reg061_A", "reg003_A", "reg010_A", "reg018_B", "reg026_B", "reg033_B", "reg041_B", "reg051_A", "reg062_A", "reg003_B", "reg010_B", "reg019_A", "reg027_A", "reg034_A", "reg042_A", "reg051_B", "reg063_A", "reg004_A", "reg011_A", "reg020_A", "reg027_B", "reg035_A", "reg042_B", "reg052_A", "reg064_A", "reg004_B", "reg011_B", "reg020_B", "reg028_A", "reg035_B", "reg043_A", "reg052_B", "reg065_A", "reg005_A", "reg012_A", "reg021_A", "reg028_B", "reg036_A", "reg044_A", "reg053_A", "reg066_A", "reg005_B", "reg012_B", "reg021_B", "reg029_A", "reg036_B", "reg045_A", "reg054_A", "reg067_A", "reg006_A", "reg013_B", "reg022_A", "reg029_B", "reg037_A", "reg045_B", "reg055_A", "reg068_A"]
 
 
+rule train_conch:
+    """
+    Train a SpotWhisperer model for a dataset_combo.
+    Uses the base config and overrides dataset names; outputs a checkpoint.
+    Ensures subsampled datasets exist when dataset_combo includes *thsub suffixes.
+
+    TODO could still check learning rate...
+    """
+    input:
+        base_config=PROJECT_DIR / "src/experiments/conch_finetuning_testing/finetune_conch_adapters.yaml"
+    output:
+        model=protected(PROJECT_DIR / config["paths"]["jointemb_models"] / "conch_{locking_mode}.ckpt")
+    params:
+        test_run_config="--trainer.limit_train_batches 500 --trainer.max_epochs 2" if config.get("fast", False) else "",
+        seed=SEEDS[0],
+        project_dir=PROJECT_DIR
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=lambda wildcards: 150000,
+        slurm=slurm_gres("large", num_cpus=12, time="70:00:00", num_gpus=1)
+    shell: """
+        cd {params.project_dir}
+
+        cellwhisperer fit \
+            --config {input.base_config} \
+            {params.test_run_config} \
+            --seed_everything {params.seed} \
+            --last_model_path {output.model} \
+            --omit_validation_functions \
+            --wandb conch_finetuning_{wildcards.locking_mode} \
+            --model.model_config.locking_mode {wildcards.locking_mode}
+    """
+
+
 rule pathocell_download_dataset:
     """
     Download PathoCell dataset from HuggingFace.
@@ -92,7 +127,8 @@ rule pathocell_cell_type_prediction:
     output:
         results=PATHOCELL_MODEL_RESULTS / "{dataset}_{prediction_level}_prediction_seed{seed}.json",
         per_class_metrics=PATHOCELL_MODEL_RESULTS / "{dataset}_{prediction_level}_per_class_seed{seed}.csv",
-        confusion_matrix=PATHOCELL_MODEL_RESULTS / "{dataset}_{prediction_level}_confusion_seed{seed}.csv"
+        confusion_matrix=PATHOCELL_MODEL_RESULTS / "{dataset}_{prediction_level}_confusion_seed{seed}.csv",
+        scores=PATHOCELL_MODEL_RESULTS / "{dataset}_{prediction_level}_scores_seed{seed}.csv",  # only valid for patches so far
     params:
         prediction_level="{prediction_level}",
     threads: 8
@@ -389,10 +425,10 @@ rule pathocell_baselines_vs_trimodal_auroc:
         conch_logits=PATHOCELL_DATA / "baselines_animesh_computed" / "conch_logits_terms1.csv",
         plip_logits=PATHOCELL_DATA / "baselines_animesh_computed" / "plip_logits_terms1.csv",
     output:
-        plot=PATHOCELL_RESULTS / "comparison" / "patch" / "plots" / "per_class_auroc_trimodal_vs_conch_plip_quilt.svg",
+        plot=PATHOCELL_RESULTS / "comparison" / "patch" / "plots" / "per_class_f1_trimodal_vs_conch_plip_quilt.svg",
         # report=PATHOCELL_RESULTS / "comparison" / "patch" / "reports" / "baseline_pred_distribution_zscore.csv",
     params:
-        metric="auroc",
+        metric="f1",
         score_norm="zscore",
     conda:
         "cellwhisperer"
@@ -431,6 +467,14 @@ rule pathocell_baselines_vs_trimodal_auroc:
 #         slurm=slurm_gres("medium", num_cpus=4, time="4:00:00")
 #     script:
 #         "../scripts/run_plip_baseline.py"
+
+rule pathocell_conch:
+    input:
+        expand(rules.pathocell_cell_type_prediction.output.results,
+               prediction_level="patch",
+               dataset=DATASETS,
+               model=[f"conch_{locking_mode}" for locking_mode in ["frozen", "LLL", "LUL"]],  # could also try "ULL", "LUL", "LUU" and  UUL, ULU, LUU  "UUU", "LUU", "UUL", "ULU"  # TODO might need to freeze things
+               seed=0)
 
 rule pathocell_all:
     """

@@ -42,9 +42,8 @@ def adata_to_embeds(
     if use_image_data and has_image_model:
         if has_whole_slide_image:
             logging.info("Extracting patches from whole slide image using UNIProcessor")
-            from cellwhisperer.jointemb.uni_model import UNIProcessor
 
-            uni_processor = UNIProcessor()
+            image_processor = processor.image_processor
             image_embeds = []
 
             if "wsi_images" in adata.uns and "sample_id" in adata.obs:
@@ -59,7 +58,7 @@ def adata_to_embeds(
                             sample_id
                         ]
 
-                        patches = uni_processor(sample_adata, return_tensors="pt")
+                        patches = image_processor(sample_adata, return_tensors="pt")
                         n_images = next(iter(patches.values())).shape[0]
                         for i in range(0, n_images, batch_size):
                             batch_inputs = {
@@ -78,7 +77,7 @@ def adata_to_embeds(
                         "No patches extracted from multi-sample dataset; falling back to transcriptome"
                     )
             else:
-                patches = uni_processor(adata, return_tensors="pt")
+                patches = image_processor(adata, return_tensors="pt")
                 image_embeds = []
                 n_images = next(iter(patches.values())).shape[0]
                 for i in range(0, n_images, batch_size):

@@ -13,6 +13,7 @@ import pandas as pd
 
 import torch
 from torch.utils.data import ConcatDataset
+from cellwhisperer.jointemb.conch_text_processor import ConchTextProcessor
 import lightning as pl
 
 from transformers import AutoTokenizer
@@ -345,13 +346,20 @@ class JointEmbedDataModule(pl.LightningDataModule):
                     pass
 
         # Initialize processor
-        self.processor = TranscriptomeTextDualEncoderProcessor(
-            self.transcriptome_processor,
-            (
+        # Use CONCH tokenizer when requested, otherwise fall back to HF AutoTokenizer
+
+        if self.tokenizer == "conch_text":
+            tokenizer_obj = ConchTextProcessor()
+        else:
+            tokenizer_obj = (
                 AutoTokenizer.from_pretrained(self.tokenizer, **self.tokenizer_kwargs)
                 if self.tokenizer
                 else None
-            ),
+            )
+
+        self.processor = TranscriptomeTextDualEncoderProcessor(
+            self.transcriptome_processor,
+            tokenizer_obj,
             self.image_processor,
         )
 
