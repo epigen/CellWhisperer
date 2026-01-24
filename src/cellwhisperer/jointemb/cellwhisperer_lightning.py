@@ -178,6 +178,14 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
                 **kwargs,
             )
         )
+        if image_model_name_or_path is None:
+            assert (
+                text_model_name_or_path is None
+            ), "Conch image model requires conch text model to be used as well."
+            logging.warning("Assuming conch models. setting temperature accordingly.")
+            self.model.discriminator.temperature = torch.nn.Parameter(
+                torch.ones([]) * 4.0307  # extracted from conch model
+            )
         self.loss_functions = self.loss_config.configure_losses(
             self.model.discriminator
         )

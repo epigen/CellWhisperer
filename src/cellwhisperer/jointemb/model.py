@@ -113,6 +113,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
         if text_model is None:
             if type(self.config.text_config).__name__ == "ConchTextConfig":
                 from .conch_text_model import ConchTextModel
+
                 text_model = ConchTextModel(self.config.text_config)
             else:
                 text_model = AutoModel.from_config(self.config.text_config)
@@ -121,9 +122,11 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             cfg_name = type(config.image_config).__name__
             if cfg_name == "UNIConfig":
                 from .uni_model import UNIModel
+
                 image_model = UNIModel(config.image_config)
             elif cfg_name == "ConchImageConfig":
                 from .conch_image_model import ConchImageModel
+
                 image_model = ConchImageModel(config.image_config)
             else:
                 raise NotImplementedError(
@@ -152,7 +155,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             image_sz=self.image_embed_dim,
             units=self.projection_dim,
             bln=True,  # batch layer norm
-            identity_mode=getattr(config, "identity_projection", False),
+            identity_mode=getattr(self.config, "identity_projection", False),
         )
 
     def _freeze_model_parameters(self, model):
@@ -736,6 +739,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                     image_model = UNIModel(kwargs_image["config"])
             elif kwargs_image["config"]["model_type"] == "conch_image":
                 from .conch_image_model import ConchImageConfig, ConchImageModel
+
                 kwargs_image["config"] = ConchImageConfig(**kwargs_image["config"])
                 image_model = ConchImageModel.from_pretrained(
                     image_model_name_or_path,

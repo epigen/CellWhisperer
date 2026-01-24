@@ -1,97 +1,47 @@
 #!/usr/bin/env python3
 """
-Plot per-class macro F1 comparison: trimodal SpotWhisperer vs two baselines (CONCH, PLIP)
+Plot per-class metrics comparison: Trimodal vs Quilt1m vs CONCH variants using metrics_from_scores per-class CSVs.
 
 Inputs via Snakemake:
 - snakemake.input.mpl_style: Matplotlib style file
-- snakemake.input.trimodal_per_class: list of per-class CSVs for trimodal across datasets (patch-level)
-- snakemake.input.adatas: list of PathoCell processed patch-level AnnData files across datasets
-- snakemake.input.conch_logits: absolute path to CONCH logits CSV (terms1)
-- snakemake.input.plip_logits: absolute path to PLIP logits CSV (terms1)
-- snakemake.params.prediction_level: 'patch'
+- snakemake.input.*_per_class: per-class CSVs per method (seed/dataset aggregated)
 - snakemake.output.plot: output SVG path
-
-Method:
-- Trimodal: compute mean 'f1' per class across datasets from provided per-class CSVs
-- Baselines: read logits, restrict to patch rows, map to ground truth labels using the
-  processed AnnData files (join by dataset + spot_id), compute per-class F1
-- Plot grouped bars per class with three methods
 """
 
 from pathlib import Path
-import re
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import anndata as ad
 
 plt.style.use(snakemake.input.mpl_style)
 
-# Inputs
-per_class_files = [Path(p) for p in snakemake.input.trimodal_per_class]
-quilt_per_class_files = [Path(p) for p in snakemake.input.quilt_per_class]
-adatas = [Path(p) for p in snakemake.input.adatas]
-conch_fp = Path(snakemake.input.conch_logits)
-plip_fp = Path(snakemake.input.plip_logits)
-prediction_level = "patch"
-metric = snakemake.params.metric
-score_norm = snakemake.params.score_norm
+trimodal_pc = Path(snakemake.input.trimodal_per_class)
+quilt_pc = Path(snakemake.input.quilt_per_class)
+conch_LLL_pc = Path(snakemake.input.conch_LLL_per_class)
+conch_LUL_pc = Path(snakemake.input.conch_LUL_per_class)
+conch_frozen_pc = Path(snakemake.input.conch_frozen_per_class)
+conch_terms1_pc = Path(snakemake.input.conch_terms1_per_class)
+plip_terms1_pc = Path(snakemake.input.plip_terms1_per_class)
 out_path = Path(snakemake.output.plot)
-
-# Normalization utility: drop leading "A sample of "
-
-
-def normalize_label(s: str) -> str:
-    s2 = re.sub(r"^A sample of\s+", "", s)
-    # Canonicalize background/other naming
-    if not s2.endswith("cells"):
-        s2 = s2 + " cells"
-    return s2
+csv_out = Path(snakemake.output.csv_table)
 
 
-def apply_score_norm(mat: np.ndarray, mode: str) -> np.ndarray:
-    if mode == "none":
-        return mat
-    if mode == "softmax":
-        m = mat - mat.max(axis=1, keepdims=True)
-        expm = np.exp(m)
-        return expm / (expm.sum(axis=1, keepdims=True) + 1e-9)
-    if mode == "zscore":
-        mu = mat.mean(axis=1, keepdims=True)
-        sd = mat.std(axis=1, keepdims=True) + 1e-9
-        return (mat - mu) / sd
-    return mat
+METRICS = [
+    "f1",
+    "rocauc",
+    "soft_rocauc",
+    "precision",
+    "accuracy",
+    "recall_at_5",
+    "mae_prob",
+    "mse_prob",
+]
 
 
-# --- Load trimodal per-class F1 and aggregate across datasets ---
-trimodal_dfs = []
-for fp in per_class_files:
+def read_pc(fp: Path) -> pd.DataFrame:
     df = pd.read_csv(fp)
-    label_col = None
-    for cand in ["class_label", "cell_type", "label", "class", "target"]:
-        if cand in df.columns:
-            label_col = cand
-            break
-    if label_col is None:
-        # assume first non-numeric column is the label
-        nonnum = [c for c in df.columns if df[c].dtype == object]
-        label_col = nonnum[0]
-    df = df.copy()
-    if label_col != "class_label":
-        df.rename(columns={label_col: "class_label"}, inplace=True)
-    # parse dataset name from filename by stripping suffix
-    stem = fp.stem  # e.g., reg006_B_patch_per_class_seed0
-    suffix_pat = r"_" + re.escape(prediction_level) + r"_per_class_seed\d+$"
-    dataset = re.sub(suffix_pat, "", stem)
-    df["dataset"] = dataset
-    trimodal_dfs.append(df)
-trimodal_df = pd.concat(trimodal_dfs, axis=0, ignore_index=True)
-
-# Load quilt1m per-class F1 and aggregate
-quilt_dfs = []
-for fp in quilt_per_class_files:
-    df = pd.read_csv(fp)
+    # normalize label col
     label_col = None
     for cand in ["class_label", "cell_type", "label", "class", "target"]:
         if cand in df.columns:
@@ -100,132 +50,79 @@ for fp in quilt_per_class_files:
     if label_col is None:
         nonnum = [c for c in df.columns if df[c].dtype == object]
         label_col = nonnum[0]
-    df = df.copy()
-    if label_col != "class_label":
-        df.rename(columns={label_col: "class_label"}, inplace=True)
-    # parse dataset name from filename by stripping suffix (same as trimodal)
-    stem = fp.stem
-    suffix_pat = r"_" + re.escape(prediction_level) + r"_per_class_seed\d+$"
-    dataset = re.sub(suffix_pat, "", stem)
-    df["dataset"] = dataset
-    quilt_dfs.append(df)
-quilt_df = pd.concat(quilt_dfs, axis=0, ignore_index=True)
-# F1 column naming in per-class CSVs
-f1_col = "f1" if "f1" in trimodal_df.columns else "F1"
-trimodal_agg = (
-    trimodal_df.groupby(["class_label"], as_index=False)[f1_col]
-    .mean()
-    .rename(columns={f1_col: "trimodal"})
-)
-
-# Quilt aggregation
-quilt_agg = (
-    quilt_df.groupby(["class_label"], as_index=False)[f1_col]
-    .mean()
-    .rename(columns={f1_col: "bimodal_quilt1m"})
-)
-# Normalize labels to match baseline column names
-trimodal_agg["class_label"] = (
-    trimodal_agg["class_label"].astype(str).map(normalize_label)
-)
-quilt_agg["class_label"] = quilt_agg["class_label"].astype(str).map(normalize_label)
-
-# --- Build ground truth mapping from AnnData files ---
-# Map: (dataset_id, spot_id) -> true class label
-truth_map = {}
-for ad_fp in adatas:
-    dataset_id = ad_fp.stem.replace(
-        f"_{prediction_level}", ""
-    )  # reg001_A, reg014_B, ...
-    # load AnnData
-
-    adata = ad.read_h5ad(ad_fp)
-    # fixed label/id columns for patch-level
-    label_col = "cell_type_coarse"
-    id_col = "patch_id"
-    # Build mapping
-    if id_col is None or id_col not in adata.obs.columns:
-        ids = adata.obs_names
-    else:
-        ids = adata.obs[id_col].astype(str).values
-    labels = adata.obs[label_col].astype(str).values
-    for sid, lab in zip(ids, labels):
-        truth_map[(dataset_id, str(sid))] = lab
+    df = df.rename(columns={label_col: "class_label"})
+    return df
 
 
-# --- Load baseline logits and compute per-class F1 ---
-def load_baseline_logits(fp: Path) -> pd.DataFrame:
+def load_baseline_logits(fp: Path) -> tuple[pd.DataFrame, list[str]]:
     df = pd.read_csv(fp)
-    # keep only patch-level rows
     df = df[df["source_image"].str.contains("_patch.tiff")].copy()
 
-    # parse dataset id and spot_id from columns
     def parse_dataset_id(x: str) -> str:
-        m = re.search(r"(reg\d+_[AB])_patch\.tiff", x)
+        m = re.search(r"(reg\d+_[AB])", x)
         return m.group(1) if m else x
 
     df["dataset_id"] = df["source_image"].apply(parse_dataset_id)
     df["spot_id"] = df["spot_id"].astype(str)
-    # class columns = all except the identifiers
     id_cols = {"source_image", "spot_id", "dataset_id"}
     class_cols = [c for c in df.columns if c not in id_cols]
-    corrected_classes = [normalize_label(s) for s in class_cols]
-    # rename
-    df.rename(
-        columns={old: new for old, new in zip(class_cols, corrected_classes)},
-        inplace=True,
-    )
-    return df, corrected_classes
+    return df, class_cols
 
 
-conch_df, conch_classes = load_baseline_logits(conch_fp)
-plip_df, plip_classes = load_baseline_logits(plip_fp)
-# Use intersection with trimodal classes for consistent comparison
-classes_trimodal = [
-    normalize_label(s) for s in trimodal_agg["class_label"].astype(str).tolist()
-]
-# Exclude background/other (match behavior of existing plots)
-exclude = {
-    "Other cells",
-    "Background cells",
-    "A sample of Other cells",
-    "A sample of Background cells",
-}
-classes = [c for c in classes_trimodal if c not in exclude]
+def load_logits_files(files: list[Path]) -> tuple[pd.DataFrame, list[str]]:
+    dfs = []
+    for fp in files:
+        if not fp.exists():
+            continue
+        df = pd.read_csv(fp)
+        m = re.search(r"(reg\d+_[AB])", fp.stem)
+        df["dataset_id"] = m.group(1)
+        df["spot_id"] = df.index.map(
+            lambda i: f"patch_{i}"
+        )  # TODO change for cell-level support
+        id_cols = {"spot_id", "dataset_id"}
+        class_cols = [c for c in df.columns if c not in id_cols]
 
-# Helper to compute per-class metrics given logits DataFrame
-from sklearn.metrics import roc_auc_score
+        if class_cols[0].isdigit():
+            class_names = snakemake.params.class_names
+            assert len(class_names) == len(class_cols)
+            df.rename(
+                columns={old: new for old, new in zip(class_cols, class_names)},
+                inplace=True,
+            )
+            class_cols = class_names
+        dfs.append(df)
+    if not dfs:
+        return pd.DataFrame(), []
+    df_all = pd.concat(dfs, axis=0, ignore_index=True)
+    id_cols = {"source_image", "spot_id", "dataset_id"}
+    class_cols = [c for c in df_all.columns if c not in id_cols]
+    return df_all, class_cols
 
 
-def compute_metrics_by_class(df: pd.DataFrame, class_cols: list[str]) -> pd.DataFrame:
-    # scores matrix and normalization
+def compute_metrics_by_class(
+    df: pd.DataFrame, class_cols: list[str], classes_ref: list[str]
+) -> pd.DataFrame:
     scores = df[class_cols].astype(float).values
     scores = apply_score_norm(scores, mode=score_norm)
-
-    # ground truth labels from truth_map
-    y_true_raw = [
-        truth_map.get((row["dataset_id"], row["spot_id"])) for _, row in df.iterrows()
+    y_true = [
+        truth_map.get((row["dataset_id"], row.get("spot_id", str(i))))
+        for i, row in df.iterrows()
     ]
-    y_true = [normalize_label(str(s)) if s is not None else None for s in y_true_raw]
-
-    # restrict to classes of interest and drop missing
-    keep_idx = [i for i, t in enumerate(y_true) if (t is not None) and (t in classes)]
+    keep_idx = [
+        i for i, t in enumerate(y_true) if (t is not None) and (t in classes_ref)
+    ]
     if len(keep_idx) == 0:
-        return pd.DataFrame({"class_label": classes, metric: [np.nan] * len(classes)})
+        return pd.DataFrame(
+            {"class_label": classes_ref, metric: [np.nan] * len(classes_ref)}
+        )
     y_true_filt = [y_true[i] for i in keep_idx]
     scores_filt = scores[keep_idx, :]
-
-    # compute per-class metric
     vals = []
     for j, cls in enumerate(class_cols):
-        cls_norm = normalize_label(cls)
-        if cls_norm not in classes:
-            continue
-        # one-vs-rest true labels
-        y_bin = np.array([1 if t == cls_norm else 0 for t in y_true_filt])
+        y_bin = np.array([1 if t == cls else 0 for t in y_true_filt])
         s = scores_filt[:, j]
         if metric == "f1":
-            # argmax prediction
             pred_idx = np.argmax(scores_filt, axis=1)
             y_pred_bin = (pred_idx == j).astype(int)
             tp = int(((y_bin == 1) & (y_pred_bin == 1)).sum())
@@ -233,75 +130,142 @@ def compute_metrics_by_class(df: pd.DataFrame, class_cols: list[str]) -> pd.Data
             fn = int(((y_bin == 1) & (y_pred_bin == 0)).sum())
             denom = 2 * tp + fp + fn
             val = (2 * tp / denom) if denom > 0 else np.nan
-        elif metric == "auroc":
+        elif metric in ("auroc", "rocauc"):
             try:
                 val = roc_auc_score(y_bin, s)
             except Exception:
                 val = np.nan
         else:
             val = np.nan
-        vals.append((cls_norm, val))
-
-    # Fill missing classes with NaN
+        vals.append((cls, val))
     val_map = {k: v for k, v in vals}
-    out_vals = [val_map.get(cls, np.nan) for cls in classes]
-    return pd.DataFrame({"class_label": classes, metric: out_vals})
+    out_vals = [val_map.get(cls, np.nan) for cls in classes_ref]
+    return pd.DataFrame({"class_label": classes_ref, metric: out_vals})
 
 
-conch_scores = compute_metrics_by_class(conch_df, conch_classes).rename(
-    columns={metric: "conch"}
-)
-plip_scores = compute_metrics_by_class(plip_df, plip_classes).rename(
-    columns={metric: "plip"}
-)
+trimodal_df = read_pc(trimodal_pc)
+quilt_df = read_pc(quilt_pc)
+conch_LLL_df = read_pc(conch_LLL_pc)
+conch_LUL_df = read_pc(conch_LUL_pc)
+conch_frozen_df = read_pc(conch_frozen_pc)
+conch_terms1_df = read_pc(conch_terms1_pc)
+plip_terms1_df = read_pc(plip_terms1_pc)
 
-# Merge all (include quilt1m)
-merged = (
-    trimodal_agg.merge(quilt_agg, on="class_label", how="inner")
-    .merge(conch_scores, on="class_label", how="inner")
-    .merge(plip_scores, on="class_label", how="inner")
-)
-# Keep classes in the chosen order
-# order = [c for c in classes if c in merged["class_label"].tolist()]
-# order by trimodal performance
-order = merged.sort_values(by="trimodal", ascending=False)["class_label"].tolist()
 
-merged = merged.set_index("class_label").loc[order].reset_index()
+def make_plot_df(metric: str) -> pd.DataFrame:
+    cols = ["class_label", metric]
+    a = trimodal_df[cols].rename(columns={metric: "trimodal"})
+    b = quilt_df[cols].rename(columns={metric: "bimodal_quilt1m"})
+    cLLL = conch_LLL_df[cols].rename(columns={metric: "conch_LLL"})
+    cLUL = conch_LUL_df[cols].rename(columns={metric: "conch_LUL"})
+    cF = conch_frozen_df[cols].rename(columns={metric: "conch_frozen"})
+    canimesh = plip_terms1_df[cols].rename(columns={metric: "plip_terms1"})
+    panimesh = conch_terms1_df[cols].rename(columns={metric: "conch_terms1"})
+    merged = a.merge(b, on="class_label", how="inner")
+    merged = merged.merge(cLLL, on="class_label", how="left")
+    merged = merged.merge(cLUL, on="class_label", how="left")
+    merged = merged.merge(cF, on="class_label", how="left")
+    merged = merged.merge(canimesh, on="class_label", how="left")
+    merged = merged.merge(panimesh, on="class_label", how="left")
 
-# Long-form for plotting
-plot_df = merged.melt(
-    id_vars=["class_label"],
-    value_vars=["trimodal", "bimodal_quilt1m", "conch", "plip"],
-    var_name="method",
-    value_name="f1",
-)
+    # If baseline per-dataset scores are available, compute per-class metrics directly and append
+    def per_class_from_scores(files: list[Path], label: str) -> pd.DataFrame:
+        if not files:
+            return pd.DataFrame(columns=["class_label", label])
+        # Concatenate per-dataset and average per-class
+        dfs = []
+        for fp in files:
+            df = pd.read_csv(fp)
+            # Columns may be numeric indices; leave as-is. Align later via class_label mapping if needed.
+            # Compute per-class metrics requires true labels; not available here, so we skip AUROC/F1 and only plot logits mean as proxy
+            # Better: rely on aggregated per-class CSVs above for proper metrics.
+        return pd.DataFrame(columns=["class_label", label])
 
-# Colors
+    # Note: we keep baselines via aggregated per-class CSVs for proper metrics; the split scores are provided to enable future metrics_from_scores runs.
+    long = merged.melt(id_vars=["class_label"], var_name="method", value_name="value")
+    return long
+
+
 method_colors = {
-    "trimodal": "#f39c12",  # matches MODALITY_COLORS["trimodal"]
+    "trimodal": "#f39c12",
     "bimodal_quilt1m": "#16a085",
-    "conch": "#2b7b9c",
-    "plip": "#7f7f7f",
+    "conch_LLL": "#1f77b4",
+    "conch_LUL": "#2ca02c",
+    "conch_frozen": "#9467bd",
+    "plip_terms1": "#7f7f7f",
+    "conch_terms1": "#d62728",
 }
 
-# Plot
-plt.figure(figsize=(max(3.8, len(order) * 0.18), 3.2))
-ax = sns.barplot(
-    data=plot_df,
-    x="class_label",
-    y="f1",
-    hue="method",
-    hue_order=["trimodal", "bimodal_quilt1m", "conch", "plip"],
-    order=order,
-    palette=method_colors,
-    edgecolor="#333333",
+fig, axes = plt.subplots(
+    nrows=len(METRICS),
+    ncols=1,
+    figsize=(max(6, 0.25 * trimodal_df.shape[0]), 2.0 * len(METRICS)),
+    sharex=True,
 )
-ax.set_ylabel("Macro F1 (per class)")
-ax.set_xlabel("Cell type")
-ax.set_title("PathoCell (patch): Trimodal vs Quilt1m vs CONCH vs PLIP")
-cleaned_labels = [normalize_label(cls) for cls in order]
-ax.set_xticklabels(cleaned_labels, rotation=60, ha="right")
-ax.legend(title="Method")
+if not isinstance(axes, np.ndarray):
+    axes = np.array([axes])
+for ax, metric in zip(axes, METRICS):
+    dfm = make_plot_df(metric)
+    order = (
+        dfm.groupby("class_label")["value"]
+        .mean()
+        .sort_values(ascending=False)
+        .index.tolist()
+    )
+    sns.barplot(
+        data=dfm,
+        x="class_label",
+        y="value",
+        hue="method",
+        order=order,
+        palette=method_colors,
+        edgecolor="#333333",
+        ax=ax,
+    )
+    ax.set_title(metric)
+    ax.tick_params(axis="x", rotation=60)
+    ax.set_xlabel("")
+    ax.set_ylabel("")
+handles, labels = axes[-1].get_legend_handles_labels()
+fig.legend(handles, labels, title="Method", loc="upper right")
 plt.tight_layout()
 plt.savefig(out_path)
 plt.close()
+
+# Build CSV table for rocauc: columns = classes (+ mean), rows = methods
+def build_csv_table_rocauc():
+    metric = "rocauc"
+    cols = ["class_label", metric]
+    dfs = {
+        "trimodal": trimodal_df[cols].rename(columns={metric: "trimodal"}),
+        "bimodal_quilt1m": quilt_df[cols].rename(columns={metric: "bimodal_quilt1m"}),
+        "conch_terms1": conch_terms1_df[cols].rename(columns={metric: "conch_terms1"}),
+        "plip_terms1": plip_terms1_df[cols].rename(columns={metric: "plip_terms1"}),
+    }
+    merged = None
+    for label, df in dfs.items():
+        merged = df if merged is None else merged.merge(df, on="class_label", how="inner")
+    exclude = {"Other cells", "Background", "A sample of Other cells", "A sample of Background cells"}
+    merged = merged[~merged["class_label"].isin(exclude)].copy()
+    merged = merged.set_index("class_label")
+    # Append mean over classes
+    merged.loc["mean"] = merged.mean(numeric_only=True)
+    # Mark best and second best per column
+    def mark_best(series: pd.Series) -> pd.Series:
+        vals = series.astype(float).copy()
+        order = vals.sort_values(ascending=False).index.tolist()
+        out = series.copy().astype(str)
+        if len(order) > 0:
+            b = order[0]
+            out[b] = f"**{vals[b]:.3f}**"  # bold
+        if len(order) > 1:
+            s = order[1]
+            out[s] = f"__{vals[s]:.3f}__"  # underline
+        for idx in order[2:]:
+            out[idx] = f"{vals[idx]:.3f}"
+        return out
+    formatted = merged.apply(mark_best, axis=0)
+    csv_out.parent.mkdir(parents=True, exist_ok=True)
+    formatted.to_csv(csv_out, index=True)
+
+build_csv_table_rocauc()

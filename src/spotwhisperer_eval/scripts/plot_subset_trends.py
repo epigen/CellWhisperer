@@ -40,16 +40,16 @@ test_dataset_map = {
 metrics_by_pair = {
     "transcriptome-text": [
         "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
-        "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
+        # "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
         # "valfn_zshot_HumanDisease_disease/rocauc_macroAvg",
     ],
     "transcriptome-image": [
         "hest/overall_performance",
     ],
     "image-text": [
-        "musk/pannuke_macro_avg_rocauc",
-        "musk/skin_macro_avg_rocauc",
-        "pathocell/zero_shot_classification",
+        # Pannuke disabled for now; plot skin F1 only
+        "musk/skin_macro_avg_f1",
+        # "musk/skin_macro_avg_rocauc",  # disabled
     ],
 }
 
@@ -128,7 +128,7 @@ def extract_metrics_for_combo(modality_pair: str, combo: str) -> dict:
                 out[key] = float(ret_row[key])
         for cw_key in [
             "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
-            "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
+            # "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
             # "valfn_zshot_HumanDisease_disease/rocauc_macroAvg",
         ]:
             out[cw_key] = float(df_cw.loc[cw_key])
@@ -142,24 +142,17 @@ def extract_metrics_for_combo(modality_pair: str, combo: str) -> dict:
             hest_json["overall_performance"]
         )  # matches metrics_by_pair key
         # PathoCellBench zero-shot classification (optional, if present via aggregate copy)
-        pathocell_path = benchmarks_dir / "pathocell" / combo / "performance_summary.json"
-        with open(pathocell_path, "r") as f:
-            patho = json.load(f)
-        out["pathocell/zero_shot_classification"] = float(patho["pathocell_zero_shot_classification"])
+        # pathocell_path = benchmarks_dir / "pathocell" / combo / "performance_summary.json"
+        # with open(pathocell_path, "r") as f:
+        #     patho = json.load(f)
+        # out["pathocell/zero_shot_classification"] = float(patho["pathocell_zero_shot_classification"])
     elif modality_pair == "image-text":
         musk_path = benchmarks_dir / "musk" / combo / "performance_summary.json"
         with open(musk_path, "r") as f:
             musk_json = json.load(f)
-        out["musk/pannuke_macro_avg_rocauc"] = float(
-            musk_json["task_summaries"]["zeroshot_classification"]["macro_avg_rocauc"][
-                "pannuke"
-            ]
-        )  # macro avg rocauc
-        out["musk/skin_macro_avg_rocauc"] = float(
-            musk_json["task_summaries"]["zeroshot_classification"]["macro_avg_rocauc"][
-                "skin"
-            ]
-        )  # macro avg rocauc
+        cls = musk_json["task_summaries"]["zeroshot_classification"]
+        # Explicit key for F1 (macro); avoid reading ROC-AUC to prevent KeyErrors
+        out["musk/skin_macro_avg_f1"] = float(cls["macro_avg_f1"]["skin"])  # F1 (macro)
 
     return out
 
@@ -187,7 +180,7 @@ def get_baseline_combo(modality_pair: str, model: str) -> str:
 ncols = len(modality_pairs)
 nrows = max(len(metrics_by_pair[mp]) for mp in modality_pairs)
 fig, axs = plt.subplots(
-    nrows=nrows, ncols=ncols, figsize=(3.2 * ncols, 2.2 * nrows), sharex=False
+    nrows=nrows, ncols=ncols, figsize=(2.2 * ncols, 2.2 * nrows), sharex=False
 )
 
 
@@ -219,10 +212,8 @@ for col, mp in enumerate(modality_pairs):
             for m in metrics:
                 trimodal_all_values_by_metric[m].append(vals_trimodal_all[m])
 
-    # Baseline combos for horizontal lines
-    trimodal_combo = get_baseline_combo(mp, "trimodal")
+    # Baseline values needed for adding the extra red point
     bimodal_bridge_combo = get_baseline_combo(mp, "bimodal_bridge")
-    trimodal_vals = extract_metrics_for_combo(mp, trimodal_combo)
     bimodal_bridge_vals = extract_metrics_for_combo(mp, bimodal_bridge_combo)
 
     # Place plots at the top, fill remaining rows with empty axes
@@ -237,9 +228,14 @@ for col, mp in enumerate(modality_pairs):
                 color=pair_only_color,
                 label="pair-only" if (row == 0 and col == 0) else None,
             )
+            # Extend the red 'with-bridge' curve with an extra baseline point at x=4096 (labeled 0 at the right end)
+            x_with_bridge = ratios + [4096]
+            y_with_bridge = with_bridge_values_by_metric[metric] + [
+                float(bimodal_bridge_vals[metric])
+            ]
             ax.plot(
-                ratios,
-                with_bridge_values_by_metric[metric],
+                x_with_bridge,
+                y_with_bridge,
                 marker="o",
                 color=with_bridge_color,
                 label="with-bridge" if (row == 0 and col == 0) else None,
@@ -254,27 +250,14 @@ for col, mp in enumerate(modality_pairs):
                 )
             ax.set_ylim(bottom=0)
             ax.set_xscale("log")
-            ax.set_xticks(ratios)
-            ax.set_xticklabels(["1", "1/8", "1/64", "1/512"])  # label fractions
-            ax.set_xlim(ratios[0], ratios[-1])
+            # Add x=4096 tick labeled as 0 to indicate no target-pair data (rightmost)
+            xticks = ratios + [4096]
+            xticklabels = [("1" if r == 1 else f"1/{r}") for r in ratios] + ["0"]
+            ax.set_xticks(xticks)
+            ax.set_xticklabels(xticklabels)
+            ax.set_xlim(ratios[0], xticks[-1])
             ax.set_title(metric)
-            # Add horizontal baselines: trimodal and bimodal_bridge (constant across ratios)
-            trimodal_baseline = float(trimodal_vals[metric])
-            bimodal_bridge_baseline = float(bimodal_bridge_vals[metric])
-            ax.axhline(
-                trimodal_baseline,
-                color="#333333",
-                linestyle="--",
-                linewidth=1.2,
-                label="trimodal baseline" if (row == 0 and col == 0) else None,
-            )
-            ax.axhline(
-                bimodal_bridge_baseline,
-                color="#777777",
-                linestyle="--",
-                linewidth=1.2,
-                label="bimodal_bridge baseline" if (row == 0 and col == 0) else None,
-            )
+            # No horizontal baseline lines
 
         else:
             ax.axis("off")

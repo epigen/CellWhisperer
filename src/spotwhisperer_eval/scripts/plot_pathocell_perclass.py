@@ -22,9 +22,14 @@ import seaborn as sns
 
 plt.style.use(snakemake.input.mpl_style)
 
-# Inputs
-per_class_a = [Path(p) for p in snakemake.input.per_class_a]
-per_class_b = [Path(p) for p in snakemake.input.per_class_b]
+# Inputs (support single-path strings or lists)
+def to_paths(obj):
+    if isinstance(obj, (str, Path)):
+        return [Path(obj)]
+    return [Path(p) for p in obj]
+
+per_class_by_dataset_a = to_paths(snakemake.input.per_class_by_dataset_a)
+per_class_by_dataset_b = to_paths(snakemake.input.per_class_by_dataset_b)
 
 # Params
 model_a = snakemake.params.model_a
@@ -72,46 +77,35 @@ def load_per_class(files):
     return pd.concat(dfs, axis=0, ignore_index=True)
 
 
-a_df = load_per_class(per_class_a)
-b_df = load_per_class(per_class_b)
+# Load per-class-by-dataset summaries (already seed-averaged per dataset x class)
+a_df = load_per_class(per_class_by_dataset_a)
+b_df = load_per_class(per_class_by_dataset_b)
 
-# Aggregate across seeds: mean per dataset x class
+# Aggregate per dataset x class (already aggregated by dataset in input)
 if metric_col not in a_df.columns or metric_col not in b_df.columns:
     raise KeyError(f"Metric '{metric}' not found in per-class files")
 
 agg_cols = ["dataset", "class_label"]
-a_g = (
-    a_df.groupby(agg_cols, as_index=False)[metric_col]
-    .mean()
-    .rename(columns={metric_col: "a"})
-)
-b_g = (
-    b_df.groupby(agg_cols, as_index=False)[metric_col]
-    .mean()
-    .rename(columns={metric_col: "b"})
-)
+a_g = a_df[agg_cols + [metric_col]].rename(columns={metric_col: "a"})
+b_g = b_df[agg_cols + [metric_col]].rename(columns={metric_col: "b"})
 
 merged = a_g.merge(b_g, on=agg_cols, how="inner")
 merged["delta"] = merged["a"] - merged["b"]
-exclude_labels = {"A sample of Other cells", "A sample of Background cells"}
+exclude_labels = {"Other cells", "Background"}
 merged = merged[~merged["class_label"].isin(exclude_labels)].copy()
 # Aggregate stats per class for barplot with uncertainty
 agg = merged.groupby("class_label")["delta"].agg(["mean", "std", "count"]).reset_index()
+# Standard error and 95% CI (normal approximation)
 agg["se"] = agg["std"] / np.sqrt(agg["count"])
+agg["ci95"] = 1.96 * agg["se"]
 
 # Sort classes by mean delta (descending: highest first)
 order = agg.sort_values("mean", ascending=False)["class_label"].tolist()
 
-# Plot mean bar with uncertainty (SE)
+# Plot mean bar with 95% confidence intervals
 plt.figure(figsize=(max(3, len(order) * 0.12), 3))
-# Read p-values before plotting for coloring
-comp_base = Path(per_class_a[0]).parent.parent  # PATHOCELL_RESULTS
-comp_csv = (
-    comp_base
-    / "comparison"
-    / prediction_level
-    / f"{model_a}_vs_{model_b}_per_class.csv"
-)
+# Read p-values before plotting for coloring using declared Snakemake input
+comp_csv = Path(snakemake.input.comparison_csv)
 comp_df = pd.read_csv(comp_csv)
 metric_in_csv = metric_col
 comp_sub = comp_df[comp_df["metric"] == metric_in_csv]
@@ -129,11 +123,11 @@ ax = sns.barplot(
     palette=bar_colors,
     edgecolor="#3a647c",
 )
-# Add error bars (standard error)
+# Add error bars (95% CI)
 ax.errorbar(
     x=np.arange(len(order)),
     y=agg.set_index("class_label").loc[order, "mean"].values,
-    yerr=agg.set_index("class_label").loc[order, "se"].values,
+    yerr=agg.set_index("class_label").loc[order, "ci95"].values,
     fmt="none",
     ecolor="#1f1f1f",
     elinewidth=1.2,
@@ -155,7 +149,7 @@ plt.xlabel("Cell type")
 plt.title(f"Per-class mean delta for {metric} | {prediction_level}")
 # Clean display labels: drop leading 'A sample of '
 cleaned_labels = [re.sub(r"^A sample of\s+", "", cls) for cls in order]
-ax.set_xticklabels(cleaned_labels, rotation=90, ha="right")
+ax.set_xticklabels(cleaned_labels, rotation=90, ha="center")
 plt.tight_layout()
 
 # Annotate p-values from comparison CSV produced by pathocell_compare_models

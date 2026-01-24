@@ -20,13 +20,10 @@ class MILinearBlock(nn.Module):
         self.identity_mode = identity_mode
 
         if identity_mode:
-            # Single linear layer initialized to identity (or closest rectangular identity)
-            self.feature_proj = nn.Linear(feature_sz, units, bias=False)
-            # Initialize weights to identity where possible, zeros elsewhere
-            with torch.no_grad():
-                self.feature_proj.weight.zero_()
-                for i in range(min(feature_sz, units)):
-                    self.feature_proj.weight[i, i] = 1.0
+            pass
+            # self.feature_proj = nn.Linear(
+            #     feature_sz, units, bias=False
+            # )  # NOTE `conch_frozen` needs this :(
         else:
             # Original 2-layer block with shortcut and normalization
             self.feature_nonlinear = nn.Sequential(
@@ -48,9 +45,7 @@ class MILinearBlock(nn.Module):
 
     def forward(self, feat):
         if self.identity_mode:
-            f = feat
-            # f = self.feature_proj(feat)
-            return f
+            return feat
         f = self.feature_nonlinear(feat) + self.feature_shortcut(feat)
         if self.bln:
             f = self.feature_block_ln(f)
@@ -75,7 +70,10 @@ class GlobalDiscriminatorDot(nn.Module):
             # Project with a single linear layer initialized to an identity mapping into a common projection space (units)
             # This avoids changing geometry while keeping a shared dimensionality across modalities for dot products.
             self.transcriptome_block = MILinearBlock(
-                transcriptome_sz, units=units, bln=bln, identity_mode=True
+                transcriptome_sz,
+                units=units,
+                bln=bln,
+                identity_mode=True,  # TODO this was hacked to False for LUL_identity
             )
             self.text_block = MILinearBlock(
                 text_sz, units=units, bln=bln, identity_mode=True

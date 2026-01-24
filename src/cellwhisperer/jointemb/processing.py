@@ -50,7 +50,10 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
         "image_processor",
     ]
     transcriptome_processor_class = "ProcessorMixin"
-    tokenizer_class = "AutoTokenizer"
+    tokenizer_class = (
+        "AutoTokenizer"
+        # "ProcessorMixin"  # "AutoTokenizer" <- for normal (processormixin is for conch)
+    )
     image_processor_class = "ProcessorMixin"
 
     def __init__(
