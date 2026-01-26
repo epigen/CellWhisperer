@@ -89,7 +89,6 @@ for i in range(len(snakemake.input.retrieval_files)):
         # Small set: HEST overall metric from aggregated_results.json
         with open(snakemake.input.hest_files[i], "r") as f:
             hest_json = json.load(f)
-        # HEST overall performance
         rows.append(
             {
                 "metric": "hest/overall_performance",
@@ -97,16 +96,16 @@ for i in range(len(snakemake.input.retrieval_files)):
                 "value": float(hest_json["overall_performance"]),
             }
         )
-        # # PathoCellBench: include zero-shot classification (f1) metric from performance_summary.json
-        # with open(snakemake.input.pathocell_files[i], "r") as f:
-        #     patho = json.load(f)
-        # rows.append(
-        #     {
-        #         "metric": "pathocell/zero_shot_classification",
-        #         "model": label,
-        #         "value": float(patho["pathocell_zero_shot_classification"]),
-        #     }
-        # )
+        # PathoCellBench: include zero-shot classification (F1 macro average) from performance_summary.json
+        with open(snakemake.input.pathocell_files[i], "r") as f:
+            patho = json.load(f)
+        rows.append(
+            {
+                "metric": "pathocell/zero_shot_classification",
+                "model": label,
+                "value": float(patho["pathocell_zero_shot_classification"]),
+            }
+        )
 
     elif modality_pair == "image-text":
         # Small set: MUSK pannuke/skin ROC-AUC (use ROC-AUC for subset plot consistency)

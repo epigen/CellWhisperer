@@ -69,7 +69,7 @@
             "request": "attach",
             "connect": {
                 "host": "localhost",
-                "port": 5681
+                "port": 5685
             },
             "justMyCode": false
         },
@@ -95,7 +95,7 @@
             "request": "attach",
             "connect": {
                 "host": "localhost",
-                "port": 5678
+                "port": 5680
             },
             "pathMappings": [
                 {

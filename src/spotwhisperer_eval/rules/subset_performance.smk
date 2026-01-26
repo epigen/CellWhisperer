@@ -62,11 +62,11 @@ rule subset_performance:
                 combo=models_for_pair(wildcards.modality_pair, wildcards.subratio),
             )
         ),
-        # pathocell_files=lambda wildcards: expand(
-        #     BENCHMARKS_DIR / "pathocell" / "{combo}" / "performance_summary.json",
-        #     combo=models_for_pair(wildcards.modality_pair, wildcards.subratio),
-        #     allow_missing=True,
-        # ),
+        pathocell_files=lambda wildcards: expand(
+            BENCHMARKS_DIR / "pathocell" / "{combo}" / "performance_summary.json",
+            combo=models_for_pair(wildcards.modality_pair, wildcards.subratio),
+            allow_missing=True,
+        ),
         musk_files=lambda wildcards: (
             [] if wildcards.modality_pair != "image-text" else expand(
                 BENCHMARKS_DIR / "musk" / "{combo}" / "performance_summary.json",
@@ -88,6 +88,7 @@ rule subset_performance:
         slurm="cpus-per-task=1"
     script:
         "../scripts/aggregate_subset_performance.py"
+
 rule subset_all:
     """
     Aggregate subset_performance across all three modality pairs for a given ratio
@@ -144,6 +145,7 @@ rule subset_performance_trend_grid:
                 "hest1k__quilt1m",
                 "cellxgene_census__archs4_geo__quilt1m",
                 "cellxgene_census__archs4_geo__hest1k",
+                # "random",
             ],
             allow_missing=True,
         ),
@@ -159,6 +161,7 @@ rule subset_performance_trend_grid:
                 "hest1k__quilt1m",
                 "cellxgene_census__archs4_geo__quilt1m",
                 "cellxgene_census__archs4_geo__hest1k",
+                # "random",
             ],
             allow_missing=True,
         ),
@@ -175,30 +178,36 @@ rule subset_performance_trend_grid:
                     (f"cellxgene_census_{r}thsub__archs4_geo_{r}thsub__hest1k_{r}thsub__quilt1m_{r}thsub")
                     for r in SUBSAMPLING_RATIOS if r != 1
                 ] if PLOT_TRIMODAL_ALL_SUBSET else []
-            # ),
-            # allow_missing=True,
-        # ),
-        # pathocell_files=lambda wildcards: expand(
-        #     BENCHMARKS_DIR / "pathocell" / "{combo}" / "performance_summary.json",
-        #     combo=[
-        #         ("cellxgene_census__archs4_geo__hest1k__quilt1m" if r == 1 else f"cellxgene_census__archs4_geo__hest1k_{r}thsub__quilt1m")
-        #         for r in SUBSAMPLING_RATIOS
-        #     ] + [
-        #         ("hest1k" if r == 1 else f"hest1k_{r}thsub")
-        #         for r in SUBSAMPLING_RATIOS
-        #     ] + (
-        #         [
-        #             (f"cellxgene_census_{r}thsub__archs4_geo_{r}thsub__hest1k_{r}thsub__quilt1m_{r}thsub")
-        #             for r in SUBSAMPLING_RATIOS if r != 1
-        #         ] if PLOT_TRIMODAL_ALL_SUBSET else []
-        #     ),
-        ) + [
+            ) + [
                 # Bimodal bridge baseline for transcriptome-image column
                 "cellxgene_census__archs4_geo__quilt1m",
+                # "random",
             ],
             allow_missing=True,
         ),
-        # pathocell_files disabled for now; will be added later
+        # PathoCellBench inputs intentionally excluded from the trend grid
+        # pathocell_files=lambda wildcards: expand(
+        #     PROJECT_DIR / "results/pathocell_evaluation" / "spotwhisperer_{combo}" / "summary/patch_metrics_from_scores_aggregated.json",
+        #     combo=[
+        #         # image-text: pair-only
+        #         ("quilt1m" if r == 1 else f"quilt1m_{r}thsub")
+        #         for r in SUBSAMPLING_RATIOS
+        #     ] + [
+        #         # image-text: with-bridge
+        #         ("cellxgene_census__archs4_geo__hest1k__quilt1m" if r == 1 else f"cellxgene_census__archs4_geo__hest1k__quilt1m_{r}thsub")
+        #         for r in SUBSAMPLING_RATIOS
+        #     ] + (
+        #         [
+        #             # trimodal-all-subset (optional)
+        #             (f"cellxgene_census_{r}thsub__archs4_geo_{r}thsub__hest1k_{r}thsub__quilt1m_{r}thsub")
+        #             for r in SUBSAMPLING_RATIOS if r != 1
+        #         ] if PLOT_TRIMODAL_ALL_SUBSET else []
+        #     ) + [
+        #         # image-text baseline (bimodal bridge)
+        #         "cellxgene_census__archs4_geo__hest1k"
+        #     ],
+        #     allow_missing=True,
+        # ),
         musk_files=lambda wildcards: expand(
             BENCHMARKS_DIR / "musk" / "{combo}" / "performance_summary.json",
             combo=[
@@ -215,6 +224,7 @@ rule subset_performance_trend_grid:
             ) + [
                 # Bimodal bridge baseline for image-text column
                 "cellxgene_census__archs4_geo__hest1k",
+                # "random",
             ],
             allow_missing=True,
         )

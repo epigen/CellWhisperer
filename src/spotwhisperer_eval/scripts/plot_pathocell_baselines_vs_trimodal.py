@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Plot per-class metrics comparison: Trimodal vs Quilt1m vs CONCH variants using metrics_from_scores per-class CSVs.
+Plot per-class metrics comparison: BiBridge vs Quilt1m vs CONCH variants using metrics_from_scores per-class CSVs.
 
 Inputs via Snakemake:
 - snakemake.input.mpl_style: Matplotlib style file
@@ -16,7 +16,7 @@ import seaborn as sns
 
 plt.style.use(snakemake.input.mpl_style)
 
-trimodal_pc = Path(snakemake.input.trimodal_per_class)
+bibridge_pc = Path(snakemake.input.bibridge_per_class)
 quilt_pc = Path(snakemake.input.quilt_per_class)
 conch_LLL_pc = Path(snakemake.input.conch_LLL_per_class)
 conch_LUL_pc = Path(snakemake.input.conch_LUL_per_class)
@@ -143,7 +143,7 @@ def compute_metrics_by_class(
     return pd.DataFrame({"class_label": classes_ref, metric: out_vals})
 
 
-trimodal_df = read_pc(trimodal_pc)
+bibridge_df = read_pc(bibridge_pc)
 quilt_df = read_pc(quilt_pc)
 conch_LLL_df = read_pc(conch_LLL_pc)
 conch_LUL_df = read_pc(conch_LUL_pc)
@@ -154,7 +154,7 @@ plip_terms1_df = read_pc(plip_terms1_pc)
 
 def make_plot_df(metric: str) -> pd.DataFrame:
     cols = ["class_label", metric]
-    a = trimodal_df[cols].rename(columns={metric: "trimodal"})
+    a = bibridge_df[cols].rename(columns={metric: "bibridge"})
     b = quilt_df[cols].rename(columns={metric: "bimodal_quilt1m"})
     cLLL = conch_LLL_df[cols].rename(columns={metric: "conch_LLL"})
     cLUL = conch_LUL_df[cols].rename(columns={metric: "conch_LUL"})
@@ -187,7 +187,7 @@ def make_plot_df(metric: str) -> pd.DataFrame:
 
 
 method_colors = {
-    "trimodal": "#f39c12",
+    "bibridge": "#f39c12",
     "bimodal_quilt1m": "#16a085",
     "conch_LLL": "#1f77b4",
     "conch_LUL": "#2ca02c",
@@ -199,7 +199,7 @@ method_colors = {
 fig, axes = plt.subplots(
     nrows=len(METRICS),
     ncols=1,
-    figsize=(max(6, 0.25 * trimodal_df.shape[0]), 2.0 * len(METRICS)),
+    figsize=(max(6, 0.25 * bibridge_df.shape[0]), 2.0 * len(METRICS)),
     sharex=True,
 )
 if not isinstance(axes, np.ndarray):
@@ -232,40 +232,28 @@ plt.tight_layout()
 plt.savefig(out_path)
 plt.close()
 
-# Build CSV table for rocauc: columns = classes (+ mean), rows = methods
-def build_csv_table_rocauc():
-    metric = "rocauc"
-    cols = ["class_label", metric]
-    dfs = {
-        "trimodal": trimodal_df[cols].rename(columns={metric: "trimodal"}),
-        "bimodal_quilt1m": quilt_df[cols].rename(columns={metric: "bimodal_quilt1m"}),
-        "conch_terms1": conch_terms1_df[cols].rename(columns={metric: "conch_terms1"}),
-        "plip_terms1": plip_terms1_df[cols].rename(columns={metric: "plip_terms1"}),
-    }
-    merged = None
-    for label, df in dfs.items():
-        merged = df if merged is None else merged.merge(df, on="class_label", how="inner")
-    exclude = {"Other cells", "Background", "A sample of Other cells", "A sample of Background cells"}
-    merged = merged[~merged["class_label"].isin(exclude)].copy()
-    merged = merged.set_index("class_label")
-    # Append mean over classes
-    merged.loc["mean"] = merged.mean(numeric_only=True)
-    # Mark best and second best per column
-    def mark_best(series: pd.Series) -> pd.Series:
-        vals = series.astype(float).copy()
-        order = vals.sort_values(ascending=False).index.tolist()
-        out = series.copy().astype(str)
-        if len(order) > 0:
-            b = order[0]
-            out[b] = f"**{vals[b]:.3f}**"  # bold
-        if len(order) > 1:
-            s = order[1]
-            out[s] = f"__{vals[s]:.3f}__"  # underline
-        for idx in order[2:]:
-            out[idx] = f"{vals[idx]:.3f}"
-        return out
-    formatted = merged.apply(mark_best, axis=0)
-    csv_out.parent.mkdir(parents=True, exist_ok=True)
-    formatted.to_csv(csv_out, index=True)
 
-build_csv_table_rocauc()
+# Build CSV table for rocauc: columns = classes (+ mean), rows = methods
+metric = "rocauc"
+cols = ["class_label", metric]
+dfs = {
+    "bibridge": bibridge_df[cols].rename(columns={metric: "bibridge"}),
+    "bimodal_quilt1m": quilt_df[cols].rename(columns={metric: "bimodal_quilt1m"}),
+    "conch_terms1": conch_terms1_df[cols].rename(columns={metric: "conch_terms1"}),
+    "plip_terms1": plip_terms1_df[cols].rename(columns={metric: "plip_terms1"}),
+}
+merged = None
+for label, df in dfs.items():
+    merged = df if merged is None else merged.merge(df, on="class_label", how="inner")
+exclude = {
+    "Other cells",
+    "Background",
+    "A sample of Other cells",
+    "A sample of Background cells",
+}
+merged = merged[~merged["class_label"].isin(exclude)].copy()
+merged = merged.set_index("class_label")
+# Append mean over classes
+merged.loc["mean"] = merged.mean(numeric_only=True)
+
+merged.to_csv(csv_out, index=True)

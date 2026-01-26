@@ -19,6 +19,7 @@ from pathlib import Path
 import json
 import pandas as pd
 import matplotlib.pyplot as plt
+import re
 
 plt.style.use(snakemake.input.mpl_style)
 
@@ -39,17 +40,18 @@ test_dataset_map = {
 # Metrics per modality pair (rows). Keep concise small set matching existing subset_performance script.
 metrics_by_pair = {
     "transcriptome-text": [
-        "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
-        # "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
+        # "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
+        "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
         # "valfn_zshot_HumanDisease_disease/rocauc_macroAvg",
     ],
     "transcriptome-image": [
         "hest/overall_performance",
     ],
     "image-text": [
-        # Pannuke disabled for now; plot skin F1 only
-        "musk/skin_macro_avg_f1",
-        # "musk/skin_macro_avg_rocauc",  # disabled
+        # Plot skin AUROC (macro) from MUSK zeroshot classification summary
+        "musk/skin_macro_avg_rocauc",
+        # PathoCellBench AUROC intentionally excluded from grid; keep for reference
+        # "pathocell/rocauc_macroAvg",
     ],
 }
 
@@ -128,7 +130,7 @@ def extract_metrics_for_combo(modality_pair: str, combo: str) -> dict:
                 out[key] = float(ret_row[key])
         for cw_key in [
             "valfn_zshot_TabSap_cell_lvl/f1_macroAvg",
-            # "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
+            "valfn_zshot_TabSap_cell_lvl/rocauc_macroAvg",
             # "valfn_zshot_HumanDisease_disease/rocauc_macroAvg",
         ]:
             out[cw_key] = float(df_cw.loc[cw_key])
@@ -151,8 +153,31 @@ def extract_metrics_for_combo(modality_pair: str, combo: str) -> dict:
         with open(musk_path, "r") as f:
             musk_json = json.load(f)
         cls = musk_json["task_summaries"]["zeroshot_classification"]
-        # Explicit key for F1 (macro); avoid reading ROC-AUC to prevent KeyErrors
-        out["musk/skin_macro_avg_f1"] = float(cls["macro_avg_f1"]["skin"])  # F1 (macro)
+
+        out["musk/skin_macro_avg_rocauc"] = float(
+            cls["macro_avg_rocauc"]["skin"]
+        )  # AUROC (macro)
+
+        # PathoCellBench AUROC from metrics_from_scores aggregated JSON (commented out)
+        # Use the exact combo to locate the corresponding model directory
+        # patho_key = "rocauc_macroAvg"
+        # patho_val = float("nan")
+        # candidates = [  # TODO make a single path
+        #     Path(__file__).resolve().parents[3]
+        #     / "results/pathocell_evaluation"
+        #     / f"spotwhisperer_{combo}"
+        #     / "summary/patch_metrics_from_scores_aggregated.json",
+        # ]
+        # for cand in candidates:  # TODO no need for this loop. single file only
+        #     try:
+        #         with open(cand, "r") as f:
+        #             obj = json.load(f)
+        #         if patho_key in obj:
+        #             patho_val = float(obj[patho_key])
+        #             break
+        #     except Exception:
+        #         continue
+        # out["pathocell/rocauc_macroAvg"] = patho_val
 
     return out
 
@@ -180,7 +205,7 @@ def get_baseline_combo(modality_pair: str, model: str) -> str:
 ncols = len(modality_pairs)
 nrows = max(len(metrics_by_pair[mp]) for mp in modality_pairs)
 fig, axs = plt.subplots(
-    nrows=nrows, ncols=ncols, figsize=(2.2 * ncols, 2.2 * nrows), sharex=False
+    nrows=nrows, ncols=ncols, figsize=(1.85 * ncols, 1.6 * nrows), sharex=False, sharey=True
 )
 
 
@@ -212,27 +237,30 @@ for col, mp in enumerate(modality_pairs):
             for m in metrics:
                 trimodal_all_values_by_metric[m].append(vals_trimodal_all[m])
 
-    # Baseline values needed for adding the extra red point
-    bimodal_bridge_combo = get_baseline_combo(mp, "bimodal_bridge")
-    bimodal_bridge_vals = extract_metrics_for_combo(mp, bimodal_bridge_combo)
+    # Baseline point source at x=4096
+    # For pair-only: use random baseline y=0.5 at x=4096 (no target-pair data)
+    # For with-bridge: use performance of the bimodal bridge model trained on the other modality pairs
+    bridge_combo = get_baseline_combo(mp, model="bimodal_bridge")
+    bridge_vals = extract_metrics_for_combo(mp, bridge_combo)
 
     # Place plots at the top, fill remaining rows with empty axes
     for row in range(nrows):
         ax = axs[row, col] if nrows > 1 else axs[col]
         if row < len(metrics):
             metric = metrics[row]
+            # Pair-only line, extended with random baseline at x=4096 (y=0.5)
+            x_with_pair = ratios + [4096]
+            y_with_pair = pair_only_values_by_metric[metric] + [0.5]
             ax.plot(
-                ratios,
-                pair_only_values_by_metric[metric],
+                x_with_pair,
+                y_with_pair,
                 marker="o",
                 color=pair_only_color,
                 label="pair-only" if (row == 0 and col == 0) else None,
             )
-            # Extend the red 'with-bridge' curve with an extra baseline point at x=4096 (labeled 0 at the right end)
+            # With-bridge line, extended with bimodal bridge performance at x=4096
             x_with_bridge = ratios + [4096]
-            y_with_bridge = with_bridge_values_by_metric[metric] + [
-                float(bimodal_bridge_vals[metric])
-            ]
+            y_with_bridge = with_bridge_values_by_metric[metric] + [bridge_vals[metric]]
             ax.plot(
                 x_with_bridge,
                 y_with_bridge,
@@ -248,6 +276,14 @@ for col, mp in enumerate(modality_pairs):
                     color=trimodal_all_color,
                     label="trimodal-all-subset" if (row == 0 and col == 0) else None,
                 )
+            # Gray dotted random baseline at y=0.5
+            ax.axhline(
+                0.5,
+                color="#7f7f7f",
+                linestyle=":",
+                linewidth=1.0,
+                label="random baseline" if (row == 0 and col == 0) else None,
+            )
             ax.set_ylim(bottom=0)
             ax.set_xscale("log")
             # Add x=4096 tick labeled as 0 to indicate no target-pair data (rightmost)
