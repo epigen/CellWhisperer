@@ -362,7 +362,8 @@ rule pathocell_performance_overview:
 
 rule pathocell_baselines_vs_trimodal:
     """
-    Per-class metrics comparison: Trimodal vs Quilt1m vs CONCH variants using metrics_from_scores per-class CSVs.
+    Per-class metrics comparison for a single metric: Trimodal vs Quilt1m vs CONCH variants using metrics_from_scores per-class CSVs.
+    Metric selected via wildcard 'metric'.
     """
     input:
         mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
@@ -376,10 +377,13 @@ rule pathocell_baselines_vs_trimodal:
         conch_terms1_per_class=PATHOCELL_RESULTS / "conch_terms1/summary/patch_per_class_metrics_from_scores.csv",
         plip_terms1_per_class=PATHOCELL_RESULTS / "plip_terms1/summary/patch_per_class_metrics_from_scores.csv",
     output:
-        plot=PATHOCELL_RESULTS / "comparison" / "patch" / "plots" / "per_class_multi_metrics_trimodal_vs_quilt_conch.svg",
-        csv_table=PATHOCELL_RESULTS / "comparison" / "patch" / "tables" / "per_class_rocauc_trimodal_vs_quilt_conch_terms1_plip_terms1.csv",
+        plot=PATHOCELL_RESULTS / "comparison" / "patch" / "plots" / "per_class__{metric}__trimodal_vs_quilt_conch.svg",
+        csv_table=PATHOCELL_RESULTS / "comparison" / "patch" / "tables" / "per_class_{metric}_trimodal_vs_quilt_conch_terms1_plip_terms1.csv",
     params:
         prediction_level="patch",
+        metric="{metric}",
+    wildcard_constraints:
+        metric="(f1|rocauc|soft_rocauc|precision|accuracy|recall_at_5|mae_prob|mse_prob)",
     conda:
         "cellwhisperer"
     resources:
@@ -415,14 +419,15 @@ rule pathocell_split_baseline_scores:
     Uses wildcards for baseline (conch|plip), dataset, prediction_level, and seed.
     """
     input:
-        baseline_csv=PATHOCELL_DATA / "baselines_animesh_computed/{baseline}_logits_terms1.csv",
+        baseline_csv=PATHOCELL_DATA / "baselines_animesh_computed/{baseline}_logits_{terms_id}.csv",
     output:
-        score=PATHOCELL_RESULTS / "{baseline}_terms1" / "{dataset}_{prediction_level}_scores_seed{seed}.csv",
+        score=PATHOCELL_RESULTS / "{baseline}_{terms_id}" / "{dataset}_{prediction_level}_scores_seed{seed}.csv",
     wildcard_constraints:
         baseline="(conch|plip)",
         prediction_level="patch",
         seed="0",
         dataset="[^/]+",
+        terms_id="(terms1|terms2)"
     conda:
         "cellwhisperer"
     resources:
@@ -463,101 +468,6 @@ ruleorder: pathocell_split_baseline_scores > pathocell_cell_type_prediction
 #     script:
 #         "../scripts/run_plip_baseline.py"
 
-rule pathocell_conch:
-    input:
-        expand(rules.pathocell_cell_type_prediction.output.results,
-               prediction_level="patch",
-               dataset=DATASETS,
-               model="conch_frozen",  # [f"conch_{config}" for config in CONCH_MODEL_CONFIGS],
-               seed=0)
-
-rule pathocell_all:
-    """
-    Run complete PathoCellBench evaluation for cell type classification.
-    """
-    input:
-        # Per-class plots for key metrics
-        expand(
-            rules.pathocell_per_class.output.plot,
-            model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"],
-            model_b=["spotwhisperer_quilt1m"],
-            prediction_level=["patch"],
-            metric=["auroc", "f1"],
-        ),
-        expand(
-            rules.pathocell_per_class.output.plot,
-            model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k"],
-            model_b=["spotwhisperer_quilt1m"],
-            prediction_level=["patch"],
-            metric=["auroc", "f1"],
-        ),
-        expand(
-            rules.pathocell_per_class.output.plot,
-            model_a=["conch_frozen"],
-            model_b=["conch_LUL_identity"],
-            prediction_level=["patch"],
-            metric=["auroc", "f1"],
-        ),
-        expand(
-            rules.pathocell_per_class.output.plot,
-            model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"],
-            model_b=["conch_frozen"],
-            prediction_level=["patch"],
-            metric=["auroc", "f1"],
-        ),
-        # Per-class F1 scatter
-        # expand(
-        #     rules.pathocell_performance_overview.output.plot,
-        #     model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"],
-        #     model_b=["spotwhisperer_quilt1m"],
-        #     prediction_level=["patch"],
-        # ),
-        rules.pathocell_baselines_vs_trimodal.output.plot,
-    default_target: True
-
-
-# Convenience rule: requested per-class plots for specific model comparisons
-rule pathocell_requested_per_class_plots:
-    input:
-        # conch: frozen vs LUL_identity (patch-level), metrics: f1, auroc
-        expand(
-            rules.pathocell_per_class.output.plot,
-            model_a=["conch_LUL_identity"],
-            model_b=["conch_frozen"],
-            prediction_level=["patch"],
-            metric=["f1", "auroc", "soft_rocauc"],
-        ),
-        # trimodal vs conch_frozen (patch-level), metrics: f1, auroc
-        # expand(
-        #     rules.pathocell_per_class.output.plot,
-        #     model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"],
-        #     model_b=["conch_frozen"],
-        #     prediction_level=["patch"],
-        #     metric=["f1", "auroc", "soft_rocauc"],
-        # ),
-        # # trimodal vs quilt1m_bimodal (patch-level), metrics: f1, auroc
-        # expand(
-        #     rules.pathocell_per_class.output.plot,
-        #     model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"],
-        #     model_b=["spotwhisperer_quilt1m"],
-        #     prediction_level=["patch"],
-        #     metric=["f1", "auroc", "soft_rocauc"],
-        # )
-        expand(
-            rules.pathocell_per_class.output.plot,
-            model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k"],
-            model_b=["spotwhisperer_quilt1m"],
-            prediction_level=["patch"],
-            metric=["auroc", "f1", "soft_rocauc"],
-        ),
-        expand(
-            rules.pathocell_per_class.output.plot,
-            model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k"],
-            model_b=["conch_frozen"],
-            prediction_level=["patch"],
-            metric=["f1", "auroc", "soft_rocauc"],
-        ),
-
 
 rule pathocell_violin_deltas:
     """
@@ -587,26 +497,110 @@ rule pathocell_violin_deltas:
         "../scripts/plot_pathocell_violin_deltas.py"
 
 
-rule pathocell_requested_violin_deltas:
+
+rule pathocell_all:
+    """
+    Run complete PathoCellBench evaluation for cell type classification.
+    TODO: most of these request __quilt1m (although we are usually interested in the bimodal bridge model)
+    """
     input:
-        # conch: frozen vs LUL_identity (patch-level)
+        # Per-class delta plots (core comparisons)
+        expand(
+            rules.pathocell_per_class.output.plot,
+            model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"],
+            model_b=["spotwhisperer_quilt1m"],
+            prediction_level=["patch"],
+            metric=["auroc", "f1"],
+        ),
+        expand(
+            rules.pathocell_per_class.output.plot,
+            model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k"],
+            model_b=["spotwhisperer_quilt1m"],
+            prediction_level=["patch"],
+            metric=["auroc", "f1"],
+        ),
+        expand(
+            rules.pathocell_per_class.output.plot,
+            model_a=["conch_frozen"],
+            model_b=["conch_LUL_identity"],
+            prediction_level=["patch"],
+            metric=["auroc", "f1"],
+        ),
+        expand(
+            rules.pathocell_per_class.output.plot,
+            model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"],
+            model_b=["conch_frozen"],
+            prediction_level=["patch"],
+            metric=["auroc", "f1"],
+        ),
+        # Requested per-class delta plots (extras including soft_rocauc)
+        expand(
+            rules.pathocell_per_class.output.plot,
+            model_a=["conch_LUL_identity"],
+            model_b=["conch_frozen"],
+            prediction_level=["patch"],
+            metric=["f1", "auroc", "soft_rocauc"],
+        ),
+        expand(
+            rules.pathocell_per_class.output.plot,
+            model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k"],
+            model_b=["spotwhisperer_quilt1m"],
+            prediction_level=["patch"],
+            metric=["auroc", "f1", "soft_rocauc"],
+        ),
+        expand(
+            rules.pathocell_per_class.output.plot,
+            model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k"],
+            model_b=["conch_frozen"],
+            prediction_level=["patch"],
+            metric=["f1", "auroc", "soft_rocauc"],
+        ),
+        # Per-class F1 scatter
+        # expand(
+        #     rules.pathocell_performance_overview.output.plot,
+        #     model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"],
+        #     model_b=["spotwhisperer_quilt1m"],
+        #     prediction_level=["patch"],
+        # ),
+        # Baselines vs Trimodal bar plots (single-metric axes)
+        expand(
+            rules.pathocell_baselines_vs_trimodal.output.plot,
+            metric=[
+                "f1",
+                "rocauc",
+                "soft_rocauc",
+                "precision",
+                "accuracy",
+                "recall_at_5",
+                "mae_prob",
+                "mse_prob",
+            ],
+        ),
+        # Requested violin deltas (per-dataset metric deltas)
         expand(
             rules.pathocell_violin_deltas.output.plot,
             model_a=["conch_frozen"],
             model_b=["conch_LUL_identity"],
             prediction_level=["patch"],
         ),
-        # trimodal vs conch_frozen (patch-level)
         expand(
             rules.pathocell_violin_deltas.output.plot,
             model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"],
             model_b=["conch_frozen"],
             prediction_level=["patch"],
         ),
-        # trimodal vs quilt1m_bimodal (patch-level)
         expand(
             rules.pathocell_violin_deltas.output.plot,
             model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"],
             model_b=["spotwhisperer_quilt1m"],
             prediction_level=["patch"],
-        )
+        ),
+        # Requested KL divergence scatter (trimodal vs PLIP/CONCH terms1)
+        expand(
+            rules.pathocell_performance_overview.output.plot,
+            model_a=["spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m"],
+            model_b=["plip_terms1", "conch_terms1"],
+            prediction_level=["patch"],
+            metric=["mean_kl_divergence"],
+        ),
+    default_target: True

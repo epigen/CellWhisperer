@@ -124,3 +124,29 @@ rule quilt_curated_trimodal_spider_plot:
         notebook="../logs/quilt_curated_trimodal_spider_plot.ipynb"
     notebook:
         "../notebooks/quilt_curated_trimodal_spider_plot.py.ipynb"
+
+
+rule quilt_curated_individual_score_violins:
+    """
+    Violin plots of individual CLIP scores for quilt1m vs quilt1m_curated.
+    Loads two CSVs written by spotwhisperer_test and compares distributions.
+    """
+    input:
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
+        individual_scores=[
+            PROJECT_DIR / config["paths"]["csv_logs"] / "sweval___{}___{}".format(MODEL_MAPPINGS["quilt1m"]["bimodal_bridge"], td) / "test_individual_clip_scores.csv"
+            for td in ["quilt1m", "quilt1m_curated"]
+        ]
+    output:
+        plot=report(CURATED_COMPARISON_RESULTS / "violin_distributions" / "individual_clip_score_violins.svg", category="comparison", subcategory="quilt_curated", labels={"Analysis": "CLIP score distributions", "Format": "plot"}),
+        stats=CURATED_COMPARISON_RESULTS / "violin_distributions" / "individual_clip_score_violins_stats.txt"
+    params:
+        dataset_combo=MODEL_MAPPINGS["quilt1m"]["bimodal_bridge"],
+        test_datasets=["quilt1m", "quilt1m_curated"],
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=15000,
+        slurm="cpus-per-task=1"
+    script:
+        "../notebooks/quilt_curated_individual_score_violins.py"

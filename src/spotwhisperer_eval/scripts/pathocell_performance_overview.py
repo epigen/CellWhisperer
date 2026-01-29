@@ -19,10 +19,12 @@ import seaborn as sns
 
 plt.style.use(snakemake.input.mpl_style)
 
+
 def to_paths(obj):
     if isinstance(obj, (str, Path)):
         return [Path(obj)]
     return [Path(p) for p in obj]
+
 
 # Inputs (robust to single path or list)
 per_class_a = to_paths(snakemake.input.per_class_a)
@@ -108,7 +110,9 @@ def load_results_json(files):
                 raise KeyError(
                     f"Requested metric '{metric_col}' not found in results JSON: {fp}"
                 )
-            rows.append(pd.DataFrame({"dataset": [dataset], metric_col: [obj[metric_col]]}))
+            rows.append(
+                pd.DataFrame({"dataset": [dataset], metric_col: [obj[metric_col]]})
+            )
     return pd.concat(rows, axis=0, ignore_index=True)
 
 
@@ -185,7 +189,7 @@ else:
 merged["significant"] = False
 
 # Plot
-plt.figure(figsize=(2.2, 1.4))
+plt.figure(figsize=(1.8, 1.8))
 if snakemake.params.plot_type == "violin":
     if scatter_unit == "dataset":
         if use_json:
@@ -258,9 +262,9 @@ else:
     ax.set_xlabel(f"{metric_col} mean ({model_b})")
     ax.set_ylabel(f"{metric_col} mean ({model_a})")
 mode_label = "dataset" if scatter_unit == "dataset" else "class"
-ax.set_title(
-    f"{metric_col}: {model_a} vs {model_b} | {prediction_level} | by {mode_label} ({snakemake.params.plot_type})"
-)
+# ax.set_title(
+#     f"{metric_col}: {model_a} vs {model_b} | {prediction_level} | by {mode_label} ({snakemake.params.plot_type})"
+# )
 handles, labels = ax.get_legend_handles_labels()
 labels = [
     "p < 0.05" if l == "True" else ("p \u2265 0.05" if l == "False" else l)

@@ -16,6 +16,7 @@ Outputs:
 from pathlib import Path
 import re
 import json
+import logging
 
 import numpy as np
 import pandas as pd
@@ -100,16 +101,18 @@ for fp in score_fps:
     y_true_labels = info["obs_labels"]
     true_probs = info["true_probs"]
     sdf = pd.read_csv(fp)
-    # Align score columns to class names; some files have numeric columns '0','1',...
-    if list(sdf.columns) != classes:
-        if str(sdf.columns[0]).isdigit():
-            # Columns are positional indices; rename by order to class names
-            if len(sdf.columns) >= len(classes):
-                sdf = sdf.iloc[:, :len(classes)]
-            sdf.columns = classes
-        else:
-            # Columns already named but possibly different order; select in required order
-            sdf = sdf[classes]
+    # Align score columns to class names. If selection by names fails,
+    # assume the order already matches and assign class labels.
+    try:
+        sdf = sdf[classes]
+    except Exception:
+        logging.warning(
+            f"Score columns do not match expected class names for dataset '{ds}' in file '{fp}'. "
+            f"Assuming column order is correct and assigning class labels."
+        )
+        assert len(sdf.columns) == len(classes), "score CSV column count must match number of classes"
+        sdf = sdf.iloc[:, :len(classes)].copy()
+        sdf.columns = classes
     scores = sdf.values.astype(float)
     # Use stable softmax to obtain valid probability distributions from logits
     m = scores - scores.max(axis=1, keepdims=True)

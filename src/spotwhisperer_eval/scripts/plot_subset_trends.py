@@ -51,7 +51,7 @@ metrics_by_pair = {
         # Plot skin AUROC (macro) from MUSK zeroshot classification summary
         "musk/skin_macro_avg_rocauc",
         # PathoCellBench AUROC intentionally excluded from grid; keep for reference
-        # "pathocell/rocauc_macroAvg",
+        "pathocell/rocauc_macroAvg",
     ],
 }
 
@@ -143,11 +143,6 @@ def extract_metrics_for_combo(modality_pair: str, combo: str) -> dict:
         out["hest/overall_performance"] = float(
             hest_json["overall_performance"]
         )  # matches metrics_by_pair key
-        # PathoCellBench zero-shot classification (optional, if present via aggregate copy)
-        # pathocell_path = benchmarks_dir / "pathocell" / combo / "performance_summary.json"
-        # with open(pathocell_path, "r") as f:
-        #     patho = json.load(f)
-        # out["pathocell/zero_shot_classification"] = float(patho["pathocell_zero_shot_classification"])
     elif modality_pair == "image-text":
         musk_path = benchmarks_dir / "musk" / combo / "performance_summary.json"
         with open(musk_path, "r") as f:
@@ -160,24 +155,24 @@ def extract_metrics_for_combo(modality_pair: str, combo: str) -> dict:
 
         # PathoCellBench AUROC from metrics_from_scores aggregated JSON (commented out)
         # Use the exact combo to locate the corresponding model directory
-        # patho_key = "rocauc_macroAvg"
-        # patho_val = float("nan")
-        # candidates = [  # TODO make a single path
-        #     Path(__file__).resolve().parents[3]
-        #     / "results/pathocell_evaluation"
-        #     / f"spotwhisperer_{combo}"
-        #     / "summary/patch_metrics_from_scores_aggregated.json",
-        # ]
-        # for cand in candidates:  # TODO no need for this loop. single file only
-        #     try:
-        #         with open(cand, "r") as f:
-        #             obj = json.load(f)
-        #         if patho_key in obj:
-        #             patho_val = float(obj[patho_key])
-        #             break
-        #     except Exception:
-        #         continue
-        # out["pathocell/rocauc_macroAvg"] = patho_val
+        patho_key = "rocauc_macroAvg"
+        patho_val = float("nan")
+        candidates = [  # TODO make a single path
+            Path(__file__).resolve().parents[3]
+            / "results/pathocell_evaluation"
+            / f"spotwhisperer_{combo}"
+            / "summary/patch_metrics_from_scores_aggregated.json",
+        ]
+        for cand in candidates:  # TODO no need for this loop. single file only
+            try:
+                with open(cand, "r") as f:
+                    obj = json.load(f)
+                if patho_key in obj:
+                    patho_val = float(obj[patho_key])
+                    break
+            except Exception:
+                continue
+        out["pathocell/rocauc_macroAvg"] = patho_val
 
     return out
 
@@ -205,7 +200,11 @@ def get_baseline_combo(modality_pair: str, model: str) -> str:
 ncols = len(modality_pairs)
 nrows = max(len(metrics_by_pair[mp]) for mp in modality_pairs)
 fig, axs = plt.subplots(
-    nrows=nrows, ncols=ncols, figsize=(1.85 * ncols, 1.6 * nrows), sharex=False, sharey=True
+    nrows=nrows,
+    ncols=ncols,
+    figsize=(1.85 * ncols, 1.6 * nrows),
+    sharex=False,
+    sharey=True,
 )
 
 
@@ -248,9 +247,18 @@ for col, mp in enumerate(modality_pairs):
         ax = axs[row, col] if nrows > 1 else axs[col]
         if row < len(metrics):
             metric = metrics[row]
-            # Pair-only line, extended with random baseline at x=4096 (y=0.5)
-            x_with_pair = ratios + [4096]
-            y_with_pair = pair_only_values_by_metric[metric] + [0.5]
+            # Build fractional x-values (1/ratio) sorted ascending; prepend baseline at x=0
+            fracs = [1.0 / r for r in ratios]
+            order_idx = sorted(range(len(ratios)), key=lambda i: fracs[i])
+            x_fracs_sorted = [fracs[i] for i in order_idx]
+            y_pair_sorted = [pair_only_values_by_metric[metric][i] for i in order_idx]
+            y_bridge_sorted = [
+                with_bridge_values_by_metric[metric][i] for i in order_idx
+            ]
+
+            # Pair-only line, extended with random baseline at x=0 (y=0.5)
+            x_with_pair = [1 / 4096] + x_fracs_sorted
+            y_with_pair = [0.5] + y_pair_sorted
             ax.plot(
                 x_with_pair,
                 y_with_pair,
@@ -258,9 +266,9 @@ for col, mp in enumerate(modality_pairs):
                 color=pair_only_color,
                 label="pair-only" if (row == 0 and col == 0) else None,
             )
-            # With-bridge line, extended with bimodal bridge performance at x=4096
-            x_with_bridge = ratios + [4096]
-            y_with_bridge = with_bridge_values_by_metric[metric] + [bridge_vals[metric]]
+            # With-bridge line, extended with bimodal bridge performance at x=0
+            x_with_bridge = [1 / 4096] + x_fracs_sorted
+            y_with_bridge = [bridge_vals[metric]] + y_bridge_sorted
             ax.plot(
                 x_with_bridge,
                 y_with_bridge,
@@ -269,9 +277,12 @@ for col, mp in enumerate(modality_pairs):
                 label="with-bridge" if (row == 0 and col == 0) else None,
             )
             if plot_trimodal_all_subset:
+                y_trimodal_sorted = [
+                    trimodal_all_values_by_metric[metric][i] for i in order_idx
+                ]
                 ax.plot(
-                    ratios,
-                    trimodal_all_values_by_metric[metric],
+                    x_fracs_sorted,
+                    y_trimodal_sorted,
                     marker="o",
                     color=trimodal_all_color,
                     label="trimodal-all-subset" if (row == 0 and col == 0) else None,
@@ -286,12 +297,15 @@ for col, mp in enumerate(modality_pairs):
             )
             ax.set_ylim(bottom=0)
             ax.set_xscale("log")
-            # Add x=4096 tick labeled as 0 to indicate no target-pair data (rightmost)
-            xticks = ratios + [4096]
-            xticklabels = [("1" if r == 1 else f"1/{r}") for r in ratios] + ["0"]
+            # Linear x-axis with 0 on the left, then fractional subsampling
+            xticks = [1 / 4096] + x_fracs_sorted
+            xticklabels = ["0"] + [
+                ("1" if ratios[i] == 1 else f"1/{ratios[i]}") for i in order_idx
+            ]
             ax.set_xticks(xticks)
             ax.set_xticklabels(xticklabels)
-            ax.set_xlim(ratios[0], xticks[-1])
+            ax.minorticks_off()
+            ax.set_xlim(1 / 4096, 1.0)
             ax.set_title(metric)
             # No horizontal baseline lines
 

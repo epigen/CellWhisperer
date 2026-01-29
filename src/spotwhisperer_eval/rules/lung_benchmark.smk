@@ -134,7 +134,10 @@ rule spotwhisperer_all:
         # Basic predictions
         expand(
             rules.zero_shot_lung_prediction.output.predictions,
-            model=[config["model_name_path_map"]["spotwhisperer"]],
+            model=[
+                "spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m",
+                "spotwhisperer_cellxgene_census__archs4_geo__hest1k",
+            ],
             dataset=["lung_tissue"],
             metadata_col=LUNG_TISSUE_METADATA_COLS,
             grouping=["by_cell"]
@@ -158,6 +161,9 @@ rule spotwhisperer_all:
         # # Performance summary
         expand(
             rules.lung_performance_summary.output.summary,
-            model=[config["model_name_path_map"]["spotwhisperer"]]
+            model=[
+                "spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m",
+                "spotwhisperer_cellxgene_census__archs4_geo__hest1k",
+            ]
         )
     default_target: True  # TODO delete

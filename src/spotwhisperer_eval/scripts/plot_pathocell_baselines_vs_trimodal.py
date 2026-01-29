@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """
-Plot per-class metrics comparison: BiBridge vs Quilt1m vs CONCH variants using metrics_from_scores per-class CSVs.
+Plot a single per-class metric comparison (one axis) for BiBridge vs Quilt1m vs CONCH variants
+using metrics_from_scores per-class CSVs.
 
 Inputs via Snakemake:
 - snakemake.input.mpl_style: Matplotlib style file
 - snakemake.input.*_per_class: per-class CSVs per method (seed/dataset aggregated)
+- snakemake.params.metric: the metric to plot (e.g., 'rocauc')
 - snakemake.output.plot: output SVG path
+- snakemake.output.csv_table: output CSV with a table for the selected metric
 """
 
 from pathlib import Path
@@ -27,16 +30,7 @@ out_path = Path(snakemake.output.plot)
 csv_out = Path(snakemake.output.csv_table)
 
 
-METRICS = [
-    "f1",
-    "rocauc",
-    "soft_rocauc",
-    "precision",
-    "accuracy",
-    "recall_at_5",
-    "mae_prob",
-    "mse_prob",
-]
+metric = snakemake.params.metric
 
 
 def read_pc(fp: Path) -> pd.DataFrame:
@@ -196,45 +190,37 @@ method_colors = {
     "conch_terms1": "#d62728",
 }
 
-fig, axes = plt.subplots(
-    nrows=len(METRICS),
+fig, ax = plt.subplots(
+    nrows=1,
     ncols=1,
-    figsize=(max(6, 0.25 * bibridge_df.shape[0]), 2.0 * len(METRICS)),
-    sharex=True,
+    figsize=(max(6, 0.25 * bibridge_df.shape[0]), 2.0),
 )
-if not isinstance(axes, np.ndarray):
-    axes = np.array([axes])
-for ax, metric in zip(axes, METRICS):
-    dfm = make_plot_df(metric)
-    order = (
-        dfm.groupby("class_label")["value"]
-        .mean()
-        .sort_values(ascending=False)
-        .index.tolist()
-    )
-    sns.barplot(
-        data=dfm,
-        x="class_label",
-        y="value",
-        hue="method",
-        order=order,
-        palette=method_colors,
-        edgecolor="#333333",
-        ax=ax,
-    )
-    ax.set_title(metric)
-    ax.tick_params(axis="x", rotation=60)
-    ax.set_xlabel("")
-    ax.set_ylabel("")
-handles, labels = axes[-1].get_legend_handles_labels()
+dfm = make_plot_df(metric)
+order = (
+    dfm.groupby("class_label")["value"].mean().sort_values(ascending=False).index.tolist()
+)
+sns.barplot(
+    data=dfm,
+    x="class_label",
+    y="value",
+    hue="method",
+    order=order,
+    palette=method_colors,
+    edgecolor="#333333",
+    ax=ax,
+)
+ax.set_title(metric)
+ax.tick_params(axis="x", rotation=60)
+ax.set_xlabel("")
+ax.set_ylabel("")
+handles, labels = ax.get_legend_handles_labels()
 fig.legend(handles, labels, title="Method", loc="upper right")
 plt.tight_layout()
 plt.savefig(out_path)
 plt.close()
 
 
-# Build CSV table for rocauc: columns = classes (+ mean), rows = methods
-metric = "rocauc"
+# Build CSV table for the selected metric: columns = classes (+ mean), rows = methods
 cols = ["class_label", metric]
 dfs = {
     "bibridge": bibridge_df[cols].rename(columns={metric: "bibridge"}),
