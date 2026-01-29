@@ -146,7 +146,7 @@ def main():
     df_new = compute_conch_scores_for_h5ad(h5ad_path, hf_token=hf_token)
 
     baseline_csv = Path(
-        "/home/moritz/Projects/SpatialWhisperer/plip_conch_baseline_performance/conch_logits_terms1.csv"
+        "/home/moritz/Projects/SpatialWhisperer/resources/plip_conch_baseline_performance/conch_logits_terms1.csv"
     )
     corrs = correlate_with_baseline(df_new, baseline_csv)
 

@@ -1,0 +1,69 @@
+{
+  "dataset_name": "pathocell_tma1",
+  "source_file": "/home/groups/zinaida/moritzs/cellwhisperer_private/resources/pathocell/raw/pathocell_hdf/reg001_A.hdf",
+  "n_cells_or_patches": 46,
+  "image_shape": [
+    1440,
+    1920,
+    3
+  ],
+  "mask_shape": [
+    1,
+    1440,
+    1920
+  ],
+  "class_names_fine": [
+    "background",
+    "B cells",
+    "CD11b+ monocytes",
+    "CD11b+CD68+ macrophages",
+    "CD11c+ DCs",
+    "CD163+ macrophages",
+    "CD3+ T cells",
+    "CD4+ T cells",
+    "CD4+ T cells CD45RO+",
+    "CD4+ T cells GATA3+",
+    "CD68+ macrophages",
+    "CD68+ macrophages GzmB+",
+    "CD68+CD163+ macrophages",
+    "CD8+ T cells",
+    "NK cells",
+    "Tregs",
+    "adipocytes",
+    "dirt",
+    "granulocytes",
+    "immune cells",
+    "immune cells / vasculature",
+    "lymphatics",
+    "nerves",
+    "plasma cells",
+    "smooth muscle",
+    "stroma",
+    "tumor cells",
+    "tumor cells / immune cells",
+    "undefined",
+    "vasculature"
+  ],
+  "class_names_coarse": [
+    "Background",
+    "B cells",
+    "Macrophages/Monocytes",
+    "Adipocytes",
+    "Dendritic cells",
+    "T cells",
+    "Granulocytes",
+    "NK cells",
+    "Nerves",
+    "Plasma cells",
+    "Smooth muscle",
+    "Stroma",
+    "Tumor cells",
+    "Vasculature/Lymphatics",
+    "Other cells"
+  ],
+  "pixel_size_um": 0.5,
+  "processing_info": {
+    "patch_size": 224,
+    "patch_level": true
+  }
+}
