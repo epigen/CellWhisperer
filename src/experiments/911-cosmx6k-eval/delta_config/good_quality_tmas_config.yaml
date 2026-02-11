@@ -1,0 +1,10 @@
+# Filter to use only good quality TMAs (exclude TMA1 and TMA11_12)
+# This tests whether excluding problematic TMAs improves performance
+# Note: This requires the dataset to be built with DROP_LOW_QUALITY_TMAS=True
+wandb: 'cosmx6k-good-quality-tmas'
+# Dataset filtering is handled at the Snakemake level, not in config
+# This config mainly serves to label the run appropriately
+best_model_path: results/911-cosmx6k-eval/best_models/cosmx6k-good-quality-tmas.ckpt
+data:
+  dataset_names: lymphoma_cosmx_large_TMA2,lymphoma_cosmx_large_TMA3,lymphoma_cosmx_large_TMA4,lymphoma_cosmx_large_TMA5,lymphoma_cosmx_large_TMA15_16,lymphoma_cosmx_large_TMA13_14
+  train_fraction: lymphoma_cosmx_large_TMA3,lymphoma_cosmx_large_TMA4,lymphoma_cosmx_large_TMA5,lymphoma_cosmx_large_TMA15_16,lymphoma_cosmx_large_TMA13_14

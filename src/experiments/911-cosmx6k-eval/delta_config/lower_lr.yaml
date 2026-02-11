@@ -1,0 +1,6 @@
+# Lower learning rate variant
+# Tests whether a lower learning rate (0.0001 vs 0.001) improves performance
+wandb: 'cosmx6k-lower-lr'
+model:
+  learning_rate: 0.0001
+best_model_path: results/911-cosmx6k-eval/best_models/cosmx6k-lower-lr.ckpt

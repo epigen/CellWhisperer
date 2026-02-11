@@ -1,0 +1,9 @@
+sample,x_offset_pixels,y_offset_pixels,scale_factor_x,scale_factor_y,notes
+TMA3,6612,-18136,0.88065,0.88065,
+TMA1,15840,3950,0.795844722,0.795844722,
+TMA2,7073,-13389,0.8762,0.8762,"somehow some cells at the bottom are cropped away, but most of the cells are aligned well, so I guess that outputs are usable."
+TMA13_14,9665,-2473,0.7932,0.7932,"curvy issue present - try using a larger search box"
+TMA15_16,2442,-2346,0.80,0.80,"this one also has cropping issue. The extract mask script crops cells from top left, while the main alignment scripy crops cells from bottom right. But transformation values are good"
+TMA11_12,7725,-3511,0.7945791,0.7945791,
+TMA4,4615,-16840,0.879,0.879,"curvy issue present, offsets balanced"
+TMA5,7425,-12924,0.876286,0.876286,

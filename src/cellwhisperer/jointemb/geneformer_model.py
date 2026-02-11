@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 PAD_TOKEN_ID = 0
 MODEL_INPUT_SIZE = 2048
 
-# Load gene symbols
+# Load gene symbols (could actually store in repository as well for simplicity)
 if get_path(["paths", "ensembl_gene_symbol_map"]).exists():
     ANNOT = pd.read_csv(get_path(["paths", "ensembl_gene_symbol_map"]), index_col=0)
 else:

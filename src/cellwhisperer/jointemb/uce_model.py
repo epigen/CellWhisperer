@@ -130,7 +130,7 @@ class UCETranscriptomeProcessor(ProcessorMixin):
         npzs_dir = get_path(["uce_paths", "tmp_feature_path"], name=self.name)
         # Ensure the directory exists
         npzs_dir.mkdir(parents=True, exist_ok=True)
-        
+
         processed_adata = self._compute_features(adata)
         features = data_to_torch_X(processed_adata.X).numpy()
         num_cells = processed_adata.X.shape[0]
@@ -194,6 +194,10 @@ class UCETranscriptomeProcessor(ProcessorMixin):
             "expression_key_padding_mask": data[1],  # mask
         }
 
+    @property
+    def model_input_names(self):
+        return ["expression_expr", "expression_key_padding_mask"]
+
 
 class UCEConfig(PretrainedConfig):
     model_type = "uce"
@@ -248,9 +252,15 @@ class UCEModel(PreTrainedModel):
         self,
         expression_expr: torch.Tensor,
         expression_key_padding_mask: torch.Tensor,
-        expression_tokens: Optional[torch.Tensor] = None,  # ignored, but needed for compatibility with other models
-        expression_token_lengths: Optional[torch.Tensor] = None,  # ignored, but needed for compatibility with other models
-        expression_gene: Optional[torch.Tensor] = None,  # ignored, but needed for compatibility with other models
+        expression_tokens: Optional[
+            torch.Tensor
+        ] = None,  # ignored, but needed for compatibility with other models
+        expression_token_lengths: Optional[
+            torch.Tensor
+        ] = None,  # ignored, but needed for compatibility with other models
+        expression_gene: Optional[
+            torch.Tensor
+        ] = None,  # ignored, but needed for compatibility with other models
         return_dict: Optional[bool] = None,
         **kwargs,
     ):
@@ -266,7 +276,9 @@ class UCEModel(PreTrainedModel):
         ).all(), f"Num over 10: {(expression_key_padding_mask.sum(dim=1) > 10).sum()}"
 
         if isinstance(self.uce_model.pe_embedding, torch.nn.Embedding):
-            expression_expr = expression_expr.long()  # Don't call, if captum (`InputEmbedding` wrapper class)
+            expression_expr = (
+                expression_expr.long()
+            )  # Don't call, if captum (`InputEmbedding` wrapper class)
 
         expression_expr = self.uce_model.pe_embedding(expression_expr)
         expression_expr = expression_expr.permute(1, 0, 2)

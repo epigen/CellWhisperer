@@ -1,0 +1,10 @@
+# Fine-tune Geneformer with UUL locking mode
+# Unlock text, Unlock transcriptome (Geneformer), Lock image
+# Tests whether fine-tuning the transcriptome model helps with CosMx data
+wandb: 'cosmx6k-finetune-uul'
+model:
+  model_config:
+    transcriptome_model_type: geneformer
+    locking_mode: UUL  # Unlock text, Unlock transcriptome, Lock image
+  learning_rate: 0.0001  # Lower learning rate for fine-tuning
+best_model_path: results/911-cosmx6k-eval/best_models/cosmx6k-finetune-uul.ckpt

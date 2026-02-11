@@ -17,6 +17,7 @@ paths:
   full_dataset_multi: results/{dataset}/h5ads/full_data_{i}.h5ad  # be careful, this is not always used (although it should)
   enrichr_terms_json: resources/enrichr_terms/terms.json
   ensembl_gene_symbol_map: resources/ensembl_gene_symbol_map.csv
+  cosmx6k_genes: static/cosmx6k_cxg_overlap_genes.csv
   jointemb_models: results/models/jointemb
   wandb_logs: results/wandb_logging
   csv_logs: results/spotwhisperer_eval/csv_logging
@@ -76,13 +77,16 @@ he_configs:  # TODO this is potentially not in sync with uni_model.py currently
 
   white_cutoff: 220
 
-# Dataset mapping to resolution configs
+  single_cell_40x_pixels: 56  # Warren's analysis (https://zinagoodlab.slack.com/archives/D094RP6317A/p1762215336551049) shows that cells are 5-15um. Thus 56x56 is good (for 40x 224x224 it translates to 13um. For 40x 448x448 translates to 26um)
+
+# Dataset mapping to resolution configs. TODO refactor away..
 dataset_he_mapping:
   lymphoma_cosmx_small: visium_resolution
   lymphoma_cosmx_small_detailed: detailed_resolution
   lymphoma_cosmx_small_singlecell: detailed_resolution
   lymphoma_cosmx_small_singlecell_corealigned: detailed_resolution
   lymphoma_cosmx_small_singlecell_goodquality: detailed_resolution
+  lymphoma_cosmx_large: detailed_resolution
   hest1k: visium_resolution
   quilt1m: visium_resolution
   # pathgen: visium_resolution
@@ -118,6 +122,7 @@ datasets:
   - lymphoma_cosmx_small
   - lymphoma_cosmx_small_detailed
   - lymphoma_cosmx_small_singlecell
+  - lymphoma_cosmx_large
   - cellxgene_census_8thsub
   - archs4_geo_8thsub
   - hest1k_8thsub  

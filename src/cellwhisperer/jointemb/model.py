@@ -504,7 +504,8 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
             )
             text_features = self._text_pooling(text_features, attention_mask)
 
-        if expression_tokens is not None:
+        # Check if any transcriptome input is provided (handles all transcriptome model types)
+        if expression_tokens is not None or expression_expr is not None or expression_gene is not None:
             transcriptome_features = self.transcriptome_model(
                 expression_tokens=expression_tokens,
                 expression_token_lengths=expression_token_lengths,

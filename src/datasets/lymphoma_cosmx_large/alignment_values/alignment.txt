@@ -1,0 +1,134 @@
+Offsets and scaling for TMA3:
+Image size (full): (55552, 36096)
+Downsampled raw image to: (13888, 9024)
+Building mask with fixed params + Inkscape affine (downsampled space)...
+Valid cells within bounds: 80335
+Cross-correlation shift: dx=445, dy=-2150, peak=37283966976.00 (padding=1600)
+Mask bbox after fit: (2888, 2621, 14351, 8474), canvas=(17088, 12224)
+
+INK_SCALE_X = 1.2243
+INK_SCALE_Y = 1.2362
+
+moritzschaefer
+moritzschaefer commented 3 weeks ago
+moritzschaefer
+3 weeks ago
+Author
+@dayenai sorry that I haven't picked this up yet! I have scheduled this for February, so I can meet two earlier deadlines
+
+dayenai
+dayenai commented 3 weeks ago
+dayenai
+3 weeks ago · edited by dayenai
+TMA1
+Image size (full): (73704, 58258)
+Downsampled raw image to: (18426, 14564)
+Building mask with fixed params + Inkscape affine (downsampled space)...
+Valid cells within bounds: 149013
+Cross-correlation shift: dx=-484, dy=-1046, peak=50258808832.00 (padding=1600)
+Mask bbox after fit: (5005, 3476, 15516, 15108), canvas=(21626, 17764)
+
+INK_SCALE_X = 0.7651145121
+INK_SCALE_Y = 0.8046553145
+
+dayenai
+dayenai commented 2 weeks ago
+dayenai
+2 weeks ago · edited by dayenai
+TMA2
+Image size (full): (55552, 39936)
+Downsampled raw image to: (13888, 9984)
+Building mask with fixed params + Inkscape affine (downsampled space)...
+Valid cells within bounds: 51650
+Cross-correlation shift: dx=516, dy=-2064, peak=28752711680.00 (padding=1600)
+Mask bbox after fit: (3054, 2438, 14445, 9520), canvas=(17088, 13184)
+
+INK_SCALE_X = 1.1814486607
+INK_SCALE_Y = 1.1502178486
+
+somehow some cells at the bottom are cropped away, but most of the cells are aligned well, so I guess that outputs are usable.
+
+dayenai
+dayenai commented 2 weeks ago
+dayenai
+2 weeks ago · edited by dayenai
+TMA13_14
+Image size (full): (73704, 54666)
+Downsampled raw image to: (18426, 13666)
+Building mask with fixed params + Inkscape affine (downsampled space)...
+Valid cells within bounds: 177792
+Cross-correlation shift: dx=-1889, dy=-3007, peak=70153650176.00 (padding=1600)
+Mask bbox after fit: (3780, 2548, 18121, 12259), canvas=(21626, 16866)
+
+INK_SCALE_X = 0.7928030500
+INK_SCALE_Y = 0.7945178545
+
+same issue as above. This weird cropping issue needs to be tuned for each TMA explicitly, while now I realize that it doesn't matter since the overall transformation values are correct.
+
+dayenai
+dayenai commented 2 weeks ago
+dayenai
+2 weeks ago · edited by dayenai
+TMA15_16:
+Image size (full): (71712, 50422)
+Downsampled raw image to: (17928, 12605)
+Building mask with fixed params + Inkscape affine (downsampled space)...
+Valid cells within bounds: 263324
+Cross-correlation shift: dx=-4214, dy=-2306, peak=123226521600.00 (padding=1600)
+Mask bbox after fit: (2057, 1823, 15314, 11899), canvas=(21128, 15805)
+
+INK_SCALE_X = 0.8313795739
+INK_SCALE_Y = 0.8246902816
+
+this one also has cropping issue. The extract mask script crops cells from top left, while the main alignment scripy crops cells from bottom right. But transformation values are good
+
+dayenai
+dayenai commented 2 weeks ago
+dayenai
+2 weeks ago · edited by dayenai
+TMA11_12:
+Image size (full): (75696, 47013)
+Downsampled raw image to: (18924, 11753)
+Building mask with fixed params + Inkscape affine (downsampled space)...
+Valid cells within bounds: 214839
+Cross-correlation shift: dx=-1859, dy=-1610, peak=85043052544.00 (padding=1600)
+Mask bbox after fit: (3269, 2214, 18665, 11743), canvas=(22124, 14953)
+
+INK_SCALE_X = 0.8308824530
+INK_SCALE_Y = 0.8316424918
+
+dayenai
+dayenai commented 2 weeks ago
+dayenai
+2 weeks ago · edited by dayenai
+TMA4:
+Image size (full): (79360, 35584)
+Downsampled raw image to: (19840, 8896)
+Building mask with fixed params + Inkscape affine (downsampled space)...
+Applied mask padding: left=0, right=12, top=0, bottom=2727 (margin=2)
+Valid cells within bounds: 102814
+Expanded raw image to: (19852, 11623)
+Cross-correlation shift: dx=-1150, dy=-3553, peak=55827668992.00 (padding=1600)
+Mask bbox after fit: (2510, 2625, 20302, 9670), canvas=(23052, 14823)
+
+INK_SCALE_X = 0.9728579180
+INK_SCALE_Y = 0.9584803493
+
+the curvy issue is a bit more obvious on this tma. Aligning either half of the plate perfectly will cause some offsets in the other half.
+
+dayenai
+dayenai commented 2 weeks ago
+dayenai
+2 weeks ago · edited by dayenai
+TMA5:
+Image size (full): (59520, 39680)
+Downsampled raw image to: (14880, 9920)
+Building mask with fixed params + Inkscape affine (downsampled space)...
+Applied mask padding: left=0, right=0, top=0, bottom=1723 (margin=2)
+Valid cells within bounds: 104176
+Expanded raw image to: (14880, 11643)
+Cross-correlation shift: dx=-1868, dy=-2628, peak=55835049984.00 (padding=1600)
+Mask bbox after fit: (2936, 2301, 14608, 10615), canvas=(18080, 14843)
+
+INK_SCALE_X = 1.1209469758
+INK_SCALE_Y = 1.1302256424

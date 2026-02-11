@@ -112,9 +112,11 @@ class CellWhispererCLI(LightningCLI):
         )  # needed for scheduler initialization
         parser.link_arguments("wandb", "trainer.logger.init_args.name")
         parser.link_arguments(
-            "wandb",
+            ["wandb", "dap_debug"],
             "trainer.logger.init_args.mode",
-            lambda wandb: "disabled" if wandb == "" else "online",
+            lambda wandb, dap_debug: (
+                "disabled" if wandb == "" or dap_debug else "online"
+            ),
         )
 
         parser.link_arguments(
@@ -353,20 +355,18 @@ def cli_main(args: Optional[List] = None):
         config["PROJECT_ROOT"] / "results" / "model_training", os.getcwd()
     )
 
-    # val_metric = "valfn_human_disease_strictly_deduplicated_dmis-lab_biobert-v1.1_CLS_pooling/text_as_classes_recall_at_5_macroAvg"
-    val_metric = "val/loss_epoch"  # TODO
-
-    # early_stop = EarlyStopping(
-    #     monitor=val_metric, min_delta=1e-4, patience=10, verbose=False, mode="max"
-    # )
-
-    checkpoint_callback = ModelCheckpoint(
-        monitor=val_metric,
-        mode="max",
-        save_top_k=1,
-        save_last=True,
-        filename="{epoch}-valfn_human_disease_recall10={%s:.2f}" % (val_metric,),
-    )
+    # NOTE: Checkpoint callback is now configured via config files (trainer.callbacks).
+    # The hardcoded callback was removed because trainer_defaults callbacks are NOT overridable
+    # and caused conflicts when configs specified their own callbacks.
+    # Configs should specify callbacks explicitly, e.g.:
+    #   trainer:
+    #     callbacks:
+    #       - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+    #         init_args:
+    #           monitor: val_retrieval/transcriptome_image/rocauc_macroAvg
+    #           mode: max
+    #           save_top_k: 1
+    #           save_last: true
 
     CellWhispererCLI(
         TranscriptomeTextDualEncoderLightning,
@@ -410,7 +410,6 @@ def cli_main(args: Optional[List] = None):
                 },
             ],
             enable_progress_bar=True,
-            callbacks=[checkpoint_callback],
         ),
         save_config_callback=LoggerSaveConfigCallback,
         auto_configure_optimizers=False,

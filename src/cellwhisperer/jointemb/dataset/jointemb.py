@@ -601,6 +601,17 @@ class JointEmbedDataModule(pl.LightningDataModule):
             valid_patches = self._filter_invalid_patches(inputs["patches_ctx"])
             valid_datapoints_filter = valid_datapoints_filter & valid_patches
 
+        # Filter cells that are too bright (only for datasets with brightness information)
+        if "is_too_bright" in adata.obs.columns:
+            brightness_filter = ~adata.obs["is_too_bright"].values
+            n_too_bright = (~brightness_filter).sum()
+            logger.info(
+                f"Found 'is_too_bright' column: {n_too_bright}/{len(brightness_filter)} cells marked as too bright ({n_too_bright/len(brightness_filter)*100:.1f}%)"
+            )
+            valid_datapoints_filter = valid_datapoints_filter & torch.from_numpy(
+                brightness_filter
+            )
+
         if sum(valid_datapoints_filter) == len(valid_datapoints_filter):
             logger.info(
                 f"No samples were filtered out (All cells had >= {self.min_genes} genes and/or non-white content)"
@@ -718,6 +729,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         total_patches = len(patches)
         filtered_count = (~valid_patches).sum().item()
 
+        # TODO the threshold is way too low. Also, I redundantly implemented the all-white thresholding
         logger.info(
             f"Image filtering: {filtered_count}/{total_patches} patches filtered "
             f"(std < {std_threshold})"
@@ -854,7 +866,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                         val_ids = sorted(list(set(total_ids) - set(train_ids)))
                     elif isinstance(self.train_fraction, str):
                         total_ids = list(range(dataset_len))
-                        if dataset_name == self.train_fraction:
+                        if dataset_name in self.train_fraction.split(","):
                             train_ids = total_ids
                             val_ids = []
                         else:
@@ -901,7 +913,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                     val_ids = sorted(list(set(total_ids) - set(train_ids)))
                 elif isinstance(self.train_fraction, str):
                     total_ids = list(range(dataset_len))
-                    if dataset_name == self.train_fraction:
+                    if dataset_name in self.train_fraction.split(","):
                         train_ids = total_ids
                         val_ids = []
                     else:

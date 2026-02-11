@@ -216,7 +216,10 @@ class UNIConfig(PretrainedConfig):
     def __init__(
         self,
         model_name="vit_giant_patch14_224",
-        views: Dict[str, int] = {"context": 224, "cell": 56},
+        views: Dict[str, int] = {
+            "context": 224,
+            "cell": 56,
+        },  # TODO should be loaded from config["he_configs"]["single_cell_40x_pixels"]
         cell_level_model=False,
         context_model=True,
         cnn_embedding_dim=128,
@@ -340,8 +343,6 @@ class UNIModel(PreTrainedModel):
 
         # Cell through CNN (if enabled)
         if cell_enabled:
-            raise ValueError("this should be disabled for now")
-
             assert (
                 patches_cell is not None
                 and patches_cell.ndim == 4

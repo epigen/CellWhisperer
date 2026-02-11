@@ -1,0 +1,9 @@
+# Use only cell-level CNN without context model
+# Tests the value of context information by using only cell-level features
+wandb: 'cosmx6k-cell-cnn-only'
+model:
+  model_config:
+    image_config:
+      cell_level_model: true
+      context_level_model: false
+best_model_path: results/911-cosmx6k-eval/best_models/cosmx6k-cell-cnn-only.ckpt

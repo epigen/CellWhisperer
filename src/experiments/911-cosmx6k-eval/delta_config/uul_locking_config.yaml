@@ -1,0 +1,6 @@
+# Test uUL locking mode (unlock image, Unlock transcriptome, Lock text)
+wandb: 'cosmx6k-uul'
+model:
+  model_config:
+    locking_mode: uUL  # unlock image, Unlock transcriptome, Lock text
+best_model_path: results/911-cosmx6k-eval/best_models/cosmx6k-uul.ckpt
