@@ -1,0 +1,42 @@
+# Configuration for gene expression decoder training on TMA datasets
+# This config is used by Snakemake and has paths resolved at runtime
+
+seed_everything: 42
+
+trainer:
+  max_epochs: 50
+  accelerator: auto
+  devices: 1
+  log_every_n_steps: 10
+  val_check_interval: 1.0
+  enable_progress_bar: true
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        monitor: val/loss
+        mode: min
+        save_top_k: 3
+        save_last: true
+    - class_path: lightning.pytorch.callbacks.EarlyStopping
+      init_args:
+        monitor: val/loss
+        patience: 10
+        mode: min
+        verbose: true
+
+data:
+  tokenizer: bert
+  transcriptome_processor: mlp
+  image_processor: uni2
+  batch_size: 64
+  nproc: 8
+  train_fraction: 0.95
+  use_disk_loading: false
+
+model:
+  decoder_config:
+    embedding_dim: 1024
+    hidden_dims: []
+  learning_rate: 1.0e-3
+  max_epochs: 50
+  loss_type: mse

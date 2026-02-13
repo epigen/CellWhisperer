@@ -691,9 +691,22 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                     get_path(["uce_paths", "tokens"]),
                     config=kwargs_transcriptome["config"],
                 )
+            elif kwargs_transcriptome["config"]["model_type"] == "mlp":
+                from .mlp_model import MLPConfig, MLPModel
+
+                logger.warning(
+                    "MLP transcriptome model is initialized from scratch, not from pretrained weights. "
+                    f"Ignoring transcriptome_model_name_or_path: {transcriptome_model_name_or_path}"
+                )
+
+                kwargs_transcriptome["config"] = MLPConfig(
+                    **kwargs_transcriptome["config"]
+                )
+
+                transcriptome_model = MLPModel(config=kwargs_transcriptome["config"])
 
             else:
-                raise NotImplementedError("Only geneformer and scgpt are supported")
+                raise NotImplementedError("Only geneformer, scgpt, uce, and mlp are supported")
                 kwargs_transcriptome["config"] = transcriptome_config
                 transcriptome_model = AutoModel.from_pretrained(
                     transcriptome_model_name_or_path,

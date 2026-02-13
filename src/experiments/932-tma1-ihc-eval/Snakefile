@@ -1,0 +1,161 @@
+"""
+Snakemake pipeline for TMA gene expression decoder training and evaluation.
+
+This pipeline:
+1. Trains a gene expression decoder on TMA1, TMA4, TMA5, TMA11_12, TMA13_14, TMA15_16
+2. Evaluates on TMA2 (validation) and TMA3 (test)
+3. Predicts gene expression for TMA1, TMA2, TMA3 for downstream IHC validation
+"""
+
+from pathlib import Path
+import subprocess
+
+include: "../../shared/config.smk"
+
+# Get project root directory
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+
+# Load main config
+configfile: PROJECT_DIR / "config.yaml"
+
+# Experiment-specific config
+EXPERIMENT_DIR = Path(workflow.basedir)
+RESULTS_DIR = PROJECT_DIR / "results" / "experiments" / EXPERIMENT_DIR.name
+SCRIPTS_DIR = EXPERIMENT_DIR / "scripts"
+
+# Model configuration
+CELLWHISPERER_CHECKPOINT = PROJECT_DIR / "results" / "models" / "spatialwhisperer" / "v1.ckpt"
+
+# Dataset configuration
+TRAIN_TMAS = ["TMA1", "TMA4", "TMA5", "TMA11_12", "TMA13_14", "TMA15_16"]
+VAL_TMA = "TMA2"
+TEST_TMA = "TMA3"
+INFERENCE_TMAS = ["TMA1", "TMA2", "TMA3"]
+
+# Create dataset names for training (comma-separated)
+TRAIN_DATASET_NAMES = ",".join([f"lymphoma_cosmx_large_{tma}" for tma in TRAIN_TMAS])
+
+# Training hyperparameters
+BATCH_SIZE = 64
+MAX_EPOCHS = 50
+LEARNING_RATE = 1e-3
+LOSS_TYPE = "mse"
+
+# Rule: all - define all targets
+rule all:
+    input:
+        # Training
+        RESULTS_DIR / "models" / "decoder.ckpt",
+        # Validation metrics
+        RESULTS_DIR / "metrics" / f"{VAL_TMA}_metrics.csv",
+        # Test metrics
+        RESULTS_DIR / "metrics" / f"{TEST_TMA}_metrics.csv",
+        # Predictions for all inference TMAs
+        expand(RESULTS_DIR / "predictions" / "{tma}_predictions.h5ad", tma=INFERENCE_TMAS),
+    default_target: True
+
+
+# Rule: train decoder
+rule train_decoder:
+    input:
+        cellwhisperer_checkpoint = CELLWHISPERER_CHECKPOINT,
+        config_file = EXPERIMENT_DIR / "decoder_config.yaml"
+    output:
+        model_checkpoint = RESULTS_DIR / "models" / "decoder.ckpt",
+    params:
+        dataset_names = TRAIN_DATASET_NAMES,
+        results_dir = RESULTS_DIR,
+        log_dir = RESULTS_DIR / "logs",
+    conda:
+        "cellwhisperer"
+    threads: 10
+    resources:
+        mem_mb = 120000,
+        slurm = slurm_gres("large", num_cpus=20)
+    shell: """
+        mkdir -p {params.results_dir}/models {params.log_dir}
+
+        python -m cellwhisperer.expression_decoder.gene_expression_decoder_lightning fit \
+            --config {input.config_file} \
+            --model.cellwhisperer_checkpoint {input.cellwhisperer_checkpoint} \
+            --data.dataset_names {params.dataset_names} \
+            --data.tokenizer bert \
+            --last_model_path {output.model_checkpoint}
+    """
+
+
+# Rule: predict gene expression for a TMA
+rule predict_expression:
+    input:
+        model_checkpoint = rules.train_decoder.output.model_checkpoint,
+        cellwhisperer_checkpoint = CELLWHISPERER_CHECKPOINT,
+        predict_config = EXPERIMENT_DIR / "predict_config.yaml"
+    output:
+        predictions = RESULTS_DIR / "predictions" / "{tma}_predictions.h5ad"
+    params:
+        dataset_name = lambda wildcards: f"lymphoma_cosmx_large_{wildcards.tma}",
+    conda:
+        "cellwhisperer"
+    threads: 10
+    resources:
+        mem_mb = 80000,
+        slurm = slurm_gres("medium", num_cpus=10)
+    shell: """
+        python -m cellwhisperer.expression_decoder.gene_expression_decoder_lightning predict \
+            --config {input.predict_config} \
+            --ckpt_path {input.model_checkpoint} \
+            --model.cellwhisperer_checkpoint {input.cellwhisperer_checkpoint} \
+            --data.dataset_names {params.dataset_name} \
+            --trainer.callbacks+=cellwhisperer.expression_decoder.prediction_writer.GeneExpressionPredictionWriter \
+            --trainer.callbacks.output_path {output.predictions} \
+            --trainer.callbacks.dataset_name {params.dataset_name}
+    """
+
+
+# Rule: evaluate predictions (compute metrics)
+rule evaluate_predictions:
+    input:
+        predictions = RESULTS_DIR / "predictions" / "{tma}_predictions.h5ad",
+        evaluate_script = SCRIPTS_DIR / "evaluate_metrics.py"
+    output:
+        metrics = RESULTS_DIR / "metrics" / "{tma}_metrics.csv",
+        plots = directory(RESULTS_DIR / "plots" / "{tma}")
+    params:
+        dataset_name = lambda wildcards: f"lymphoma_cosmx_large_{wildcards.tma}"
+    conda:
+        "cellwhisperer"
+    threads: 4
+    resources:
+        mem_mb = 40000
+    shell: """
+        python {input.evaluate_script} \
+            --predictions {input.predictions} \
+            --dataset_name {params.dataset_name} \
+            --output_metrics {output.metrics} \
+            --output_plots {output.plots}
+    """
+
+
+# Rule: create summary report
+rule create_summary:
+    input:
+        val_metrics = RESULTS_DIR / "metrics" / f"{VAL_TMA}_metrics.csv",
+        test_metrics = RESULTS_DIR / "metrics" / f"{TEST_TMA}_metrics.csv",
+        all_predictions = expand(RESULTS_DIR / "predictions" / "{tma}_predictions.h5ad", tma=INFERENCE_TMAS)
+    output:
+        summary = RESULTS_DIR / "summary_report.md"
+    shell: """
+        echo "# TMA Gene Expression Decoder - Summary Report" > {output.summary}
+        echo "" >> {output.summary}
+        echo "## Training Configuration" >> {output.summary}
+        echo "- Model: {MODEL_NAME}" >> {output.summary}
+        echo "- Training TMAs: {TRAIN_TMAS}" >> {output.summary}
+        echo "- Validation TMA: {VAL_TMA}" >> {output.summary}
+        echo "- Test TMA: {TEST_TMA}" >> {output.summary}
+        echo "" >> {output.summary}
+        echo "## Results" >> {output.summary}
+        echo "- Training complete: $(date)" >> {output.summary}
+        echo "- Predictions generated for: {INFERENCE_TMAS}" >> {output.summary}
+        echo "" >> {output.summary}
+        echo "See individual metric files in results/metrics/" >> {output.summary}
+    """

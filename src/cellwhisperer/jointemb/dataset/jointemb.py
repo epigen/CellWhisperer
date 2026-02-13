@@ -151,7 +151,6 @@ def multi_modal_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
                 collated_values.append(values[value_idx])
                 value_idx += 1
             else:
-                # Create zero tensor with same shape and dtype
                 zero_tensor = torch.zeros(shape, dtype=dtype)
                 collated_values.append(zero_tensor)
 
@@ -246,13 +245,15 @@ class JointEmbedDatasetDisk(Dataset):
     This is designed to handle large datasets that cannot fit in RAM.
     """
 
-    def __init__(self, dataset_name: str, orig_ids, i: Optional[str] = None):
+    def __init__(self, dataset_name: str, orig_ids, hash: str, i: Optional[str] = None):
         self.dataset_name = dataset_name
         self.orig_ids = orig_ids
         self.i = i if i is not None else ""
+        self.hash = hash
         self.base_path = get_path(
             ["paths", "data_loading_individual_samples"],
             dataset_name=dataset_name,
+            hash=self.hash,
             i=self.i,
         )
 
@@ -363,21 +364,25 @@ class JointEmbedDataModule(pl.LightningDataModule):
             self.image_processor,
         )
 
+    def _compute_hash(self, i: Optional[str] = None):
+        """Compute hash from processing parameters"""
+        return "_".join(
+            [
+                self.transcriptome_processor,
+                "" if not self.tokenizer else self.tokenizer.replace("/", "__"),
+                self.image_processor,
+                str(self.min_genes),
+                str(self.use_replicates),
+                self.include_labels or "",
+                i or "",
+            ]
+        )
+
     def _processed_path(self, dataset_name, i: Optional[str] = None):
         return get_path(
             ["paths", "datamodule_prepared_path"],
             dataset=dataset_name,
-            hash="_".join(
-                [
-                    self.transcriptome_processor,
-                    "" if not self.tokenizer else self.tokenizer.replace("/", "__"),
-                    self.image_processor,
-                    str(self.min_genes),
-                    str(self.use_replicates),
-                    self.include_labels or "",
-                    i or "",
-                ]
-            ),
+            hash=self._compute_hash(i),
         )
 
     def get_sample_ids(self, dataset_name):
@@ -463,6 +468,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                         individual_samples_dir = get_path(
                             ["paths", "data_loading_individual_samples"],
                             dataset_name=dataset_name,
+                            hash=self._compute_hash(sample_id),
                             i=sample_id,
                         )
 
@@ -746,6 +752,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         individual_samples_dir = get_path(
             ["paths", "data_loading_individual_samples"],
             dataset_name=dataset_name,
+            hash=self._compute_hash(sample_id),
             i=sample_id,
         )
         individual_samples_dir.mkdir(parents=True, exist_ok=True)
@@ -784,7 +791,10 @@ class JointEmbedDataModule(pl.LightningDataModule):
 
             # Create JointEmbedDatasetDisk for this batch
             disk_dataset = JointEmbedDatasetDisk(
-                dataset_name=dataset_name, orig_ids=result[0]["orig_ids"], i=sample_id
+                dataset_name=dataset_name,
+                orig_ids=result[0]["orig_ids"],
+                i=sample_id,
+                hash=self._compute_hash(sample_id),
             )
             disk_datasets.append(disk_dataset)
 
@@ -883,6 +893,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                             dataset_name=disk_dataset.dataset_name,
                             orig_ids=disk_dataset.orig_ids[train_ids],
                             i=disk_dataset.i,
+                            hash=disk_dataset.hash,
                         )
                         self.train_datasets.append(train_disk_dataset)
 
@@ -892,6 +903,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                             dataset_name=disk_dataset.dataset_name,
                             orig_ids=disk_dataset.orig_ids[val_ids],
                             i=disk_dataset.i,
+                            hash=disk_dataset.hash,
                         )
                         self.val_datasets.append(val_disk_dataset)
             else:

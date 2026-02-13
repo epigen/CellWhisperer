@@ -1,0 +1,17 @@
+# Configuration for gene expression decoder prediction
+# Use with: python -m cellwhisperer.expression_decoder.gene_expression_decoder_lightning predict --config predict_config.yaml
+
+seed_everything: 42
+
+trainer:
+  accelerator: auto
+  devices: 1
+
+data:
+  tokenizer: null
+  transcriptome_processor: mlp
+  image_processor: uni2
+  batch_size: 64
+  nproc: 8
+  train_fraction: 1.0  # Use all data for prediction
+  use_disk_loading: false

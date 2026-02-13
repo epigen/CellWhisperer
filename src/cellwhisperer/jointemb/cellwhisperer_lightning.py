@@ -495,6 +495,9 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
         # Obtain a subsample of max. 20000 data points (for performance)
         if modalities[0].shape[0] != modalities[1].shape[0]:
             raise ValueError("Modality sizes do not match. This should never happen.")
+        if modalities[1].shape[0] < 2:
+            logging.error("Not enough samples for retrieval evaluation.")
+            return
         if modalities[0].shape[0] > 20000:
             orig_indices = torch.randperm(modalities[0].shape[0])[:20000]
             modalities[0] = modalities[0][orig_indices]

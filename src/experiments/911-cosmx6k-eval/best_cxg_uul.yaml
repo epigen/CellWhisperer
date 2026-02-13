@@ -125,7 +125,7 @@ last_model_path: null
 log_level: INFO
 dap_debug: false
 omit_validation_functions: false
-batch_size: 1024
+batch_size: 512
 nproc: 8
 wandb: 'cosmx6k-cxg'
 ckpt_path: null
