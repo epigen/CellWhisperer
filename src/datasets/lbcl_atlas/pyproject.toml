@@ -1,0 +1,36 @@
+[project]
+name = "lbcl-atlas"
+version = "0.1.0"
+description = "LBCL atlas dataset: download, process, annotate via vLLM (B200)"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    # Let vLLM pull CUDA 13 torch/vision/audio
+    "vllm[flashinfer]>=0.11.2",
+    "transformers>=4.57,<5",
+    # Optional helpers
+    "accelerate>=1.0.0",
+    "sentencepiece>=0.1.99",
+    # Single-cell processing (Phase 1)
+    "anndata>=0.10.0",
+    "scanpy>=1.9.0",
+    "scipy>=1.11.0",
+    # Data processing
+    "pandas>=2.1.3",
+    "pyyaml>=6.0",
+    "snakemake<8",
+    "setuptools",
+    "huggingface-hub>=0.36.0",
+]
+
+[tool.uv]
+# Prefer CUDA 13 wheels; fall back to PyPI
+index-url = "https://download.pytorch.org/whl/cu130"
+extra-index-url = ["https://pypi.org/simple"]
+index-strategy = "unsafe-best-match"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lbcl_atlas"]

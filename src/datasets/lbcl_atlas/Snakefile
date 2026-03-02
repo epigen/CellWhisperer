@@ -1,0 +1,150 @@
+# LBCL Atlas pipeline
+# Downloads the single-cell atlas of large B-cell lymphoma from CZI CELLxGENE,
+# groups cells by annotation, creates pseudobulk + sampled single cells,
+# and generates natural language annotations via vLLM (openai/gpt-oss-120b).
+#
+# Everything runs on SNAP via uv (single pyproject.toml):
+#   cd src/datasets/lbcl_atlas
+#   uv run snakemake --cores 4
+#
+# For SLURM submission of the full pipeline:
+#   uv run snakemake --cores all --executor slurm --jobs 64 \
+#     --default-resources slurm_account=infolab runtime=60 --latency-wait 30
+
+import subprocess
+from pathlib import Path
+
+PROJECT_DIR = Path(subprocess.check_output("git rev-parse --show-toplevel", shell=True).decode("utf-8").strip())
+configfile: PROJECT_DIR / "config.yaml"
+
+include: "../../shared/config.smk"
+
+LBCL_ATLAS_DIR = PROJECT_DIR / "src" / "datasets" / "lbcl_atlas"
+
+DATASET = "lbcl_atlas"
+DOWNLOAD_URL = "https://datasets.cellxgene.cziscience.com/560e2123-d4de-47ad-8f0c-92f8da6c00fe.h5ad"
+
+# LLM scatter config
+scattergather:
+    split=64
+
+rule download_data:
+    output:
+        adata=PROJECT_DIR / f"resources/{DATASET}/source.h5ad"
+    resources:
+        mem_mb=8000,
+    shell:
+        "wget -q -O {output.adata} " + DOWNLOAD_URL
+
+rule process_dataset:
+    """Group cells by annotation columns, create pseudobulk + sampled single cells."""
+    input:
+        adata=rules.download_data.output.adata
+    output:
+        adata=PROJECT_DIR / f"resources/{DATASET}/read_count_table.h5ad",
+        info_json=PROJECT_DIR / f"results/{DATASET}/dataset_info.json"
+    resources:
+        mem_mb=120000,
+        slurm="account=infolab cpus-per-task=4 partition=il-interactive time=04:00:00"
+    shell:
+        "cd {LBCL_ATLAS_DIR} && uv run --no-progress python scripts/process_dataset.py "
+        "--input {input.adata} --output {output.adata} --info-json {output.info_json}"
+
+rule structured_annotations:
+    """Extract obs metadata as structured JSON for LLM annotation."""
+    input:
+        adata=rules.process_dataset.output.adata
+    output:
+        annotations=PROJECT_DIR / f"results/{DATASET}/annotations.json"
+    shell:
+        "cd {LBCL_ATLAS_DIR} && uv run --no-progress python scripts/structured_annotations.py "
+        "--input {input.adata} --output {output.annotations}"
+
+rule prepare_requests:
+    """Split structured annotations into scatter chunks for parallel LLM processing."""
+    input:
+        annotations=rules.structured_annotations.output.annotations
+    output:
+        splits=scatter.split(PROJECT_DIR / f"results/{DATASET}/requests/{{scatteritem}}.yaml")
+    run:
+        import json, yaml
+
+        with open(input.annotations) as f:
+            annotations = json.load(f)
+
+        for split_fn in output.splits:
+            split_i, split_n = map(int, Path(split_fn).stem.split('-of-'))
+            split_i -= 1
+            split_annotations = {k: v for i, (k, v) in enumerate(annotations.items()) if i % split_n == split_i}
+            Path(split_fn).parent.mkdir(parents=True, exist_ok=True)
+            with open(split_fn, "w") as f:
+                yaml.dump(split_annotations, f)
+
+rule process_annotations_vllm:
+    """Generate natural language annotations using vLLM on GPU (openai/gpt-oss-120b with Harmony format)."""
+    input:
+        split_yaml=PROJECT_DIR / f"results/{DATASET}/requests/{{scatteritem}}.yaml",
+        prompt_file=PROJECT_DIR / f"src/datasets/{DATASET}/prompts/annotation.txt",
+        few_shot_prompts=expand(PROJECT_DIR / "src/pre_training_processing/prompts/few_shot_samples/{i}_request.json", i=range(9)),
+        few_shot_responses=expand(PROJECT_DIR / "src/pre_training_processing/prompts/few_shot_samples/{i}_response.json", i=range(9)),
+    output:
+        processed=protected(PROJECT_DIR / f"results/{DATASET}/processed/{{scatteritem}}.csv")
+    log:
+        PROJECT_DIR / f"results/{DATASET}/logs/{{scatteritem}}.log"
+    resources:
+        mem_mb=100000,
+        slurm=slurm_gres("large", num_gpus=1, cluster_name="ilc")
+    threads: 8
+    shell:
+        "export PYTORCH_ALLOC_CONF=expandable_segments:True && "
+        "cd {LBCL_ATLAS_DIR} && uv run --no-progress python scripts/run_vllm_annotation.py "
+        "--split-yaml {input.split_yaml} "
+        "--prompt-file {input.prompt_file} "
+        "--few-shot-dir " + str(PROJECT_DIR / "src/pre_training_processing/prompts/few_shot_samples") + " "
+        "--output-csv {output.processed} "
+        "--log-file {log} "
+        "--model openai/gpt-oss-120b "
+        "--max-num-seqs 16 "
+        "--tensor-parallel-size 1 "
+        "2>&1 | tee -a {log}"
+
+rule aggregate_annotations:
+    """Combine processed annotation CSVs into a single JSON."""
+    input:
+        csvs=gather.split(PROJECT_DIR / f"results/{DATASET}/processed/{{scatteritem}}.csv")
+    output:
+        single=PROJECT_DIR / f"results/{DATASET}/processed_annotations.json",
+        multi=PROJECT_DIR / f"results/{DATASET}/processed_multi_annotations.json",
+    run:
+        import pandas as pd, json
+
+        dfs = [pd.read_csv(f) for f in input.csvs if Path(f).stat().st_size > 0]
+        combined = pd.concat(dfs, ignore_index=True)
+
+        # Single: sample_id -> annotation (first replicate)
+        single = combined.groupby("sample_id")["annotation"].first().to_dict()
+        # Multi: sample_id -> [annotations]
+        multi = combined.groupby("sample_id")["annotation"].apply(list).to_dict()
+
+        with open(output.single, "w") as f:
+            json.dump(single, f)
+        with open(output.multi, "w") as f:
+            json.dump(multi, f)
+
+rule integrate_dataset:
+    """Merge natural language annotations into the final h5ad."""
+    input:
+        adata=rules.process_dataset.output.adata,
+        annotations=rules.aggregate_annotations.output.multi,
+    output:
+        adata=PROJECT_DIR / f"results/{DATASET}/full_data.h5ad"
+    resources:
+        mem_mb=120000,
+    shell:
+        "cd {LBCL_ATLAS_DIR} && uv run --no-progress python scripts/integrate_dataset.py "
+        "--input {input.adata} --annotations {input.annotations} --output {output.adata}"
+
+rule all:
+    input:
+        rules.integrate_dataset.output.adata,
+    default_target: True
