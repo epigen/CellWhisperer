@@ -61,7 +61,16 @@ def slurm_gres(
         )
         qos = ""
     elif cluster_name == "ilc":
-        pass  # TODO implement blackwell1 and hyperturing2
+        gpu_type = {
+            "small": "2080_ti",
+            "medium": "RTX8000",
+            "large": "b200",
+        }[gpu_size]
+        partition = "il-interactive"
+        gres = "gres=gpu:{gpu_type}:{num_gpus}".format(
+            gpu_type=gpu_type, num_gpus=num_gpus
+        )
+        qos = ""
     else:
         gpu_type = {"small": "3g.20gb", "medium": "a100", "large": "a100-sxm4-80gb"}[
             gpu_size

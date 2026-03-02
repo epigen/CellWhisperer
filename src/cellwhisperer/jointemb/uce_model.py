@@ -214,7 +214,7 @@ class UCEConfig(PretrainedConfig):
         **kwargs,
     ):
 
-        self.model_type = UCEConfig.model_type
+        self.model_type = f"uce{nlayers}"
         self.token_dim = token_dim
         self.d_model = d_model
         self.nhead = nhead

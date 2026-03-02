@@ -303,6 +303,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         use_replicates: bool = False,
         include_labels: Optional[str] = None,
         use_disk_loading: bool = False,
+        cosmx6k_filter: bool = False,
     ):
         """
 
@@ -320,6 +321,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             include_labels: name of the column in the AnnData object to use as labels. If None, no labels will be included
             use_disk_loading: whether to use disk-based loading (JointEmbedDatasetDisk) instead of loading all data into RAM.
                              Recommended for large datasets that cannot fit in memory.
+            cosmx6k_filter: whether to filter genes to the CosMx 6K gene list before processing.
         """
         super().__init__()
         self.batch_size = batch_size
@@ -334,6 +336,11 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.use_replicates = use_replicates
         self.include_labels = include_labels
         self.use_disk_loading = use_disk_loading
+        self.cosmx6k_filter = cosmx6k_filter
+
+        if self.cosmx6k_filter:
+            gene_list_path = str(get_path(["paths", "cosmx6k_genes"]))
+            self._cosmx6k_genes = set(pd.read_csv(gene_list_path)["gene_name"].tolist())
 
         self.train_fraction = train_fraction
 
@@ -374,6 +381,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 str(self.min_genes),
                 str(self.use_replicates),
                 self.include_labels or "",
+                "cosmx6k" if self.cosmx6k_filter else "",
                 i or "",
             ]
         )
@@ -526,6 +534,16 @@ class JointEmbedDataModule(pl.LightningDataModule):
         # Load data
         adata = anndata.read_h5ad(adata_path)
 
+        # Filter genes to CosMx 6K gene list if requested
+        if self.cosmx6k_filter:
+            if "gene_name" in adata.var.columns:
+                gene_names = adata.var["gene_name"].astype(str)
+            else:
+                gene_names = adata.var.index.astype(str)
+            mask = gene_names.isin(self._cosmx6k_genes)
+            adata = adata[:, mask].copy()
+            logger.info(f"CosMx 6K filter: kept {mask.sum()}/{len(mask)} genes")
+
         # Fixed size embedding (https://huggingface.co/docs/transformers/en/pad_truncation), as we combine multiple datasets
         inputs = self.processor(
             text=(
@@ -590,7 +608,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
                 dim=1
             ) >= self.min_genes
         elif (
-            self.transcriptome_processor == "uce"
+            self.transcriptome_processor.startswith("uce")
             and "expression_key_padding_mask" in inputs
         ):
             n_genes_filter = (inputs["expression_key_padding_mask"] == False).sum(
@@ -1001,3 +1019,20 @@ class JointEmbedDataModule(pl.LightningDataModule):
     def test_dataloader(self):
         # Return the validation dataloader for testing
         return self.val_dataloader(shuffle=False)
+
+    def predict_dataloader(self):
+        """
+        Return dataloader for prediction.
+        Uses val_datasets if available, otherwise uses train_datasets (for train_fraction=1.0).
+        """
+        # Use validation data if available, otherwise use training data
+
+        return DataLoader(
+            ConcatDataset(self.train_datasets),
+            batch_size=self.batch_size,
+            num_workers=self.nproc,
+            persistent_workers=self.nproc > 0,
+            drop_last=False,
+            shuffle=False,  # Never shuffle for prediction
+            collate_fn=multi_modal_collate_fn,
+        )

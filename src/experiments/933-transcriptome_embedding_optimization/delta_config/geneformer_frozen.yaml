@@ -1,0 +1,11 @@
+# Geneformer frozen
+# Lock transcriptome (Geneformer), Unlock image, Lock text
+wandb: 'transcriptome-emb-opt-geneformer-frozen'
+model:
+  model_config:
+    transcriptome_model_type: geneformer
+    locking_mode: LUL
+data:
+  transcriptome_processor: geneformer
+  transcriptome_processor_kwargs: {}
+best_model_path: results/transcriptome-emb-opt/best_models/geneformer-frozen.ckpt

@@ -46,6 +46,16 @@ SAMPLE_IDS = list(TMA_GROUPING.keys())
 ALIGNMENT_DF = pd.read_csv(PROJECT_DIR / f"src/datasets/{DATASET}/alignment_values/alignment.csv").set_index("sample")
 
 # Source location for SVS images
+RAW_DATA_BASE = "/oak/stanford/groups/zinaida/CAR_T_data_warehouse/CosMX/stanford_CART_TMA/data"
+SAMPLE_TO_RAW_EXPR = {
+    "TMA2": f"{RAW_DATA_BASE}/CART_TMA2_20_08_2025_0_19_00_203/flatFiles/CarTTMA2/CarTTMA2_exprMat_file.csv.gz",
+    "TMA3": f"{RAW_DATA_BASE}/CART_TMA3_20_08_2025_0_21_28_874/flatFiles/CarTTMA3/CarTTMA3_exprMat_file.csv.gz",
+    "TMA4": f"{RAW_DATA_BASE}/CART_TMA4_12_09_2025_10_19_26_839/flatFiles/CARTTMA4/CARTTMA4_exprMat_file.csv.gz",
+    "TMA5": f"{RAW_DATA_BASE}/CART_TMA5_12_09_2025_10_20_16_938/flatFiles/CARTTMA5/CARTTMA5_exprMat_file.csv.gz",
+    "TMA13_14": f"{RAW_DATA_BASE}/Car_T_13_14_v202_19_11_2025_16_05_34_581/flatFiles/CarT1314/CarT1314_exprMat_file.csv.gz",
+    "TMA15_16": f"{RAW_DATA_BASE}/Car_T_15_16_v202_20_06_2025_19_13_25_525/CarT1516/CarT1516_exprMat_file.csv.gz",
+}
+
 IMAGE_SOURCE_BASE = "/oak/stanford/groups/zinaida/CAR_T_data_warehouse/CosMX/stanford_CART_TMA/CosMx_CAR_T_post_run_HE"
 SAMPLE_TO_IMAGE = {
     "TMA1": ("Batch-1", "CosMx_6K_CART_1__61356.svs"),
@@ -88,7 +98,7 @@ rule disentangle_tmas:
     - TMA4-Sec1 + TMA4-Sec2 → TMA4
     """
     input:
-        combined_h5ad=PROJECT_DIR / f"resources/{DATASET}/adata_combined_seurat.h5ad"
+        combined_h5ad=PROJECT_DIR / f"resources/{DATASET}/adata_combined_seurat.h5ad"  # copied from /oak/stanford/groups/zinaida/eric/cart_cosmx/exportedMtx/all_cells_sct/adata_combined_seurat.h5ad
     output:
         output_dir=directory(PROJECT_DIR / f"resources/{DATASET}/per_tma_h5ads"),
         h5ad_files=expand(
@@ -151,6 +161,47 @@ rule process_data:
         max_patches_per_scale=None,
     script:
         "scripts/process_data.py"
+
+
+rule filter_good_quality:
+    """Filter out low-quality cores using the good_quality annotation."""
+    input:
+        adata=PROJECT_DIR / f"results/{DATASET}_{{sample}}/full_data.h5ad"
+    output:
+        adata=PROJECT_DIR / f"results/{DATASET}_{{sample}}_hqcores/full_data.h5ad"
+    conda:
+        "cellwhisperer"
+    script:
+        "scripts/filter_good_quality.py"
+
+
+rule filter_fna:
+    """Filter out fine needle aspirate cores (TISS_prefix == 'SHF')."""
+    input:
+        adata=PROJECT_DIR / f"results/{DATASET}_{{sample}}/full_data.h5ad"
+    output:
+        adata=PROJECT_DIR / f"results/{DATASET}_{{sample}}_nofna/full_data.h5ad"
+    conda:
+        "cellwhisperer"
+    script:
+        "scripts/filter_fna.py"
+
+
+ruleorder: replace_with_raw_counts > process_data
+
+rule replace_with_raw_counts:
+    """Replace SCTransform corrected counts in X with raw read counts from CosMx flat files."""
+    input:
+        adata=PROJECT_DIR / f"results/{DATASET}_{{sample}}/full_data.h5ad",
+        raw_expr=lambda w: SAMPLE_TO_RAW_EXPR[w.sample]
+    output:
+        adata=PROJECT_DIR / f"results/{DATASET}_{{sample}}_raw/full_data.h5ad"
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=40000,
+    script:
+        "scripts/replace_with_raw_counts.py"
 
 
 rule symlink_to_joint_dataset:

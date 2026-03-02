@@ -11,6 +11,8 @@ NOTE: The name of the class is not optimal!
 from torch.utils.data import DataLoader
 from cellwhisperer.jointemb.processing import TranscriptomeTextDualEncoderProcessor
 import anndata
+import pandas as pd
+from cellwhisperer.config import get_path
 from cellwhisperer.utils.processing import ensure_raw_counts_adata
 from .jointemb import JointEmbedDataset
 from pathlib import Path
@@ -30,6 +32,7 @@ class CellxGenePreparationLoader(DataLoader):
         transcriptome_processor="geneformer",
         transcriptome_processor_kwargs={},
         image_processor="uni2",
+        cosmx6k_filter: bool = False,
         **kwargs
     ):
         """ """
@@ -37,6 +40,17 @@ class CellxGenePreparationLoader(DataLoader):
             read_count_table = anndata.read_h5ad(read_count_table)
 
         ensure_raw_counts_adata(read_count_table)
+
+        # Filter genes to CosMx 6K gene list if requested
+        if cosmx6k_filter:
+            gene_list_path = str(get_path(["paths", "cosmx6k_genes"]))
+            cosmx6k_genes = set(pd.read_csv(gene_list_path)["gene_name"].tolist())
+            if "gene_name" in read_count_table.var.columns:
+                gene_names = read_count_table.var["gene_name"].astype(str)
+            else:
+                gene_names = read_count_table.var.index.astype(str)
+            mask = gene_names.isin(cosmx6k_genes)
+            read_count_table = read_count_table[:, mask].copy()  # this could lead to memory issues
 
         self.transcriptome_processor = transcriptome_processor
         self.transcriptome_processor_kwargs = transcriptome_processor_kwargs

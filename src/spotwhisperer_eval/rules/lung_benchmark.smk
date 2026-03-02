@@ -2,6 +2,14 @@
 SPOTWHISPERER_RESULTS = PROJECT_DIR / "results/spotwhisperer_eval/lung"
 SPOTWHISPERER_MODEL_RESULTS = SPOTWHISPERER_RESULTS / "{model}"
 
+# Lung tissue data paths
+LUNG_DATA = PROJECT_DIR / "resources/lung_tissue"
+LUNG_RESULTS = PROJECT_DIR / "results/lung_evaluation"
+LUNG_MODEL_RESULTS = LUNG_RESULTS / "{model}"
+
+# Lung dataset samples (from baseline CSV)
+LUNG_SAMPLES = ["lc_1", "lc_2", "lc_3", "lc_4", "lc_5"]
+
 LUNG_TISSUE_METADATA_COLS = ["region_type_expert_annotation", "cell_type_annotations"]
 METRICS = ["accuracy", "f1", "auroc"]
 
@@ -167,3 +175,148 @@ rule spotwhisperer_all:
             ]
         )
     default_target: True  # TODO delete
+
+
+# Baseline evaluation rules for lung tissue
+rule lung_download_sample:
+    """
+    Download individual LC{N}.h5ad.gz files from the SpotWhisperer data server.
+    Used as per-sample ground truth for baseline metric computation.
+    """
+    output:
+        adata=LUNG_DATA / "per_sample" / "LC{sample_n}.h5ad",
+    params:
+        url="https://medical-epigenomics.org/papers/spotwhisperer/data/LC{sample_n}.h5ad.gz",
+    wildcard_constraints:
+        sample_n="[1-5]"
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=10000,
+        slurm="cpus-per-task=1 partition=cmackall"
+    shell: """
+        tmp=$(mktemp --suffix=.h5ad.gz)
+        curl -fsSL {params.url} -o "$tmp"
+        python -c "
+import gzip, shutil, anndata
+adata = anndata.read_h5ad('$tmp')
+adata.write_h5ad('{output.adata}')
+"
+        rm -f "$tmp"
+    """
+
+
+rule lung_metrics_from_scores:
+    """
+    Aggregate per-class metrics across all lung samples from stored score CSVs and h5ad files.
+    """
+    input:
+        scores=lambda wildcards: expand(
+            LUNG_RESULTS / "{model}" / "{sample}_scores_seed0.csv",
+            model=wildcards.model,
+            sample=LUNG_SAMPLES,
+        ),
+        adatas=expand(
+            LUNG_DATA / "per_sample" / "LC{sample_n}.h5ad",
+            sample_n=[1, 2, 3, 4, 5],
+        ),
+    output:
+        aggregated=LUNG_RESULTS / "{model}" / "summary" / "metrics_aggregated.json",
+        per_class=LUNG_RESULTS / "{model}" / "summary" / "per_class_metrics.csv",
+        per_dataset=LUNG_RESULTS / "{model}" / "summary" / "per_dataset_metrics.csv",
+        per_class_by_dataset=LUNG_RESULTS / "{model}" / "summary" / "per_class_by_dataset_metrics.csv",
+    wildcard_constraints:
+        model="[^/]+",
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=10000,
+        slurm="cpus-per-task=1 partition=cmackall"
+    script:
+        "../scripts/compute_lung_metrics_from_scores.py"
+
+
+rule lung_split_baseline_scores:
+    """
+    Split baseline logits (terms1) into a per-sample score CSV.
+    Uses wildcards for baseline (conch|plip), sample, and seed.
+    """
+    input:
+        baseline_csv=LUNG_DATA / "baselines_animesh_computed/{baseline}_logits_{terms_id}.csv",
+    output:
+        score=LUNG_RESULTS / "{baseline}_{terms_id}" / "{sample}_scores_seed{seed}.csv",
+    wildcard_constraints:
+        baseline="(conch|plip)",
+        seed="0",
+        sample="lc_[0-9]+",
+        terms_id="(terms1|terms2)"
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=4000,
+        slurm="cpus-per-task=1 partition=cmackall"
+    script:
+        "../scripts/split_baseline_logits_lung.py"
+
+ruleorder: lung_split_baseline_scores > zero_shot_lung_prediction
+
+
+rule lung_baselines_vs_spotwhisperer:
+    """
+    Per-class metrics comparison: SpotWhisperer models vs PLIP/CONCH baselines on lung tissue.
+    Analogous to pathocell_baselines_vs_trimodal.
+    SpotWhisperer predictions come from zero_shot_lung_prediction (LC1, 2 classes: TUM/TLS).
+    Baseline per-class CSVs come from lung_metrics_from_scores (5 samples, 4 classes).
+    Comparison is restricted to shared classes: tumor cells and tertiary lymphoid structure.
+    """
+    input:
+        mpl_style=ancient(PROJECT_DIR / config["plot_style"]),
+        # SpotWhisperer prediction CSVs (region_type_expert_annotation.by_cell.csv)
+        sw_bibridge=SPOTWHISPERER_RESULTS / "spotwhisperer_cellxgene_census__archs4_geo__hest1k" / "datasets" / "lung_tissue" / "predictions" / "region_type_expert_annotation.by_cell.csv",
+        sw_trimodal=SPOTWHISPERER_RESULTS / "spotwhisperer_cellxgene_census__archs4_geo__hest1k__quilt1m" / "datasets" / "lung_tissue" / "predictions" / "region_type_expert_annotation.by_cell.csv",
+        # Baseline per-class summary CSVs from lung_metrics_from_scores
+        baseline_conch_terms1=LUNG_RESULTS / "conch_terms1" / "summary" / "per_class_metrics.csv",
+        baseline_plip_terms1=LUNG_RESULTS / "plip_terms1" / "summary" / "per_class_metrics.csv",
+    output:
+        plot=LUNG_RESULTS / "comparison" / "plots" / "per_class__{metric}__baselines_vs_spotwhisperer.svg",
+        csv_table=LUNG_RESULTS / "comparison" / "tables" / "per_class_{metric}__baselines_vs_spotwhisperer.csv",
+    params:
+        metric="{metric}",
+    wildcard_constraints:
+        metric="(f1|rocauc|precision|accuracy)",
+    conda:
+        "cellwhisperer"
+    resources:
+        mem_mb=8000,
+        slurm="cpus-per-task=1 partition=cmackall"
+    script:
+        "../scripts/plot_lung_baselines_vs_spotwhisperer.py"
+
+
+# NOTE: These rules are great, but not debugged yet :). Animesh ran them manually
+# # Baseline runners using local scripts and project data structure
+# rule lung_conch_baseline:
+#     output:
+#         logits_terms1=LUNG_DATA / "baselines_animesh_computed" / "conch_logits_terms1.csv",
+#     params:
+#         data_dir=LUNG_DATA / "processed",
+#     conda:
+#         "cellwhisperer"
+#     resources:
+#         mem_mb=32000,
+#         slurm=slurm_gres("medium", num_cpus=4, time="4:00:00")
+#     script:
+#         "../scripts/run_conch_baseline_lung.py"
+
+# rule lung_plip_baseline:
+#     output:
+#         logits_terms1=LUNG_DATA / "baselines_animesh_computed" / "plip_logits_terms1.csv",
+#     params:
+#         data_dir=LUNG_DATA / "processed",
+#     conda:
+#         "cellwhisperer"
+#     resources:
+#         mem_mb=32000,
+#         slurm=slurm_gres("medium", num_cpus=4, time="4:00:00")
+#     script:
+#         "../scripts/run_plip_baseline_lung.py"

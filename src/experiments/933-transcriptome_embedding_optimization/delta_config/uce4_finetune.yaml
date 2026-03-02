@@ -1,0 +1,15 @@
+# UCE 4-layer fine-tuned
+# Unlock transcriptome (UCE 4-layer), Unlock image, Lock text
+wandb: 'transcriptome-emb-opt-uce4-finetune'
+model:
+  model_config:
+    transcriptome_model_type: uce
+    transcriptome_config:
+      nlayers: 4
+    locking_mode: UUL
+  learning_rate: 0.0001
+data:
+  transcriptome_processor: uce
+  transcriptome_processor_kwargs: {}
+best_model_path: results/transcriptome-emb-opt/best_models/uce4-finetune.ckpt
+batch_size: 256

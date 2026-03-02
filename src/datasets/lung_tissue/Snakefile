@@ -4,10 +4,10 @@ include: "../../shared/rules/dataset_processing.smk"
 # Sample files from the lung cancer dataset
 SAMPLE_FILES = [
     "LC1.h5ad.gz",
-    # "LC2.h5ad.gz", 
-    # "LC3.h5ad.gz",
-    # "LC4.h5ad.gz",
-    # "LC5.h5ad.gz"
+    "LC2.h5ad.gz",
+    "LC3.h5ad.gz",
+    "LC4.h5ad.gz",
+    "LC5.h5ad.gz",
 ]
 
 BASE_URL = "https://medical-epigenomics.org/papers/spotwhisperer/data/"

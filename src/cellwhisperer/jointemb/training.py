@@ -286,6 +286,10 @@ class CellWhispererCLI(LightningCLI):
                     logger.error(
                         f"File {self.config['fit.best_model_path']} already exists. Overwriting {self.trainer.checkpoint_callback.best_model_path}."
                     )
+                # create directory first
+                Path(self.config["fit.best_model_path"]).parent.mkdir(
+                    parents=True, exist_ok=True
+                )
                 shutil.copy(
                     self.trainer.checkpoint_callback.best_model_path,
                     self.config["fit.best_model_path"],

@@ -9,7 +9,7 @@ trainer:
   callbacks:
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
-        monitor: val_retrieval/transcriptome_image/rocauc_macroAvg
+        monitor: val_retrieval/transcriptome_text/rocauc_macroAvg
         mode: max
         save_top_k: 1
         save_last: true
@@ -27,7 +27,7 @@ trainer:
   overfit_batches: 0.0
   val_check_interval: null
   check_val_every_n_epoch: 1
-  num_sanity_val_steps: null
+  num_sanity_val_steps: 2
   log_every_n_steps: null
   enable_checkpointing: null
   enable_progress_bar: true
@@ -65,7 +65,7 @@ trainer:
       entity: single-cellm
       reinit: null
       tags: null
-      group: '911-cosmx6keval'
+      group: 'transcriptome-emb-opt'
       notes: null
       magic: null
       config_exclude_keys: null
@@ -85,11 +85,7 @@ model:
     transcriptome_config: {}
     text_model_type: bert
     text_config: {}
-    image_model_type: uni2
-    image_config:
-      cell_level_model: true
-      cnn_embedding_dim: 512  # Ramped up from 128 to 512
-      cnn_num_layers: 4  # Increased from 2 to 4 layers
+    image_model_type: uni_small
     locking_mode: uUL
     unlocked_fp16: false
     use_cache: false
@@ -103,27 +99,28 @@ model:
     sample_weighting: false
   val_batch_size: 32
   gauss_noise_std: 0.0
-  learning_rate: 0.00001
+  learning_rate: 0.00005
   lr_warmup: 0.03
   frozen_warmup: null
 data:
   image_processor: uni2
-  dataset_names: lymphoma_cosmx_large_TMA2,lymphoma_cosmx_large_TMA4,lymphoma_cosmx_large_TMA5,lymphoma_cosmx_large_TMA15_16,lymphoma_cosmx_large_TMA13_14,cellxgene_census
-  transcriptome_processor: mlp  # could also do UCE
+  dataset_names: cellxgene_census
+  transcriptome_processor: mlp
   tokenizer_kwargs:
     model_max_length: 128
   min_genes: 100
-  train_fraction: lymphoma_cosmx_large_TMA4,lymphoma_cosmx_large_TMA5,lymphoma_cosmx_large_TMA15_16,lymphoma_cosmx_large_TMA13_14,cellxgene_census
+  train_fraction: 0.95
   use_replicates: false
   include_labels: null
   use_disk_loading: true
+  cosmx6k_filter: true
 model_ckpt: null
-best_model_path: results/911-cosmx6k-eval/best_models/best_cxg.ckpt
+best_model_path: results/transcriptome-emb-opt/best_models/baseline-mlp.ckpt
 last_model_path: null
 log_level: INFO
 dap_debug: false
 omit_validation_functions: false
-batch_size: 512
+batch_size: 1024
 nproc: 8
-wandb: 'cosmx6k-cxg'
+wandb: 'transcriptome-emb-opt-mlp'
 ckpt_path: null

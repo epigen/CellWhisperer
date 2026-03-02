@@ -14,25 +14,35 @@ This experiment trains a gene expression decoder on frozen CellWhisperer embeddi
 ## Pipeline Structure
 
 ```
-├── Snakefile                    # Main pipeline orchestration
+├── Snakefile                                    # Main pipeline orchestration
 ├── scripts/
-│   ├── train_decoder.py         # Train gene expression decoder
-│   ├── predict_expression.py    # Predict gene expression for a TMA
-│   └── evaluate_metrics.py      # Compute evaluation metrics
+│   ├── train_decoder.py                         # Train gene expression decoder
+│   ├── predict_expression.py                    # Predict gene expression for a TMA
+│   ├── evaluate_metrics.py                      # Compute evaluation metrics
+│   └── correlate_predictions_with_ihc.py        # IHC validation script
+├── run_tma1_ihc_analysis.sh                     # Convenience script for TMA1 IHC analysis
 ├── results/
 │   ├── models/
-│   │   └── decoder.ckpt        # Trained decoder checkpoint
+│   │   └── decoder.ckpt                        # Trained decoder checkpoint
 │   ├── predictions/
 │   │   ├── TMA1_predictions.h5ad
 │   │   ├── TMA2_predictions.h5ad
 │   │   └── TMA3_predictions.h5ad
 │   ├── metrics/
-│   │   ├── TMA2_metrics.csv    # Validation metrics
-│   │   └── TMA3_metrics.csv    # Test metrics
+│   │   ├── TMA2_metrics.csv                    # Validation metrics
+│   │   └── TMA3_metrics.csv                    # Test metrics
 │   └── plots/
-│       ├── TMA2/               # Validation plots
-│       └── TMA3/               # Test plots
-└── patient_ihc.xlsx            # IHC quantification data
+│       ├── TMA2/                               # Validation plots
+│       └── TMA3/                               # Test plots
+├── analysis/                                    # IHC validation results
+│   ├── correlation_results.csv
+│   ├── PAX5_PAX5_Hscore_mean_correlation.png
+│   ├── PAX5_PAX5_Hscore_p90_correlation.png
+│   ├── CD19_CD19_Hscore_mean_correlation.png
+│   └── CD19_CD19_Hscore_p90_correlation.png
+├── patient_ihc.xlsx                             # IHC quantification data (52 patients)
+├── tma1_fov_to_ihc_mapping.csv                  # FOV→grid→patient→IHC mapping
+└── tma1_grid_to_patient_mapping.csv             # Grid position mapping (deprecated)
 ```
 
 ## Configuration
@@ -146,16 +156,102 @@ For each evaluated TMA in `results/plots/{TMA}/`:
 - Reports mean, median, and std of correlations across all genes
 - Indicates which genes are well-predicted vs poorly-predicted
 
-## Next Steps: IHC Validation
+## IHC Validation
 
-The predictions can be validated against IHC quantification in `patient_ihc.xlsx`:
+Predictions are validated against IHC (immunohistochemistry) quantification from `patient_ihc.xlsx`.
 
-1. Extract predictions for specific proteins quantified in IHC
-2. Aggregate predictions at the patient/core level
-3. Compute correlation between predicted expression and IHC quantification
-4. Identify discordant cases for further analysis
+### Current Status: TMA1 Ground Truth Correlation
 
-(Implementation pending)
+**Implemented**: Correlation analysis between TMA1 ground truth gene expression and IHC H-scores for PAX5 and CD19.
+
+### TMA1 Mapping Solution
+
+The key challenge was mapping between different identifier systems:
+- **Predictions**: Use FOV numbers (1-167) from CosMx data
+- **IHC data**: Use patient-specific core IDs (1-621, 1-873, etc.)
+- **TMA grid**: Physical grid positions (A5, K5, B10, etc.)
+
+**Solution**: Created `tma1_fov_to_ihc_mapping.csv` linking FOV → grid position → sample ID → IHC scores
+- Source: `src/datasets/lymphoma_cosmx_small/cell_barcode_core_assignment.csv`
+- 104 FOVs mapped to IHC data
+- 52 FOVs with both PAX5 and CD19 scores
+- 63 unique grid positions
+- 36 unique patients
+
+### Running IHC Correlation Analysis
+
+```bash
+cd src/experiments/932-tma1-ihc-eval
+
+# Using ground truth TMA1 data (current default)
+bash run_tma1_ihc_analysis.sh
+
+# Or with decoder predictions (when available)
+bash run_tma1_ihc_analysis.sh path/to/TMA1_predictions.h5ad
+```
+
+### Analysis Results (TMA1 Ground Truth)
+
+Correlations between ground truth expression and IHC H-scores:
+
+**PAX5**:
+- Mean aggregation: r=0.218 (p=0.124), 51 FOVs, 34 cores, 20 patients
+- 90th percentile: r=0.140 (p=0.326), 51 FOVs, 34 cores, 20 patients
+- **Interpretation**: Weak positive correlation, not statistically significant
+
+**CD19**:
+- Mean aggregation: r=-0.254 (p=0.046), 62 FOVs, 41 cores, 24 patients
+- 90th percentile: r=-0.158 (p=0.219), 62 FOVs, 41 cores, 24 patients
+- **Interpretation**: Weak negative correlation, marginally significant (mean only)
+
+### Output Files
+
+Located in `analysis/`:
+- `correlation_results.csv` - Summary statistics
+- `PAX5_PAX5_Hscore_mean_correlation.png` - PAX5 scatter plot (mean)
+- `PAX5_PAX5_Hscore_p90_correlation.png` - PAX5 scatter plot (90th percentile)
+- `CD19_CD19_Hscore_mean_correlation.png` - CD19 scatter plot (mean)
+- `CD19_CD19_Hscore_p90_correlation.png` - CD19 scatter plot (90th percentile)
+
+### Mapping Files Created
+
+- `tma1_fov_to_ihc_mapping.csv` - Complete FOV to IHC mapping for TMA1
+- `tma1_grid_to_patient_mapping.csv` - Grid position to patient mapping (deprecated, use FOV version)
+
+### Scripts
+
+- `scripts/correlate_predictions_with_ihc.py` - Main correlation analysis script
+  - Loads predictions (h5ad)
+  - Aggregates by FOV (mean or 90th percentile)
+  - Merges with IHC scores via FOV→sample_id mapping
+  - Computes Pearson and Spearman correlations
+  - Generates scatter plots
+
+- `run_tma1_ihc_analysis.sh` - Convenience wrapper script
+  - Auto-creates mapping file if needed
+  - Searches for predictions in multiple locations
+  - Runs complete analysis pipeline
+
+### Next Steps
+
+1. **Generate decoder predictions for TMA1**
+   - Run Snakemake pipeline to create `results/predictions/TMA1_predictions.h5ad`
+   - Predictions will contain model outputs instead of ground truth
+   
+2. **Run IHC validation on predictions**
+   ```bash
+   bash run_tma1_ihc_analysis.sh results/predictions/TMA1_predictions.h5ad
+   ```
+
+3. **Expected outcomes**:
+   - Compare decoder prediction correlations vs ground truth correlations
+   - Assess if predicted expression captures IHC protein levels
+   - Identify genes where predictions match/diverge from IHC
+
+4. **Extend to other TMAs**:
+   - TMA2, TMA3 require their own FOV→IHC mapping files
+   - IHC file may contain patients from multiple TMAs (need verification)
+   - Each TMA needs dataset-specific `cell_barcode_core_assignment.csv`
 
 ## Troubleshooting
 
@@ -218,6 +314,22 @@ Computes evaluation metrics:
 - Computes MSE, MAE, correlations
 - Creates visualization plots
 - Saves metrics to CSV
+
+### scripts/correlate_predictions_with_ihc.py
+Validates predictions against IHC quantification:
+- Loads predictions (h5ad with FOV identifiers)
+- Loads FOV→patient mapping and IHC scores
+- Aggregates expression by FOV (mean or 90th percentile)
+- Correlates predicted gene expression with IHC H-scores
+- Generates scatter plots with correlation statistics
+- Supports both ground truth and decoder predictions
+
+### run_tma1_ihc_analysis.sh
+Convenience wrapper for TMA1 IHC validation:
+- Auto-generates FOV mapping file if missing
+- Searches for predictions in standard locations
+- Runs complete correlation analysis
+- Outputs results to `analysis/` directory
 
 ## References
 

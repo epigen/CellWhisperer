@@ -1,0 +1,6 @@
+# cellxgene_census + lymphoma_cosmx_large_TMA5, without cosmx6k_filter
+wandb: 'transcriptome-emb-opt-census-cosmx-tma5-unfiltered'
+data:
+  dataset_names: cellxgene_census,lymphoma_cosmx_large_TMA5
+  cosmx6k_filter: false
+best_model_path: results/transcriptome-emb-opt/best_models/census-cosmx-tma5-unfiltered.ckpt

@@ -679,7 +679,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                     # *model_args,  # these args are not supported by geneformer
                     **kwargs_transcriptome,
                 )
-            elif kwargs_transcriptome["config"]["model_type"] == "uce":
+            elif kwargs_transcriptome["config"]["model_type"].startswith("uce"):
                 from .uce_model import UCEConfig, UCEModel
 
                 kwargs_transcriptome["config"] = UCEConfig(

@@ -42,8 +42,8 @@ rule download_scgpt:
 
 rule download_uce:
     output:
-        PROJECT_DIR / config["model_name_path_map"]["uce4layer"],
-        PROJECT_DIR / config["model_name_path_map"]["uce"],
+        PROJECT_DIR / config["model_name_path_map"]["uce4"],
+        PROJECT_DIR / config["model_name_path_map"]["uce33"],
         directory(PROJECT_DIR / config["uce_paths"]["protein_embeddings_dir"]),
         PROJECT_DIR / config["uce_paths"]["offset_pkl_path"],
         PROJECT_DIR / config["uce_paths"]["spec_chrom_csv_path"],

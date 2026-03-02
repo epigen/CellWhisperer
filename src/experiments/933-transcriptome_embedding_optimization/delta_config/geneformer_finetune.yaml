@@ -1,0 +1,13 @@
+# Geneformer fine-tuned
+# Unlock transcriptome (Geneformer), Unlock image, Lock text
+wandb: 'transcriptome-emb-opt-geneformer-finetune'
+model:
+  model_config:
+    transcriptome_model_type: geneformer
+    locking_mode: UUL
+  learning_rate: 0.0001
+data:
+  transcriptome_processor: geneformer
+  transcriptome_processor_kwargs: {}
+best_model_path: results/transcriptome-emb-opt/best_models/geneformer-finetune.ckpt
+batch_size: 512

@@ -1,0 +1,13 @@
+# UCE 33-layer frozen
+# Lock transcriptome (UCE 33-layer), Unlock image, Lock text
+wandb: 'transcriptome-emb-opt-uce33-frozen'
+model:
+  model_config:
+    transcriptome_model_type: uce
+    transcriptome_config:
+      nlayers: 33
+    locking_mode: LUL
+data:
+  transcriptome_processor: uce
+  transcriptome_processor_kwargs: {}
+best_model_path: results/transcriptome-emb-opt/best_models/uce33-frozen.ckpt

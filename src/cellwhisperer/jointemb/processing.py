@@ -77,7 +77,7 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
                 nproc=nproc,
                 **transcriptome_kwargs,
             )
-        elif transcriptome_processor == "uce":
+        elif transcriptome_processor.startswith("uce"):
             from .uce_model import UCETranscriptomeProcessor
 
             transcriptome_processor = UCETranscriptomeProcessor(

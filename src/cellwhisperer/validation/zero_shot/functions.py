@@ -57,6 +57,9 @@ def get_performance_metrics_left_vs_right(
     if grouping_keys is None and average_mode is not None:
         raise ValueError("If average_mode is not None, grouping_keys must be provided.")
 
+    # Keep the original (per-sample) grouping_keys before score_left_vs_right deduplicates them
+    original_grouping_keys = grouping_keys
+
     # Get the scores.
     # grouping_keys will be updated (deduplicated and put into correct order) if averaging is used, else kept the same.
     scores, grouping_keys = score_left_vs_right(
@@ -80,6 +83,7 @@ def get_performance_metrics_left_vs_right(
         correct_right_idx_per_left=correct_right_idx_per_left,
         average_mode=average_mode,
         grouping_keys=grouping_keys,
+        original_grouping_keys=original_grouping_keys,
         right_as_classes=right_as_classes,
         report_per_class_metrics=report_per_class_metrics,
     )
@@ -94,6 +98,7 @@ def prepare_metrics_and_labels(
     grouping_keys: Optional[List[str]],
     right_as_classes: bool,
     report_per_class_metrics: bool,
+    original_grouping_keys: Optional[List[str]] = None,
 ) -> Tuple[Dict[str, torch.Tensor], pd.DataFrame]:
     """
     Prepare the labels and compute the performance metrics using torchmetrics.
@@ -111,10 +116,17 @@ def prepare_metrics_and_labels(
         ]
     else:
         if average_mode is not None:
+            # grouping_keys has been deduplicated/sorted by score_left_vs_right.
+            # We need to look up the correct right index for each group using
+            # the original (per-sample) grouping keys and correct_right_idx_per_left.
+            original_keys = original_grouping_keys or grouping_keys
+            # Build a mapping from group name -> correct right index
+            group_to_right_idx = {}
+            for key, right_idx in zip(original_keys, correct_right_idx_per_left):
+                group_to_right_idx[key] = right_idx
             true_class_indices = [
-                correct_right_idx_per_left[grouping_keys.index(x)]
-                for x in grouping_keys
-            ]  # If we are averaging, we need to subset the true classes to match the averaged left inputs
+                group_to_right_idx[x] for x in grouping_keys
+            ]
         else:
             # we can just use the annotations and true classes as they are
             true_class_indices = correct_right_idx_per_left

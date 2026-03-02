@@ -1,0 +1,13 @@
+# UCE 4-layer frozen
+# Lock transcriptome (UCE 4-layer), Unlock image, Lock text
+wandb: 'transcriptome-emb-opt-uce4-frozen'
+model:
+  model_config:
+    transcriptome_model_type: uce
+    transcriptome_config:
+      nlayers: 4
+    locking_mode: LUL
+data:
+  transcriptome_processor: uce
+  transcriptome_processor_kwargs: {}
+best_model_path: results/transcriptome-emb-opt/best_models/uce4-frozen.ckpt

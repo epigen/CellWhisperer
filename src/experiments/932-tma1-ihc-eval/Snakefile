@@ -27,9 +27,9 @@ SCRIPTS_DIR = EXPERIMENT_DIR / "scripts"
 CELLWHISPERER_CHECKPOINT = PROJECT_DIR / "results" / "models" / "spatialwhisperer" / "v1.ckpt"
 
 # Dataset configuration
-TRAIN_TMAS = ["TMA1", "TMA4", "TMA5", "TMA11_12", "TMA13_14", "TMA15_16"]
-VAL_TMA = "TMA2"
-TEST_TMA = "TMA3"
+TRAIN_TMAS = ["TMA4", "TMA5", "TMA13_14", "TMA15_16"]
+VAL_TMA = "TMA2"  # can optimize on this..
+TEST_TMA = "TMA3"  # use eric's annotations
 INFERENCE_TMAS = ["TMA1", "TMA2", "TMA3"]
 
 # Create dataset names for training (comma-separated)
@@ -55,6 +55,32 @@ rule all:
     default_target: True
 
 
+EVAL_TMAS = [VAL_TMA, TEST_TMA]
+
+include: "core_level_analysis.smk"
+
+# Rule: evaluate predictions with scrambled baseline
+rule evaluate_with_baseline:
+    input:
+        predictions = expand(RESULTS_DIR / "predictions" / "{tma}_predictions.h5ad", tma=EVAL_TMAS),
+        script = SCRIPTS_DIR / "evaluate_with_baseline.py"
+    output:
+        metrics = RESULTS_DIR / "metrics" / "metrics_with_baseline.csv",
+        gene_metrics = RESULTS_DIR / "metrics" / "gene_level_metrics.csv",
+        plots = directory(RESULTS_DIR / "plots" / "baseline_comparison")
+    conda:
+        "cellwhisperer"
+    threads: 4
+    resources:
+        mem_mb = 80000
+    shell: """
+        python {input.script} \
+            --predictions {input.predictions} \
+            --output_csv {output.metrics} \
+            --output_plots {output.plots}
+    """
+
+
 # Rule: train decoder
 rule train_decoder:
     input:
@@ -70,7 +96,7 @@ rule train_decoder:
         "cellwhisperer"
     threads: 10
     resources:
-        mem_mb = 120000,
+        mem_mb = 450000,
         slurm = slurm_gres("large", num_cpus=20)
     shell: """
         mkdir -p {params.results_dir}/models {params.log_dir}
@@ -79,7 +105,6 @@ rule train_decoder:
             --config {input.config_file} \
             --model.cellwhisperer_checkpoint {input.cellwhisperer_checkpoint} \
             --data.dataset_names {params.dataset_names} \
-            --data.tokenizer bert \
             --last_model_path {output.model_checkpoint}
     """
 

@@ -177,8 +177,8 @@ model_name_path_map:
 
   geneformer: resources/geneformer-12L-30M
   scgpt: resources/scGPT_human
-  uce: resources/UCE/33layer_model.torch
-  uce4layer: resources/UCE/4layer_model.torch
+  uce33: resources/UCE/33layer_model.torch
+  uce4: resources/UCE/4layer_model.torch
 
   biogpt: microsoft/biogpt
   bert: dmis-lab/biobert-v1.1  # Big limitation in our code: `text_model.config.model_type` will always be `bert` because that's the architecture. Thus, the two below are set up for failure -.-. Thus I can only use this one key here

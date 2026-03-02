@@ -80,7 +80,7 @@ class TranscriptomeTextDualEncoderConfig(PretrainedConfig):
             from .scgpt_model import ScGPTConfig
 
             self.transcriptome_config = ScGPTConfig(**transcriptome_config)
-        elif transcriptome_model_type == "uce":
+        elif transcriptome_model_type.startswith("uce"):
             from .uce_model import UCEConfig
 
             self.transcriptome_config = UCEConfig(**transcriptome_config)
