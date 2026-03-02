@@ -1,0 +1,6 @@
+# Train on TMA4,5 (no FNA) + census; eval on TMA2 (no FNA)
+# Tests whether removing FNA cores from training data improves performance
+wandb: 'trimodal-nofna-train'
+data:
+  dataset_names: lymphoma_cosmx_large_TMA2_nofna,lymphoma_cosmx_large_TMA4_nofna,lymphoma_cosmx_large_TMA5_nofna,cellxgene_census
+  train_fraction: lymphoma_cosmx_large_TMA4_nofna,lymphoma_cosmx_large_TMA5_nofna,cellxgene_census

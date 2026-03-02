@@ -1,0 +1,6 @@
+# Reference: train on unfiltered TMA4,5 + census; eval on TMA2 (no FNA)
+# Comparison baseline for the nofna_train experiment
+wandb: 'trimodal-nofna-ref'
+data:
+  dataset_names: lymphoma_cosmx_large_TMA2_nofna,lymphoma_cosmx_large_TMA4,lymphoma_cosmx_large_TMA5,cellxgene_census
+  train_fraction: lymphoma_cosmx_large_TMA4,lymphoma_cosmx_large_TMA5,cellxgene_census

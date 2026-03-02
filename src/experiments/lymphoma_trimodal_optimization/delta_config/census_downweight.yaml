@@ -1,0 +1,9 @@
+# Downweight cellxgene_census relative contribution by duplicating lymphoma training datasets
+# Base has 4 lymphoma train datasets + 1 census.
+# Here each lymphoma train dataset appears twice in dataset_names, so census
+# contributes proportionally less to training batches.
+# train_fraction only needs each name once (membership check).
+wandb: 'trimodal-census-downweight'
+data:
+  dataset_names: lymphoma_cosmx_large_TMA2,lymphoma_cosmx_large_TMA4,lymphoma_cosmx_large_TMA5,lymphoma_cosmx_large_TMA15_16,lymphoma_cosmx_large_TMA13_14,lymphoma_cosmx_large_TMA4,lymphoma_cosmx_large_TMA5,lymphoma_cosmx_large_TMA15_16,lymphoma_cosmx_large_TMA13_14,cellxgene_census
+  train_fraction: lymphoma_cosmx_large_TMA4,lymphoma_cosmx_large_TMA5,lymphoma_cosmx_large_TMA15_16,lymphoma_cosmx_large_TMA13_14,cellxgene_census

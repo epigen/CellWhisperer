@@ -1,0 +1,9 @@
+# Best config: raw counts for all 5 TMAs + cellxgene_census + lbcl_atlas
+# Based on experiment results: raw_train was the clear winner (+2.6pp T→I, +1.4pp I→T)
+# This extends raw counts to all TMAs (including TMA13_14, TMA15_16)
+# lbcl_atlas: 58K single-cell LBCL atlas with LLM-generated annotations (text-only, no images)
+# Usage: cellwhisperer fit --config base_config.yaml --config best_config.yaml
+wandb: 'trimodal-best-lbcl'
+data:
+  dataset_names: lymphoma_cosmx_large_TMA2_raw,lymphoma_cosmx_large_TMA4_raw,lymphoma_cosmx_large_TMA5_raw,lymphoma_cosmx_large_TMA13_14_raw,lymphoma_cosmx_large_TMA15_16_raw,cellxgene_census,lbcl_atlas
+  train_fraction: lymphoma_cosmx_large_TMA4_raw,lymphoma_cosmx_large_TMA5_raw,lymphoma_cosmx_large_TMA13_14_raw,lymphoma_cosmx_large_TMA15_16_raw,cellxgene_census,lbcl_atlas

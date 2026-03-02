@@ -1,0 +1,6 @@
+# Train on raw-count TMA4,5 + census; eval on raw-count TMA2
+# Tests effect of using actual raw read counts instead of SCTransform corrected counts
+wandb: 'trimodal-raw-train'
+data:
+  dataset_names: lymphoma_cosmx_large_TMA2_raw,lymphoma_cosmx_large_TMA4_raw,lymphoma_cosmx_large_TMA5_raw,cellxgene_census
+  train_fraction: lymphoma_cosmx_large_TMA4_raw,lymphoma_cosmx_large_TMA5_raw,cellxgene_census

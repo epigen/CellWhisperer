@@ -1,0 +1,6 @@
+# Train on filtered TMA4,5 + census; eval on filtered TMA2
+# Tests whether removing low-quality cores from training data improves performance
+wandb: 'trimodal-hqcores-train'
+data:
+  dataset_names: lymphoma_cosmx_large_TMA2_hqcores,lymphoma_cosmx_large_TMA4_hqcores,lymphoma_cosmx_large_TMA5_hqcores,cellxgene_census
+  train_fraction: lymphoma_cosmx_large_TMA4_hqcores,lymphoma_cosmx_large_TMA5_hqcores,cellxgene_census

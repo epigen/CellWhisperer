@@ -1,0 +1,11 @@
+# Increase cell-level CNN size further
+# Base: cnn_embedding_dim=512, cnn_num_layers=4
+# This: cnn_embedding_dim=1024, cnn_num_layers=6
+# Channel progression: 3->64->128->256->512->1024->1024
+wandb: 'trimodal-larger-cnn'
+model:
+  model_config:
+    transcriptome_model_type: mlp  # Must repeat: link_arguments derives data.transcriptome_processor from model_config
+    image_config:
+      cnn_embedding_dim: 1024
+      cnn_num_layers: 6

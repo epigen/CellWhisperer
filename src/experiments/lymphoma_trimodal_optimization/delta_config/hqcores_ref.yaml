@@ -1,0 +1,6 @@
+# Reference: train on unfiltered TMA4,5 + census; eval on filtered TMA2
+# Comparison baseline for the hqcores_train experiment
+wandb: 'trimodal-hqcores-ref'
+data:
+  dataset_names: lymphoma_cosmx_large_TMA2_hqcores,lymphoma_cosmx_large_TMA4,lymphoma_cosmx_large_TMA5,cellxgene_census
+  train_fraction: lymphoma_cosmx_large_TMA4,lymphoma_cosmx_large_TMA5,cellxgene_census
