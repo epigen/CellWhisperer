@@ -3,7 +3,7 @@
 
 from typing import Optional, Tuple, Union, Any, List
 from dataclasses import dataclass
-from cellwhisperer.config import model_path_from_name
+from cellwhisperer.config import config, model_path_from_name
 from cellwhisperer.jointemb.frozen_model import FrozenCachedModel
 from cellwhisperer.jointemb.processing import TranscriptomeTextDualEncoderProcessor
 from cellwhisperer.config import get_path
@@ -687,7 +687,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                 )
 
                 transcriptome_model = UCEModel.from_pretrained(
-                    str(get_path(["uce_paths", "checkpoint"])),
+                    config["uce_paths"]["checkpoint"],  # HuggingFace hub ID, not a local path
                     config=kwargs_transcriptome["config"],
                 )
             elif kwargs_transcriptome["config"]["model_type"] == "mlp":

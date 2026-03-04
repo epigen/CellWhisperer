@@ -1,13 +1,19 @@
 # Project Conventions
 
 ## Environment Management
-- This project uses pixi for dependency management
-- All commands should be executed within the pixi environment
+- This project uses pixi for dependency management locally
+- On Sherlock, use conda (env name: `cellwhisperer`) — pixi fails due to glibc 2.17
+- All commands should be executed within the pixi/conda environment
 
 ## Command Execution
-- Prepend the launcher command `pixi run --no-progress` to anything you wanna run. E.g. for running `python`, run `pixi run --no-progress python`; if you need to `cd` somewhere do `cd` first, e.g. `cd src/datasets/<name> && pixi run --no-progress snakemake` for running `snakemake` in a specific directory.
-  - Exception: If your termnial prompt indicates that the `cellwhisperer` environment is loaded, you can directly use `cellwhisperer` command as well as `python`` with all dependencies/libraries, as well as the `cellwhisperer` command itself.
+- Locally: prepend `pixi run --no-progress` to anything you wanna run. E.g. for running `python`, run `pixi run --no-progress python`; if you need to `cd` somewhere do `cd` first, e.g. `cd src/datasets/<name> && pixi run --no-progress snakemake` for running `snakemake` in a specific directory.
+  - Exception: If your terminal prompt indicates that the `cellwhisperer` environment is loaded, you can directly use `cellwhisperer` command as well as `python` with all dependencies/libraries, as well as the `cellwhisperer` command itself.
+- On Sherlock: use `conda run -n cellwhisperer <command>` or `conda activate cellwhisperer`
 - If you encounter this issue: `/lib64/libgcc_s.so.1: version 'GCC_7.0.0' not found` then `import pyarrow` in the *first* row of the python code/script.
+
+## Sherlock Cluster
+- Use conda (not pixi) on Sherlock — Sherlock has glibc 2.17, pixi packages require >= 2.28
+- Do not run heavy computations on the login node; always submit SLURM jobs
 
 # Coding Conventions
 
