@@ -19,3 +19,6 @@
 [submodule "modules/MUSK"]
 				path = modules/MUSK
 				url = https://github.com/moritzschaefer/MUSK
+[submodule "modules/data_collection_exp"]
+	path = modules/data_collection_exp
+	url = git@github.com:Kuan-Pang/data_collection_exp.git

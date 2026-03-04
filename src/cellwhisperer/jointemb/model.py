@@ -687,8 +687,7 @@ class TranscriptomeTextDualEncoderModel(PreTrainedModel):
                 )
 
                 transcriptome_model = UCEModel.from_pretrained(
-                    transcriptome_model_name_or_path,
-                    get_path(["uce_paths", "tokens"]),
+                    str(get_path(["uce_paths", "checkpoint"])),
                     config=kwargs_transcriptome["config"],
                 )
             elif kwargs_transcriptome["config"]["model_type"] == "mlp":

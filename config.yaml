@@ -200,12 +200,16 @@ model_name_path_map:
 
 
 uce_paths:
+  # New Kuan model paths (KuanP/uce-cosmx-geneset)
+  gene_names_path: resources/UCE/gene_names.txt
+  gene_mapping_path: resources/UCE/all_species_gene_dict.json
+  checkpoint: "KuanP/uce-cosmx-geneset"
+
+  # Legacy paths (old UCE model, kept for reference)
   protein_embeddings_dir: resources/UCE/protein_embeddings
   offset_pkl_path: resources/UCE/species_offsets.pkl
   spec_chrom_csv_path: resources/UCE/species_chrom.csv
-
   tokens: resources/UCE/all_tokens.torch
-
   tmp_pe_idx_path: results/UCE/{name}_pe_idx.torch
   tmp_chroms_path: results/UCE/{name}_chroms.pkl
   tmp_starts_path: results/UCE/{name}_starts.pkl
