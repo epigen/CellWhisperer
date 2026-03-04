@@ -1,0 +1,7 @@
+# Replace MLP transcriptome encoder with UCE model
+# Base: transcriptome_model_type=mlp
+# This: transcriptome_model_type=uce (KuanP/uce-cosmx-geneset, 512-dim embeddings)
+wandb: 'trimodal-uce'
+model:
+  model_config:
+    transcriptome_model_type: uce  # Must repeat: link_arguments derives data.transcriptome_processor from model_config
