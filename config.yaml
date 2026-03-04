@@ -201,8 +201,8 @@ model_name_path_map:
 
 uce_paths:
   # New Kuan model paths (KuanP/uce-cosmx-geneset)
-  gene_names_path: resources/UCE/gene_names.txt
-  gene_mapping_path: resources/UCE/all_species_gene_dict.json
+  gene_names_path: static/UCE/gene_names.txt
+  gene_mapping_path: static/UCE/all_species_gene_dict.json
   checkpoint: "KuanP/uce-cosmx-geneset"
 
   # Legacy paths (old UCE model, kept for reference)
