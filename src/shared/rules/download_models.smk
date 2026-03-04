@@ -40,34 +40,35 @@ rule download_scgpt:
     """
 
 
-rule download_uce:
-    output:
-        PROJECT_DIR / config["model_name_path_map"]["uce4"],
-        PROJECT_DIR / config["model_name_path_map"]["uce33"],
-        directory(PROJECT_DIR / config["uce_paths"]["protein_embeddings_dir"]),
-        PROJECT_DIR / config["uce_paths"]["offset_pkl_path"],
-        PROJECT_DIR / config["uce_paths"]["spec_chrom_csv_path"],
-        PROJECT_DIR / config["uce_paths"]["tokens"],
-    shell:
-        """
-        urls=(
-            "https://figshare.com/ndownloader/files/42706576"
-            "https://figshare.com/ndownloader/files/43423236"
-            "https://figshare.com/ndownloader/files/42715213"
-            "https://figshare.com/ndownloader/files/42706555"
-            "https://figshare.com/ndownloader/files/42706558"
-            "https://figshare.com/ndownloader/files/42706585"
-        )
-        outs=({output})
-        i=0
-        for url in "${{urls[@]}}"; do
-            wget --header="User-Agent: Mozilla/5.0" -O "${{outs[$i]}}" "$url"
-            i=$((i+1))
-        done
-
-        # unpack protein embeddings
-        tar -xzf {output[2]} -C $(dirname {output[2]})
-        """
+# Legacy UCE download rule (deprecated - now using KuanP/uce-cosmx-geneset from HuggingFace)
+# rule download_uce:
+#     output:
+#         PROJECT_DIR / config["model_name_path_map"]["uce4"],
+#         PROJECT_DIR / config["model_name_path_map"]["uce33"],
+#         directory(PROJECT_DIR / config["uce_paths"]["protein_embeddings_dir"]),
+#         PROJECT_DIR / config["uce_paths"]["offset_pkl_path"],
+#         PROJECT_DIR / config["uce_paths"]["spec_chrom_csv_path"],
+#         PROJECT_DIR / config["uce_paths"]["tokens"],
+#     shell:
+#         """
+#         urls=(
+#             "https://figshare.com/ndownloader/files/42706576"
+#             "https://figshare.com/ndownloader/files/43423236"
+#             "https://figshare.com/ndownloader/files/42715213"
+#             "https://figshare.com/ndownloader/files/42706555"
+#             "https://figshare.com/ndownloader/files/42706558"
+#             "https://figshare.com/ndownloader/files/42706585"
+#         )
+#         outs=({output})
+#         i=0
+#         for url in "${{urls[@]}}"; do
+#             wget --header="User-Agent: Mozilla/5.0" -O "${{outs[$i]}}" "$url"
+#             i=$((i+1))
+#         done
+#
+#         # unpack protein embeddings
+#         tar -xzf {output[2]} -C $(dirname {output[2]})
+#         """
 
 rule download_llama33:
     output:

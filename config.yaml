@@ -177,8 +177,9 @@ model_name_path_map:
 
   geneformer: resources/geneformer-12L-30M
   scgpt: resources/scGPT_human
-  uce33: resources/UCE/33layer_model.torch
-  uce4: resources/UCE/4layer_model.torch
+  # Legacy UCE models (deprecated - use 'uce' which loads KuanP/uce-cosmx-geneset)
+  # uce33: resources/UCE/33layer_model.torch
+  # uce4: resources/UCE/4layer_model.torch
 
   biogpt: microsoft/biogpt
   bert: dmis-lab/biobert-v1.1  # Big limitation in our code: `text_model.config.model_type` will always be `bert` because that's the architecture. Thus, the two below are set up for failure -.-. Thus I can only use this one key here
@@ -204,16 +205,6 @@ uce_paths:
   gene_names_path: static/UCE/gene_names.txt
   gene_mapping_path: static/UCE/all_species_gene_dict.json
   checkpoint: "KuanP/uce-cosmx-geneset"
-
-  # Legacy paths (old UCE model, kept for reference)
-  protein_embeddings_dir: resources/UCE/protein_embeddings
-  offset_pkl_path: resources/UCE/species_offsets.pkl
-  spec_chrom_csv_path: resources/UCE/species_chrom.csv
-  tokens: resources/UCE/all_tokens.torch
-  tmp_pe_idx_path: results/UCE/{name}_pe_idx.torch
-  tmp_chroms_path: results/UCE/{name}_chroms.pkl
-  tmp_starts_path: results/UCE/{name}_starts.pkl
-  tmp_feature_path: results/UCE
 
 scfms:
   - "geneformer"
