@@ -17,7 +17,7 @@ rule leiden_umap_embeddings:
 
 rule llava_annotate_clusters:
     """
-    Uses the `leiden` obs column as well as all columns declared in `.uns["cluster_fields"]` to generate clusters
+    Uses the hosted CellWhisperer API to annotate clusters.
 
     Generated CSV has the following columns:
     - cluster_field: obs column name representing clustering (e.g., "leiden")
@@ -26,61 +26,41 @@ rule llava_annotate_clusters:
     """
     input:
         embedding_adata=rules.leiden_umap_embeddings.output.adata,
-        read_count_adata=PROJECT_DIR / config["paths"]["read_count_table"],  # needed for potential uns and obs fields
-        llava_model=ancient(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"].format(llava_dataset="_default", base_model=LLAVA_BASE_MODEL, model="{model}")),
+        read_count_adata=PROJECT_DIR / config["paths"]["read_count_table"],
     output:
         csv=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_annotated_clusters.csv"
-    conda:
-        "llava"
     params:
-        request="<s>[INST] Help me analyzing this sample of cells. Respond in proper English sentences in a tone of uncertainty and focus on the biology of the sample rather than any potential donor or patient information (e.g. do not mention age and sex) [/INST] Sure. I'll respond as you requested, focusing on the sample of cells and avoiding patient or donor information. </s> [INST] Describe the biological state of these cells\n<image> [/INST]",
-        num_beams=10
-    threads: 8  # NOTE increase this without GPU
-    resources:
-        mem_mb=40000,
-        slurm=slurm_gres()
+        api_url=config["cellwhisperer_api_url"] + "/llava-model-worker",
+        model_name="Mistral-7B-Instruct-v0.2__cellwhisperer_clip_v1",
+    conda:
+        "cellwhisperer"
     log:
         notebook="../log/llava_annotate_clusters_{dataset}_{model}.py.ipynb"
     notebook:
-        "../notebooks/llava_annotate_clusters.py.ipynb"
+        "../notebooks/llava_annotate_clusters_api.py.ipynb"
 
-rule gpt4_curate_llava_annotations:
+rule curate_llava_annotations:
     """
-    Output is protected to prevent high GPT-4 cost. Script also fails with more than 200 clusters
-
-    NOTE: requires OpenAI API key
+    Condenses LLaVA cluster descriptions into short (<=8 word) titles.
+    Uses OpenAI GPT-4 if OPENAI_API_KEY is set and valid, otherwise falls back
+    to a local model (Qwen2.5-3B-Instruct) via transformers.
     """
     input:
         cellwhisperer_labels=rules.llava_annotate_clusters.output.csv
     output:
-        curated_labels=protected(PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_curated_annotated_clusters.csv")
+        curated_labels=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_curated_annotated_clusters.csv"
     params:
-        request="Condense this description of a cell sample into a short title (using normal sentence case) of maximum 8 words. Focus on the biological state of the sample, rather than its source or any specific perturbations.",
-        max_num_clusters=200,  # to prevent high GPT-4 cost
-        openai_api_key=os.getenv("OPENAI_API_KEY")
+        request="Condense this description of a cell sample into a short title (using normal sentence case) of maximum 8 words. Focus on the biological state of the sample, rather than its source or any specific perturbations. Generate nothing but the title.",
+        openai_api_key=os.getenv("OPENAI_API_KEY"),
+        local_model="Qwen/Qwen2.5-0.5B-Instruct",
+    resources:
+        mem_mb=16000,
     conda:
         "cellwhisperer"
+    log:
+        notebook="../log/curate_llava_annotations_{dataset}_{model}.py.ipynb"
     notebook:
-        "../notebooks/gpt4_curate_llava_annotations.py.ipynb"
-
-rule mixtral_curate_llava_annotations:
-    """
-    """
-    input:
-        cellwhisperer_labels=rules.llava_annotate_clusters.output.csv,
-        model=PROJECT_DIR / config["model_name_path_map"]["mixtral"],
-    output:
-        curated_labels=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_curated_annotated_clusters_mixtral.csv"
-    params:
-        request="Condense the description of a cell sample below into a short title (using normal sentence case) of maximum 8 words. Focus on the biological state, rather than the source or any specific perturbations of the sample and generate nothing but the title (no quotes or additional information, using sentence case).\n\n",
-    threads: 8  # NOTE increase this without GPU
-    resources:
-        mem_mb=40000,
-        slurm=slurm_gres()
-    conda:
-        "llama_cpp"
-    notebook:
-        "../notebooks/mixtral_curate_llava_annotations.py.ipynb"
+        "../notebooks/curate_llava_annotations.py.ipynb"
 
 
 rule compile_h5ad:
@@ -92,7 +72,7 @@ rule compile_h5ad:
 
     input:
         umap_embedding=rules.leiden_umap_embeddings.output.adata,
-        cellwhisperer_llava_labels=rules.gpt4_curate_llava_annotations.output.curated_labels if "OPENAI_API_KEY" in os.environ else rules.mixtral_curate_llava_annotations.output.curated_labels,
+        cellwhisperer_llava_labels=rules.curate_llava_annotations.output.curated_labels,
         read_count_table=PROJECT_DIR / config["paths"]["read_count_table"],
         processed_data=PROJECT_DIR / config["paths"]["model_processed_dataset"], # rules.process_full_dataset.output.model_outputs,
         enrichr_terms=PROJECT_DIR / config["paths"]["enrichr_terms_json"],

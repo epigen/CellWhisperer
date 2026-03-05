@@ -13,7 +13,7 @@ anndata = "0.10.2.*"
 langchain = "0.0.314.*"
 ipdb = "0.13.13.*"
 ipykernel = "6.25.2.*"
-transformers = "4.34.1.*"
+transformers = ">=4.45"
 pytorch = "2.7.*"
 torchvision = "0.22.*"  # Add this line
 safetensors = "0.5.2.*"
@@ -37,6 +37,7 @@ pynndescent = "0.5.11.*"
 biopython = "1.83.*"
 httpcore = "1.0.7.*"
 gseapy = ">=1.1.11,<2"
+accelerate = ">=1.13.0,<2"
 
 [pypi-dependencies]
 # torchvision = "==0.*"
