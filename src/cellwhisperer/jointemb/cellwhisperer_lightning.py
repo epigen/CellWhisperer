@@ -100,7 +100,15 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
         NOTE: we only need to do this explicit sub-model loading, if one of the models is frozen (which is usually the case)
         """
-        model = super().load_from_checkpoint(checkpoint_path, **kwargs)
+        # PyTorch >=2.6 defaults to weights_only=True which breaks on our checkpoints
+        # containing custom config classes. We trust our own checkpoints.
+        import torch
+        _orig_load = torch.load
+        torch.load = lambda *a, **kw: _orig_load(*a, **{**kw, "weights_only": kw.get("weights_only", False)})
+        try:
+            model = super().load_from_checkpoint(checkpoint_path, **kwargs)
+        finally:
+            torch.load = _orig_load
         # Park state_dict
         state_dict = model.state_dict().copy()
 

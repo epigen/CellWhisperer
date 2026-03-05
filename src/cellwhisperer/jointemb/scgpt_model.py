@@ -537,7 +537,7 @@ class ScGPTModel(PreTrainedModel):
         # A scgpt function:
         outer_scgpt_model.scgpt_model = load_pretrained(
             outer_scgpt_model.scgpt_model,
-            torch.load(pretrained_model_path),
+            torch.load(pretrained_model_path, weights_only=False),
             verbose=False,
         )
 
