@@ -105,55 +105,101 @@ class UNIProcessor(ProcessorMixin):
             )
 
         # Build named views: context (224x224) and cell (56x56)
-        # Parallelized with threads (GIL released during image I/O and C-backed transforms)
+        # Parallelized via DataLoader with num_workers (fork-based multiprocessing
+        # gives true parallelism, unlike threads which are GIL-bound for PIL ops)
 
         views = UNIConfig().views
         ctx_diameter = views["context"]
         cell_diameter = views["cell"]
 
-        def _extract_one(args):
-            obs_index, x, y = args
+        # Convert image to numpy array for fork-safe sharing across workers
+        if isinstance(image, openslide.OpenSlide):
+            # OpenSlide can't be forked; read full image at level 0
+            # For very large slides this may be too much memory; fall back to sequential
             try:
-                tile_ctx = self._crop_tile(image, x, y, ctx_diameter)
-                t_ctx = self.transform_context(Image.fromarray(tile_ctx))
-            except (IndexError, ValueError) as e:
-                logger.error(
-                    f"Error processing context tile for barcode {obs_index} at ({x}, {y}): {e}"
-                )
-                t_ctx = torch.zeros((3, 224, 224), dtype=torch.float32)
-            try:
-                tile_cell = self._crop_tile(image, x, y, cell_diameter)
-                t_cell = self.transform_cell(Image.fromarray(tile_cell))
-            except (IndexError, ValueError) as e:
-                logger.error(
-                    f"Error processing cell tile for barcode {obs_index} at ({x}, {y}): {e}"
-                )
-                t_cell = torch.zeros((3, 56, 56), dtype=torch.float32)
-            return t_ctx, t_cell
+                img_w, img_h = image.dimensions
+                image_np = np.array(image.read_region((0, 0), 0, (img_w, img_h)).convert("RGB"))
+            except Exception:
+                logger.warning("Could not convert OpenSlide to numpy; falling back to sequential extraction")
+                image_np = None
+        elif isinstance(image, Image.Image):
+            image_np = np.array(image)
+        elif isinstance(image, np.ndarray):
+            image_np = image
+        else:
+            image_np = None
 
-        from concurrent.futures import ThreadPoolExecutor, as_completed
+        from torch.utils.data import Dataset as TorchDataset, DataLoader
 
-        work_items = list(zip(adata.obs_names, x_pixel, y_pixel))
-        n_workers = min(8, len(work_items))
+        class _PatchDataset(TorchDataset):
+            def __init__(self, obs_names, x_coords, y_coords, image_np, crop_fn, transform_ctx, transform_cell, ctx_diam, cell_diam):
+                self.obs_names = obs_names
+                self.x_coords = x_coords
+                self.y_coords = y_coords
+                self.image_np = image_np
+                self.crop_fn = crop_fn
+                self.transform_ctx = transform_ctx
+                self.transform_cell = transform_cell
+                self.ctx_diam = ctx_diam
+                self.cell_diam = cell_diam
 
-        X_context = [None] * len(work_items)
-        X_cell = [None] * len(work_items)
+            def __len__(self):
+                return len(self.x_coords)
 
-        with ThreadPoolExecutor(max_workers=n_workers) as pool:
-            futures = {pool.submit(_extract_one, item): i for i, item in enumerate(work_items)}
-            for future in tqdm(
-                as_completed(futures),
-                desc="Extracting UNI patches",
-                total=len(work_items),
+            def __getitem__(self, idx):
+                x, y = int(self.x_coords[idx]), int(self.y_coords[idx])
+                try:
+                    tile_ctx = self.crop_fn(self.image_np, x, y, self.ctx_diam)
+                    t_ctx = self.transform_ctx(Image.fromarray(tile_ctx))
+                except (IndexError, ValueError):
+                    t_ctx = torch.zeros((3, 224, 224), dtype=torch.float32)
+                try:
+                    tile_cell = self.crop_fn(self.image_np, x, y, self.cell_diam)
+                    t_cell = self.transform_cell(Image.fromarray(tile_cell))
+                except (IndexError, ValueError):
+                    t_cell = torch.zeros((3, 56, 56), dtype=torch.float32)
+                return t_ctx, t_cell
+
+        if image_np is not None:
+            n_workers = min(8, len(x_pixel))
+            patch_ds = _PatchDataset(
+                adata.obs_names, x_pixel.values, y_pixel.values, image_np,
+                self._crop_tile, self.transform_context, self.transform_cell,
+                ctx_diameter, cell_diameter,
+            )
+            loader = DataLoader(patch_ds, batch_size=256, shuffle=False, num_workers=n_workers)
+            X_context = []
+            X_cell = []
+            for batch_ctx, batch_cell in tqdm(loader, desc="Extracting UNI patches"):
+                X_context.append(batch_ctx)
+                X_cell.append(batch_cell)
+            patches_context = torch.cat(X_context, dim=0)
+            patches_cell = torch.cat(X_cell, dim=0)
+        else:
+            # Fallback: sequential extraction (e.g. for OpenSlide that couldn't be converted)
+            X_context = []
+            X_cell = []
+            for i, (obs_index, x, y) in tqdm(
+                enumerate(zip(adata.obs_names, x_pixel, y_pixel)),
+                desc="Extracting UNI patches (sequential)",
+                total=len(adata.obs),
             ):
-                i = futures[future]
-                t_ctx, t_cell = future.result()
-                X_context[i] = t_ctx
-                X_cell[i] = t_cell
-
-        # Create tensors only for enabled models
-        patches_context = torch.stack(X_context, dim=0)
-        patches_cell = torch.stack(X_cell, dim=0)
+                try:
+                    tile_ctx = self._crop_tile(image, x, y, ctx_diameter)
+                    t_ctx = self.transform_context(Image.fromarray(tile_ctx))
+                except (IndexError, ValueError) as e:
+                    logger.error(f"Error processing context tile for barcode {obs_index} at ({x}, {y}): {e}")
+                    t_ctx = torch.zeros((3, 224, 224), dtype=torch.float32)
+                try:
+                    tile_cell = self._crop_tile(image, x, y, cell_diameter)
+                    t_cell = self.transform_cell(Image.fromarray(tile_cell))
+                except (IndexError, ValueError) as e:
+                    logger.error(f"Error processing cell tile for barcode {obs_index} at ({x}, {y}): {e}")
+                    t_cell = torch.zeros((3, 56, 56), dtype=torch.float32)
+                X_context.append(t_ctx)
+                X_cell.append(t_cell)
+            patches_context = torch.stack(X_context, dim=0)
+            patches_cell = torch.stack(X_cell, dim=0)
 
         if return_tensors == "pt":
             return {"patches_ctx": patches_context, "patches_cell": patches_cell}
@@ -171,8 +217,8 @@ class UNIProcessor(ProcessorMixin):
     def model_input_names(self):
         return ["patches_ctx", "patches_cell"]
 
+    @staticmethod
     def _crop_tile(
-        self,
         image: Union[Image.Image, openslide.OpenSlide],
         x_pixel: int,
         y_pixel: int,
