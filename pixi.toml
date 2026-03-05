@@ -1,0 +1,70 @@
+[workspace]
+authors = ["Moritz Schaefer <mail@moritzs.de>"]
+channels = ["conda-forge", "pytorch", "bioconda", "nodefaults"]
+name = "cellwhisperer-aarch64"
+platforms = ["linux-aarch64", "linux-64", "osx-arm64"]
+version = "0.1.0"
+
+
+[dependencies]
+gfortran = "*"
+python = "3.10.*"
+anndata = "0.10.2.*"
+langchain = "0.0.314.*"
+ipdb = "0.13.13.*"
+ipykernel = "6.25.2.*"
+transformers = "4.34.1.*"
+pytorch = "2.7.*"
+torchvision = "0.22.*"  # Add this line
+safetensors = "0.5.2.*"
+lightning = "2.1.0.*"
+scanpy = "1.9.5.*"
+scipy = "1.12.0.*"
+notebook = "7.0.8.*"
+multiprocess = "0.70.14.*"
+numpy = "1.23.5.*"
+nodejs = "22.6.0.*"
+mscorefonts = { version = "==0.0.1", build = "3" }
+snakemake = "7.32.4.*"
+torchmetrics = "1.2.0.*"
+pip = "23.3.1.*"
+umap-learn = "0.5.3.*"
+datasets = "2.12.0.*"
+typing-extensions = "4.11.0.*"
+unzip = "6.0.*"
+ninja = "1.11.1.*"
+pynndescent = "0.5.11.*"
+biopython = "1.83.*"
+httpcore = "1.0.7.*"
+
+[pypi-dependencies]
+# torchvision = "==0.*"
+# torchaudio = "==2.1.0"
+louvain = "*"
+timm = "==0.9.8"
+open-clip-torch = "==2.32.0"
+fairscale = "==0.4.13"
+backports-tarfile = "==1.2.0"
+igraph = "==0.11.4"
+leidenalg = "==0.10.2"
+openai = "==1.55.3"
+anthropic = "==0.45.2"
+loompy = "==3.0.7"
+tdigest = "==0.5.2.2"
+plotly = "==5.20.0"
+kaleido = "==0.2.1"
+# networkx = "==2.6.3"
+wandb = "==0.*"
+jsonargparse = { version = "==4.27.0", extras = ["signatures"] }
+orbax = "==0.1.7"
+scvi-tools = ">=1.0.0"
+scikit-misc = ">=0.2.0"
+cell-gears = "==0.0.2"
+pybiomart = "==0.2.0"
+matplotlib-venn = "==0.11.10"
+openslide-python = "==1.4.2"
+openslide-bin = "==4.0.0.8"
+scIB = ">=1.1.5"
+uni = { git = "https://github.com/mahmoodlab/UNI.git", rev = "42715efc11722a496e0a67f3369505a8f277206c" }
+cellwhisperer = { path = ".", editable = true }
+cellxgene-cellwhisperer = { path = "modules/cellxgene", editable = true }
