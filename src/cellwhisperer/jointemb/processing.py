@@ -26,7 +26,8 @@ from transformers import AutoTokenizer
 from transformers.processing_utils import ProcessorMixin
 from transformers.tokenization_utils_base import BatchEncoding
 from .geneformer_model import GeneformerTranscriptomeProcessor
-from .scgpt_model import ScGPTTranscriptomeProcessor
+# Lazy import when needed to avoid scgpt dependency
+# from .scgpt_model import ScGPTTranscriptomeProcessor
 from .uce_model import UCETranscriptomeProcessor
 
 
@@ -64,6 +65,8 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
                 **transcriptome_kwargs,
             )
         elif transcriptome_processor == "scgpt":
+            # Lazy import to avoid requiring scgpt unless selected
+            from .scgpt_model import ScGPTTranscriptomeProcessor
             transcriptome_processor = ScGPTTranscriptomeProcessor(
                 nproc=nproc,
                 **transcriptome_kwargs,
@@ -153,17 +156,18 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
 
         if text is not None and transcriptomes is not None:
             # NOTE this block could be refactored
-            if type(self.transcriptome_processor) == GeneformerTranscriptomeProcessor:
+            proc_name = self.transcriptome_processor.__class__.__name__
+            if proc_name == "GeneformerTranscriptomeProcessor":
                 encoding["expression_tokens"] = transcriptome_processor_results[
                     "expression_tokens"
                 ]
                 encoding["expression_token_lengths"] = transcriptome_processor_results[
                     "expression_token_lengths"
                 ]
-            elif type(self.transcriptome_processor) == ScGPTTranscriptomeProcessor:
+            elif proc_name == "ScGPTTranscriptomeProcessor":
                 for key in transcriptome_processor_results.keys():
                     encoding[key] = transcriptome_processor_results[key]
-            elif type(self.transcriptome_processor) == UCETranscriptomeProcessor:
+            elif proc_name == "UCETranscriptomeProcessor":
                 for key in transcriptome_processor_results.keys():
                     encoding[key] = transcriptome_processor_results[key]
             else:
