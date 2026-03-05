@@ -105,38 +105,51 @@ class UNIProcessor(ProcessorMixin):
             )
 
         # Build named views: context (224x224) and cell (56x56)
+        # Parallelized with threads (GIL released during image I/O and C-backed transforms)
 
-        X_context = []
-        X_cell = []
+        views = UNIConfig().views
+        ctx_diameter = views["context"]
+        cell_diameter = views["cell"]
 
-        for i, (obs_index, x, y) in tqdm(
-            enumerate(zip(adata.obs_names, x_pixel, y_pixel)),
-            desc="Extracting UNI patches",
-            total=len(adata.obs),
-        ):
-            # Context view (only if context model is enabled)
+        def _extract_one(args):
+            obs_index, x, y = args
             try:
-                tile_ctx = self._crop_tile(image, x, y, UNIConfig().views["context"])
+                tile_ctx = self._crop_tile(image, x, y, ctx_diameter)
                 t_ctx = self.transform_context(Image.fromarray(tile_ctx))
             except (IndexError, ValueError) as e:
                 logger.error(
                     f"Error processing context tile for barcode {obs_index} at ({x}, {y}): {e}"
                 )
                 t_ctx = torch.zeros((3, 224, 224), dtype=torch.float32)
-            X_context.append(t_ctx)
-
-            # Cell view (only if cell level model is enabled)
-            # Note: Only the context view implements physical scale anchoring via crop size.
-            #       The cell view uses a fixed 56x56 pixel crop without physical anchoring.
             try:
-                tile_cell = self._crop_tile(image, x, y, UNIConfig().views["cell"])
+                tile_cell = self._crop_tile(image, x, y, cell_diameter)
                 t_cell = self.transform_cell(Image.fromarray(tile_cell))
             except (IndexError, ValueError) as e:
                 logger.error(
                     f"Error processing cell tile for barcode {obs_index} at ({x}, {y}): {e}"
                 )
                 t_cell = torch.zeros((3, 56, 56), dtype=torch.float32)
-            X_cell.append(t_cell)
+            return t_ctx, t_cell
+
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        work_items = list(zip(adata.obs_names, x_pixel, y_pixel))
+        n_workers = min(8, len(work_items))
+
+        X_context = [None] * len(work_items)
+        X_cell = [None] * len(work_items)
+
+        with ThreadPoolExecutor(max_workers=n_workers) as pool:
+            futures = {pool.submit(_extract_one, item): i for i, item in enumerate(work_items)}
+            for future in tqdm(
+                as_completed(futures),
+                desc="Extracting UNI patches",
+                total=len(work_items),
+            ):
+                i = futures[future]
+                t_ctx, t_cell = future.result()
+                X_context[i] = t_ctx
+                X_cell[i] = t_cell
 
         # Create tensors only for enabled models
         patches_context = torch.stack(X_context, dim=0)
