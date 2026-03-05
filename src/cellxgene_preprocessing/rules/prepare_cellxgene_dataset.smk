@@ -15,6 +15,8 @@ rule leiden_umap_embeddings:
     notebook:
         "../notebooks/leiden_umap_embeddings.py.ipynb"
 
+ruleorder: llava_annotate_clusters > llava_annotate_clusters_local
+
 rule llava_annotate_clusters:
     """
     Uses the hosted CellWhisperer API to annotate clusters.
@@ -38,6 +40,34 @@ rule llava_annotate_clusters:
         notebook="../log/llava_annotate_clusters_{dataset}_{model}.py.ipynb"
     notebook:
         "../notebooks/llava_annotate_clusters_api.py.ipynb"
+
+rule llava_annotate_clusters_local:
+    """
+    Runs the finetuned LLaVA model locally to annotate clusters.
+    Requires the `llava` conda env and a GPU.
+
+    To use this instead of the API version:
+        snakemake --forcerun llava_annotate_clusters_local --target-jobs "llava_annotate_clusters_local:dataset=immgen,model=cellwhisperer_clip_v1"
+    """
+    input:
+        embedding_adata=rules.leiden_umap_embeddings.output.adata,
+        read_count_adata=PROJECT_DIR / config["paths"]["read_count_table"],
+        llava_model=ancient(PROJECT_DIR / config["paths"]["llava"]["finetuned_model_dir"].format(llava_dataset="_default", base_model=LLAVA_BASE_MODEL, model="{model}")),
+    output:
+        csv=PROJECT_DIR / "results" / "{dataset}" / "{model}" / "llava_annotated_clusters.csv"
+    params:
+        request='<s>[INST] Help me analyzing this sample of cells. Respond in proper English sentences in a tone of uncertainty and focus on the biology of the sample rather than any potential donor or patient information (e.g. do not mention age and sex) [/INST] Sure. I\'ll respond as you requested, focusing on the sample of cells and avoiding patient or donor information. </s> [INST] Describe the biological state of these cells\n<image> [/INST]',
+        num_beams=10,
+    conda:
+        "llava"
+    threads: 8
+    resources:
+        mem_mb=40000,
+        slurm=slurm_gres()
+    log:
+        notebook="../log/llava_annotate_clusters_{dataset}_{model}.py.ipynb"
+    notebook:
+        "../notebooks/llava_annotate_clusters.py.ipynb"
 
 rule curate_llava_annotations:
     """
