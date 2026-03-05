@@ -36,6 +36,7 @@ ninja = "1.11.1.*"
 pynndescent = "0.5.11.*"
 biopython = "1.83.*"
 httpcore = "1.0.7.*"
+gseapy = ">=1.1.11,<2"
 
 [pypi-dependencies]
 # torchvision = "==0.*"
