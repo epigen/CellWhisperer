@@ -135,19 +135,31 @@ Run the preprocessing pipeline to generate embeddings and prepare the dataset fo
 
 ```bash
 cd <PROJECT_ROOT>/src/cellxgene_preprocessing
+
+# With pixi:
+pixi run snakemake --cores 8 --config 'datasets=["<dataset_name>"]'
+
+# With conda:
 snakemake --use-conda --cores 8 --config 'datasets=["<dataset_name>"]'
 ```
 
 **Important notes:**
 - **GPU acceleration:** Processing is considerably faster with a GPU (4GB VRAM sufficient). Without GPU, increase CPU cores (e.g., `--cores 32`). To specify which GPU to use, set the `CUDA_VISIBLE_DEVICES` environment variable (e.g., `export CUDA_VISIBLE_DEVICES=0` for the first GPU).
 - **Memory requirements:** Allow approximately 2× the dataset file size in RAM.
-- **Cluster captions:** The pipeline uses GPT-4 API or a locally hosted Mixtral model to summarize CellWhisperer descriptions into brief cluster captions. To use GPT-4 (recommended, cost is low), set: `export OPENAI_API_KEY=sk-your-key`. Otherwise, Mixtral will be used (requires GPU with 40GB VRAM).
+- **Cluster annotation:** The pipeline uses the hosted CellWhisperer API to generate cluster descriptions (no local GPU needed).
+- **Cluster captions:** Descriptions are condensed into short titles using GPT-4 if `OPENAI_API_KEY` is set, otherwise a lightweight local model (Qwen2.5-0.5B-Instruct, ~1GB) is used automatically.
 
 ### Step 3: Launch CellWhisperer
 
 Start the web interface with your processed dataset:
 
 ```bash
+# With pixi:
+pixi run cellxgene launch -p 5005 --host 0.0.0.0 --max-category-items 500 \
+  --var-names gene_name \
+  <PROJECT_ROOT>/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad
+
+# With conda:
 conda activate cellwhisperer
 cellxgene launch -p 5005 --host 0.0.0.0 --max-category-items 500 \
   --var-names gene_name \
