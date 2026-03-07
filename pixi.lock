@@ -572,7 +572,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/df/e4/3a56b85846102b67af6937410f9f8dc314fc60529d6891fc003611fc3796/timm-0.9.8-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fb/12/5911ae3eeec47800503a238d971e51722ccea5feb8569b735184d5fcdbc0/toolz-1.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/11/db/e7474719e90062df673057e865f94f67da2d0b4f671d8051020c74962c77/typeshed_client-2.8.2-py3-none-any.whl
-      - pypi: git+https://github.com/mahmoodlab/UNI.git?rev=42715efc11722a496e0a67f3369505a8f277206c#42715efc11722a496e0a67f3369505a8f277206c
       - pypi: https://files.pythonhosted.org/packages/bc/d9/5ec15501b675f7bc07c5d16aa70d8d778b12375686b6efd47656efdc67cd/url_normalize-2.2.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/5c/ee/9a8bb9a39cc1f09c3060456cc79565110226dc4099a719af5c63432da21d/wandb-0.23.1-py3-none-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/2f/f9/9e082990c2585c744734f85bec79b5dae5df9c974ffee58fe421652c8e91/werkzeug-3.1.4-py3-none-any.whl
@@ -1144,7 +1143,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/df/e4/3a56b85846102b67af6937410f9f8dc314fc60529d6891fc003611fc3796/timm-0.9.8-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fb/12/5911ae3eeec47800503a238d971e51722ccea5feb8569b735184d5fcdbc0/toolz-1.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/11/db/e7474719e90062df673057e865f94f67da2d0b4f671d8051020c74962c77/typeshed_client-2.8.2-py3-none-any.whl
-      - pypi: git+https://github.com/mahmoodlab/UNI.git?rev=42715efc11722a496e0a67f3369505a8f277206c#42715efc11722a496e0a67f3369505a8f277206c
       - pypi: https://files.pythonhosted.org/packages/bc/d9/5ec15501b675f7bc07c5d16aa70d8d778b12375686b6efd47656efdc67cd/url_normalize-2.2.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/96/b6/fd465827c14c64d056d30b4c9fcf4dac889a6969dba64489a88fc4ffa333/wandb-0.23.1-py3-none-manylinux_2_28_aarch64.whl
       - pypi: https://files.pythonhosted.org/packages/2f/f9/9e082990c2585c744734f85bec79b5dae5df9c974ffee58fe421652c8e91/werkzeug-3.1.4-py3-none-any.whl
@@ -1714,7 +1712,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/df/e4/3a56b85846102b67af6937410f9f8dc314fc60529d6891fc003611fc3796/timm-0.9.8-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fb/12/5911ae3eeec47800503a238d971e51722ccea5feb8569b735184d5fcdbc0/toolz-1.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/11/db/e7474719e90062df673057e865f94f67da2d0b4f671d8051020c74962c77/typeshed_client-2.8.2-py3-none-any.whl
-      - pypi: git+https://github.com/mahmoodlab/UNI.git?rev=42715efc11722a496e0a67f3369505a8f277206c#42715efc11722a496e0a67f3369505a8f277206c
       - pypi: https://files.pythonhosted.org/packages/bc/d9/5ec15501b675f7bc07c5d16aa70d8d778b12375686b6efd47656efdc67cd/url_normalize-2.2.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/0b/c3d7053dfd93fd259a63c7818d9c4ac2ba0642ff8dc8db98662ea0cf9cc0/wandb-0.23.1-py3-none-macosx_12_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/2f/f9/9e082990c2585c744734f85bec79b5dae5df9c974ffee58fe421652c8e91/werkzeug-3.1.4-py3-none-any.whl
@@ -16036,18 +16033,6 @@ packages:
   - pkg:pypi/umap-learn?source=hash-mapping
   size: 135687
   timestamp: 1684537829928
-- pypi: git+https://github.com/mahmoodlab/UNI.git?rev=42715efc11722a496e0a67f3369505a8f277206c#42715efc11722a496e0a67f3369505a8f277206c
-  name: uni
-  version: 0.1.0
-  requires_dist:
-  - torch>=2.0.1
-  - torchvision
-  - timm==0.9.8
-  - numpy<2
-  - pandas
-  - scikit-learn
-  - tqdm
-  - transformers
 - conda: https://conda.anaconda.org/conda-forge/linux-64/unicodedata2-17.0.0-py310h7c4b9e2_1.conda
   sha256: cffe509e0294586fbcee9cbb762d6144636c5d4a19defffda9f9c726a84b55e7
   md5: b1ccdb989be682ab0dd430c1c15d5012
