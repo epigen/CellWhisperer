@@ -20,7 +20,7 @@ Installing a local copy of CellWhisperer allows you to analyze your own datasets
 
 ### Option A: Pixi (recommended)
 
-[Pixi](https://pixi.sh) provides a fast, reproducible setup with a single command.
+[Pixi](https://pixi.sh), very similarly to `uv`, provides a fast, reproducible setup with a single command.
 
 1. **Clone the repository** with all submodules:
    ```bash
@@ -28,22 +28,9 @@ Installing a local copy of CellWhisperer allows you to analyze your own datasets
    cd cellwhisperer
    ```
 
-2. **Install and run:**
+2. **Install:**
    ```bash
-   pixi install
-   pixi run cellxgene --version  # verify installation
-   ```
-
-3. **Build the web frontend** (requires [Node.js](https://nodejs.org)):
-   ```bash
-   cd modules/cellxgene/client
-   PUPPETEER_SKIP_DOWNLOAD=true npm ci
-   npm run build configuration/webpack/webpack.config.prod.js
-   cd ..
-   mkdir -p server/common/web/{static/assets,templates}
-   cp client/build/index.html server/common/web/templates/
-   cp -r client/build/static server/common/web/
-   cp client/build/csp-hashes.json server/common/web/
+   bash envs/setup_pixi.sh
    ```
 
 All dependencies (including snakemake and cellxgene) are resolved automatically from `pixi.toml`. Use `pixi run` or `pixi shell` to execute commands in the environment.
