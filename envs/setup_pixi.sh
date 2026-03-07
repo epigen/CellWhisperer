@@ -25,4 +25,4 @@ echo "==> Step 3: Verifying installation..."
 pixi run cellxgene --version
 
 echo ""
-echo "You are all set! Run 'pixi run cellxgene launch <your_dataset.h5ad>' to start."
+echo "You are all set! Follow the README to prepare your dataset and to start the CellWhisperer webapp."
