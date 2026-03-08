@@ -16,6 +16,8 @@ from torchvision import transforms
 import timm
 import os
 
+from torch.utils.data import Dataset as TorchDataset, DataLoader
+
 from cellwhisperer.config import config
 from .cell_model import CellLevelModel
 
@@ -26,10 +28,42 @@ PAD_TOKEN_ID = 0
 MODEL_INPUT_SIZE = 2048
 
 
+class _PatchDataset(TorchDataset):
+    """Dataset for parallel UNI patch extraction. Defined at module level for picklability."""
+    def __init__(self, obs_names, x_coords, y_coords, image_np, crop_fn, transform_ctx, transform_cell, ctx_diam, cell_diam):
+        self.obs_names = obs_names
+        self.x_coords = x_coords
+        self.y_coords = y_coords
+        self.image_np = image_np
+        self.crop_fn = crop_fn
+        self.transform_ctx = transform_ctx
+        self.transform_cell = transform_cell
+        self.ctx_diam = ctx_diam
+        self.cell_diam = cell_diam
+
+    def __len__(self):
+        return len(self.x_coords)
+
+    def __getitem__(self, idx):
+        x, y = int(self.x_coords[idx]), int(self.y_coords[idx])
+        try:
+            tile_ctx = self.crop_fn(self.image_np, x, y, self.ctx_diam)
+            t_ctx = self.transform_ctx(Image.fromarray(tile_ctx))
+        except (IndexError, ValueError):
+            t_ctx = torch.zeros((3, 224, 224), dtype=torch.float32)
+        try:
+            tile_cell = self.crop_fn(self.image_np, x, y, self.cell_diam)
+            t_cell = self.transform_cell(Image.fromarray(tile_cell))
+        except (IndexError, ValueError):
+            t_cell = torch.zeros((3, 56, 56), dtype=torch.float32)
+        return t_ctx, t_cell
+
+
 class UNIProcessor(ProcessorMixin):
     attributes = []
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, nproc=8, **kwargs):
+        self.nproc = nproc
         # Get H&E configuration defaults (use visium_resolution as default)
         he_config = config["he_configs"]["visium_resolution"]
         self.fallback_spot_diameter_fullres = he_config.get(
@@ -129,39 +163,8 @@ class UNIProcessor(ProcessorMixin):
         else:
             image_np = None
 
-        from torch.utils.data import Dataset as TorchDataset, DataLoader
-
-        class _PatchDataset(TorchDataset):
-            def __init__(self, obs_names, x_coords, y_coords, image_np, crop_fn, transform_ctx, transform_cell, ctx_diam, cell_diam):
-                self.obs_names = obs_names
-                self.x_coords = x_coords
-                self.y_coords = y_coords
-                self.image_np = image_np
-                self.crop_fn = crop_fn
-                self.transform_ctx = transform_ctx
-                self.transform_cell = transform_cell
-                self.ctx_diam = ctx_diam
-                self.cell_diam = cell_diam
-
-            def __len__(self):
-                return len(self.x_coords)
-
-            def __getitem__(self, idx):
-                x, y = int(self.x_coords[idx]), int(self.y_coords[idx])
-                try:
-                    tile_ctx = self.crop_fn(self.image_np, x, y, self.ctx_diam)
-                    t_ctx = self.transform_ctx(Image.fromarray(tile_ctx))
-                except (IndexError, ValueError):
-                    t_ctx = torch.zeros((3, 224, 224), dtype=torch.float32)
-                try:
-                    tile_cell = self.crop_fn(self.image_np, x, y, self.cell_diam)
-                    t_cell = self.transform_cell(Image.fromarray(tile_cell))
-                except (IndexError, ValueError):
-                    t_cell = torch.zeros((3, 56, 56), dtype=torch.float32)
-                return t_ctx, t_cell
-
         if image_np is not None:
-            n_workers = min(8, len(x_pixel))
+            n_workers = min(self.nproc, len(x_pixel))
             patch_ds = _PatchDataset(
                 adata.obs_names, x_pixel.values, y_pixel.values, image_np,
                 self._crop_tile, self.transform_context, self.transform_cell,

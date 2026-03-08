@@ -66,7 +66,11 @@ class _CellDataset(torch.utils.data.Dataset):
 
     def _align_genes(self, species: str):
         """Align adata genes to the UCE vocabulary."""
-        h5ad_gene_names = list(self.adata.var_names)
+        # Use gene_name column if available (for datasets like cellxgene_census with Ensembl IDs as index)
+        if "gene_name" in self.adata.var.columns:
+            h5ad_gene_names = list(self.adata.var["gene_name"].astype(str))
+        else:
+            h5ad_gene_names = list(self.adata.var_names)
         target_gene_to_idx = {g: i for i, g in enumerate(self.gene_names)}
         mapping = self.gene_mapping
 
@@ -179,16 +183,20 @@ class UCETranscriptomeProcessor(ProcessorMixin):
         collator = UCEDataCollator()
         dataloader = DataLoader(
             dataset,
-            batch_size=len(dataset),
+            batch_size=1024,
             shuffle=False,
             collate_fn=collator,
             num_workers=min(self.nproc, len(dataset)),
         )
-        batch = next(iter(dataloader))
+        all_input_ids = []
+        all_attention_mask = []
+        for batch in dataloader:
+            all_input_ids.append(batch["input_ids"])
+            all_attention_mask.append(batch["attention_mask"])
 
         return {
-            "expression_expr": batch["input_ids"],
-            "expression_key_padding_mask": batch["attention_mask"],
+            "expression_expr": torch.cat(all_input_ids, dim=0),
+            "expression_key_padding_mask": torch.cat(all_attention_mask, dim=0),
         }
 
     @property

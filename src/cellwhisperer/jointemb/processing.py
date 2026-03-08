@@ -100,6 +100,7 @@ class TranscriptomeTextDualEncoderProcessor(ProcessorMixin):
             from .uni_model import UNIProcessor
 
             image_processor = UNIProcessor(
+                nproc=nproc,
                 **transcriptome_kwargs,
             )
         elif isinstance(image_processor, str) and (

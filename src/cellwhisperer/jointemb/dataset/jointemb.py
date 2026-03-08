@@ -369,6 +369,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
             self.transcriptome_processor,
             tokenizer_obj,
             self.image_processor,
+            nproc=self.nproc,
         )
 
     def _compute_hash(self, i: Optional[str] = None):
