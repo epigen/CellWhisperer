@@ -298,7 +298,7 @@ class JointEmbedDataModule(pl.LightningDataModule):
         self.train_datasets = []
         self.val_datasets = []
         for dataset_name in self.dataset_names:
-            (inputs, replicate_inputs) = torch.load(self._processed_path(dataset_name))
+            (inputs, replicate_inputs) = torch.load(self._processed_path(dataset_name), weights_only=False)
 
             if isinstance(self.train_fraction, (int, float)):
                 # Assuming you want to split the data into train and val for simplicity

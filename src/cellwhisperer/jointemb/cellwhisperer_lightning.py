@@ -100,7 +100,41 @@ class TranscriptomeTextDualEncoderLightning(LightningModule):
 
         NOTE: we only need to do this explicit sub-model loading, if one of the models is frozen (which is usually the case)
         """
-        model = super().load_from_checkpoint(checkpoint_path, **kwargs)
+        # PyTorch >=2.6 defaults to weights_only=True which breaks on our checkpoints
+        # containing custom config classes. We trust our own checkpoints.
+        import torch
+        _orig_load = torch.load
+
+        def _fix_legacy_config(cfg):
+            """Fix config objects pickled with older transformers versions."""
+            from transformers.configuration_utils import PretrainedConfig
+            if not isinstance(cfg, PretrainedConfig):
+                return
+            # Create a fresh default config of the same type to get all default attrs
+            defaults = PretrainedConfig()
+            for attr in ["_attn_implementation_internal", "dtype"]:
+                if not hasattr(cfg, attr):
+                    setattr(cfg, attr, getattr(defaults, attr, None))
+
+        def _patched_load(*a, **kw):
+            result = _orig_load(*a, **{**kw, "weights_only": kw.get("weights_only", False)})
+            # Fix configs pickled with older transformers that lack newer attributes
+            if isinstance(result, dict) and "hyper_parameters" in result:
+                hp = result["hyper_parameters"]
+                if "model_config" in hp:
+                    mc = hp["model_config"]
+                    _fix_legacy_config(mc)
+                    for attr_name in ["transcriptome_config", "text_config"]:
+                        sub_cfg = getattr(mc, attr_name, None)
+                        if sub_cfg is not None:
+                            _fix_legacy_config(sub_cfg)
+            return result
+
+        torch.load = _patched_load
+        try:
+            model = super().load_from_checkpoint(checkpoint_path, **kwargs)
+        finally:
+            torch.load = _orig_load
         # Park state_dict
         state_dict = model.state_dict().copy()
 

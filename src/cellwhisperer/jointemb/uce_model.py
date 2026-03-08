@@ -297,11 +297,11 @@ class UCEModel(PreTrainedModel):
 
         # Load model state dict
         outer_uce_model.uce_model.load_state_dict(
-            torch.load(pretrained_model_path, map_location="cpu"), strict=True
+            torch.load(pretrained_model_path, map_location="cpu", weights_only=False), strict=True
         )
 
         # Load in the protein embeddings
-        all_pe = torch.load(token_file)
+        all_pe = torch.load(token_file, weights_only=False)
         if all_pe.shape[0] == 143574:
             torch.manual_seed(23)
             CHROM_TENSORS = torch.normal(mean=0, std=1, size=(1895, config.token_dim))
