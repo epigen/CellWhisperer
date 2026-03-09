@@ -18,7 +18,7 @@ This repository contains detailed instructions on how to run your own CellWhispe
 
 Installing a local copy of CellWhisperer allows you to analyze your own datasets and explore scRNA-seq data interactively using the CellWhisperer AI model. The installation process takes approximately 15 minutes and supports both CPU and GPU (CUDA 12) environments.
 
-### Option A: Pixi (recommended)
+### Option A: Pixi (recommended for Mac&Linux)
 
 [Pixi](https://pixi.sh), very similarly to `uv`, provides a fast, reproducible setup with a single command.
 
@@ -35,7 +35,7 @@ Installing a local copy of CellWhisperer allows you to analyze your own datasets
 
 All dependencies (including snakemake and cellxgene) are resolved automatically from `pixi.toml`. Use `pixi run` or `pixi shell` to execute commands in the environment.
 
-### Option B: Conda
+### Option B: Conda (Linux-only)
 
 1. **Clone the repository** with all submodules (required):
    ```bash
@@ -73,7 +73,7 @@ All dependencies (including snakemake and cellxgene) are resolved automatically 
 
 You're now ready to run CellWhisperer locally (see next section) or analyze your own datasets.
 
-### Alternative: Docker Installation
+### Option C: Docker (Best for deployment; Linux-only)
 
 For users who prefer containerized environments, CellWhisperer can be installed and run using Docker. This approach includes all dependencies and installation steps in a self-contained environment.
 
