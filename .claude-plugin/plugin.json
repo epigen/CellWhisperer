@@ -1,0 +1,11 @@
+{
+  "name": "cellwhisperer",
+  "description": "AI-assisted single-cell RNA-seq analysis with CellWhisperer: dataset processing, cell type scoring, and interactive exploration.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Moritz Schaefer"
+  },
+  "homepage": "https://github.com/epigen/cellwhisperer",
+  "repository": "https://github.com/epigen/cellwhisperer",
+  "license": "GPL-3.0"
+}

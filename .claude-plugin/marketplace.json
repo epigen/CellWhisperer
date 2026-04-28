@@ -1,0 +1,16 @@
+{
+  "name": "cellwhisperer",
+  "owner": {
+    "name": "Moritz Schaefer"
+  },
+  "metadata": {
+    "description": "Single-plugin marketplace for the CellWhisperer Claude Code skill."
+  },
+  "plugins": [
+    {
+      "name": "cellwhisperer",
+      "source": "./",
+      "description": "AI-assisted single-cell RNA-seq analysis: dataset processing, API-based cell scoring, and local model inference."
+    }
+  ]
+}
