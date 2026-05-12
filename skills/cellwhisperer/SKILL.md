@@ -1,20 +1,16 @@
 ---
 name: cellwhisperer
 description: |
-  Use when the user needs to work with single-cell RNA-seq data using CellWhisperer: processing datasets for the interactive web app, scoring/annotating cells' types and states with free-text queries, or loading CellWhisperer as a Python library for local inference. Triggers on: "cellwhisperer", "cell type annotation", "scRNA-seq analysis", "single-cell scoring", "cellxgene", or any request involving transcriptome-to-text similarity scoring (e.g. when the user asks for specific attributes/properties of cells, including their type and state).
+  Use when the user needs to work with single-cell RNA-seq data using CellWhisperer: scoring/annotating cells with free-text queries (cell types, states, pathways), launching the interactive cellxgene browser, or any request involving transcriptome-to-text similarity. Triggers on: "cellwhisperer", "cell type annotation", "scRNA-seq analysis", "single-cell scoring", "cellxgene", "stemness", or questions about cell identity/state in transcriptomic data.
 ---
 
 # CellWhisperer
 
-CellWhisperer is a multimodal AI model combining transcriptomics with natural language to enable intuitive interaction with scRNA-seq datasets. Published in [Nature Biotechnology](https://doi.org/10.1038/s41587-025-02857-9).
+CellWhisperer is a multimodal AI model that scores single cells against free-text queries (cell types, states, pathways) using a CLIP-style joint embedding of transcriptomes and natural language. Published in [Nature Biotechnology](https://doi.org/10.1038/s41587-025-02857-9).
 
-This skill provides three capabilities:
+## Plugin setup
 
-1. **End-to-end analysis** — Prepare an h5ad dataset, process it through the CellWhisperer pipeline, and launch the interactive cellxgene web app.
-2. **API-based cell scoring** — Query the hosted CellWhisperer API at `cellwhisperer.bocklab.org` to embed texts and score/annotate cells on demand, without local model installation.
-3. **Local library usage** — Install CellWhisperer as a Python library and use it programmatically for model loading, embedding, and scoring.
-
-## Installation (for Claude Code users)
+This skill is distributed as a Claude Code plugin. Installing it clones the full CellWhisperer repository (with pixi environment) to `~/.claude/plugins/cache/cellwhisperer/cellwhisperer/<version>/`. This clone is used for all compute — no separate installation needed.
 
 ```bash
 # generally prevent auto-update for your safety
@@ -22,58 +18,149 @@ claude plugin marketplace add epigen/cellwhisperer@v0.1.0
 claude plugin install cellwhisperer@cellwhisperer
 ```
 
-After installing, restart Claude Code or run `/reload-plugins`. The skill becomes available as `/cellwhisperer` or is invoked automatically when CellWhisperer-related tasks are detected.
-
-## Project setup
-
-CellWhisperer uses [pixi](https://pixi.sh) for environment management.
-
-```bash
-git clone git@github.com:epigen/cellwhisperer.git --recurse-submodules
-cd cellwhisperer
+The clone path (referred to as `$CW_ROOT` below) is:
+```
+~/.claude/plugins/cache/cellwhisperer/cellwhisperer/0.1.0/
 ```
 
-All commands below should be run from the CellWhisperer project root using `pixi run`.
-
-Before starting, read the project README for full context:
-- `README.md` — installation, dataset format, web app launch, paper reproduction
+Before starting, read `$CW_ROOT/README.md` for full project context.
 
 ---
 
-## Feature 1: End-to-End scRNA-seq Analysis
+## Workflow 1: Score & Analyze (default)
 
-Goal: take a user's h5ad file from raw counts to an interactive CellWhisperer-powered cellxgene browser.
+Score cells in any h5ad dataset against free-text queries. This is the primary workflow.
+
+### Step 1: Compute transcriptome embeddings
+
+Most h5ad files won't have CellWhisperer embeddings. Compute them using the plugin's pixi environment and model checkpoint:
+
+```bash
+cd ~/.claude/plugins/cache/cellwhisperer/cellwhisperer/0.1.0/
+pixi run python /path/to/embed_script.py
+```
+
+The embedding script should:
+
+```python
+import anndata
+import torch
+from cellwhisperer.utils.model_io import load_cellwhisperer_model
+from cellwhisperer.utils.processing import adata_to_embeds, ensure_raw_counts_adata
+
+# Load model (ships with the plugin)
+pl_model, tokenizer, transcriptome_processor = load_cellwhisperer_model(
+    "results/models/jointemb/cellwhisperer_clip_v1.ckpt",
+    cache=True,
+)
+
+# Load user's dataset
+adata = anndata.read_h5ad("/absolute/path/to/user_data.h5ad")
+
+# Validate raw counts (required)
+ensure_raw_counts_adata(adata)
+
+# Compute embeddings
+transcriptome_embeds = adata_to_embeds(
+    adata,
+    pl_model.model,
+    transcriptome_processor,
+    batch_size=32,  # reduce if GPU OOM
+)
+
+# Save back
+adata.obsm["transcriptome_embeds"] = transcriptome_embeds.cpu().numpy()
+adata.write_h5ad("/absolute/path/to/user_data.h5ad")
+```
+
+**h5ad requirements** for embedding:
+- Raw integer counts in `.X` or `.layers["counts"]` (int32, no NaN)
+- `.var` must have a `gene_name` column with gene symbols
+- Recommended: `ensembl_id` in `.var` (computed if missing)
+
+**Performance**: GPU (>=4GB VRAM) recommended. CPU works but is significantly slower.
+
+If the h5ad already has `transcriptome_embeds` in `.obsm`, skip this step.
+
+### Step 2: Score cells via the API
+
+Once embeddings exist, score cells against any text query using the hosted API. This step requires only `requests`, `pickle`, and `torch` — no CellWhisperer install needed in the user's environment.
+
+```python
+import pickle
+import requests
+import torch
+import anndata
+
+# Load dataset with embeddings
+adata = anndata.read_h5ad("/path/to/data.h5ad")
+transcriptome_embeds = torch.from_numpy(adata.obsm["transcriptome_embeds"])
+
+# Get logit scale from API
+logit_scale = float(requests.get(
+    "https://cellwhisperer.bocklab.org/clip/api/logit_scale"
+).content)
+
+# Embed text queries via API
+queries = ["intestinal stem cell", "inflamed cell", "goblet cell"]
+response = requests.post(
+    "https://cellwhisperer.bocklab.org/clip/api/text_embedding",
+    json=queries,
+)
+text_embeds = torch.from_numpy(pickle.loads(response.content))
+
+# Score: (n_queries, n_cells), higher = stronger match
+scores = (torch.matmul(text_embeds, transcriptome_embeds.t()) * logit_scale).detach()
+
+# Add scores to adata
+for i, q in enumerate(queries):
+    adata.obs[f"cw_score_{q}"] = scores[i].numpy()
+```
+
+### Step 3: Analyze and plot
+
+Use the scores for downstream analysis — violin plots by condition, UMAP overlays, statistical tests, cluster-level summaries, etc. Write analysis code in the user's working directory (not in `$CW_ROOT`).
+
+### Alternative: score locally without API
+
+For offline use or to avoid API dependency, score text queries locally using the plugin's pixi environment (run from `$CW_ROOT`):
+
+```python
+# Text embedding (local, no API)
+text_embeds = pl_model.model.embed_texts(
+    ["intestinal stem cell", "inflamed cell"],
+    chunk_size=128,
+)
+
+# Score
+scores = (torch.matmul(text_embeds, transcriptome_embeds.t())
+          * pl_model.model.discriminator.temperature.exp()).detach()
+```
+
+---
+
+## Workflow 2: Interactive Browser
+
+Process a raw h5ad through the full CellWhisperer pipeline and launch the cellxgene web app with AI-powered search and chat. Run all commands from `$CW_ROOT`.
 
 ### Step 1: Prepare the dataset
 
-Place the h5ad file at `resources/<dataset_name>/read_count_table.h5ad`.
+Place the h5ad at `$CW_ROOT/resources/<dataset_name>/read_count_table.h5ad`.
 
-**Requirements** (validate before proceeding):
-- Raw integer read counts in `.X` or `.layers["counts"]` (int32, no NaN)
-- `.var` must have a unique index and a `gene_name` column with gene symbols
-- Recommended: provide `ensembl_id` in `.var` (computed if missing)
-- Recommended: filter cells with <100 genes expressed
+Requirements are the same as Workflow 1 (raw counts, gene_name column). Additionally:
 - Use `categorical` dtype for categorical `.obs` columns
-- 2D embeddings in `.obsm` must be `np.ndarray` (not DataFrame), dtype float/int, shape `(n_obs, >=2)`, no Inf values
+- 2D embeddings in `.obsm` must be `np.ndarray` (not DataFrame), no Inf values
 
-Write a validation script if the user's data needs checking. Common issues:
-- Normalized counts instead of raw → check `.layers["counts"]`
-- Gene symbols in index but no `gene_name` column → copy index to `gene_name`
-- Object dtype obs columns → convert to categorical
-
-### Step 2: Run the processing pipeline
+### Step 2: Run the preprocessing pipeline
 
 ```bash
-cd src/cellxgene_preprocessing
+cd $CW_ROOT/src/cellxgene_preprocessing
 pixi run snakemake --cores 8 --config 'datasets=["<dataset_name>"]'
 ```
 
-Key notes:
-- GPU accelerates processing (4GB VRAM sufficient). Set `CUDA_VISIBLE_DEVICES` to select GPU.
-- Without GPU, increase `--cores` (e.g. 32).
-- Memory: allocate ~2x the h5ad file size.
-- Cluster captions use GPT-4 API by default (`OPENAI_API_KEY` env var). Without it, falls back to a local Mixtral model (requires 40GB VRAM GPU).
-- Output lands in `results/<dataset_name>/`.
+This computes embeddings, generates cluster labels (via GPT-4 API if `OPENAI_API_KEY` is set, otherwise local Mixtral), and prepares the cellxgene-ready h5ad.
+
+Output: `$CW_ROOT/results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad`
 
 ### Step 3: Launch cellxgene
 
@@ -83,184 +170,14 @@ pixi run cellxgene launch -p 5005 --host 0.0.0.0 --max-category-items 500 \
   results/<dataset_name>/cellwhisperer_clip_v1/cellxgene.h5ad
 ```
 
-Access at `http://localhost:5005`. The web app connects to the hosted CellWhisperer API at `cellwhisperer.bocklab.org` for AI features (search, chat).
-
-To self-host the embedding model (4GB VRAM), add:
-```bash
---cellwhisperer-clip-model results/models/jointemb/cellwhisperer_clip_v1.ckpt
-```
-
----
-
-## Feature 2: API-Based Cell Scoring
-
-Use the hosted CellWhisperer API to embed text queries and score cells without installing the full model locally. This is useful when an agent or script needs quick cell-type annotations or text-transcriptome similarity scores.
-
-### API endpoints
-
-Base URL: `https://cellwhisperer.bocklab.org/clip/api`
-
-#### Get logit scale (learned CLIP temperature)
-```python
-import requests
-response = requests.get("https://cellwhisperer.bocklab.org/clip/api/logit_scale")
-logit_scale = float(response.content)
-```
-
-#### Embed text queries
-```python
-import pickle
-import torch
-import requests
-
-texts = ["T cell", "B cell", "monocyte"]
-response = requests.post(
-    "https://cellwhisperer.bocklab.org/clip/api/text_embedding",
-    json=texts,
-)
-text_embeds = torch.from_numpy(pickle.loads(response.content))
-# Shape: (len(texts), embedding_dim)
-```
-
-#### Score cells against text
-
-Once you have text embeddings and precomputed transcriptome embeddings (from `adata.obsm["transcriptome_embeds"]` in a processed dataset), compute similarity:
-
-```python
-import torch
-
-# text_embeds: (n_texts, embedding_dim) from API
-# transcriptome_embeds: (n_cells, embedding_dim) from adata.obsm["transcriptome_embeds"]
-transcriptome_embeds = torch.from_numpy(adata.obsm["transcriptome_embeds"])
-
-scores = torch.matmul(text_embeds, transcriptome_embeds.t()) * logit_scale
-# Shape: (n_texts, n_cells) - higher score = stronger match
-```
-
-### Standalone scoring recipe (no CellWhisperer install needed)
-
-For quick annotation of cells that already have precomputed transcriptome embeddings:
-
-```python
-import pickle
-import requests
-import torch
-import numpy as np
-import anndata
-
-# Load a CellWhisperer-processed dataset
-adata = anndata.read_h5ad("results/<dataset>/cellwhisperer_clip_v1/cellxgene.h5ad")
-transcriptome_embeds = torch.from_numpy(adata.obsm["transcriptome_embeds"])
-
-# Get model parameters from API
-logit_scale = float(requests.get("https://cellwhisperer.bocklab.org/clip/api/logit_scale").content)
-
-# Embed query terms
-queries = ["CD8+ cytotoxic T cell", "naive B cell", "classical monocyte"]
-response = requests.post("https://cellwhisperer.bocklab.org/clip/api/text_embedding", json=queries)
-text_embeds = torch.from_numpy(pickle.loads(response.content))
-
-# Compute per-cell scores
-scores = (torch.matmul(text_embeds, transcriptome_embeds.t()) * logit_scale).detach()
-
-# Assign best-matching label per cell
-best_labels = [queries[i] for i in scores.argmax(dim=0)]
-adata.obs["cellwhisperer_label"] = best_labels
-```
-
----
-
-## Feature 3: Local Library Usage
-
-When explicitly requested, install CellWhisperer as a Python library for local model loading and inference (no API dependency).
-
-### Installation
-
-It uses pixi for dependency management. Infer the user about implications, i.e. that their project would need to be run within pixi, and that pixi would need to be installed (which you could take care of). There is also the option to adapt the environment for `uv` (or `pip`), but this is untested
-
-```bash
-# From the cellwhisperer repo root
-pixi run pip install -e .
-```
-
-Note: this pulls in substantial dependencies (PyTorch, transformers, geneformer). A GPU with >=4GB VRAM is recommended for inference. On CPU, embedding is significantly slower. For quick scoring without local model installation, prefer Feature 2 (API-based scoring).
-
-### Model loading
-
-```python
-from cellwhisperer.utils.model_io import load_cellwhisperer_model
-
-# Load from a checkpoint file
-pl_model, tokenizer, transcriptome_processor = load_cellwhisperer_model(
-    "results/models/jointemb/cellwhisperer_clip_v1.ckpt",
-    cache=True,  # enables embedding caching for repeated calls
-)
-logit_scale = pl_model.model.discriminator.temperature.exp()
-```
-
-Model weights can be downloaded from the [project website](http://cellwhisperer.bocklab.org/).
-
-### Embed transcriptomes
-
-```python
-import anndata
-from cellwhisperer.utils.processing import adata_to_embeds
-
-adata = anndata.read_h5ad("resources/<dataset>/read_count_table.h5ad")
-
-# adata.X must contain raw integer counts
-# adata.var must have gene_name column (or gene symbols as index)
-transcriptome_embeds = adata_to_embeds(
-    adata,
-    pl_model.model,
-    transcriptome_processor,
-    batch_size=32,
-)
-# Shape: (n_cells, embedding_dim), L2-normalized
-```
-
-### Embed texts
-
-```python
-text_embeds = pl_model.model.embed_texts(
-    ["T cell", "B cell", "monocyte"],
-    chunk_size=128,
-)
-# Shape: (n_texts, embedding_dim), L2-normalized
-```
-
-### Score transcriptomes vs texts
-
-```python
-from cellwhisperer.utils.inference import score_transcriptomes_vs_texts
-
-scores, group_keys = score_transcriptomes_vs_texts(
-    transcriptome_input=transcriptome_embeds,  # or pass adata directly
-    text_list_or_text_embeds=text_embeds,       # or pass list of strings
-    logit_scale=logit_scale,
-    model=pl_model.model,                       # needed if passing raw adata/strings
-    transcriptome_processor=transcriptome_processor,  # needed if passing raw adata
-    average_mode=None,         # None for per-cell, "embeddings" for per-group average
-    score_norm_method=None,    # "zscore", "softmax", "01norm", or None
-)
-# scores shape: (n_texts, n_cells)
-```
-
-### Raw counts validation
-
-```python
-from cellwhisperer.utils.processing import ensure_raw_counts_adata
-
-ensure_raw_counts_adata(adata)
-# Raises ValueError if neither .X nor .layers["counts"] has integer counts
-# If .layers["counts"] has raw counts, it swaps them into .X
-```
+Access at `http://localhost:5005`. The web app uses the hosted API for AI features (search, chat).
 
 ---
 
 ## Troubleshooting
 
 - **`GCC_7.0.0 not found`**: Add `import pyarrow` as the first import in your script.
-- **GPU out of memory**: Reduce `batch_size` in `adata_to_embeds` or `score_transcriptomes_vs_texts`.
+- **GPU out of memory**: Reduce `batch_size` in `adata_to_embeds`.
 - **Missing gene_name column**: Copy gene symbols from `.var.index` to `.var["gene_name"]`.
-- **Slow processing**: If running with CPU only, increase `--cores` in the snakemake command and expect ~2h per 10k cells on CPU. If GPU is available and , check it's used as intended, and if not suggest to the user to do some environment tests to support this.
+- **Non-integer counts**: `ensure_raw_counts_adata(adata)` detects and fixes this (swaps `.layers["counts"]` into `.X` if needed).
+- **Slow on CPU**: Embedding is significantly slower without GPU. Consider reducing the dataset size or using a machine with GPU access.
